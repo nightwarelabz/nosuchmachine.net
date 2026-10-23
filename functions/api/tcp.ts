@@ -57,9 +57,24 @@ export async function onRequestGet(context: any) {
   // Cloudflare cannot TCP-connect to its own anycast ranges (loop
   // prevention): a Cloudflare-hosted target reads "closed" on every door
   // from inside, whatever its true state. Say so instead of lying.
-  const CF_V4: Array<[number, number]> = [[0x68000000, 0xfff80000], [0xac400000, 0xfffc0000], [0xa29f0000, 0xffff0000], [0xad000000, 0xffff0000], [0xaf500000, 0xfffe0000], [0x6a1fc000, 0xffffc000], [0x8d380000, 0xffff0000], [0x8d580000, 0xffff0000], [0xc6290000, 0xfffe0000], [0xc762b000, 0xfffff000]];
-  const ipv4Int = (ip: string) => ip.split(".").map(Number).reduce((a, o) => a * 256 + o, 0) >>> 0;
-  const isCf = (a: string) => a.includes(":") ? a.toLowerCase().startsWith("2606:4700:") || a.toLowerCase().startsWith("2803:f800:") || a.toLowerCase().startsWith("2405:b500:") || a.toLowerCase().startsWith("2405:8100:") || a.toLowerCase().startsWith("2a06:98c0:") || a.toLowerCase().startsWith("2c0f:f248:") : CF_V4.some(([net, mask]) => (ipv4Int(a) & mask) === (net & mask));
+  // Cloudflare's published egress/anycast allocations (ipv4 ranges list).
+  const CF_V4: Array<[number, number]> = [
+    [0x68100000, 0xfff80000], // 104.16.0.0/13
+    [0x68180000, 0xfffc0000], // 104.24.0.0/14
+    [0xac400000, 0xfff80000], // 172.64.0.0/13
+    [0xa29e0000, 0xfffe0000], // 162.158.0.0/15
+    [0xc6298000, 0xffff8000], // 198.41.128.0/17
+    [0x8d654000, 0xffffc000], // 141.101.64.0/18
+    [0x6ca2c000, 0xffffc000], // 108.162.192.0/18
+    [0xadf53000, 0xfffff000], // 173.245.48.0/20
+    [0xbe5df000, 0xfffff000], // 190.93.240.0/20
+    [0xbc72e000, 0xfffff000], // 188.114.96.0/20
+    [0x6715f400, 0xfffffc00], // 103.21.244.0/22
+    [0x6716c800, 0xfffffc00], // 103.22.200.0/22
+    [0x671f0400, 0xfffffc00], // 103.31.4.0/22
+    [0xc5eaf000, 0xfffffc00], // 197.234.240.0/22
+    [0x83004800, 0xfffffc00], // 131.0.72.0/22
+  ];
   const cfHosted = addresses.length > 0 && addresses.every(isCf);
   const results: Awaited<ReturnType<typeof probe>>[] = [];
   // Small batches keep one request from becoming a scan cannon.
