@@ -85,7 +85,22 @@ function syncTargetToTools() {
   if (http && !http.value) http.value = /^[a-z][a-z0-9+.-]*:\/\//i.test(target) ? target : `https://${host}/`;
 }
 
+async function edgeChip() {
+  const chip = document.getElementById("edge-chip");
+  if (!chip) return;
+  const t0 = performance.now();
+  try {
+    const res = await fetch("/api/echo", { headers: { accept: "application/json" } });
+    const data = await res.json();
+    const ms = Math.round(performance.now() - t0);
+    const v = data?.visitor || data?.seenByTheEdge || data || {};
+    const where = v.country || v.cfCountry || data?.cf?.country || "";
+    chip.innerHTML = `EDGE <b>● ONLINE</b> · ${ms} ms${where ? ` · ${where}` : ""}`;
+  } catch { chip.textContent = "EDGE ● UNREACHABLE"; }
+}
+
 function init() {
+  void edgeChip();
   document.querySelectorAll<HTMLFormElement>("form.bs-form").forEach((f) => {
     f.addEventListener("submit", (e) => e.preventDefault());
   });
