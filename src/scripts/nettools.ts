@@ -82,9 +82,12 @@ export async function runMail(domainOverride?: string) {
   busy("mail-out", `Reading the mail ledgers for ${domain} — SPF, DMARC, DKIM selectors, MTA-STS…`);
   const q = async (name: string, type: string) => {
     const d = await api(`/api/dns?name=${encodeURIComponent(name)}&type=${type}`);
-    const rows: any[] = [];
-    for (const r of d?.results || []) for (const a of r.answers || []) rows.push(a.data);
-    return rows as string[];
+    // /api/dns shape: results is keyed by record type; each entry is the
+    // per-resolver array, whose rows carry `records` (not `answers`).
+    const byType = d?.results?.[type];
+    const resolvers = Array.isArray(byType) ? byType : [];
+    const first = resolvers.find((r: any) => r?.ok && Array.isArray(r.records) && r.records.length) || resolvers[0];
+    return ((first?.records || []) as any[]).map((rec) => String(rec.data)) as string[];
   };
   try {
     const [mx, txt, dmarc, mtaSts, tlsRpt] = await Promise.all([

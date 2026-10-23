@@ -15,6 +15,7 @@ function switchPanel(id: string) {
     b.setAttribute("aria-current", active ? "page" : "false");
   });
   if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+  syncTargetToTools();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
