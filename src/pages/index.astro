@@ -1,81 +1,320 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-const repo = "https://github.com/nightwarelabz/nightjar";
-const rooms = [
-  { id: "listen", number: "01", name: "Listen", caption: "Find the signal.", title: "Understand what’s around you.", description: "A receive-only BLE listening post with device details, a decoder bench, and recorded sessions. See the activity. Keep the evidence.", items: ["BLE sightings & device details", "Decoder bench & tracker hunt", "JSONL session records"], link: `${repo}#inside-the-house`, linkLabel: "Explore the listening post" },
-  { id: "bench", number: "02", name: "Investigate", caption: "Work the bench.", title: "Go from a question to evidence.", description: "Discover services, inspect TLS, query DNS, and dissect imported captures. Open Blacksite for a command shell, protocol audit tools, and the EAZY audit battery.", items: ["Connect scans, DNS & TLS inspection", "Protocol-speaking probes", "Blacksite console & EAZY reports"], link: `${repo}/blob/main/docs/blacksite/README.md`, linkLabel: "Read the Blacksite manual" },
-  { id: "send", number: "03", name: "Connect", caption: "Give it a voice.", title: "Build the exchange. See both sides.", description: "Compose a payload, choose a destination, and send. Bring up TCP, UDP, or HTTP listeners, inspect what arrives, and work through a protocol on your own terms.", items: ["Destination → payload → send", "TCP, UDP & HTTP listeners", "Saved templates & receive inbox"], link: `${repo}#inside-the-house`, linkLabel: "Explore Send & Serve" },
-  { id: "protect", number: "04", name: "Protect", caption: "Set your posture.", title: "Keep your controls close.", description: "EMCON puts exposure and operation gates in one place. Knocktalk carries encrypted messages. The Vault brings hashes, keys, and authenticated file encryption to the bench.", items: ["Shared EMCON operation gates", "Knocktalk encrypted messaging", "Cryptography & file-encryption tools"], link: `${repo}#defensive-posture`, linkLabel: "Explore the controls" },
-];
+import "../styles/suite.css";
+const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
 ---
-<BaseLayout>
-  <main id="main" class="nightjar-home">
-    <section class="nw-hero shell" id="hero" aria-labelledby="hero-title">
-      <div class="hero-topline"><p class="eyebrow"><span class="red-line"></span> A NIGHTWARE LABZ INSTRUMENT</p><span class="serial">NOSUCHMACHINE.NET / EST. INDEPENDENT</span></div>
-      <div class="nw-hero-grid">
-        <div class="nw-hero-copy">
-          <h1 id="hero-title">nightjar<span>.</span></h1>
-          <p class="nw-hero-tagline">Your network.<br />In your hands.</p>
-          <p class="nw-hero-description">A native network instrument for iPhone and Mac. Listen, investigate, build, and communicate—with Skelli’s on-device intelligence at your side.</p>
-          <div class="nw-actions">
-            <a class="button button-primary" href="#get-started">Get nightjar <span aria-hidden="true">↗</span></a>
-            <a class="button button-secondary" href="#instrument">Explore the instrument <span aria-hidden="true">↓</span></a>
+<BaseLayout
+  bare={true}
+  title="BLACKSITE WEB — a working pentest bench in your browser"
+  description="BLACKSITE WEB by NIGHTWARE LABZ: the nightjar Blacksite bench, rebuilt for the web. DNS, TLS, HTTP security grading, connect checks, domain recon, JWT and certificate inspection, hashes, codecs, subnet math, payloads, and a mirror that shows you what sites see. Public targets only. One knock, read, grade."
+>
+  <div class="bs">
+    <span id="hero" hidden></span><span id="instrument" hidden></span><span id="skelli" hidden></span><span id="get-started" hidden></span><span id="lab" hidden></span><span id="about" hidden></span><span id="work" hidden></span><span id="current" hidden></span>
+    <header class="bs-topbar">
+      <a class="bs-brand" href="/" aria-label="BLACKSITE WEB, home">
+        <img src="/brand/nightware/nightjar-icon.png" alt="" width="34" height="34" />
+        <span><span class="bs-name">BLACKSITE <em>WEB</em></span><small>NIGHTWARE LABZ · THE nightjar BENCH, ON THE WEB</small></span>
+      </a>
+      <nav class="bs-top-links" aria-label="Lab">
+        <a href="/blacksite/" style="color:#ff3b47;font-weight:700">▸_ BLACKSITE OS</a>
+        <a href={nightjarRepo}>nightjar for iPhone &amp; Mac ↗</a>
+        <a href="/book/">Orange Book</a>
+        <a href="/projects/orange/">Projects</a>
+        <a href="https://github.com/nightwarelabz/nosuchmachine.net">Site source ↗</a>
+      </nav>
+    </header>
+
+    <div class="bs-targetbar">
+      <label for="global-target">TARGET</label>
+      <input id="global-target" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="example.com — a public host you own or are authorized to test" />
+      <button class="bs-btn" id="battery-run" type="button">RUN FULL BATTERY</button>
+      <p class="bs-doctrine"><strong>Doctrine: one knock, read, grade.</strong> This bench recons and grades — it does not exploit, spray, brute-force, or flood. Server-side probes refuse private, loopback, link-local, and cloud-metadata addresses before contact, and re-check every redirect. Test only systems you own or have permission to test. Local tools never leave your browser.</p>
+      <p class="bs-doctrine" id="battery-status" role="status"></p>
+    </div>
+
+    <div class="bs-shell">
+      <nav class="bs-rail" aria-label="Tools">
+        <h2>CONSOLE</h2>
+        <button class="rail-btn active" data-panel="overview" type="button">Overview <small>⌂</small></button>
+        <button class="rail-btn" data-panel="report" type="button">Report <small><span class="bs-report-badge" id="report-count">0</span></small></button>
+        <h2>NETWORK — VIA EDGE</h2>
+        <button class="rail-btn" data-panel="dns" type="button">DNS <small>DoH ×3</small></button>
+        <button class="rail-btn" data-panel="tls" type="button">TLS Inspector <small>certs</small></button>
+        <button class="rail-btn" data-panel="http" type="button">HTTP Audit <small>EAZY grade</small></button>
+        <button class="rail-btn" data-panel="ports" type="button">Connect Check <small>TCP</small></button>
+        <button class="rail-btn" data-panel="recon" type="button">Domain Recon <small>RDAP·CT</small></button>
+        <h2>LOCAL LAB — IN-BROWSER</h2>
+        <button class="rail-btn" data-panel="jwt" type="button">JWT Inspector <small>verify</small></button>
+        <button class="rail-btn" data-panel="vault" type="button">Vault <small>AES·hash</small></button>
+        <button class="rail-btn" data-panel="codecs" type="button">Codecs <small>b64·hex</small></button>
+        <button class="rail-btn" data-panel="subnet" type="button">Subnet Math <small>CIDR</small></button>
+        <button class="rail-btn" data-panel="cert" type="button">Cert Decoder <small>X.509</small></button>
+        <button class="rail-btn" data-panel="payload" type="button">Payload Bench <small>bytes</small></button>
+        <button class="rail-btn" data-panel="mirror" type="button">Mirror <small>self-audit</small></button>
+      </nav>
+
+      <main class="bs-main" id="main">
+        <section class="panel" id="panel-overview" aria-labelledby="ov-title">
+          <p class="bs-kicker">NOSUCHMACHINE.NET / BLACKSITE WEB</p>
+          <h1 id="ov-title">The bench is the website now.</h1>
+          <p class="bs-sub">This used to be a brochure for <a href={nightjarRepo}>nightjar</a>, the native network instrument for iPhone and Mac. Brochures don't pentest anything — so the site became the tool. Everything nightjar's Blacksite bench does from a phone, rebuilt for the browser, plus everything a browser and an edge network can honestly do. Set a target above and run the battery, or pick a tool. Need the native app? Build nightjar from source with Xcode on iPhone or Mac (iOS signing/provisioning applies) — <a href={`${nightjarRepo}/releases`}>releases</a> · <a href={`${nightjarRepo}#get-started`}>get started</a>.</p>
+          <div class="bs-grid">
+            <button class="bs-toolcard" data-goto="dns" type="button"><span class="bs-tag">NETWORK</span><strong>DNS</strong><span>A/AAAA/MX/TXT/CAA/DS and more, answered by Cloudflare, Google, and Quad9 side by side — spot the resolver that disagrees, check DNSSEC's AD flag.</span></button>
+            <button class="bs-toolcard" data-goto="tls" type="button"><span class="bs-tag">NETWORK</span><strong>TLS Inspector</strong><span>A hand-rolled handshake reads the certificate chain as presented: SANs, validity, fingerprint, expiry findings, cipher suite.</span></button>
+            <button class="bs-toolcard" data-goto="http" type="button"><span class="bs-tag">NETWORK</span><strong>HTTP Audit</strong><span>Redirect chain, header-by-header security grading (A–F), cookie flags, a CORS reflection probe, and a light fingerprint.</span></button>
+            <button class="bs-toolcard" data-goto="ports" type="button"><span class="bs-tag">NETWORK</span><strong>Connect Check</strong><span>The honest TCP connect — open, closed, or silent — across the common service ports, from the edge's point of view.</span></button>
+            <button class="bs-toolcard" data-goto="recon" type="button"><span class="bs-tag">NETWORK</span><strong>Domain Recon</strong><span>RDAP registration, the Certificate Transparency subdomain census, robots.txt, security.txt, sitemap — the public ledger, read properly.</span></button>
+            <button class="bs-toolcard" data-goto="mirror" type="button"><span class="bs-tag">SELF-AUDIT</span><strong>Mirror</strong><span>Turn the bench around: what the edge sees of you, what WebRTC leaks, what your fingerprint says, and what Bluetooth devices around you offer.</span></button>
+            <button class="bs-toolcard" data-goto="jwt" type="button"><span class="bs-tag">LOCAL</span><strong>JWT Inspector</strong><span>Decode, red-flag (alg=none, kid traversal, remote key URLs), and HMAC-verify — entirely on your machine.</span></button>
+            <button class="bs-toolcard" data-goto="vault" type="button"><span class="bs-tag">LOCAL</span><strong>Vault</strong><span>SHA/MD5/HMAC hashing, file fingerprinting, AES-256-GCM sealing with PBKDF2, password strength and generation.</span></button>
+            <button class="bs-toolcard" data-goto="codecs" type="button"><span class="bs-tag">LOCAL</span><strong>Codecs + Regex</strong><span>Base64/hex/URL/HTML/ROT13/binary, hexdump, entropy — and a regex bench with match groups.</span></button>
+            <button class="bs-toolcard" data-goto="subnet" type="button"><span class="bs-tag">LOCAL</span><strong>Subnet Math</strong><span>CIDR, netmask, usable range, address class — including which ranges this bench itself refuses to probe, and why.</span></button>
+            <button class="bs-toolcard" data-goto="cert" type="button"><span class="bs-tag">LOCAL</span><strong>Cert Decoder</strong><span>Paste a PEM and read it: names, SANs, serial, signature algorithm, SHA-256 fingerprint.</span></button>
+            <button class="bs-toolcard" data-goto="payload" type="button"><span class="bs-tag">LOCAL</span><strong>Payload Bench</strong><span>The Send-tab habit, on the web: bytes in any encoding, out in every encoding, with CRC32, entropy, and SHA-256.</span></button>
           </div>
-          <p class="platform-line">iOS 17+ <span>/</span> macOS 14+ <span>/</span> Open source</p>
-        </div>
-        <div class="hero-insignia">
-          <div class="insignia-cross top-left" aria-hidden="true">+</div><div class="insignia-cross bottom-right" aria-hidden="true">+</div>
-          <span class="insignia-label">INDEPENDENT BY DESIGN</span>
-          <div class="insignia-orbit" aria-hidden="true"></div>
-          <img src="/brand/nightware/stallion.svg" alt="The NIGHTWARE LABZ black stallion with a crimson eye" width="1200" height="1200" fetchpriority="high" />
-          <div class="insignia-footer"><span>NIGHTWARE LABZ</span><span class="red">THE WORLD IS YOURS ↗</span></div>
-        </div>
-      </div>
-      <div class="hero-bottomline"><span>The listening post. The mouth. The bench.</span><a href={repo}>Built in the open <span aria-hidden="true">↗</span></a></div>
-    </section>
-
-    <div class="trust-strip"><div class="shell"><span><i aria-hidden="true"></i> Native on iPhone & Mac</span><span>On-device model inference</span><span>No accounts. No ads. No analytics.</span><a href={`${repo}/blob/main/PRIVACY.md`}>Read the privacy policy ↗</a></div></div>
-
-    <section id="instrument" class="nw-section shell" aria-labelledby="instrument-title">
-      <span id="work" class="anchor-alias"></span><span id="current" class="anchor-alias"></span>
-      <div class="section-heading"><p class="eyebrow"><span class="red">01 /</span> THE INSTRUMENT</p><span class="eyebrow">ONE HOUSE. CONNECTED TOOLS.</span></div>
-      <div class="section-intro"><h2 id="instrument-title">Follow your curiosity.<br /><span class="dim">Keep your tools together.</span></h2><p>From the first signal to the final report, nightjar gives the work a place to happen. A shared process board and session log connect the rooms.</p></div>
-      <div class="instrument-explorer" data-explorer>
-        <div class="instrument-tabs" role="tablist" aria-label="Explore nightjar capabilities" hidden>
-          {rooms.map((room, index) => <button type="button" id={`tab-${room.id}`} role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`panel-${room.id}`} tabindex={index === 0 ? 0 : -1} data-room-tab={room.id}><span>{room.number}</span>{room.name}<span aria-hidden="true">↗</span></button>)}
-        </div>
-        {rooms.map((room) => (
-          <div id={`panel-${room.id}`} class="instrument-panel" data-room-panel={room.id}>
-            <div class="instrument-visual" aria-hidden="true">
-              <div class="visual-top"><span>NIGHTJAR / {room.name.toUpperCase()}</span><span class="red">{room.number}</span></div>
-              {room.id === "listen" && <div class="radar"><div class="radar-ring ring-one"></div><div class="radar-ring ring-two"></div><div class="radar-ring ring-three"></div><div class="radar-axis horizontal"></div><div class="radar-axis vertical"></div><span class="radar-point point-one"></span><span class="radar-point point-two"></span><span class="radar-point point-three"></span><span class="radar-center"></span><span class="radar-label label-one">BLE / RECEIVE ONLY</span><span class="radar-label label-two">SIGHTINGS → SESSIONS</span></div>}
-              {room.id === "bench" && <div class="console-visual"><p><span>›</span> help bench</p><div>PROTOCOLS<br />EVIDENCE<br />AUDIT REPORTS</div><p><span>›</span> log <span class="console-cursor">_</span></p></div>}
-              {room.id === "send" && <div class="flow-visual"><span>01 / DESTINATION</span><i>↓</i><span>02 / PAYLOAD</span><i>↓</i><span class="flow-last">03 / SEND ↗</span></div>}
-              {room.id === "protect" && <div class="posture-visual"><span>EMISSION CONTROL</span><div><i>C</i><i>B</i><i>A</i></div><p>CHARLIE / BRAVO / ALPHA</p><b>EXPOSURE → POLICY → GATES</b></div>}
-              <div class="visual-bottom"><span>WORKFLOW ILLUSTRATION</span><span>NOT A LIVE SESSION</span></div>
-            </div>
-            <div class="instrument-copy"><p class="eyebrow red">{room.caption}</p><h3>{room.title}</h3><p>{room.description}</p><ul>{room.items.map((item) => <li><span aria-hidden="true">↗</span>{item}</li>)}</ul><a class="text-link" href={room.link}>{room.linkLabel} <span aria-hidden="true">↗</span></a></div>
+          <div class="bs-card" style="border-color:#8f1d24">
+            <h3>▸_ BLACKSITE OS — the entire console, as an operating system</h3>
+            <p>The bench above is the toolkit. <strong><a href="/blacksite/">BLACKSITE OS</a></strong> is the house it lives in: a windowed operating system in this tab — a real shell over a persistent virtual filesystem, the full 426-command Blacksite roster (every command live, edge-powered, or honestly named a limit), Python and JavaScript engines that run your programs, a vim-mannered editor, a process board, a gauntlet that tests the room itself, EMCON gating, themes, and generated wallpapers. It is the nightjar console, ported.</p>
+            <p><a class="bs-btn" href="/blacksite/" style="display:inline-block;text-decoration:none">BOOT BLACKSITE OS ▸</a></p>
           </div>
-        ))}
-      </div>
-      <p class="instrument-footnote">Built for the platform it runs on. iOS uses connect scans and imported captures; socket work follows the app’s lifecycle. <a href={`${repo}#platform-boundaries`}>Platform details ↗</a></p>
-    </section>
+          <div class="bs-card">
+            <h3>What a website honestly cannot do</h3>
+            <p>No raw sockets, no SYN scans, no UDP, no packet capture, no sniffing your LAN — browsers don't offer them and this page won't pretend otherwise. Anything beyond connect-level truth needs the native instrument: nightjar on iPhone/Mac does BLE listening, imported-pcap dissection, protocol probes, listeners, and encrypted messaging that a web page structurally cannot. This bench is everything short of that line — done for real.</p>
+          </div>
+        </section>
 
-    <section id="skelli" class="skelli-section" aria-labelledby="skelli-title"><div class="shell skelli-grid">
-      <div class="skelli-copy"><p class="eyebrow"><span class="red">02 /</span> MEET SKELLI</p><h2 id="skelli-title">Intelligence.<br /><span class="dim">Inside the instrument.</span></h2><p>Skelli knows the manual, reads live app state, and works the controls. Ask her to investigate, build a packet, run console commands, or put a result in Deliveries.</p><p class="skelli-note">Her model inference runs on your device. Requested research, model downloads, and configured connections use the network.</p><a class="text-link" href={`${repo}#skelli-the-houses-specialist`}>Meet your onboard specialist <span aria-hidden="true">↗</span></a></div>
-      <div class="skelli-diagram"><div class="skelli-diagram-head"><span class="eyebrow">THE WORK, CONNECTED</span><span class="red" aria-hidden="true">↗</span></div><div class="skelli-core"><span class="core-symbol" aria-hidden="true">✳</span><strong>skelli<span class="red">.</span></strong><span>ON-DEVICE INTELLIGENCE</span></div><div class="skelli-path"><div><span>01</span><strong>Read the state</strong><small>Manual + live instrument</small></div><div><span>02</span><strong>Work the controls</strong><small>Tools + console + code</small></div><div><span>03</span><strong>Keep the result</strong><small>Reports + Deliveries</small></div></div><p>Apple’s model on eligible devices.<br />Open-weights models through the Weights bench.</p></div>
-    </div></section>
+        <section class="panel" id="panel-dns" aria-labelledby="dns-title" hidden>
+          <p class="bs-kicker">NETWORK / VIA EDGE</p>
+          <h2 class="bs-h" id="dns-title">DNS</h2>
+          <p class="bs-sub">One question, three independent resolvers. Disagreement between them is the finding: split-horizon DNS, stale caches, and lame delegations all show up as a row that doesn't match.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="dns-name">NAME</label><input id="dns-name" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
+            <div class="bs-field"><label for="dns-type">TYPE</label><select id="dns-type"><option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option><option>TXT</option><option>NS</option><option>SOA</option><option>CAA</option><option>PTR</option><option>SRV</option><option>DS</option><option>DNSKEY</option><option>HTTPS</option><option>ALL</option></select></div>
+            <button class="bs-btn" id="dns-run" type="button">RESOLVE</button>
+            <button class="bs-btn ghost" data-copy="dns-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="dns-out"></pre>
+          <p class="bs-note">PTR works too — give an IP and ask for PTR. ALL sweeps the ten record types that matter most.</p>
+        </section>
 
-    <section id="get-started" class="nw-section shell" aria-labelledby="start-title">
-      <div class="section-heading"><p class="eyebrow"><span class="red">03 /</span> MAKE IT YOURS</p><a class="eyebrow" href={`${repo}/releases`}>RELEASES & CHANGELOG ↗</a></div>
-      <div class="section-intro"><h2 id="start-title">The bench is open.</h2><p>Choose your platform. Read the setup. Put nightjar to work.</p></div>
-      <div class="install-grid"><article class="install-card"><div class="install-top"><span class="eyebrow">THE FLAGSHIP / iOS 17+</span><span class="platform-icon" aria-hidden="true">▯</span></div><h3>On your iPhone.</h3><p>Build and sideload with Xcode, or start with the available iOS release package. Signing and provisioning are required.</p><a class="button button-primary" href={`${repo}#build-for-iphone`}>Set up for iPhone <span aria-hidden="true">↗</span></a><a class="text-link" href={`${repo}/releases`}>View release downloads <span aria-hidden="true">↗</span></a><small>No App Store or TestFlight listing.</small></article>
-      <article class="install-card"><div class="install-top"><span class="eyebrow">THE DESKTOP / macOS 14+</span><span class="platform-icon desktop-icon" aria-hidden="true">▱</span></div><h3>On your Mac.</h3><p>The same instrument, with a native sidebar and room to spread out. Build from source with the nightjar-mac scheme in Xcode.</p><a class="button button-secondary" href={`${repo}#build-for-mac`}>Build for Mac <span aria-hidden="true">↗</span></a><a class="text-link" href={`${repo}#get-started`}>Requirements & setup <span aria-hidden="true">↗</span></a><small>A Mac with Xcode is required to build.</small></article></div>
-      <div class="source-row"><div><span class="red" aria-hidden="true">&lt;/&gt;</span><p><strong>Open source. Open to inspection.</strong><br />Read the code, explore the manuals, or contribute on GitHub.</p></div><a class="text-link" href={repo}>Explore the source <span aria-hidden="true">↗</span></a></div>
-      <div class="faq"><details><summary>What does Skelli need to run?<span aria-hidden="true">+</span></summary><p>Apple’s on-device model requires iOS 26, Apple Intelligence-capable hardware, and Apple Intelligence enabled. Open-weights models can be selected and downloaded in Skelli → Weights; availability depends on device memory. See the <a href={`${repo}#requirements`}>current requirements</a>.</p></details><details><summary>Can I install the iPhone release directly?<span aria-hidden="true">+</span></summary><p>An IPA still needs signing and provisioning suitable for your device. Start with the <a href={`${repo}/blob/main/ota/README.md`}>installation guide</a> for sideloading, SideStore, and update options. Free Personal Team signing lasts seven days.</p></details><details><summary>Where are the manuals?<span aria-hidden="true">+</span></summary><p>Start with the <a href={`${repo}#documentation`}>documentation index</a>, the <a href={`${repo}/blob/main/ios/README.md`}>iOS manual</a>, or the <a href={`${repo}/blob/main/docs/blacksite/README.md`}>Blacksite manual</a>. Source development can move ahead of packaged releases; check the release notes for the build you install.</p></details></div>
-    </section>
+        <section class="panel" id="panel-tls" aria-labelledby="tls-title" hidden>
+          <p class="bs-kicker">NETWORK / VIA EDGE</p>
+          <h2 class="bs-h" id="tls-title">TLS Inspector</h2>
+          <p class="bs-sub">A hand-rolled ClientHello flies from the edge and the certificate flight is parsed byte by byte — the chain exactly as a client receives it, not as a database remembers it. TLS 1.3 encrypts its Certificate message; when that happens the inspector says so instead of inventing a chain.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="tls-host">HOST</label><input id="tls-host" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
+            <div class="bs-field" style="flex:0 1 120px"><label for="tls-port">PORT</label><input id="tls-port" type="number" value="443" min="1" max="65535" /></div>
+            <button class="bs-btn" id="tls-run" type="button">INSPECT</button>
+            <button class="bs-btn ghost" data-copy="tls-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="tls-out"></pre>
+        </section>
 
-    <section id="lab" class="lab-section shell" aria-labelledby="lab-title"><span id="about" class="anchor-alias"></span><div class="lab-identity"><p class="eyebrow"><span class="red">04 /</span> BEHIND THE INSTRUMENT</p><img src="/brand/nightware/wordmark.svg" width="390" height="53" alt="NIGHTWARE LABZ" loading="lazy" /><h2 id="lab-title">The world is yours.</h2></div><div class="lab-copy"><p>Independent software by Chase Bryan. Tools for people who want to look closer, understand the systems around them, and make something of their own.</p><a class="text-link" href="https://github.com/nightwarelabz">Inside the lab <span aria-hidden="true">↗</span></a><div class="lab-archive"><span class="eyebrow">ALSO FROM THE LAB</span><a href="/projects/orange/">Orange <span>A mathematical language for cryptography ↗</span></a><a href="/book/">The Orange Book <span>Read the hosted manuscript ↗</span></a></div></div></section>
-  </main>
-  <script src="../scripts/nightjar.ts"></script>
+        <section class="panel" id="panel-http" aria-labelledby="http-title" hidden>
+          <p class="bs-kicker">NETWORK / VIA EDGE</p>
+          <h2 class="bs-h" id="http-title">HTTP Audit — the EAZY battery, web edition</h2>
+          <p class="bs-sub">One GET per redirect hop (each hop re-checked against the public-target guard), then everything graded: security headers scored A–F, every cookie's flags read, a foreign-Origin CORS probe, and a fingerprint from what the server volunteers.</p>
+          <form class="bs-form">
+            <div class="bs-field wide"><label for="http-url">URL</label><input id="http-url" type="text" autocomplete="off" spellcheck="false" placeholder="https://example.com/" /></div>
+            <button class="bs-btn" id="http-run" type="button">AUDIT</button>
+            <button class="bs-btn ghost" data-copy="http-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="http-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-ports" aria-labelledby="tcp-title" hidden>
+          <p class="bs-kicker">NETWORK / VIA EDGE</p>
+          <h2 class="bs-h" id="tcp-title">Connect Check</h2>
+          <p class="bs-sub">nightjar's connect scan, from the edge: a full TCP connection either opens, is refused, or times out. No stealth claims — a connect is a knock, and the other side's logs will show it. Results are from a Cloudflare point of presence; a port can read differently from your network.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="tcp-host">HOST</label><input id="tcp-host" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
+            <div class="bs-field"><label for="tcp-ports">PORTS</label><input id="tcp-ports" type="text" autocomplete="off" spellcheck="false" value="common" placeholder="common, or 22,80,443" /></div>
+            <button class="bs-btn" id="tcp-run" type="button">CHECK</button>
+            <button class="bs-btn ghost" data-copy="tcp-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="tcp-out"></pre>
+          <p class="bs-note">Custom lists are capped at 32 ports per check. This is a bench instrument, not a sweep cannon.</p>
+        </section>
+
+        <section class="panel" id="panel-recon" aria-labelledby="recon-title" hidden>
+          <p class="bs-kicker">NETWORK / PUBLIC LEDGERS</p>
+          <h2 class="bs-h" id="recon-title">Domain Recon</h2>
+          <p class="bs-sub">Before touching a target, read what it already published. Registration (RDAP), every name it ever put on a certificate (Certificate Transparency via crt.sh), and its well-known public files — assembled into one picture.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="recon-domain">DOMAIN</label><input id="recon-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
+            <button class="bs-btn" id="recon-run" type="button">RECON</button>
+            <button class="bs-btn ghost" data-copy="recon-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="recon-out"></pre>
+          <p class="bs-note">crt.sh is a volunteer-run ledger and rate-limits; a timeout there is their throttle, not your target hiding.</p>
+        </section>
+
+        <section class="panel" id="panel-jwt" aria-labelledby="jwt-title" hidden>
+          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
+          <h2 class="bs-h" id="jwt-title">JWT Inspector</h2>
+          <p class="bs-sub">Decode the token, read its claims against the clock, red-flag the classic verifier traps (alg=none, kid traversal, remote key URLs, no expiry), and — for HMAC tokens — verify the signature against a secret you supply. Tokens can be credentials: this tool runs locally precisely so you can paste one safely.</p>
+          <form class="bs-form">
+            <div class="bs-field wide"><label for="jwt-input">TOKEN</label><textarea id="jwt-input" spellcheck="false" placeholder="eyJhbGciOi…"></textarea></div>
+            <div class="bs-field"><label for="jwt-secret">HMAC SECRET (OPTIONAL)</label><input id="jwt-secret" type="text" autocomplete="off" spellcheck="false" placeholder="only needed to verify HS256/384/512" /></div>
+            <button class="bs-btn" id="jwt-run" type="button">INSPECT</button>
+            <button class="bs-btn ghost" data-copy="jwt-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="jwt-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-vault" aria-labelledby="vault-title" hidden>
+          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
+          <h2 class="bs-h" id="vault-title">Vault — hashes, seals, passwords</h2>
+          <div class="bs-card">
+            <h3>Hash lab</h3>
+            <form class="bs-form">
+              <div class="bs-field wide"><label for="hash-input">INPUT</label><textarea id="hash-input" spellcheck="false" placeholder="text, or hex in hex mode"></textarea></div>
+              <div class="bs-field"><label for="hash-mode">INPUT IS</label><select id="hash-mode"><option value="text">text (UTF-8)</option><option value="hex">hex bytes</option></select></div>
+              <div class="bs-field"><label for="hash-key">HMAC KEY (OPTIONAL)</label><input id="hash-key" type="text" autocomplete="off" spellcheck="false" /></div>
+              <button class="bs-btn" id="hash-run" type="button">HASH</button>
+              <label class="bs-btn ghost" for="hash-file" style="cursor:pointer">HASH A FILE…</label>
+              <input id="hash-file" type="file" hidden />
+            </form>
+            <pre class="bs-out" id="hash-out"></pre>
+          </div>
+          <div class="bs-card">
+            <h3>AES-256-GCM seal</h3>
+            <p>Encrypt text with a password — PBKDF2-SHA-256 at 310,000 iterations, authenticated encryption. The sealed block replaces the text; paste it back with the same password to open. Wrong password and tampered data fail identically, on purpose.</p>
+            <form class="bs-form">
+              <div class="bs-field"><label for="vault-password">PASSWORD</label><input id="vault-password" type="password" autocomplete="off" /></div>
+              <div class="bs-field wide"><label for="vault-input">TEXT / SEALED BLOCK</label><textarea id="vault-input" spellcheck="false"></textarea></div>
+              <button class="bs-btn" id="vault-seal" type="button">SEAL</button>
+              <button class="bs-btn ghost" id="vault-open" type="button">OPEN</button>
+            </form>
+            <pre class="bs-out" id="vault-out"></pre>
+          </div>
+          <div class="bs-card">
+            <h3>Passwords</h3>
+            <form class="bs-form">
+              <div class="bs-field"><label for="pw-input">CHECK A PASSWORD (LOCALLY)</label><input id="pw-input" type="text" autocomplete="off" spellcheck="false" /></div>
+              <button class="bs-btn ghost" id="pw-check" type="button">CHECK</button>
+              <div class="bs-field" style="flex:0 1 120px"><label for="pwgen-length">GEN LENGTH</label><input id="pwgen-length" type="number" value="20" min="8" max="128" /></div>
+              <button class="bs-btn" id="pwgen-run" type="button">GENERATE</button>
+              <div class="bs-field"><label for="pwgen-out">GENERATED</label><input id="pwgen-out" type="text" readonly /></div>
+            </form>
+            <pre class="bs-out" id="pwgen-meta"></pre>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-codecs" aria-labelledby="codec-title" hidden>
+          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
+          <h2 class="bs-h" id="codec-title">Codecs + Regex</h2>
+          <div class="bs-card">
+            <h3>Convert</h3>
+            <form class="bs-form">
+              <div class="bs-field wide"><label for="codec-input">INPUT</label><textarea id="codec-input" spellcheck="false"></textarea></div>
+              <div class="bs-field"><label for="codec-op">OPERATION</label><select id="codec-op"><option value="b64e">Base64 encode</option><option value="b64d">Base64 decode</option><option value="b64url">Base64URL encode</option><option value="hexe">Hex encode</option><option value="hexd">Hex decode</option><option value="urle">URL encode</option><option value="urld">URL decode</option><option value="htmle">HTML escape</option><option value="htmld">HTML unescape</option><option value="rot13">ROT13</option><option value="bin">Binary</option><option value="hexdump">Hexdump</option><option value="entropy">Entropy analysis</option></select></div>
+              <button class="bs-btn" id="codec-run" type="button">RUN</button>
+              <button class="bs-btn ghost" id="codec-swap" type="button">OUTPUT → INPUT</button>
+              <div class="bs-field wide"><label for="codec-output">OUTPUT</label><textarea id="codec-output" spellcheck="false" readonly></textarea></div>
+            </form>
+          </div>
+          <div class="bs-card">
+            <h3>Regex bench</h3>
+            <form class="bs-form">
+              <div class="bs-field"><label for="regex-pattern">PATTERN</label><input id="regex-pattern" type="text" spellcheck="false" placeholder="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+" /></div>
+              <div class="bs-field" style="flex:0 1 110px"><label for="regex-flags">FLAGS</label><input id="regex-flags" type="text" value="g" spellcheck="false" /></div>
+              <div class="bs-field wide"><label for="regex-subject">SUBJECT</label><textarea id="regex-subject" spellcheck="false"></textarea></div>
+              <button class="bs-btn" id="regex-run" type="button">MATCH</button>
+            </form>
+            <pre class="bs-out" id="regex-out"></pre>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-subnet" aria-labelledby="subnet-title" hidden>
+          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
+          <h2 class="bs-h" id="subnet-title">Subnet Math</h2>
+          <p class="bs-sub">The arithmetic under every scope document. The class field tells you which space an address lives in — and the private, loopback, and link-local classes are exactly the ones this bench's edge probes refuse to touch.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="subnet-input">ADDRESS / CIDR</label><input id="subnet-input" type="text" spellcheck="false" placeholder="192.168.1.10/24" /></div>
+            <button class="bs-btn" id="subnet-run" type="button">CALCULATE</button>
+            <button class="bs-btn ghost" data-copy="subnet-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="subnet-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-cert" aria-labelledby="cert-title" hidden>
+          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
+          <h2 class="bs-h" id="cert-title">Certificate Decoder</h2>
+          <p class="bs-sub">Paste a certificate — PEM, base64 DER, or hex — and read it with a hand-rolled ASN.1 parser. The local twin of the TLS Inspector, for certs you already hold.</p>
+          <form class="bs-form">
+            <div class="bs-field wide"><label for="cert-input">CERTIFICATE</label><textarea id="cert-input" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
+            <button class="bs-btn" id="cert-run" type="button">DECODE</button>
+            <button class="bs-btn ghost" data-copy="cert-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="cert-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-payload" aria-labelledby="payload-title" hidden>
+          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
+          <h2 class="bs-h" id="payload-title">Payload Bench</h2>
+          <p class="bs-sub">Build the bytes before you send them anywhere: enter text, hex, or base64 and get every representation back with length, CRC32, entropy, and SHA-256 — the same discipline as nightjar's Send tab, where you see both sides of an exchange before it happens.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="payload-format">INPUT IS</label><select id="payload-format"><option value="text">text (UTF-8)</option><option value="hex">hex</option><option value="base64">base64</option></select></div>
+            <div class="bs-field wide"><label for="payload-input">PAYLOAD</label><textarea id="payload-input" spellcheck="false" placeholder="GET / HTTP/1.1"></textarea></div>
+            <button class="bs-btn" id="payload-run" type="button">BUILD</button>
+            <button class="bs-btn ghost" data-copy="payload-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="payload-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-mirror" aria-labelledby="mirror-title" hidden>
+          <p class="bs-kicker">SELF-AUDIT / KNOW YOUR OWN EXPOSURE</p>
+          <h2 class="bs-h" id="mirror-title">Mirror — pentest yourself first</h2>
+          <p class="bs-sub">Every probe on this bench can be turned around. This is your own EMCON picture: what this server saw, what your browser volunteers, what WebRTC hands to any page, and what the radios around you are offering.</p>
+          <div class="bs-card">
+            <h3>Edge echo</h3>
+            <p>Your request, as the edge received it — headers, TLS version and cipher, network identity. Anything here is visible to every site you visit.</p>
+            <div class="bs-btnrow"><button class="bs-btn" id="echo-run" type="button">SHOW ME</button><button class="bs-btn ghost" data-copy="echo-out" type="button">Copy</button></div>
+            <pre class="bs-out" id="echo-out"></pre>
+          </div>
+          <div class="bs-card">
+            <h3>WebRTC exposure</h3>
+            <p>WebRTC's ICE gathering shows pages addresses your browser would rather keep quiet. Run it and see what leaks — an mDNS name is the mask working; a raw LAN or public address is exposure.</p>
+            <div class="bs-btnrow"><button class="bs-btn" id="webrtc-run" type="button">RUN CHECK</button></div>
+            <pre class="bs-out" id="webrtc-out"></pre>
+          </div>
+          <div class="bs-card">
+            <h3>Fingerprint surface</h3>
+            <p>The quiet identifiers: cores, memory, screen, timezone, languages, automation flags. Individually dull; together, a name.</p>
+            <div class="bs-btnrow"><button class="bs-btn" id="fingerprint-run" type="button">READ SURFACE</button></div>
+            <pre class="bs-out" id="fingerprint-out"></pre>
+          </div>
+          <div class="bs-card">
+            <h3>Bluetooth — the listening post, in a page</h3>
+            <p>Web Bluetooth (Chrome/Edge) can ask a nearby BLE device what it is and what services it offers — read-only here, nothing is ever written. nightjar's native listening post does this passively and continuously; a web page gets one polite question at a time.</p>
+            <div class="bs-btnrow"><button class="bs-btn" id="ble-run" type="button">ASK A DEVICE</button></div>
+            <pre class="bs-out" id="ble-out"></pre>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-report" aria-labelledby="report-title" hidden>
+          <p class="bs-kicker">SESSION / DELIVERIES</p>
+          <h2 class="bs-h" id="report-title">Report</h2>
+          <p class="bs-sub">Every probe you run lands here, in order. Export it as JSON or Markdown before you close the page — the bench keeps nothing server-side, mirroring nightjar's rule that the evidence belongs to the operator.</p>
+          <div class="bs-btnrow" style="margin-bottom:1rem">
+            <button class="bs-btn" id="report-export-md" type="button">EXPORT MARKDOWN</button>
+            <button class="bs-btn ghost" id="report-export-json" type="button">EXPORT JSON</button>
+            <button class="bs-btn ghost" id="report-clear" type="button">CLEAR</button>
+          </div>
+          <div id="report-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <footer class="bs-foot">
+      <span>BLACKSITE WEB · NIGHTWARE LABZ</span>
+      <span>Doctrine: one knock, read, grade. Public targets only.</span>
+      <a href={nightjarRepo}>nightjar — the native instrument ↗</a>
+      <a href="/book/">The Orange Book</a>
+      <a href="https://github.com/nightwarelabz/nosuchmachine.net">Site source ↗</a>
+      <span>© {new Date().getUTCFullYear()} Chase Bryan</span>
+    </footer>
+  </div>
+  <script src="../scripts/suite.ts"></script>
 </BaseLayout>
