@@ -46,12 +46,21 @@ export async function onRequestGet(context: any) {
     if (ports.length > 32) return err("At most 32 ports per check. This is a connect check, not a sweep.");
   }
   let host: string;
+  let addresses: string[] = [];
   try {
     const g = await guardTarget(hostParam);
     host = g.host;
+    addresses = g.addresses || [];
   } catch (e: any) {
     return err(String(e?.message || e));
   }
+  // Cloudflare cannot TCP-connect to its own anycast ranges (loop
+  // prevention): a Cloudflare-hosted target reads "closed" on every door
+  // from inside, whatever its true state. Say so instead of lying.
+  const CF_V4: Array<[number, number]> = [[0x68000000, 0xfff80000], [0xac400000, 0xfffc0000], [0xa29f0000, 0xffff0000], [0xad000000, 0xffff0000], [0xaf500000, 0xfffe0000], [0x6a1fc000, 0xffffc000], [0x8d380000, 0xffff0000], [0x8d580000, 0xffff0000], [0xc6290000, 0xfffe0000], [0xc762b000, 0xfffff000]];
+  const ipv4Int = (ip: string) => ip.split(".").map(Number).reduce((a, o) => a * 256 + o, 0) >>> 0;
+  const isCf = (a: string) => a.includes(":") ? a.toLowerCase().startsWith("2606:4700:") || a.toLowerCase().startsWith("2803:f800:") || a.toLowerCase().startsWith("2405:b500:") || a.toLowerCase().startsWith("2405:8100:") || a.toLowerCase().startsWith("2a06:98c0:") || a.toLowerCase().startsWith("2c0f:f248:") : CF_V4.some(([net, mask]) => (ipv4Int(a) & mask) === (net & mask));
+  const cfHosted = addresses.length > 0 && addresses.every(isCf);
   const results: Awaited<ReturnType<typeof probe>>[] = [];
   // Small batches keep one request from becoming a scan cannon.
   for (let i = 0; i < ports.length; i += 6) {
@@ -63,6 +72,7 @@ export async function onRequestGet(context: any) {
     ok: true, host, checkedAt: new Date().toISOString(),
     summary: `${open.length} open of ${results.length} checked`,
     openPorts: open.map((r) => r.port), results,
+    warning: cfHosted ? "This target is Cloudflare-hosted, and Cloudflare cannot TCP-connect to its own anycast addresses — every door reads closed from inside regardless of its true state. Use the TLS/HTTP probes for this host (they ride fetch, not raw sockets), or knock it from the native bench." : undefined,
     note: "Connect check from a Cloudflare edge point of presence. 'Filtered / timed out' means no answer arrived in time — from here. Your mileage from another network will differ.",
   });
 }

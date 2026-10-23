@@ -180,11 +180,16 @@ function buildClientHello(host: string): Uint8Array {
 
 async function readCertificateFlight(host: string, port: number, timeoutMs = 8000) {
   const socket: any = connect({ hostname: host, port }, { secureTransport: "off", allowHalfOpen: false });
-  const writer = socket.writable.getWriter();
-  const reader = socket.readable.getReader();
   const deadline = Date.now() + timeoutMs;
+  let writer: any = null;
+  let reader: any = null;
   try {
+    // Streams are locked only AFTER opened settles — locking them first
+    // breaks the socket in the Workers runtime (connect appears to succeed
+    // but no byte ever crosses).
     await Promise.race([socket.opened, new Promise((_, r) => setTimeout(() => r(new Error("connect timeout")), timeoutMs))]);
+    writer = socket.writable.getWriter();
+    reader = socket.readable.getReader();
     await writer.write(buildClientHello(host));
     let buf = new Uint8Array(0);
     let serverVersion: number | null = null;
@@ -255,8 +260,8 @@ async function readCertificateFlight(host: string, port: number, timeoutMs = 800
     }
     return { certs: [], serverVersion, cipher, encrypted: false };
   } finally {
-    try { reader.releaseLock(); } catch { /* noop */ }
-    try { writer.releaseLock(); } catch { /* noop */ }
+    try { reader?.releaseLock(); } catch { /* noop */ }
+    try { writer?.releaseLock(); } catch { /* noop */ }
     try { socket.close(); } catch { /* noop */ }
   }
 }
