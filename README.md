@@ -17,6 +17,13 @@ refused in `functions/_lib/guard.ts` before contact and on every redirect hop.
 
 ## Structure
 
+- The OS also carries a **Daylight Bottle desk**: the age-encrypted
+  message-in-a-bottle service (bottle.nosuchmachine.net) plugged into the
+  room — mint/load an age identity, seal and drop bottles to keyring
+  recipients, fetch and open an inbox — speaking the service's exact
+  `nsm.daylight-bottle.*.v1` protocol through a same-origin edge bridge
+  (`functions/api/bottle.ts`), because the service deliberately sends no
+  CORS headers. Plaintext and identities never leave the browser.
 - `/blacksite/` is **BLACKSITE OS**: the nightjar console ported whole — a
   windowed web OS (boot, desktop, taskbar, process board) with a real shell
   over a persistent virtual filesystem, pipes/redirects/jobs, the full
