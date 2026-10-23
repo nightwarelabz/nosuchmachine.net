@@ -16,3 +16,11 @@
 /api/*
   ! Cache-Control
   Cache-Control: no-store
+
+# BLACKSITE OS is a machine for running the visitor's own programs in
+# their own browser (Skulpt Python, the JS engine room). That is eval by
+# design — scoped to the OS subtree only; every other page keeps the
+# strict policy above.
+/blacksite/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
