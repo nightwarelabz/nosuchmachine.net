@@ -34,25 +34,37 @@ assert.equal(
   catalog.length,
   "Project slugs must be unique",
 );
-assert.deepEqual(
-  catalog.filter((project) => project.featured).map((project) => project.slug),
-  ["orange"],
-  "Orange must be the only featured catalog project",
-);
 const sitemap = fs.readFileSync(path.join(root, "sitemap.xml"), "utf8");
 const home = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const homeProjects = catalog.filter((project) =>
-  home.includes(`href="/projects/${project.slug}/"`),
-);
-assert.deepEqual(
-  homeProjects.map((project) => project.slug),
-  ["orange"],
-  "Orange must be the only catalog project linked from the homepage",
-);
-assert.ok(!/<canvas\b/i.test(home), "Homepage must not include canvas visuals");
-assert.ok(
-  !/data-motion-toggle|data-animation-toggle/i.test(home),
-  "Homepage must not include animation or motion controls",
+const homeLinks = new Set(anchors(home).map((anchor) => anchor.href));
+const homeHeading = home.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1]
+  .replace(/<[^>]*>/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
+assert.match(homeHeading ?? "", /nightjar/i, "Homepage must introduce nightjar");
+assert.match(home, /nightware[\s-]*labz/i, "Homepage must identify NIGHTWARE LABZ");
+for (const section of [
+  "hero", "instrument", "skelli", "get-started", "lab", "about", "work", "current",
+]) {
+  assert.ok(
+    home.includes(`id="${section}"`),
+    `Missing homepage section or retained anchor: #${section}`,
+  );
+}
+for (const destination of [
+  "#get-started",
+  "https://github.com/nightwarelabz/nightjar",
+  "https://github.com/nightwarelabz/nightjar/releases",
+  "https://github.com/nightwarelabz/nightjar#get-started",
+  "/projects/orange/",
+]) {
+  assert.ok(homeLinks.has(destination), `Homepage missing destination: ${destination}`);
+}
+assert.match(home, /Xcode/i, "Homepage must explain the build-from-source option");
+assert.match(
+  home,
+  /signing|sign and|signed|provisioning/i,
+  "Homepage must explain iOS signing requirements",
 );
 
 assert.equal(book.chapters.length, 24, "The pinned Orange Book has 24 chapters");
@@ -257,5 +269,5 @@ for (const file of files) {
   }
 }
 console.log(
-  `Verified Orange-only homepage, ${book.chapters.length} hosted book chapters with reading navigation and search, ${catalog.length} project routes and source references, ${files.length} HTML pages, ${checkedLinks} local links/assets, sitemap, and CSP-compatible scripts.`,
+  `Verified NIGHTWARE LABZ / nightjar homepage, installation and source links, ${book.chapters.length} hosted book chapters with reading navigation and search, ${catalog.length} project routes and source references, ${files.length} HTML pages, ${checkedLinks} local links/assets, sitemap, and CSP-compatible scripts.`,
 );

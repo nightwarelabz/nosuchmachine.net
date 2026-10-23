@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "No Such Machine — signals, mathematics, cryptography, and independent work by Chase Bryan.",
+  "description": "NIGHTWARE LABZ — nightjar, a native network instrument for iPhone and Mac.",
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
     "start": "ASTRO_TELEMETRY_DISABLED=1 astro dev",

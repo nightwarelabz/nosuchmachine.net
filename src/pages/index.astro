@@ -1,119 +1,81 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import BookBlocks from "../components/BookBlocks.astro";
-import CodeListing from "../components/CodeListing.astro";
-import StatusBadge from "../components/StatusBadge.astro";
-import book from "../data/book.json";
-import { getProject } from "../data/projects";
-import { groupBookRows, loadBookSync, loadCurriculumRows, loadManifestInfo, loadManuscriptRows } from "../lib/book-status";
-import { orangeRevision, sha256Fixture, sha256FixturePath } from "../data/orange-sources";
-const orange = getProject("orange")!;
-const bookInfo = loadManifestInfo();
-const curriculumGroups = groupBookRows(loadCurriculumRows(book.chapters));
-const manuscriptGroups = groupBookRows(loadManuscriptRows(book.chapters));
-const bookSync = loadBookSync();
-const sha256FixtureUrl = `https://github.com/chasebryan/orange/blob/${orangeRevision}/${sha256FixturePath}`;
-const conformancePath = ["compiler", "crates", "orangec", "tests", "s3b_conformance.rs"];
+const repo = "https://github.com/nightwarelabz/nightjar";
+const rooms = [
+  { id: "listen", number: "01", name: "Listen", caption: "Find the signal.", title: "Understand what’s around you.", description: "A receive-only BLE listening post with device details, a decoder bench, and recorded sessions. See the activity. Keep the evidence.", items: ["BLE sightings & device details", "Decoder bench & tracker hunt", "JSONL session records"], link: `${repo}#inside-the-house`, linkLabel: "Explore the listening post" },
+  { id: "bench", number: "02", name: "Investigate", caption: "Work the bench.", title: "Go from a question to evidence.", description: "Discover services, inspect TLS, query DNS, and dissect imported captures. Open Blacksite for a command shell, protocol audit tools, and the EAZY audit battery.", items: ["Connect scans, DNS & TLS inspection", "Protocol-speaking probes", "Blacksite console & EAZY reports"], link: `${repo}/blob/main/docs/blacksite/README.md`, linkLabel: "Read the Blacksite manual" },
+  { id: "send", number: "03", name: "Connect", caption: "Give it a voice.", title: "Build the exchange. See both sides.", description: "Compose a payload, choose a destination, and send. Bring up TCP, UDP, or HTTP listeners, inspect what arrives, and work through a protocol on your own terms.", items: ["Destination → payload → send", "TCP, UDP & HTTP listeners", "Saved templates & receive inbox"], link: `${repo}#inside-the-house`, linkLabel: "Explore Send & Serve" },
+  { id: "protect", number: "04", name: "Protect", caption: "Set your posture.", title: "Keep your controls close.", description: "EMCON puts exposure and operation gates in one place. Knocktalk carries encrypted messages. The Vault brings hashes, keys, and authenticated file encryption to the bench.", items: ["Shared EMCON operation gates", "Knocktalk encrypted messaging", "Cryptography & file-encryption tools"], link: `${repo}#defensive-posture`, linkLabel: "Explore the controls" },
+];
 ---
-
 <BaseLayout>
-  <main id="main">
-    <section id="hero" class="hero shell" aria-labelledby="hero-title">
-      <p class="eyebrow">CHASE BRYAN <span aria-hidden="true">/</span> INDEPENDENT WORK</p>
-      <div class="hero-grid">
-        <div class="hero-copy">
-          <div class="hero-kicker">
-            <StatusBadge status={orange.status}>{orange.status}</StatusBadge>
-            <span class="eyebrow">OPEN SOURCE</span>
+  <main id="main" class="nightjar-home">
+    <section class="nw-hero shell" id="hero" aria-labelledby="hero-title">
+      <div class="hero-topline"><p class="eyebrow"><span class="red-line"></span> A NIGHTWARE LABZ INSTRUMENT</p><span class="serial">NOSUCHMACHINE.NET / EST. INDEPENDENT</span></div>
+      <div class="nw-hero-grid">
+        <div class="nw-hero-copy">
+          <h1 id="hero-title">nightjar<span>.</span></h1>
+          <p class="nw-hero-tagline">Your network.<br />In your hands.</p>
+          <p class="nw-hero-description">A native network instrument for iPhone and Mac. Listen, investigate, build, and communicate—with Skelli’s on-device intelligence at your side.</p>
+          <div class="nw-actions">
+            <a class="button button-primary" href="#get-started">Get nightjar <span aria-hidden="true">↗</span></a>
+            <a class="button button-secondary" href="#instrument">Explore the instrument <span aria-hidden="true">↓</span></a>
           </div>
-          <h1 id="hero-title">Orange<span class="hero-dot">.</span></h1>
-          <p class="hero-tagline">A mathematical language<br class="desktop-break" /> for cryptography.</p>
-          <p class="hero-statement">Mathematics, made <em>executable.</em></p>
-          <p class="hero-description">Write the specification. Make its meaning explicit. Explore it with a Rust frontend and an exact reference evaluator.</p>
-          <p class="hero-note">I build languages and tools at the intersection of mathematics and cryptography. My focus is <a href="#current">Orange<span aria-hidden="true"> ↙</span></a>.</p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="/book/">Book <span aria-hidden="true">→</span></a>
-            <a class="button button-secondary link-external" href={orange.githubUrl} rel="noopener noreferrer">Source <span class="external-icon" aria-hidden="true">↗</span></a>
-            <a class="button button-secondary" href="/projects/orange/">Reference <span aria-hidden="true">→</span></a>
-          </div>
+          <p class="platform-line">iOS 17+ <span>/</span> macOS 14+ <span>/</span> Open source</p>
         </div>
-        <figure class="hero-emblem" aria-hidden="true">
-          <img src="/projects/orange/emblem.svg" alt="" width="1024" height="1024" fetchpriority="high" />
-          <figcaption>MATHEMATICAL INTENT.<br />EXECUTABLE FORM.</figcaption>
-        </figure>
+        <div class="hero-insignia">
+          <div class="insignia-cross top-left" aria-hidden="true">+</div><div class="insignia-cross bottom-right" aria-hidden="true">+</div>
+          <span class="insignia-label">INDEPENDENT BY DESIGN</span>
+          <div class="insignia-orbit" aria-hidden="true"></div>
+          <img src="/brand/nightware/stallion.svg" alt="The NIGHTWARE LABZ black stallion with a crimson eye" width="1200" height="1200" fetchpriority="high" />
+          <div class="insignia-footer"><span>NIGHTWARE LABZ</span><span class="red">THE WORLD IS YOURS ↗</span></div>
+        </div>
       </div>
-      <p class="hero-caption">A language in development. Built in the open.</p>
+      <div class="hero-bottomline"><span>The listening post. The mouth. The bench.</span><a href={repo}>Built in the open <span aria-hidden="true">↗</span></a></div>
     </section>
 
-    <section id="current" class="band shell" aria-labelledby="current-title">
-      <div class="section-label">
-        <h2>What works today</h2>
-        <span class="section-label-note">LANGUAGE DESIGN & CRYPTOGRAPHY</span>
+    <div class="trust-strip"><div class="shell"><span><i aria-hidden="true"></i> Native on iPhone & Mac</span><span>On-device model inference</span><span>No accounts. No ads. No analytics.</span><a href={`${repo}/blob/main/PRIVACY.md`}>Read the privacy policy ↗</a></div></div>
+
+    <section id="instrument" class="nw-section shell" aria-labelledby="instrument-title">
+      <span id="work" class="anchor-alias"></span><span id="current" class="anchor-alias"></span>
+      <div class="section-heading"><p class="eyebrow"><span class="red">01 /</span> THE INSTRUMENT</p><span class="eyebrow">ONE HOUSE. CONNECTED TOOLS.</span></div>
+      <div class="section-intro"><h2 id="instrument-title">Follow your curiosity.<br /><span class="dim">Keep your tools together.</span></h2><p>From the first signal to the final report, nightjar gives the work a place to happen. A shared process board and session log connect the rooms.</p></div>
+      <div class="instrument-explorer" data-explorer>
+        <div class="instrument-tabs" role="tablist" aria-label="Explore nightjar capabilities" hidden>
+          {rooms.map((room, index) => <button type="button" id={`tab-${room.id}`} role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`panel-${room.id}`} tabindex={index === 0 ? 0 : -1} data-room-tab={room.id}><span>{room.number}</span>{room.name}<span aria-hidden="true">↗</span></button>)}
+        </div>
+        {rooms.map((room) => (
+          <div id={`panel-${room.id}`} class="instrument-panel" data-room-panel={room.id}>
+            <div class="instrument-visual" aria-hidden="true">
+              <div class="visual-top"><span>NIGHTJAR / {room.name.toUpperCase()}</span><span class="red">{room.number}</span></div>
+              {room.id === "listen" && <div class="radar"><div class="radar-ring ring-one"></div><div class="radar-ring ring-two"></div><div class="radar-ring ring-three"></div><div class="radar-axis horizontal"></div><div class="radar-axis vertical"></div><span class="radar-point point-one"></span><span class="radar-point point-two"></span><span class="radar-point point-three"></span><span class="radar-center"></span><span class="radar-label label-one">BLE / RECEIVE ONLY</span><span class="radar-label label-two">SIGHTINGS → SESSIONS</span></div>}
+              {room.id === "bench" && <div class="console-visual"><p><span>›</span> help bench</p><div>PROTOCOLS<br />EVIDENCE<br />AUDIT REPORTS</div><p><span>›</span> log <span class="console-cursor">_</span></p></div>}
+              {room.id === "send" && <div class="flow-visual"><span>01 / DESTINATION</span><i>↓</i><span>02 / PAYLOAD</span><i>↓</i><span class="flow-last">03 / SEND ↗</span></div>}
+              {room.id === "protect" && <div class="posture-visual"><span>EMISSION CONTROL</span><div><i>C</i><i>B</i><i>A</i></div><p>CHARLIE / BRAVO / ALPHA</p><b>EXPOSURE → POLICY → GATES</b></div>}
+              <div class="visual-bottom"><span>WORKFLOW ILLUSTRATION</span><span>NOT A LIVE SESSION</span></div>
+            </div>
+            <div class="instrument-copy"><p class="eyebrow red">{room.caption}</p><h3>{room.title}</h3><p>{room.description}</p><ul>{room.items.map((item) => <li><span aria-hidden="true">↗</span>{item}</li>)}</ul><a class="text-link" href={room.link}>{room.linkLabel} <span aria-hidden="true">↗</span></a></div>
+          </div>
+        ))}
       </div>
-      <h2 id="current-title" class="eyebrow section-kicker"><span class="status-dot" aria-hidden="true"></span> CURRENT PROJECT</h2>
-      <div class="principles" aria-label="Inside Orange">
-        <div class="principle"><span class="principle-number">01 / SPECIFICATION</span><h3>Start with the mathematics.</h3><p>Typed specifications keep the meaning of a cryptographic idea explicit.</p></div>
-        <div class="principle"><span class="principle-number">02 / PRECISION</span><h3>Make the rules clear.</h3><p>Integers, fixed-width words, and modular values each have defined semantics.</p></div>
-        <div class="principle"><span class="principle-number">03 / EVALUATION</span><h3>Inspect the result.</h3><p>A deterministic reference evaluator makes specifications executable and inspectable.</p></div>
-      </div>
+      <p class="instrument-footnote">Built for the platform it runs on. iOS uses connect scans and imported captures; socket work follows the app’s lifecycle. <a href={`${repo}#platform-boundaries`}>Platform details ↗</a></p>
     </section>
 
-    <section id="listing" class="band shell" aria-labelledby="listing-title">
-      <div class="section-label">
-        <h2 id="listing-title">A checked SHA-256 fragment</h2>
-      </div>
-      <CodeListing><a slot="caption" href={sha256FixtureUrl}>{sha256FixturePath.split("/").map((segment, index, parts) => (
-        <>
-          <span class="code-path-seg">{segment}</span>
-          {index < parts.length - 1 && <span class="code-path-sep">/<wbr /></span>}
-        </>
-      ))}</a>{sha256Fixture}</CodeListing>
-      <p>{conformancePath.map((segment, index, parts) => (
-        <>
-          <span class="code-path-seg">{segment}</span>
-          {index < parts.length - 1 && <span class="code-path-sep">/<wbr /></span>}
-        </>
-      ))} evaluates this file and expects sha256::round0_a = 0x5d6aebcd. That is a conformance check of the fixture. It is not native code, a proof, or a security property.</p>
+    <section id="skelli" class="skelli-section" aria-labelledby="skelli-title"><div class="shell skelli-grid">
+      <div class="skelli-copy"><p class="eyebrow"><span class="red">02 /</span> MEET SKELLI</p><h2 id="skelli-title">Intelligence.<br /><span class="dim">Inside the instrument.</span></h2><p>Skelli knows the manual, reads live app state, and works the controls. Ask her to investigate, build a packet, run console commands, or put a result in Deliveries.</p><p class="skelli-note">Her model inference runs on your device. Requested research, model downloads, and configured connections use the network.</p><a class="text-link" href={`${repo}#skelli-the-houses-specialist`}>Meet your onboard specialist <span aria-hidden="true">↗</span></a></div>
+      <div class="skelli-diagram"><div class="skelli-diagram-head"><span class="eyebrow">THE WORK, CONNECTED</span><span class="red" aria-hidden="true">↗</span></div><div class="skelli-core"><span class="core-symbol" aria-hidden="true">✳</span><strong>skelli<span class="red">.</span></strong><span>ON-DEVICE INTELLIGENCE</span></div><div class="skelli-path"><div><span>01</span><strong>Read the state</strong><small>Manual + live instrument</small></div><div><span>02</span><strong>Work the controls</strong><small>Tools + console + code</small></div><div><span>03</span><strong>Keep the result</strong><small>Reports + Deliveries</small></div></div><p>Apple’s model on eligible devices.<br />Open-weights models through the Weights bench.</p></div>
+    </div></section>
+
+    <section id="get-started" class="nw-section shell" aria-labelledby="start-title">
+      <div class="section-heading"><p class="eyebrow"><span class="red">03 /</span> MAKE IT YOURS</p><a class="eyebrow" href={`${repo}/releases`}>RELEASES & CHANGELOG ↗</a></div>
+      <div class="section-intro"><h2 id="start-title">The bench is open.</h2><p>Choose your platform. Read the setup. Put nightjar to work.</p></div>
+      <div class="install-grid"><article class="install-card"><div class="install-top"><span class="eyebrow">THE FLAGSHIP / iOS 17+</span><span class="platform-icon" aria-hidden="true">▯</span></div><h3>On your iPhone.</h3><p>Build and sideload with Xcode, or start with the available iOS release package. Signing and provisioning are required.</p><a class="button button-primary" href={`${repo}#build-for-iphone`}>Set up for iPhone <span aria-hidden="true">↗</span></a><a class="text-link" href={`${repo}/releases`}>View release downloads <span aria-hidden="true">↗</span></a><small>No App Store or TestFlight listing.</small></article>
+      <article class="install-card"><div class="install-top"><span class="eyebrow">THE DESKTOP / macOS 14+</span><span class="platform-icon desktop-icon" aria-hidden="true">▱</span></div><h3>On your Mac.</h3><p>The same instrument, with a native sidebar and room to spread out. Build from source with the nightjar-mac scheme in Xcode.</p><a class="button button-secondary" href={`${repo}#build-for-mac`}>Build for Mac <span aria-hidden="true">↗</span></a><a class="text-link" href={`${repo}#get-started`}>Requirements & setup <span aria-hidden="true">↗</span></a><small>A Mac with Xcode is required to build.</small></article></div>
+      <div class="source-row"><div><span class="red" aria-hidden="true">&lt;/&gt;</span><p><strong>Open source. Open to inspection.</strong><br />Read the code, explore the manuals, or contribute on GitHub.</p></div><a class="text-link" href={repo}>Explore the source <span aria-hidden="true">↗</span></a></div>
+      <div class="faq"><details><summary>What does Skelli need to run?<span aria-hidden="true">+</span></summary><p>Apple’s on-device model requires iOS 26, Apple Intelligence-capable hardware, and Apple Intelligence enabled. Open-weights models can be selected and downloaded in Skelli → Weights; availability depends on device memory. See the <a href={`${repo}#requirements`}>current requirements</a>.</p></details><details><summary>Can I install the iPhone release directly?<span aria-hidden="true">+</span></summary><p>An IPA still needs signing and provisioning suitable for your device. Start with the <a href={`${repo}/blob/main/ota/README.md`}>installation guide</a> for sideloading, SideStore, and update options. Free Personal Team signing lasts seven days.</p></details><details><summary>Where are the manuals?<span aria-hidden="true">+</span></summary><p>Start with the <a href={`${repo}#documentation`}>documentation index</a>, the <a href={`${repo}/blob/main/ios/README.md`}>iOS manual</a>, or the <a href={`${repo}/blob/main/docs/blacksite/README.md`}>Blacksite manual</a>. Source development can move ahead of packaged releases; check the release notes for the build you install.</p></details></div>
     </section>
 
-    <section id="non-claims" class="band shell" aria-labelledby="non-claims-title">
-      <div class="note">
-        <p class="eyebrow">PROJECT STATUS / {orange.status.toUpperCase()}</p>
-        <h2 id="non-claims-title">What Orange does not claim</h2>
-        <ul>
-          {orange.limitations.map((limit) => (
-            <li>{limit}</li>
-          ))}
-        </ul>
-      </div>
-    </section>
-
-    <section id="book-parts" class="band shell" aria-labelledby="book-parts-title">
-      <div class="section-label">
-        <h2 id="book-parts-title">{book.title}</h2>
-        <a href="/book/">Read the Orange Book <span aria-hidden="true">→</span></a>
-      </div>
-      <p>This list is the original 17-chapter manuscript plus appendices, docs/THE_ORANGE_BOOK.md. It is an earlier draft. Those chapter numbers stay until one renumbering pass later. It is not the finished three-part Book.</p>
-      <p>Novice, Journeyman, and Master is a separate curriculum in docs/book/, being written now. It is not this list, and it is not complete.</p>
-      <BookBlocks
-        blockTag="h3"
-        variant="cards"
-        curriculumGroups={curriculumGroups}
-        manuscriptGroups={manuscriptGroups}
-        version={bookInfo.version}
-        sync={bookSync}
-      />
-    </section>
-
-    <section id="about" class="about-section shell" aria-labelledby="about-title">
-      <div class="about-label"><p class="eyebrow">BEHIND THE WORK</p><span class="about-monogram" aria-hidden="true">cb.</span></div>
-      <div class="about-copy">
-        <h2 id="about-title">Chase Bryan.</h2>
-        <p>I’m interested in how we describe complex systems—and how we make those descriptions precise enough to work with.</p>
-        <p>Orange brings that work into focus: mathematics, language design, and cryptography, in one ongoing project.</p>
-        <a class="text-link link-external" href="https://github.com/chasebryan" rel="noopener noreferrer">Elsewhere on GitHub <span class="external-icon" aria-hidden="true">↗</span></a>
-      </div>
-      <div class="about-note"><span class="eyebrow">NO SUCH MACHINE</span><p>Independent research.<br />Open source.<br />A work in progress.</p></div>
-    </section>
+    <section id="lab" class="lab-section shell" aria-labelledby="lab-title"><span id="about" class="anchor-alias"></span><div class="lab-identity"><p class="eyebrow"><span class="red">04 /</span> BEHIND THE INSTRUMENT</p><img src="/brand/nightware/wordmark.svg" width="390" height="53" alt="NIGHTWARE LABZ" loading="lazy" /><h2 id="lab-title">The world is yours.</h2></div><div class="lab-copy"><p>Independent software by Chase Bryan. Tools for people who want to look closer, understand the systems around them, and make something of their own.</p><a class="text-link" href="https://github.com/nightwarelabz">Inside the lab <span aria-hidden="true">↗</span></a><div class="lab-archive"><span class="eyebrow">ALSO FROM THE LAB</span><a href="/projects/orange/">Orange <span>A mathematical language for cryptography ↗</span></a><a href="/book/">The Orange Book <span>Read the hosted manuscript ↗</span></a></div></div></section>
   </main>
+  <script src="../scripts/nightjar.ts"></script>
 </BaseLayout>

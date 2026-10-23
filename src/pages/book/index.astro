@@ -32,7 +32,7 @@ const sync = loadBookSync();
 
   <section class="book-checks" aria-labelledby="book-checks-title">
     <h2 id="book-checks-title">How the hosted chapters are checked</h2>
-    <p>The hosted chapters are manuscript {book.version}, snapshot {book.snapshot}, revision {book.revision}. The site checks that text against the vendored manuscript. That check is not a new compiler run. The home-page listing is compiler/fixtures/s3b/valid-sha256-functions.or. compiler/crates/orangec/tests/s3b_conformance.rs expects sha256::round0_a = 0x5d6aebcd. A fixture result is not a proof or a security claim. Compiler sentences on this site were checked against orange main {orangeRevision} on 9 October 2026, a later revision than this manuscript. Compiler tests were not re-run.</p>
+    <p>The hosted chapters are manuscript {book.version}, snapshot {book.snapshot}, revision {book.revision}. The site checks that text against the vendored manuscript. That check is not a new compiler run. The SHA-256 reference fixture is compiler/fixtures/s3b/valid-sha256-functions.or. compiler/crates/orangec/tests/s3b_conformance.rs expects sha256::round0_a = 0x5d6aebcd. A fixture result is not a proof or a security claim. Compiler sentences on this site were checked against orange main {orangeRevision} on 9 October 2026, a later revision than this manuscript. Compiler tests were not re-run.</p>
   </section>
 
   <p class="book-start">

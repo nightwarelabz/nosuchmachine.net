@@ -1,90 +1,66 @@
 ---
 import "../styles/global.css";
-interface Props {
-  title?: string;
-  description?: string;
-}
+import "../styles/nightware.css";
+interface Props { title?: string; description?: string; }
 const {
-  title = "No Such Machine",
-  description = "Independent work by Chase Bryan. Orange is a pre-alpha mathematical language for cryptography. The compiler checks and evaluates a typed fragment; it does not generate native code or check proofs.",
+  title = "nightjar — Your network. In your hands.",
+  description = "Meet nightjar by NIGHTWARE LABZ: a native network instrument for iPhone and Mac. BLE listening, protocol tools, the Blacksite console, and Skelli’s on-device intelligence.",
 } = Astro.props;
-const pageTitle =
-  title === "No Such Machine"
-    ? "No Such Machine — Chase Bryan"
-    : `${title} · No Such Machine`;
+const pageTitle = `${title} · NIGHTWARE LABZ`;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const isNotFound = Astro.url.pathname.replace(/\/$/, "") === "/404";
-const here = Astro.url.pathname;
-const onHome = here === "/";
-const onBook = here.startsWith("/book/");
-const onReference = here.startsWith("/projects/orange/");
+const onBook = Astro.url.pathname.startsWith("/book/");
 ---
-
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f3f0e8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#12110f" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#090b0e" />
     <meta name="description" content={description} />
-    <meta name="author" content="Chase Bryan" />
-    <meta property="og:site_name" content="No Such Machine" />
+    <meta name="author" content="NIGHTWARE LABZ / Chase Bryan" />
+    <meta property="og:site_name" content="NIGHTWARE LABZ" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
-    <meta
-      property="og:image"
-      content={new URL("/brand/social.png", Astro.site).toString()}
-    />
+    <meta property="og:image" content={new URL("/brand/nightware/social.png", Astro.site).toString()} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Orange, a mathematical language for cryptography. Independent work by Chase Bryan at No Such Machine." />
+    <meta property="og:image:alt" content="nightjar by NIGHTWARE LABZ. Your network. In your hands. Native for iPhone and Mac." />
     <meta name="twitter:card" content="summary_large_image" />
-    {isNotFound ? (
-      <meta name="robots" content="noindex" />
-    ) : (
-      <link rel="canonical" href={canonical} />
-    )}
-    <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/brand/site-icon.png" />
+    {isNotFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    <link rel="icon" href="/brand/nightware/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/brand/nightware/nightjar-icon.png" />
     <link rel="sitemap" href="/sitemap.xml" />
     {onBook && <link rel="stylesheet" href="/book-nav-boot.css" />}
     <title>{pageTitle}</title>
   </head>
   <body>
-    <a class="skip-link" href="#main">
-      Skip to content
-    </a>
+    <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header shell">
-      <a class="wordmark" href="/" aria-label="No Such Machine, home">
-        <span class="brand-symbol" aria-hidden="true"></span>
-        <span>No Such Machine</span>
+      <a class="wordmark" href="/" aria-label="NIGHTWARE LABZ, home">
+        <span class="nw-sign" aria-hidden="true">N<span>↗</span></span>
+        <img src="/brand/nightware/wordmark.svg" width="190" height="26" alt="NIGHTWARE LABZ" />
       </a>
       <nav aria-label="Main navigation">
-        <a href="/#hero" aria-current={onHome ? "page" : undefined}>Orange</a>
-        <a href="/book/" aria-current={onBook ? "location" : undefined}>Book</a>
-        <a href="/projects/orange/" aria-current={onReference ? "page" : undefined}>Reference</a>
-        <a class="link-external" href="https://github.com/chasebryan/orange" rel="noopener noreferrer">
-          Source <span class="external-icon" aria-hidden="true">↗</span>
-        </a>
-        <a href="/#about">About</a>
+        <a href="/#instrument">The instrument</a>
+        <a href="/#skelli">Skelli</a>
+        <a href="/#lab">The lab</a>
+        <a class="nav-cta" href="/#get-started">Get nightjar <span aria-hidden="true">↗</span></a>
       </nav>
     </header>
     <slot />
     <footer class="site-footer shell">
       <div>
-        <a class="footer-name" href="/">
-          No Such Machine
-        </a>
-        <p>Independent research & engineering by Chase Bryan.</p>
+        <a class="footer-name" href="/">NIGHTWARE LABZ<span class="red"> /</span></a>
+        <p>Independent tools. Open source. The world is yours.</p>
       </div>
       <div class="footer-links">
-        <a href="https://github.com/chasebryan/nosuchmachine.net">
-          Site source
-        </a>
+        <a href="/book/">The Orange Book</a>
+        <a href="https://github.com/nightwarelabz/nightjar/blob/main/PRIVACY.md">Privacy</a>
+        <a href="https://github.com/nightwarelabz/nosuchmachine.net">Site source ↗</a>
         <span>© {new Date().getUTCFullYear()} Chase Bryan</span>
       </div>
     </footer>
