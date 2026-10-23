@@ -416,8 +416,54 @@ async function runBle() {
   } catch (e: any) { show("ble-out", `Cancelled or failed: ${e?.message || e}`); }
 }
 
+/* ---------------- PQC scanner (the snoot front door) ---------------- */
+const PQC_RULES: Array<{ re: RegExp; name: string; risk: string; replace: string }> = [
+  { re: /TLS_RSA_WITH|rsa[_-]?(encryption|key[_-]?exchange)/i, name: "RSA key transport (TLS_RSA_*)", risk: "no forward secrecy; recorded sessions open with the key — or a quantum machine", replace: "TLS 1.3 with (EC)DHE, migrating to X25519+ML-KEM-768 hybrid key exchange" },
+  { re: /\bssh-rsa\b|ssh-dss/i, name: "SSH RSA/DSA host or user keys (ssh-rsa, ssh-dss)", risk: "Shor's algorithm breaks RSA/DSA outright; ssh-rsa (SHA-1) is already retired by OpenSSH", replace: "Ed25519 today; ML-DSA keys as implementations land" },
+  { re: /\brsa\b[^0-9]{0,12}(1024|2048|3072|4096)|(?:1024|2048|3072|4096)[^0-9]{0,6}bit[^a-z]{0,4}rsa|BEGIN RSA/i, name: "RSA key", risk: "Shor's algorithm factors the modulus — the whole key falls at once", replace: "ML-KEM-768 (FIPS 203) for key establishment · ML-DSA-65 (FIPS 204) for signatures" },
+  { re: /ecdsa|secp256k1|prime256v1|p-256|p-384|secp384r1|nistp\d{3}|BEGIN EC /i, name: "ECDSA / NIST-curve key", risk: "Shor's algorithm solves the discrete log on the curve", replace: "ML-DSA-65 (FIPS 204); SLH-DSA (FIPS 205) where conservative hash-based signatures fit" },
+  { re: /x25519|curve25519|ecdh|elliptic curve diffie/i, name: "ECDH key agreement (X25519 / ECDH)", risk: "Shor's algorithm — the shared secret is recoverable from the transcript", replace: "X25519+ML-KEM-768 hybrid (the deployed transition), then ML-KEM alone" },
+  { re: /diffie|modp\d*|\bdh(?:14|15|16|17|18| group)/i, name: "Finite-field Diffie-Hellman", risk: "Shor's algorithm solves finite-field discrete logs at any group size", replace: "ML-KEM-768 (FIPS 203)" },
+  { re: /\bdsa\b/i, name: "DSA signatures", risk: "broken classically at common sizes and quantumly at all sizes", replace: "ML-DSA-65 (FIPS 204)" },
+  { re: /3des|tripledes|\bdes\b/i, name: "DES / 3DES cipher", risk: "64-bit block (Sweet32) and long past its classical prime", replace: "AES-256-GCM or ChaCha20-Poly1305" },
+  { re: /sha-?1|md5/i, name: "MD5 / SHA-1 (in a signature or fingerprint context)", risk: "collision-broken classically; never mind the quantum machine", replace: "SHA-256 / SHA-384 / SHA-3" },
+];
+const PQC_GOOD: Array<{ re: RegExp; name: string }> = [
+  { re: /ml-kem|kyber|x25519mlkem768/i, name: "ML-KEM / Kyber key establishment — post-quantum, good" },
+  { re: /ml-dsa|dilithium/i, name: "ML-DSA / Dilithium signatures — post-quantum, good" },
+  { re: /slh-dsa|sphincs/i, name: "SLH-DSA / SPHINCS+ signatures — post-quantum, good" },
+  { re: /ed25519/i, name: "Ed25519 — classical, but the strongest classical signature; fine until the migration lands" },
+  { re: /aes-?256|chacha20/i, name: "AES-256 / ChaCha20 — symmetric; Grover only halves the margin, 256 stays sound" },
+];
+function runPqc() {
+  const text = val("pqc-input");
+  if (!text.trim()) return show("pqc-out", "Paste something with cryptography in it first.");
+  const lines = text.split("\n");
+  const findings: string[] = [];
+  let classical = 0;
+  lines.forEach((line, i) => {
+    for (const rule of PQC_RULES) {
+      if (rule.re.test(line)) { classical++; findings.push(`line ${i + 1}: ${rule.name}\n  found: ${line.trim().slice(0, 110)}\n  risk: ${rule.risk}\n  replacement: ${rule.replace}`); break; }
+    }
+  });
+  const good: string[] = [];
+  for (const g of PQC_GOOD) if (g.re.test(text)) good.push(`  ✓ ${g.name}`);
+  const out = [
+    `PQC SCAN — ${lines.length} lines read`,
+    classical ? `${classical} classical finding(s) a cryptographically relevant quantum machine would open:` : "no classical algorithms found in what you pasted.",
+    ...(findings.length ? ["", ...findings] : []),
+    ...(good.length ? ["", "already sound:", ...good] : []),
+    "",
+    "the threat model: harvest now, decrypt later. anything encrypted under RSA/ECC/DH today should be treated as public on the day a capable machine exists — migrate key establishment first (it protects recorded traffic), signatures second (they protect the future).",
+    "full snoot (codebase walk + CBOM): https://github.com/nightwarelabz/snoot",
+  ].join("\n");
+  show("pqc-out", out);
+  emitReport("pqc", `PQC scan — ${classical} classical findings`, out);
+}
+
 /* ---------------- wiring ---------------- */
 export function initLab() {
+  on("pqc-run", "click", runPqc);
   on("hash-run", "click", () => void runHash());
   on("hash-file", "change", (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void runFileHash(f); });
   on("codec-run", "click", runCodec);

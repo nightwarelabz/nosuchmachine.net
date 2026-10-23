@@ -8,6 +8,7 @@ import { registerBenchVerbs } from "./os-verbs3";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import roster from "../data/blacksite-commands.json";
+import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 
 const os = new BlacksiteOS();
 let zTop = 10;
@@ -33,6 +34,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   settings: { title: "House Settings", icon: "⚙" },
   help: { title: "Help — the 426", icon: "?" },
   bottle: { title: "Daylight Bottle", icon: "☀" },
+  system: { title: "System — the Noether register", icon: "⬢" },
 };
 
 export function openApp(app: string, arg?: string) {
@@ -53,9 +55,11 @@ export function openApp(app: string, arg?: string) {
   const controls = el("span", "os-win-controls");
   const minBtn = el("button", "os-win-btn", "–");
   minBtn.setAttribute("aria-label", "Minimize");
+  const maxBtn = el("button", "os-win-btn", "☐");
+  maxBtn.setAttribute("aria-label", "Maximize");
   const closeBtn = el("button", "os-win-btn os-win-close", "×");
   closeBtn.setAttribute("aria-label", "Close");
-  controls.append(minBtn, closeBtn);
+  controls.append(minBtn, maxBtn, closeBtn);
   head.append(title, controls);
   const body = el("div", "os-win-body");
   win.append(head, body);
@@ -69,6 +73,10 @@ export function openApp(app: string, arg?: string) {
   win.addEventListener("pointerdown", () => focusWindow(win));
   closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); });
   minBtn.addEventListener("click", () => { win.style.display = "none"; });
+  const toggleMax = () => toggleMaximize(win);
+  maxBtn.addEventListener("click", toggleMax);
+  head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
+  win.classList.add("os-win-in");
   focusWindow(win);
   BUILDERS[app]?.(body, arg);
 }
@@ -84,7 +92,19 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   btn.addEventListener("click", () => { win.style.display = win.style.display === "none" ? "" : win.style.display; focusWindow(win); });
   bar.appendChild(btn);
 }
+function toggleMaximize(win: HTMLElement) {
+  if (win.classList.contains("maxed")) {
+    win.classList.remove("maxed");
+    const prev = (win as any)._prevRect as { l: string; t: string; w: string; h: string } | undefined;
+    if (prev) { win.style.left = prev.l; win.style.top = prev.t; win.style.width = prev.w; win.style.height = prev.h; }
+  } else {
+    (win as any)._prevRect = { l: win.style.left, t: win.style.top, w: win.style.width, h: win.style.height };
+    win.classList.add("maxed");
+  }
+  focusWindow(win);
+}
 function startDrag(e: PointerEvent, win: HTMLElement) {
+  if (win.classList.contains("maxed")) return;
   const startX = e.clientX - win.offsetLeft;
   const startY = e.clientY - win.offsetTop;
   const move = (ev: PointerEvent) => {
@@ -320,6 +340,42 @@ function buildEditor(body: HTMLElement, arg?: string) {
   setTimeout(() => area.focus(), 50);
 }
 
+
+const BOOT_AT = Date.now();
+function buildSystem(body: HTMLElement) {
+  const wrap = el("div", "os-settings");
+  const stats = el("div", "os-sys-grid");
+  const vs = vfsStats(os.files as any);
+  let lsBytes = 0; try { for (const k of Object.keys(localStorage)) if (k.startsWith("blacksite-")) lsBytes += (localStorage.getItem(k) || "").length; } catch { /* private mode */ }
+  const cells: Array<[string, string]> = [
+    [OS_RELEASE.version + " " + OS_RELEASE.codename, "RELEASE"],
+    [String(VERBS.size), "VERBS LIVE + EDGE"],
+    ["426", "COMMANDS ON THE ROSTER"],
+    [`${vs.files}`, "FILES IN THE VFS"],
+    [`${(vs.bytes / 1024).toFixed(1)} KB`, "VFS CONTENT"],
+    [`${(lsBytes / 1024).toFixed(1)} KB`, "LOCAL STORAGE FOOTPRINT"],
+    [`${Math.floor((Date.now() - BOOT_AT) / 1000)}s`, "UPTIME (THIS BOOT)"],
+    [os.emcon.toUpperCase(), "EMCON CONDITION"],
+  ];
+  for (const [v, k] of cells) { const c = el("div", "os-sys-stat"); c.append(el("strong", "", v), el("span", "", k)); stats.appendChild(c); }
+  const h = el("h3", "", "THE COMPONENT REGISTER — every subsystem, declared");
+  const table = el("table", "os-sys-table");
+  const head = el("tr"); head.append(el("th", "", "COMPONENT"), el("th", "", "WHAT IT IS"), el("th", "", "STATE"));
+  table.appendChild(head);
+  const facts = { live: [...VERBS.values()].filter((v) => v.status === "LIVE").length, edge: [...VERBS.values()].filter((v) => v.status === "EDGE").length, emcon: os.emcon, skReady: typeof (window as any).Sk !== "undefined" };
+  for (const [name, what, state] of registerRows(facts)) {
+    const tr = el("tr");
+    const tdState = el("td", "", state); tdState.style.color = state === "LIVE" ? "var(--os-green)" : "var(--os-muted)";
+    tr.append(el("td", "", name), el("td", "", what), tdState);
+    table.appendChild(tr);
+  }
+  const note = el("p", "os-note", "The register is the WUCI OS discipline carried to the web: components are declared, budgets are visible, and limits are named instead of hidden. Run `posture` in the terminal for the room's graded self-assessment, `register` for this table as text.");
+  const refresh = el("button", "os-btn", "refresh the budgets");
+  refresh.addEventListener("click", () => { body.innerHTML = ""; buildSystem(body); });
+  wrap.append(stats, h, table, note, refresh);
+  body.appendChild(wrap);
+}
+
 /* ---------------- Processes / Journal / Gauntlet / Settings / Help ---------------- */
 function buildProcesses(body: HTMLElement) {
   const pre = el("pre", "os-plain");
@@ -394,6 +450,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   terminal: buildTerminal, files: buildFiles, editor: buildEditor, processes: buildProcesses,
   journal: buildJournal, gauntlet: buildGauntlet, settings: buildSettings, help: buildHelp,
   bottle: (body) => buildBottleApp(body, os),
+  system: buildSystem,
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
@@ -406,36 +463,54 @@ function setWallpaper(kind: string) {
   const desk = desktop();
   if (kind === "none") { desk.style.backgroundImage = ""; return; }
   const canvas = document.createElement("canvas");
-  canvas.width = 640; canvas.height = 400;
+  canvas.width = 960; canvas.height = 600;
   const g = canvas.getContext("2d")!;
+  const W = 960, H = 600;
+  const accent = getComputedStyle(root()).getPropertyValue("--os-accent").trim() || "#ff3b47";
+  const base = g.createLinearGradient(0, 0, W * 0.3, H);
+  base.addColorStop(0, "#0a0f1a"); base.addColorStop(0.55, "#05070c"); base.addColorStop(1, "#030408");
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+  // nebula: two soft accent glows, low and slow
+  const hexRgb = /^#?([0-9a-f]{6})$/i.exec(accent);
+  const rgb = hexRgb ? [parseInt(hexRgb[1].slice(0, 2), 16), parseInt(hexRgb[1].slice(2, 4), 16), parseInt(hexRgb[1].slice(4, 6), 16)] : [255, 59, 71];
+  const neb = (x: number, y: number, r: number, a: number) => {
+    const rg = g.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`);
+    rg.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  };
+  g.globalCompositeOperation = "lighter";
+  neb(W * 0.78, H * 0.2, 340, 0.1);
+  neb(W * 0.16, H * 0.82, 300, 0.07);
+  g.globalCompositeOperation = "source-over";
   if (kind === "stars") {
-    const grad = g.createRadialGradient(320, 200, 40, 320, 200, 420);
-    grad.addColorStop(0, "#101a2e"); grad.addColorStop(1, "#04060a");
-    g.fillStyle = grad; g.fillRect(0, 0, 640, 400);
-    for (let i = 0; i < 260; i++) { const x = Math.random() * 640, y = Math.random() * 400, r = Math.random() * 1.4; g.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.75})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
-    g.fillStyle = "rgba(255,59,71,0.85)"; g.beginPath(); g.arc(512, 82, 2.2, 0, 7); g.fill();
-  } else if (kind === "plasma") {
-    const img = g.createImageData(640, 400);
-    for (let y = 0; y < 400; y++) for (let x = 0; x < 640; x++) {
-      const v = Math.sin(x / 44) + Math.sin(y / 31) + Math.sin((x + y) / 52) + Math.sin(Math.hypot(x - 320, y - 200) / 26);
-      const idx = (y * 640 + x) * 4;
-      img.data[idx] = 90 + 60 * Math.sin(v * 1.7);
-      img.data[idx + 1] = 22 + 18 * Math.cos(v * 1.3);
-      img.data[idx + 2] = 60 + 50 * Math.sin(v * 0.9 + 2);
-      img.data[idx + 3] = 255;
+    for (let i = 0; i < 420; i++) { const x = Math.random() * W, y = Math.random() * H, r = Math.random() * 1.5; g.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.8})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+    g.fillStyle = accent; g.beginPath(); g.arc(W * 0.8, H * 0.18, 2.6, 0, 7); g.fill();
+    g.strokeStyle = "rgba(255,255,255,0.25)"; g.beginPath(); g.moveTo(W * 0.8 - 7, H * 0.18); g.lineTo(W * 0.8 + 7, H * 0.18); g.moveTo(W * 0.8, H * 0.18 - 7); g.lineTo(W * 0.8, H * 0.18 + 7); g.stroke();
+  } else if (kind === "plasma" || kind === "mandelbrot") {
+    const small = document.createElement("canvas"); small.width = 480; small.height = 300;
+    const sg = small.getContext("2d")!;
+    const img = sg.createImageData(480, 300);
+    for (let y = 0; y < 300; y++) for (let x = 0; x < 480; x++) {
+      const idx = (y * 480 + x) * 4;
+      if (kind === "plasma") {
+        const v = Math.sin(x / 33) + Math.sin(y / 23) + Math.sin((x + y) / 39) + Math.sin(Math.hypot(x - 240, y - 150) / 19);
+        img.data[idx] = 70 + 55 * Math.sin(v * 1.7); img.data[idx + 1] = 14 + 14 * Math.cos(v * 1.3); img.data[idx + 2] = 44 + 40 * Math.sin(v * 0.9 + 2); img.data[idx + 3] = 255;
+      } else {
+        let zx = 0, zy = 0; const cx = (x / 480) * 3.2 - 2.2, cy = (y / 300) * 2.2 - 1.1; let iter = 0;
+        while (zx * zx + zy * zy < 4 && iter < 42) { const t = zx * zx - zy * zy + cx; zy = 2 * zx * zy + cy; zx = t; iter++; }
+        img.data[idx] = iter * 6; img.data[idx + 1] = iter * 2; img.data[idx + 2] = 40 + iter * 5; img.data[idx + 3] = 255;
+      }
     }
-    g.putImageData(img, 0, 0);
-  } else if (kind === "mandelbrot") {
-    const img = g.createImageData(640, 400);
-    for (let y = 0; y < 400; y++) for (let x = 0; x < 640; x++) {
-      let zx = 0, zy = 0; const cx = (x / 640) * 3.2 - 2.2, cy = (y / 400) * 2.2 - 1.1;
-      let iter = 0;
-      while (zx * zx + zy * zy < 4 && iter < 42) { const t = zx * zx - zy * zy + cx; zy = 2 * zx * zy + cy; zx = t; iter++; }
-      const idx = (y * 640 + x) * 4;
-      img.data[idx] = iter * 6; img.data[idx + 1] = iter * 2; img.data[idx + 2] = 40 + iter * 5; img.data[idx + 3] = 255;
-    }
-    g.putImageData(img, 0, 0);
+    sg.putImageData(img, 0, 0);
+    g.imageSmoothingEnabled = true;
+    g.globalAlpha = 0.85; g.drawImage(small, 0, 0, W, H); g.globalAlpha = 1;
   }
+  // vignette: the room darkens at its edges
+  const vig = g.createRadialGradient(W / 2, H / 2, H * 0.36, W / 2, H / 2, H * 0.95);
+  vig.addColorStop(0, "rgba(0,0,0,0)"); vig.addColorStop(1, "rgba(0,0,0,0.5)");
+  g.fillStyle = vig; g.fillRect(0, 0, W, H);
   desk.style.backgroundImage = `url(${canvas.toDataURL()})`;
 }
 function updateEmconChip() {
@@ -454,7 +529,7 @@ function boot() {
   const overlay = document.getElementById("os-boot")!;
   const bootText = document.getElementById("os-boot-text")!;
   const lines = [
-    "NIGHTWARE LABZ BIOS — blacksite web firmware 1.0",
+    "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
     "kernel: blacksite sh · vfs: mounted (persistent, this browser)",
     `engines: javascript native · python skulpt · verbs: ${VERBS.size} live/edge of 426 on the roster`,
@@ -474,7 +549,7 @@ function boot() {
   const defs: Array<[string, string, string]> = [
     ["terminal", "▸_", "Terminal"], ["files", "🗀", "Files"], ["editor", "✎", "Editor"],
     ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "🕮", "Journal"],
-    ["help", "?", "Help — 426"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"],
+    ["help", "?", "Help — 426"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "⬢", "System"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");

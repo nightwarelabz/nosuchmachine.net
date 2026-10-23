@@ -310,6 +310,110 @@ function registerBatteries() {
   });
 }
 
+/* ————— timelock: the Magic Box construction, in the room —————
+   RSW repeated squaring. Sealing is fast for the sealer, who knows
+   the factorization and reduces the exponent through Carmichael's λ;
+   opening costs t sequential squarings that no parallelism shortens.
+   The delay is calibrated against THIS machine's measured squaring
+   rate, and the lock file says exactly what it holds. */
+function tlRandomBits(bits: number): bigint {
+  const bytes = new Uint8Array(Math.ceil(bits / 8));
+  crypto.getRandomValues(bytes);
+  let n = 0n; for (const b of bytes) n = (n << 8n) | BigInt(b);
+  const excess = BigInt(bytes.length * 8 - bits);
+  if (excess > 0n) n >>= excess;
+  return n | (1n << BigInt(bits - 1)) | 1n;
+}
+function tlGcd(a: bigint, b: bigint): bigint { while (b) { const t = a % b; a = b; b = t; } return a; }
+function tlModPow(base: bigint, exp: bigint, mod: bigint): bigint {
+  let r = 1n; base %= mod;
+  while (exp > 0n) { if (exp & 1n) r = (r * base) % mod; base = (base * base) % mod; exp >>= 1n; }
+  return r;
+}
+function tlIsPrime(n: bigint): boolean {
+  if (n < 2n) return false;
+  for (const p of [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n, 31n, 37n]) { if (n === p) return true; if (n % p === 0n) return false; }
+  let d = n - 1n, s = 0n; while ((d & 1n) === 0n) { d >>= 1n; s++; }
+  for (let round = 0; round < 12; round++) {
+    const a = 2n + (tlRandomBits(128) % (n - 3n));
+    let x = tlModPow(a, d, n);
+    if (x === 1n || x === n - 1n) continue;
+    let composite = true;
+    for (let r = 0n; r < s - 1n; r++) { x = (x * x) % n; if (x === n - 1n) { composite = false; break; } }
+    if (composite) return false;
+  }
+  return true;
+}
+function tlGenPrime(bits: number): bigint { let c = tlRandomBits(bits); while (!tlIsPrime(c)) c += 2n; return c; }
+async function tlCalibrate(N: bigint): Promise<number> {
+  let v = 123456789n % N; const t0 = performance.now();
+  for (let i = 0; i < 200; i++) v = (v * v) % N;
+  const dt = (performance.now() - t0) / 1000;
+  return Math.max(200, Math.floor(200 / Math.max(dt, 0.001)));
+}
+const tlHex = (n: bigint) => n.toString(16);
+const tlUnhex = (s: string) => BigInt("0x" + s);
+
+function registerTimelock() {
+  verb("timelock", "LIVE", "timelock seal <seconds> <file> | timelock open <file.lock> — RSW time-lock seals (the Magic Box construction): sealing is instant, opening costs the squarings", async (ctx) => {
+    const sub = (ctx.args[0] || "").toLowerCase();
+    if (sub === "seal") {
+      const seconds = Math.max(1, Math.min(86400, Number(ctx.args[1]) || 0));
+      const path = ctx.args[2];
+      if (!seconds || !path) throw new Error("usage: timelock seal <seconds> <file>");
+      const content = ctx.os.read(path);
+      if (content === null) throw new Error(`no such file: ${path}`);
+      ctx.io.print("timelock: generating the modulus (two 512-bit primes)…", "dim");
+      await new Promise((r) => setTimeout(r, 10));
+      const p = tlGenPrime(512); let q = tlGenPrime(512); if (q === p) q = tlGenPrime(512);
+      const N = p * q;
+      const lambda = ((p - 1n) * (q - 1n)) / tlGcd(p - 1n, q - 1n);
+      let x = tlRandomBits(256) % (N - 3n) + 2n;
+      while (tlGcd(x, N) !== 1n) x += 1n;
+      const rate = await tlCalibrate(N);
+      const t = Math.max(2000, Math.round(seconds * rate));
+      const e = tlModPow(2n, BigInt(t), lambda);
+      const y = tlModPow(x, e, N);
+      const keyRaw = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`blacksite.timelock.v1:${y.toString()}`));
+      const key = await crypto.subtle.importKey("raw", keyRaw, "AES-GCM", false, ["encrypt"]);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(content)));
+      const outPath = path + ".lock";
+      const lock = { schema: "blacksite.timelock.v1", construction: "RSW repeated squaring + AES-256-GCM", modulusBits: 1024, N: tlHex(N), t, x: tlHex(x), calibratedSeconds: seconds, squaringsPerSecondHere: rate, iv: bToB64(iv), ct: bToB64(ct), sealedAt: new Date().toISOString(), source: path };
+      ctx.os.write(outPath, JSON.stringify(lock, null, 2));
+      return `sealed ${path} → ${outPath}\n  t = ${t.toLocaleString()} sequential squarings at the calibrated ${rate.toLocaleString()}/s on this machine ≈ ${seconds}s of opening work.\n  the factorization stays in this moment and is discarded — nobody, including you, can shortcut this lock now. open it with: timelock open ${outPath}`;
+    }
+    if (sub === "open") {
+      const path = ctx.args[1];
+      if (!path) throw new Error("usage: timelock open <file.lock>");
+      const raw = ctx.os.read(path);
+      if (raw === null) throw new Error(`no such file: ${path}`);
+      let lock: any; try { lock = JSON.parse(raw); } catch { throw new Error("that is not a timelock file (no JSON)"); }
+      if (lock.schema !== "blacksite.timelock.v1") throw new Error(`unknown lock schema: ${lock.schema}`);
+      const N = tlUnhex(lock.N); let v = tlUnhex(lock.x); const t = Number(lock.t);
+      ctx.io.print(`timelock: ${t.toLocaleString()} squarings stand between you and the plaintext. starting…`, "dim");
+      const t0 = performance.now();
+      const CHUNK = 3000;
+      for (let i = 0; i < t; i += CHUNK) {
+        const end = Math.min(t, i + CHUNK);
+        for (let j = i; j < end; j++) v = (v * v) % N;
+        if (end < t && end % (CHUNK * 10) < CHUNK) ctx.io.print(`  ${Math.floor((end / t) * 100)}% — ${(end).toLocaleString()} / ${t.toLocaleString()} squarings`, "dim");
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      const keyRaw = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`blacksite.timelock.v1:${v.toString()}`));
+      const key = await crypto.subtle.importKey("raw", keyRaw, "AES-GCM", false, ["decrypt"]);
+      let plain: Uint8Array;
+      try { plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64ToB(lock.iv) }, key, b64ToB(lock.ct))); }
+      catch { throw new Error("the squarings finished but the seal does not open — the lock file is damaged or foreign."); }
+      const outPath = path.replace(/\.lock$/, "") === path ? path + ".opened" : path.replace(/\.lock$/, "");
+      ctx.os.write(outPath, td.decode(plain));
+      const secs = ((performance.now() - t0) / 1000).toFixed(1);
+      return `opened in ${secs}s of sequential squaring → ${outPath}\n${td.decode(plain)}`;
+    }
+    return "timelock — the Magic Box construction, in the room: an RSW repeated-squaring puzzle wraps an AES-256-GCM key.\n  timelock seal <seconds> <file>   seal a file so opening it costs ~<seconds> of unavoidable sequential work\n  timelock open <file.lock>        do the work, get the plaintext\nsealing is instant for the sealer (the factorization reduces the exponent); the factors are then discarded, so the delay binds everyone equally.";
+  });
+}
+
 function registerEngines() {
   verb("run", "LIVE", "run <file> — run a program from the tree (.py, .js, .sh)", async (ctx) => {
     if (!need(ctx, 1, "run <file>")) return;
@@ -467,5 +571,6 @@ export function registerBenchVerbs() {
   registerProbes();
   registerBatteries();
   registerEngines();
+  registerTimelock();
   registerSelfTests();
 }

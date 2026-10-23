@@ -43,20 +43,40 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         <button class="rail-btn" data-panel="http" type="button">HTTP Audit <small>EAZY grade</small></button>
         <button class="rail-btn" data-panel="ports" type="button">Connect Check <small>TCP</small></button>
         <button class="rail-btn" data-panel="recon" type="button">Domain Recon <small>RDAP·CT</small></button>
+        <button class="rail-btn" data-panel="mail" type="button">Email Security <small>SPF·DMARC</small></button>
+        <button class="rail-btn" data-panel="subs" type="button">Subdomains <small>CT census</small></button>
         <h2>LOCAL LAB — IN-BROWSER</h2>
         <button class="rail-btn" data-panel="jwt" type="button">JWT Inspector <small>verify</small></button>
         <button class="rail-btn" data-panel="vault" type="button">Vault <small>AES·hash</small></button>
         <button class="rail-btn" data-panel="codecs" type="button">Codecs <small>b64·hex</small></button>
         <button class="rail-btn" data-panel="subnet" type="button">Subnet Math <small>CIDR</small></button>
         <button class="rail-btn" data-panel="cert" type="button">Cert Decoder <small>X.509</small></button>
+        <button class="rail-btn" data-panel="pqc" type="button">PQC Scanner <small>snoot</small></button>
         <button class="rail-btn" data-panel="payload" type="button">Payload Bench <small>bytes</small></button>
         <button class="rail-btn" data-panel="mirror" type="button">Mirror <small>self-audit</small></button>
       </nav>
 
       <main class="bs-main" id="main">
         <section class="panel" id="panel-overview" aria-labelledby="ov-title">
-          <p class="bs-kicker">NOSUCHMACHINE.NET / BLACKSITE WEB</p>
-          <h1 id="ov-title">The bench is the website now.</h1>
+          <div class="bs-hero">
+            <div class="bs-hero-copy">
+              <p class="bs-kicker">NOSUCHMACHINE.NET / BLACKSITE WEB</p>
+              <h1 id="ov-title">The bench is<br />the <em>website</em> now.</h1>
+              <p class="bs-hero-sub">A working pentest bench in your browser — and an entire operating system one click past it.</p>
+              <div class="bs-stats">
+                <span><strong>17</strong> bench tools</span>
+                <span><strong>426</strong> OS commands</span>
+                <span><strong>160</strong> live verbs</span>
+                <span><strong>3</strong> resolvers per DNS answer</span>
+                <span><strong>0</strong> trackers — local tools stay local</span>
+              </div>
+            </div>
+            <div class="bs-hero-art" aria-hidden="true">
+              <span class="bs-orbit"></span>
+              <img src="/brand/nightware/nightjar-icon.png" alt="" width="300" height="300" />
+              <span class="bs-hero-tag">NIGHTWARE LABZ · EST. MMXXVI</span>
+            </div>
+          </div>
           <p class="bs-sub">This used to be a brochure for <a href={nightjarRepo}>nightjar</a>, the native network instrument for iPhone and Mac. Brochures don't pentest anything — so the site became the tool. Everything nightjar's Blacksite bench does from a phone, rebuilt for the browser, plus everything a browser and an edge network can honestly do. Set a target above and run the battery, or pick a tool. Need the native app? Build nightjar from source with Xcode on iPhone or Mac (iOS signing/provisioning applies) — <a href={`${nightjarRepo}/releases`}>releases</a> · <a href={`${nightjarRepo}#get-started`}>get started</a>.</p>
           <div class="bs-grid">
             <button class="bs-toolcard" data-goto="dns" type="button"><span class="bs-tag">NETWORK</span><strong>DNS</strong><span>A/AAAA/MX/TXT/CAA/DS and more, answered by Cloudflare, Google, and Quad9 side by side — spot the resolver that disagrees, check DNSSEC's AD flag.</span></button>
@@ -64,12 +84,15 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
             <button class="bs-toolcard" data-goto="http" type="button"><span class="bs-tag">NETWORK</span><strong>HTTP Audit</strong><span>Redirect chain, header-by-header security grading (A–F), cookie flags, a CORS reflection probe, and a light fingerprint.</span></button>
             <button class="bs-toolcard" data-goto="ports" type="button"><span class="bs-tag">NETWORK</span><strong>Connect Check</strong><span>The honest TCP connect — open, closed, or silent — across the common service ports, from the edge's point of view.</span></button>
             <button class="bs-toolcard" data-goto="recon" type="button"><span class="bs-tag">NETWORK</span><strong>Domain Recon</strong><span>RDAP registration, the Certificate Transparency subdomain census, robots.txt, security.txt, sitemap — the public ledger, read properly.</span></button>
+            <button class="bs-toolcard" data-goto="mail" type="button"><span class="bs-tag">NETWORK</span><strong>Email Security</strong><span>SPF posture, DMARC enforcement, DKIM selectors, MTA-STS — the anti-spoofing ledgers, graded A–F.</span></button>
+            <button class="bs-toolcard" data-goto="subs" type="button"><span class="bs-tag">NETWORK</span><strong>Subdomain Census</strong><span>Every name that has ever appeared on a certificate for the domain — forgotten staging doors included.</span></button>
             <button class="bs-toolcard" data-goto="mirror" type="button"><span class="bs-tag">SELF-AUDIT</span><strong>Mirror</strong><span>Turn the bench around: what the edge sees of you, what WebRTC leaks, what your fingerprint says, and what Bluetooth devices around you offer.</span></button>
             <button class="bs-toolcard" data-goto="jwt" type="button"><span class="bs-tag">LOCAL</span><strong>JWT Inspector</strong><span>Decode, red-flag (alg=none, kid traversal, remote key URLs), and HMAC-verify — entirely on your machine.</span></button>
             <button class="bs-toolcard" data-goto="vault" type="button"><span class="bs-tag">LOCAL</span><strong>Vault</strong><span>SHA/MD5/HMAC hashing, file fingerprinting, AES-256-GCM sealing with PBKDF2, password strength and generation.</span></button>
             <button class="bs-toolcard" data-goto="codecs" type="button"><span class="bs-tag">LOCAL</span><strong>Codecs + Regex</strong><span>Base64/hex/URL/HTML/ROT13/binary, hexdump, entropy — and a regex bench with match groups.</span></button>
             <button class="bs-toolcard" data-goto="subnet" type="button"><span class="bs-tag">LOCAL</span><strong>Subnet Math</strong><span>CIDR, netmask, usable range, address class — including which ranges this bench itself refuses to probe, and why.</span></button>
             <button class="bs-toolcard" data-goto="cert" type="button"><span class="bs-tag">LOCAL</span><strong>Cert Decoder</strong><span>Paste a PEM and read it: names, SANs, serial, signature algorithm, SHA-256 fingerprint.</span></button>
+            <button class="bs-toolcard" data-goto="pqc" type="button"><span class="bs-tag">LOCAL</span><strong>PQC Scanner</strong><span>snoot's front door: paste anything and find the RSA/ECC/DH that a quantum machine will open — with the NIST replacement named.</span></button>
             <button class="bs-toolcard" data-goto="payload" type="button"><span class="bs-tag">LOCAL</span><strong>Payload Bench</strong><span>The Send-tab habit, on the web: bytes in any encoding, out in every encoding, with CRC32, entropy, and SHA-256.</span></button>
           </div>
           <div class="bs-card" style="border-color:#8f1d24">
@@ -152,6 +175,30 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
           </form>
           <pre class="bs-out" id="recon-out"></pre>
           <p class="bs-note">crt.sh is a volunteer-run ledger and rate-limits; a timeout there is their throttle, not your target hiding.</p>
+        </section>
+
+        <section class="panel" id="panel-mail" aria-labelledby="mail-title" hidden>
+          <p class="bs-kicker">NETWORK / VIA EDGE</p>
+          <h2 class="bs-h" id="mail-title">Email Security — SPF · DMARC · DKIM · MTA-STS</h2>
+          <p class="bs-sub">Can anyone send mail as this domain? The anti-spoofing ledgers answer: SPF says who may send, DMARC says what to do with fakes, DKIM signs, MTA-STS enforces encrypted delivery. Graded like the EAZY battery grades them.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="mail-domain">DOMAIN</label><input id="mail-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
+            <button class="bs-btn" id="mail-run" type="button">GRADE THE MAIL</button>
+            <button class="bs-btn ghost" data-copy="mail-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="mail-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-subs" aria-labelledby="subs-title" hidden>
+          <p class="bs-kicker">NETWORK / VIA EDGE</p>
+          <h2 class="bs-h" id="subs-title">Subdomain Census — Certificate Transparency</h2>
+          <p class="bs-sub">Every certificate ever issued for a domain is public, and each one names its hosts. This reads the ledger and lists them all — the attack surface the domain itself published.</p>
+          <form class="bs-form">
+            <div class="bs-field"><label for="subs-domain">DOMAIN</label><input id="subs-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
+            <button class="bs-btn" id="subs-run" type="button">RUN THE CENSUS</button>
+            <button class="bs-btn ghost" data-copy="subs-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="subs-out"></pre>
         </section>
 
         <section class="panel" id="panel-jwt" aria-labelledby="jwt-title" hidden>
@@ -253,6 +300,19 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
             <button class="bs-btn ghost" data-copy="cert-out" type="button">Copy</button>
           </form>
           <pre class="bs-out" id="cert-out"></pre>
+        </section>
+
+        <section class="panel" id="panel-pqc" aria-labelledby="pqc-title" hidden>
+          <p class="bs-kicker">LOCAL LAB / IN-BROWSER — THE SNOOT FRONT DOOR</p>
+          <h2 class="bs-h" id="pqc-title">PQC Scanner — find the classical crypto before a quantum does</h2>
+          <p class="bs-sub">Paste a config, an SSH banner, a TLS report, a code fragment — anything with cryptography in it. The scanner (a web cut of <a href="https://github.com/nightwarelabz/snoot">snoot</a>) flags classical algorithms and names the NIST post-quantum replacement for each. Harvest-now-decrypt-later is the threat: ciphertext recorded today opens the day a capable quantum machine exists.</p>
+          <form class="bs-form">
+            <div class="bs-field wide"><label for="pqc-input">TEXT TO SCAN</label><textarea id="pqc-input" spellcheck="false" placeholder="e.g. output of ssh -Q key, an sshd_config, a TLS cipher list, an openssl s_client transcript…"></textarea></div>
+            <button class="bs-btn" id="pqc-run" type="button">SCAN FOR CLASSICAL CRYPTO</button>
+            <button class="bs-btn ghost" data-copy="pqc-out" type="button">Copy</button>
+          </form>
+          <pre class="bs-out" id="pqc-out"></pre>
+          <p class="bs-note">Runs entirely in your browser — nothing you paste leaves the page. The full snoot walks codebases and emits CBOM (CycloneDX); this is its front door.</p>
         </section>
 
         <section class="panel" id="panel-payload" aria-labelledby="payload-title" hidden>

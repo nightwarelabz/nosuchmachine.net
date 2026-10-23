@@ -7,6 +7,7 @@ import {
 } from "./os-shell";
 import type { ShellIO } from "./os-shell";
 import { identifyFile, hexdump } from "./os-parse";
+import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -84,7 +85,7 @@ function registerHouse() {
     if (!rows.length) return `no command matches "${q}".`;
     return rows.slice(0, 90).map((r: any) => `${statusOf(r.verb).padEnd(5)} ${r.cmd.padEnd(38)} ${r.desc}`).join("\n");
   });
-  verb("ver", "LIVE", "version of the room", async () => "BLACKSITE OS — web edition 1.0 · the nightjar bench, ported\nkernel: blacksite-web · shell: blacksite sh · engines: skulpt python, native javascript");
+  verb("ver", "LIVE", "version of the room", async () => "BLACKSITE OS — web edition 2.0 'NOETHER' · the nightjar bench, ported\nkernel: blacksite-web · shell: blacksite sh · engines: skulpt python, native javascript\nthe register: `register` · the budgets: `sysinfo` · the grade: `posture`");
   verb("sys", "LIVE", "the whole house state", async (ctx) => {
     const up = Math.floor((Date.now() - ctx.os.bootedAt) / 1000);
     return [
@@ -118,6 +119,45 @@ function registerHouse() {
   verb("clear", "LIVE", "clear the transcript", async (ctx) => { ctx.io.clear(); });
   verb("date", "LIVE", "the date and time", async () => new Date().toString());
   verb("uptime", "LIVE", "how long the room has stood", async (ctx) => { const s = Math.floor((Date.now() - ctx.os.bootedAt) / 1000); return `up ${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`; });
+  verb("sysinfo", "LIVE", "sysinfo — the room's budgets: files, bytes, verbs, uptime", async (ctx) => {
+    const vs = vfsStats(ctx.os.files as any);
+    let ls = 0; try { for (const k of Object.keys(localStorage)) if (k.startsWith("blacksite-")) ls += (localStorage.getItem(k) || "").length; } catch { /* private mode */ }
+    const live = [...VERBS.values()].filter((v) => v.status === "LIVE").length;
+    const edge = [...VERBS.values()].filter((v) => v.status === "EDGE").length;
+    return [
+      `BLACKSITE OS ${OS_RELEASE.version} "${OS_RELEASE.codename}" — sysinfo`,
+      `verbs: ${VERBS.size} registered (${live} in-room, ${edge} edge) of 426 on the roster — the rest are named limits`,
+      `vfs: ${vs.files} files · ${(vs.bytes / 1024).toFixed(1)} KB of content`,
+      `local storage footprint: ${(ls / 1024).toFixed(1)} KB (this room only)`,
+      `processes on the board: ${ctx.os.procs.length} · journal entries: ${ctx.os.journal.length}`,
+      `emcon: ${ctx.os.emcon.toUpperCase()} · theme: ${ctx.os.theme} · shell history: ${ctx.os.history.length} lines`,
+    ].join("\n");
+  });
+  verb("register", "LIVE", "register — the Noether register: every subsystem, declared", async (ctx) => {
+    const facts = { live: [...VERBS.values()].filter((v) => v.status === "LIVE").length, edge: [...VERBS.values()].filter((v) => v.status === "EDGE").length, emcon: ctx.os.emcon, skReady: typeof (window as any).Sk !== "undefined" };
+    const lines = [`THE NOETHER REGISTER — BLACKSITE OS ${OS_RELEASE.version}`, "(the WUCI OS discipline: components declared, budgets visible, limits named)", ""];
+    for (const [name, what, state] of registerRows(facts)) lines.push(`  ${name.padEnd(18)} ${state.padEnd(8)} ${what}`);
+    return lines.join("\n");
+  });
+  verb("posture", "LIVE", "posture — the room grades itself (engines, storage, silence, edge, crypto)", async (ctx) => {
+    const parts: Array<[string, number, number, string]> = [];
+    const sk = typeof (window as any).Sk !== "undefined";
+    parts.push(["engines (python + javascript)", sk ? 25 : 10, 25, sk ? "both engines answer" : "python still loading"]);
+    let storageOk = false; try { localStorage.setItem("blacksite-probe", "1"); localStorage.removeItem("blacksite-probe"); storageOk = true; } catch { /* no */ }
+    parts.push(["storage (vfs persistence)", storageOk ? 15 : 0, 15, storageOk ? "local storage writable — the room persists" : "storage unavailable (private mode?) — the room forgets"]);
+    const emconPts = ({ open: 6, charlie: 13, bravo: 17, alpha: 20 } as Record<string, number>)[ctx.os.emcon] ?? 6;
+    parts.push(["silence (emcon condition)", emconPts, 20, `condition ${ctx.os.emcon.toUpperCase()} — ${ctx.os.emcon === "open" ? "the wire is open; the bench knocks freely" : "the gate is set; refusals speak"}`]);
+    let bridge = 0; let bridgeNote = "edge bridge unreachable from here";
+    if (ctx.os.emcon === "alpha") { bridgeNote = "not attempted — EMCON ALPHA forbids the wire, this verb included"; }
+    else try { const r = await fetch("/api/echo", { headers: { accept: "application/json" } }); const d = await r.json(); if (d.ok) { bridge = 20; bridgeNote = "edge bridge answers; the guard stands in front of every wire verb"; } } catch { /* offline */ }
+    parts.push(["edge bridge (guarded wire)", bridge, 20, bridgeNote]);
+    let cryptoPts = 0; let cryptoNote = "WebCrypto missing — vault and bottle are dark";
+    if (crypto?.subtle) { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("abc")); const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join(""); if (hex.startsWith("ba7816bf8f01cfea")) { cryptoPts = 20; cryptoNote = "WebCrypto present; SHA-256('abc') matches FIPS 180-4 in this browser"; } }
+    parts.push(["crypto (webcrypto, proven live)", cryptoPts, 20, cryptoNote]);
+    const total = parts.reduce((a, p) => a + p[1], 0);
+    const grade = total >= 90 ? "A" : total >= 75 ? "B" : total >= 60 ? "C" : total >= 40 ? "D" : "F";
+    return [`POSTURE — the room grades itself`, ...parts.map(([n, got, max, note]) => `  ${n.padEnd(34)} ${String(got).padStart(2)}/${max}  ${note}`), ``, `POSTURE GRADE: ${grade} (${total}/100)`].join("\n");
+  });
   verb("whoami", "LIVE", "who you are in this room", async (ctx) => ctx.os.env.USER);
   verb("hostname", "LIVE", "who this room is on the wire", async (ctx) => ctx.os.env.HOSTNAME);
   verb("env", "LIVE", "the environment", async (ctx) => Object.entries(ctx.os.env).map(([k, v]) => `${k}=${v}`).join("\n"));
@@ -249,6 +289,30 @@ function registerFiles() {
     return parts.join("\n");
   });
   verb("echo", "LIVE", "echo <words> — say it back (pipes and redirects work)", async (ctx) => ctx.args.join(" "));
+  verb("printf", "LIVE", "printf <format> [args…] — formatted print (%s %d %x %f %c %% · \\n \\t escapes · the format repeats until args are spent)", async (ctx) => {
+    if (!ctx.args.length) throw new Error("usage: printf FORMAT [ARGS…]");
+    const fmt = ctx.args[0].replace(/\\(.)/g, (_m, c) => (c === "n" ? "\n" : c === "t" ? "\t" : c === "r" ? "\r" : c === "0" ? "\0" : c));
+    const args = ctx.args.slice(1);
+    let ai = 0;
+    const render = (f: string): string => f.replace(/%([-+ 0#]*)(\d*(?:\.\d+)?)([sdixXofc%])/g, (_m, flags, spec, conv) => {
+      if (conv === "%") return "%";
+      const arg = args.length ? args[ai++ % args.length] : "";
+      const width = parseInt(spec) || 0;
+      const padNum = (s: string) => (width > 0 ? (String(flags).includes("0") && !String(flags).includes("-") ? s.padStart(width, "0") : s.padStart(width)) : s);
+      if (conv === "s") { return width > 0 ? (String(flags).includes("-") ? arg.padEnd(width) : arg.padStart(width)) : arg; }
+      if (conv === "c") return arg ? arg[0] : "";
+      const num = parseFloat(arg) || 0;
+      if (conv === "d" || conv === "i") return padNum(String(Math.trunc(num)));
+      if (conv === "x") return padNum(Math.trunc(num).toString(16));
+      if (conv === "X") return padNum(Math.trunc(num).toString(16).toUpperCase());
+      if (conv === "o") return padNum(Math.trunc(num).toString(8));
+      if (conv === "f") { const p = spec.includes(".") ? parseInt(spec.split(".")[1]) || 0 : 6; return padNum(num.toFixed(p)); }
+      return arg;
+    });
+    let out = render(fmt);
+    while (args.length && ai < args.length) out += render(fmt);
+    return out;
+  });
   verb("mkdir", "LIVE", "mkdir <dir>", async (ctx) => { if (!need(ctx, 1, "mkdir <dir>")) return; ctx.os.mkdir(ctx.args[0]); });
   verb("touch", "LIVE", "touch <file> — make it, or mark it now", async (ctx) => { if (!need(ctx, 1, "touch <file>")) return; const p = resolve(ctx, ctx.args[0]); if (!ctx.os.node(p)) ctx.os.write(p, ""); else { const n = ctx.os.node(p)!; n.mtime = Date.now(); ctx.os.saveSoon(); } });
   verb("rm", "LIVE", "rm [-r] <path>", async (ctx) => { const rec = ctx.args.includes("-r") || ctx.args.includes("-rf"); const target = ctx.args.find((a) => !a.startsWith("-")); if (!target) { ctx.io.print("usage: rm [-r] <path>", "err"); return; } ctx.os.remove(target, rec); });
