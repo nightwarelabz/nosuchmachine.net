@@ -152,7 +152,7 @@ function buildClientHello(host: string): Uint8Array {
   const versions = [4, 0x03, 0x04, 0x03, 0x03];
   extensions.push(0, 43, 0, versions.length, ...versions);
   // supported_groups: x25519, secp256r1, secp384r1
-  const groups = [0, 10, 0, 29, 0, 23, 0, 24];
+  const groups = [0, 29, 0, 23, 0, 24];
   const groupsBody = [groups.length >> 8, groups.length & 0xff, ...groups];
   extensions.push(0, 10, groupsBody.length >> 8, groupsBody.length & 0xff, ...groupsBody);
   // signature_algorithms
@@ -162,8 +162,8 @@ function buildClientHello(host: string): Uint8Array {
   // key_share (x25519 dummy 32-byte key) so TLS 1.3 servers complete their flight
   const dummyKey = crypto.getRandomValues(new Uint8Array(32));
   const share = [0, 29, dummyKey.length >> 8, dummyKey.length & 0xff, ...dummyKey];
-  const shares = [share.length >> 8, share.length & 0xff, ...share];
-  const ksBody = [shares.length >> 8, shares.length & 0xff, ...shares];
+  // key_share data IS the client_shares list: uint16 total length + entries.
+  const ksBody = [share.length >> 8, share.length & 0xff, ...share];
   extensions.push(0, 51, ksBody.length >> 8, ksBody.length & 0xff, ...ksBody);
 
   const ciphers = [0x13, 0x01, 0x13, 0x02, 0x13, 0x03, 0xc0, 0x2b, 0xc0, 0x2f, 0xc0, 0x2c, 0xc0, 0x30, 0xcc, 0xa9, 0xcc, 0xa8, 0xc0, 0x13, 0xc0, 0x14, 0x00, 0x9c, 0x00, 0x9d, 0x00, 0x2f, 0x00, 0x35];
