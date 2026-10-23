@@ -158,6 +158,30 @@ function registerHouse() {
     const grade = total >= 90 ? "A" : total >= 75 ? "B" : total >= 60 ? "C" : total >= 40 ? "D" : "F";
     return [`POSTURE — the room grades itself`, ...parts.map(([n, got, max, note]) => `  ${n.padEnd(34)} ${String(got).padStart(2)}/${max}  ${note}`), ``, `POSTURE GRADE: ${grade} (${total}/100)`].join("\n");
   });
+  verb("banner", "LIVE", "banner <text> — say it in block letters", async (ctx) => {
+    const FONT: Record<string, string[]> = {
+      A: [" █ ", "█ █", "███", "█ █", "█ █"], B: ["██ ", "█ █", "██ ", "█ █", "██ "], C: [" ██", "█  ", "█  ", "█  ", " ██"],
+      D: ["██ ", "█ █", "█ █", "█ █", "██ "], E: ["███", "█  ", "██ ", "█  ", "███"], F: ["███", "█  ", "██ ", "█  ", "█  "],
+      G: [" ██", "█  ", "█ █", "█ █", " ██"], H: ["█ █", "█ █", "███", "█ █", "█ █"], I: ["███", " █ ", " █ ", " █ ", "███"],
+      J: [" ██", "  █", "  █", "█ █", " █ "], K: ["█ █", "█ █", "██ ", "█ █", "█ █"], L: ["█  ", "█  ", "█  ", "█  ", "███"],
+      M: ["█ █", "███", "█ █", "█ █", "█ █"], N: ["█ █", "███", "███", "█ █", "█ █"], O: [" █ ", "█ █", "█ █", "█ █", " █ "],
+      P: ["██ ", "█ █", "██ ", "█  ", "█  "], Q: [" █ ", "█ █", "█ █", " ██", "  █"], R: ["██ ", "█ █", "██ ", "█ █", "█ █"],
+      S: [" ██", "█  ", " █ ", "  █", "██ "], T: ["███", " █ ", " █ ", " █ ", " █ "], U: ["█ █", "█ █", "█ █", "█ █", " █ "],
+      V: ["█ █", "█ █", "█ █", "█ █", " █ "], W: ["█ █", "█ █", "█ █", "███", "█ █"], X: ["█ █", "█ █", " █ ", "█ █", "█ █"],
+      Y: ["█ █", "█ █", " █ ", " █ ", " █ "], Z: ["███", "  █", " █ ", "█  ", "███"],
+      "0": ["███", "█ █", "█ █", "█ █", "███"], "1": [" █ ", "██ ", " █ ", " █ ", "███"], "2": ["██ ", "  █", " █ ", "█  ", "███"],
+      "3": ["██ ", "  █", " █ ", "  █", "██ "], "4": ["█ █", "█ █", "███", "  █", "  █"], "5": ["███", "█  ", "██ ", "  █", "██ "],
+      "6": [" ██", "█  ", "██ ", "█ █", " █ "], "7": ["███", "  █", " █ ", " █ ", " █ "], "8": [" █ ", "█ █", " █ ", "█ █", " █ "],
+      "9": [" █ ", "█ █", " ██", "  █", "██ "], " ": ["   ", "   ", "   ", "   ", "   "], "-": ["   ", "   ", "███", "   ", "   "],
+      ".": ["   ", "   ", "   ", "   ", " █ "], "!": [" █ ", " █ ", " █ ", "   ", " █ "], "?": ["██ ", "  █", " █ ", "   ", " █ "],
+      "/": ["  █", "  █", " █ ", "█  ", "█  "], ":": ["   ", " █ ", "   ", " █ ", "   "], "_": ["   ", "   ", "   ", "   ", "███"],
+      "+": ["   ", " █ ", "███", " █ ", "   "], "#": ["█ █", "███", "█ █", "███", "█ █"],
+    };
+    const text = (ctx.args.join(" ") || "BLACKSITE").toUpperCase().slice(0, 24);
+    const rows = ["", "", "", "", ""];
+    for (const ch of text) { const g = FONT[ch] || FONT["?"]; for (let r = 0; r < 5; r++) rows[r] += g[r] + " "; }
+    return rows.join("\n");
+  });
   verb("whoami", "LIVE", "who you are in this room", async (ctx) => ctx.os.env.USER);
   verb("hostname", "LIVE", "who this room is on the wire", async (ctx) => ctx.os.env.HOSTNAME);
   verb("env", "LIVE", "the environment", async (ctx) => Object.entries(ctx.os.env).map(([k, v]) => `${k}=${v}`).join("\n"));
@@ -169,6 +193,8 @@ function registerHouse() {
     if (!["open", "charlie", "bravo", "alpha", "off"].includes(v)) return "conditions: open, charlie, bravo, alpha.";
     ctx.os.emcon = (v === "off" ? "open" : v) as BlacksiteOS["emcon"];
     ctx.os.saveSoon(); ctx.os.log(`emcon set to ${ctx.os.emcon}`);
+    document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: `EMCON is now ${ctx.os.emcon.toUpperCase()} — the gates read it before every knock.` } }));
+    document.dispatchEvent(new CustomEvent("blacksite:emcon"));
     return `condition is now ${ctx.os.emcon.toUpperCase()}. the gates read it before every knock.`;
   });
   verb("theme", "LIVE", "theme [name] — list or switch the house theme", async (ctx) => {
