@@ -75,6 +75,8 @@ export async function onRequestGet(context: any) {
     [0xc5eaf000, 0xfffffc00], // 197.234.240.0/22
     [0x83004800, 0xfffffc00], // 131.0.72.0/22
   ];
+  const ipv4Int = (ip: string) => ip.split(".").map(Number).reduce((a, o) => a * 256 + o, 0) >>> 0;
+  const isCf = (a: string) => a.includes(":") ? a.toLowerCase().startsWith("2606:4700:") || a.toLowerCase().startsWith("2803:f800:") || a.toLowerCase().startsWith("2405:b500:") || a.toLowerCase().startsWith("2405:8100:") || a.toLowerCase().startsWith("2a06:98c0:") || a.toLowerCase().startsWith("2c0f:f248:") : CF_V4.some(([net, mask]) => (ipv4Int(a) & mask) === (net & mask));
   const cfHosted = addresses.length > 0 && addresses.every(isCf);
   const results: Awaited<ReturnType<typeof probe>>[] = [];
   // Small batches keep one request from becoming a scan cannon.
