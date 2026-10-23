@@ -358,9 +358,11 @@ function buildSystem(body: HTMLElement) {
   const stats = el("div", "os-sys-grid");
   const vs = vfsStats(os.files as any);
   let lsBytes = 0; try { for (const k of Object.keys(localStorage)) if (k.startsWith("blacksite-")) lsBytes += (localStorage.getItem(k) || "").length; } catch { /* private mode */ }
+  const liveCount = [...VERBS.values()].filter((v) => v.status === "LIVE").length;
+  const edgeCount = [...VERBS.values()].filter((v) => v.status === "EDGE").length;
   const cells: Array<[string, string]> = [
     [OS_RELEASE.version + " " + OS_RELEASE.codename, "RELEASE"],
-    [String(VERBS.size), "VERBS LIVE + EDGE"],
+    [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, "WORKING VERBS — IN-ROOM + EDGE"],
     ["426", "COMMANDS ON THE ROSTER"],
     [`${vs.files}`, "FILES IN THE VFS"],
     [`${(vs.bytes / 1024).toFixed(1)} KB`, "VFS CONTENT"],
@@ -553,7 +555,7 @@ function boot() {
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
     "kernel: blacksite sh · vfs: mounted (persistent, this browser)",
-    `engines: javascript native · python skulpt · verbs: ${VERBS.size} live/edge of 426 on the roster`,
+    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 426 on the roster`,
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     "doctrine loaded: one knock, read, grade.",
     "",
