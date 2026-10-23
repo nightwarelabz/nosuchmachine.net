@@ -1,10 +1,11 @@
 ---
 import "../styles/global.css";
 import "../styles/nightware.css";
-interface Props { title?: string; description?: string; }
+interface Props { title?: string; description?: string; bare?: boolean; }
 const {
-  title = "nightjar — Your network. In your hands.",
-  description = "Meet nightjar by NIGHTWARE LABZ: a native network instrument for iPhone and Mac. BLE listening, protocol tools, the Blacksite console, and Skelli’s on-device intelligence.",
+  title = "BLACKSITE WEB — a working pentest bench in your browser",
+  description = "BLACKSITE WEB by NIGHTWARE LABZ: the nightjar Blacksite bench, rebuilt for the web. DNS, TLS, HTTP security grading, connect checks, domain recon, JWT and certificate inspection, hashes, codecs, subnet math, and payloads. Public targets only. One knock, read, grade.",
+  bare = false,
 } = Astro.props;
 const pageTitle = `${title} · NIGHTWARE LABZ`;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
@@ -28,7 +29,7 @@ const onBook = Astro.url.pathname.startsWith("/book/");
     <meta property="og:image" content={new URL("/brand/nightware/social.png", Astro.site).toString()} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="nightjar by NIGHTWARE LABZ. Your network. In your hands. Native for iPhone and Mac." />
+    <meta property="og:image:alt" content="BLACKSITE WEB by NIGHTWARE LABZ — the nightjar pentest bench, in your browser." />
     <meta name="twitter:card" content="summary_large_image" />
     {isNotFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/brand/nightware/favicon.svg" type="image/svg+xml" />
@@ -38,31 +39,36 @@ const onBook = Astro.url.pathname.startsWith("/book/");
     <title>{pageTitle}</title>
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to content</a>
-    <header class="site-header shell">
-      <a class="wordmark" href="/" aria-label="NIGHTWARE LABZ, home">
-        <span class="nw-sign" aria-hidden="true">N<span>↗</span></span>
-        <img src="/brand/nightware/wordmark.svg" width="190" height="26" alt="NIGHTWARE LABZ" />
-      </a>
-      <nav aria-label="Main navigation">
-        <a href="/#instrument">The instrument</a>
-        <a href="/#skelli">Skelli</a>
-        <a href="/#lab">The lab</a>
-        <a class="nav-cta" href="/#get-started">Get nightjar <span aria-hidden="true">↗</span></a>
-      </nav>
-    </header>
-    <slot />
-    <footer class="site-footer shell">
-      <div>
-        <a class="footer-name" href="/">NIGHTWARE LABZ<span class="red"> /</span></a>
-        <p>Independent tools. Open source. The world is yours.</p>
-      </div>
-      <div class="footer-links">
-        <a href="/book/">The Orange Book</a>
-        <a href="https://github.com/nightwarelabz/nightjar/blob/main/PRIVACY.md">Privacy</a>
-        <a href="https://github.com/nightwarelabz/nosuchmachine.net">Site source ↗</a>
-        <span>© {new Date().getUTCFullYear()} Chase Bryan</span>
-      </div>
-    </footer>
+    {bare ? <slot /> : (
+      <>
+        <a class="skip-link" href="#main">Skip to content</a>
+        <header class="site-header shell">
+          <a class="wordmark" href="/" aria-label="NIGHTWARE LABZ, home">
+            <span class="nw-sign" aria-hidden="true">N<span>↗</span></span>
+            <img src="/brand/nightware/wordmark.svg" width="190" height="26" alt="NIGHTWARE LABZ" />
+          </a>
+          <nav aria-label="Main navigation">
+            <a href="/">BLACKSITE WEB</a>
+            <a href="/book/">Orange Book</a>
+            <a href="/projects/orange/">Projects</a>
+            <a class="nav-cta" href="https://github.com/nightwarelabz/nightjar">Get nightjar <span aria-hidden="true">↗</span></a>
+          </nav>
+        </header>
+        <slot />
+        <footer class="site-footer shell">
+          <div>
+            <a class="footer-name" href="/">NIGHTWARE LABZ<span class="red"> /</span></a>
+            <p>Independent tools. Open source. The world is yours.</p>
+          </div>
+          <div class="footer-links">
+            <a href="/">BLACKSITE WEB bench</a>
+            <a href="/book/">The Orange Book</a>
+            <a href="https://github.com/nightwarelabz/nightjar/blob/main/PRIVACY.md">Privacy</a>
+            <a href="https://github.com/nightwarelabz/nosuchmachine.net">Site source ↗</a>
+            <span>© {new Date().getUTCFullYear()} Chase Bryan</span>
+          </div>
+        </footer>
+      </>
+    )}
   </body>
 </html>

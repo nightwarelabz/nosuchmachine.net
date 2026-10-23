@@ -41,7 +41,8 @@ const homeHeading = home.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1]
   .replace(/<[^>]*>/g, " ")
   .replace(/\s+/g, " ")
   .trim();
-assert.match(homeHeading ?? "", /nightjar/i, "Homepage must introduce nightjar");
+assert.match(homeHeading ?? "", /bench/i, "Homepage must present the BLACKSITE WEB bench");
+assert.match(home, /blacksite[\s-]*web/i, "Homepage must identify BLACKSITE WEB");
 assert.match(home, /nightware[\s-]*labz/i, "Homepage must identify NIGHTWARE LABZ");
 for (const section of [
   "hero", "instrument", "skelli", "get-started", "lab", "about", "work", "current",
@@ -51,8 +52,22 @@ for (const section of [
     `Missing homepage section or retained anchor: #${section}`,
   );
 }
+for (const panel of [
+  "panel-overview", "panel-dns", "panel-tls", "panel-http", "panel-ports",
+  "panel-recon", "panel-jwt", "panel-vault", "panel-codecs", "panel-subnet",
+  "panel-cert", "panel-payload", "panel-mirror", "panel-report",
+]) {
+  assert.ok(home.includes(`id="${panel}"`), `Missing suite panel: #${panel}`);
+}
+for (const control of [
+  "global-target", "battery-run", "dns-run", "tls-run", "http-run", "tcp-run",
+  "recon-run", "jwt-run", "hash-run", "vault-seal", "codec-run", "subnet-run",
+  "cert-run", "payload-run", "echo-run", "webrtc-run", "fingerprint-run",
+  "ble-run", "report-export-md", "report-export-json",
+]) {
+  assert.ok(home.includes(`id="${control}"`), `Missing suite control: #${control}`);
+}
 for (const destination of [
-  "#get-started",
   "https://github.com/nightwarelabz/nightjar",
   "https://github.com/nightwarelabz/nightjar/releases",
   "https://github.com/nightwarelabz/nightjar#get-started",
@@ -60,13 +75,19 @@ for (const destination of [
 ]) {
   assert.ok(homeLinks.has(destination), `Homepage missing destination: ${destination}`);
 }
-assert.match(home, /Xcode/i, "Homepage must explain the build-from-source option");
+assert.match(home, /Xcode/i, "Homepage must explain the build-from-source option for the native app");
 assert.match(
   home,
   /signing|sign and|signed|provisioning/i,
   "Homepage must explain iOS signing requirements",
 );
+assert.match(home, /one knock, read, grade/i, "Homepage must state the bench doctrine");
+assert.match(home, /public targets only/i, "Homepage must state the public-target guard");
 
+const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
+for (const marker of ["os-boot", "os-desktop", "os-taskbar", "os-emcon-chip", "BLACKSITE OS"]) {
+  assert.ok(osPage.includes(marker), `BLACKSITE OS page missing marker: ${marker}`);
+}
 assert.equal(book.chapters.length, 24, "The pinned Orange Book has 24 chapters");
 assert.equal(
   new Set(book.chapters.map((chapter) => chapter.slug)).size,
@@ -269,5 +290,5 @@ for (const file of files) {
   }
 }
 console.log(
-  `Verified NIGHTWARE LABZ / nightjar homepage, installation and source links, ${book.chapters.length} hosted book chapters with reading navigation and search, ${catalog.length} project routes and source references, ${files.length} HTML pages, ${checkedLinks} local links/assets, sitemap, and CSP-compatible scripts.`,
+  `Verified NIGHTWARE LABZ / BLACKSITE WEB bench homepage, BLACKSITE OS page markers, suite panels and controls, installation and source links, ${book.chapters.length} hosted book chapters with reading navigation and search, ${catalog.length} project routes and source references, ${files.length} HTML pages, ${checkedLinks} local links/assets, sitemap, and CSP-compatible scripts.`,
 );

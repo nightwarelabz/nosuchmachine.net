@@ -1,15 +1,48 @@
-# NIGHTWARE LABZ
+# NIGHTWARE LABZ — BLACKSITE WEB
 
-The home of NIGHTWARE LABZ and nightjar, Chase Bryan’s native network instrument for iPhone and Mac.
+**nosuchmachine.net is a working pentest bench, not a brochure.** The homepage is
+BLACKSITE WEB: the [nightjar](https://github.com/nightwarelabz/nightjar) Blacksite
+bench rebuilt for the browser — DNS, TLS, HTTP security grading, TCP connect
+checks, domain recon, JWT/certificate inspection, hashes, codecs, subnet math,
+payloads, and a self-audit mirror — running on Cloudflare Pages + Pages
+Functions. See [docs/blacksite-web.md](docs/blacksite-web.md) for the full
+architecture, the tool roster, and the safety guard.
 
 **Production domain:** [nosuchmachine.net](https://nosuchmachine.net)
 
+**Doctrine: one knock, read, grade.** The bench recons and grades; it does not
+exploit, spray, brute-force, or flood. Server-side probes only touch public
+targets — private, loopback, link-local, CGNAT, and cloud-metadata addresses are
+refused in `functions/_lib/guard.ts` before contact and on every redirect hop.
+
 ## Structure
 
-- The homepage introduces nightjar, its network instruments, and Skelli, then gives visitors a clear installation path. Releases, source code, and the installation manual use the canonical `nightwarelabz/nightjar` repository.
-- The NIGHTWARE LABZ identity uses the project's existing stallion and wordmark, black and steel surfaces, silver type, and crimson accents. Product claims and asset provenance are recorded in [Nightjar sources](docs/nightjar-sources.md).
-- Installation copy distinguishes an iOS release package, which still needs suitable signing, from building the native iPhone and Mac apps with Xcode. It does not imply an App Store listing, a Mac binary download, or a universal one-tap install.
-- The lab section retains a path to Orange and the Orange Book. Existing homepage anchors remain available for incoming links.
+- `/blacksite/` is **BLACKSITE OS**: the nightjar console ported whole — a
+  windowed web OS (boot, desktop, taskbar, process board) with a real shell
+  over a persistent virtual filesystem, pipes/redirects/jobs, the full
+  426-command Blacksite roster from nightjar's own generated reference
+  (`src/data/blacksite-commands.json`) with each command LIVE, EDGE, or a
+  named LIMIT, Python (vendored Skulpt) and JavaScript engines, a
+  vim-mannered editor, the Wave-10 file parsers, the Gauntlet self-test
+  battery, EMCON gating, themes, and room-generated wallpapers. Its wire
+  verbs ride the same guarded edge functions (`/api/fetch`, `/api/exchange`,
+  `/api/ping` included: one connection, ≤4KB spoken, ≤64KB read).
+- The homepage (`src/pages/index.astro`) is the suite console: a global target
+  bar with a one-click full battery, a tool rail, and a session Report with
+  JSON/Markdown export. Network probes live in Cloudflare Pages Functions under
+  `functions/api/` (`dns`, `tls`, `http-audit`, `tcp`, `recon`, `echo`); local
+  tools live in `src/scripts/lab.ts` and never send input anywhere.
+- The TLS Inspector's certificate chain comes from a hand-rolled TLS
+  ClientHello parsed at the edge (`functions/api/tls.ts`); TLS 1.3's encrypted
+  Certificate message is reported honestly rather than faked.
+- The native instrument still exists and still out-ranges the web: nightjar for
+  iPhone/Mac (BLE listening, pcap dissection, listeners, encrypted messaging)
+  builds from source with Xcode; iOS packages still need signing/provisioning.
+  The suite links to the canonical `nightwarelabz/nightjar` repository,
+  releases, and get-started guide rather than advertising over them.
+- Legacy homepage anchors (`#hero`, `#instrument`, `#skelli`, `#get-started`,
+  `#lab`, `#about`, `#work`, `#current`) are retained as hidden anchors for
+  incoming links.
 - The complete Orange Book is hosted at `/book/`, with a table of contents, 24 chapter pages, chapter navigation, section links, and local full-text search. The reader follows the original manuscript's order, including its preface, appendices, manuscript map, and source disclosure.
 - All 40 existing project pages remain available at `/projects/<slug>/`, with their purpose, implementation, maturity, limitations, repository, and documentation links.
 - `src/data/catalog.json` owns the project content. The [repository inventory](docs/repository-inventory.json) and [review report](docs/portfolio-review.md) record the public-repository review and earlier curation decisions.
