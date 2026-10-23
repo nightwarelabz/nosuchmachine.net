@@ -6,6 +6,7 @@ import { registerCoreVerbs } from "./os-verbs";
 import { registerWireVerbs } from "./os-verbs2";
 import { registerBenchVerbs } from "./os-verbs3";
 import { registerLimitReasons } from "./os-limits";
+import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import roster from "../data/blacksite-commands.json";
 
 const os = new BlacksiteOS();
@@ -31,6 +32,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   gauntlet: { title: "Gauntlet & Diagnose", icon: "⚔" },
   settings: { title: "House Settings", icon: "⚙" },
   help: { title: "Help — the 426", icon: "?" },
+  bottle: { title: "Daylight Bottle", icon: "☀" },
 };
 
 export function openApp(app: string, arg?: string) {
@@ -391,6 +393,7 @@ function buildHelp(body: HTMLElement) {
 const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   terminal: buildTerminal, files: buildFiles, editor: buildEditor, processes: buildProcesses,
   journal: buildJournal, gauntlet: buildGauntlet, settings: buildSettings, help: buildHelp,
+  bottle: (body) => buildBottleApp(body, os),
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
@@ -445,6 +448,7 @@ function boot() {
   registerCoreVerbs();
   registerWireVerbs();
   registerBenchVerbs();
+  registerBottleVerbs();
   registerLimitReasons();
   applyTheme(os.theme);
   const overlay = document.getElementById("os-boot")!;
@@ -462,7 +466,7 @@ function boot() {
   let i = 0;
   const tick = () => {
     if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, 110); }
-    else setTimeout(() => { overlay.classList.add("done"); openApp("terminal"); setTimeout(() => overlay.remove(), 650); }, 420);
+    else setTimeout(() => { overlay.classList.add("done"); openApp("terminal"); if (window.location.hash === "#bottle") openApp("bottle"); setTimeout(() => overlay.remove(), 650); }, 420);
   };
   tick();
   // desktop icons
@@ -470,7 +474,7 @@ function boot() {
   const defs: Array<[string, string, string]> = [
     ["terminal", "▸_", "Terminal"], ["files", "🗀", "Files"], ["editor", "✎", "Editor"],
     ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "🕮", "Journal"],
-    ["help", "?", "Help — 426"], ["settings", "⚙", "Settings"],
+    ["help", "?", "Help — 426"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");

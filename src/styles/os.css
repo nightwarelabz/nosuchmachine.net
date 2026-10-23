@@ -124,3 +124,10 @@
   .os-icons { flex-direction: row; flex-wrap: wrap; }
   .os-desktop-brand { display: none; }
 }
+
+/* daylight bottle */
+.os-bottle-box { border: 1px solid var(--os-line); border-radius: 6px; padding: 0.7rem; margin-bottom: 0.8rem; }
+.os-bottle-box h3 { font-size: 0.8rem; letter-spacing: 0.1em; color: var(--os-muted); margin: 0 0 0.5rem; }
+.os-bottle-area { width: 100%; background: #04060a; color: var(--os-ink); border: 1px solid var(--os-line); border-radius: 4px; font: inherit; font-size: 0.78rem; line-height: 1.5; padding: 0.55rem; resize: vertical; margin-bottom: 0.5rem; }
+.os-bottle-area:focus { outline: 1px solid var(--os-accent); }
+.os-bottle-input, .os-bottle-select { background: #04060a; color: var(--os-ink); border: 1px solid var(--os-line); border-radius: 4px; font: inherit; font-size: 0.76rem; padding: 0.42rem 0.55rem; }

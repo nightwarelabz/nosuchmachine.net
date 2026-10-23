@@ -84,3 +84,29 @@ The suite is intentionally a poor weapon: public targets only, tiny port
 caps, one GET per hop, self-identifying User-Agent, no concurrency cannon,
 no exploitation primitives. Operators are told, on the page itself, to test
 only systems they own or are authorized to test.
+
+## The Daylight Bottle plug
+
+BLACKSITE OS carries a Daylight Bottle desk (desktop icon, the `bottle`
+verb family, deep link `/blacksite/#bottle`). Daylight Bottle
+(bottle.nosuchmachine.net, from the Wuci-Ji project) is an age-encrypted
+message-in-a-bottle service: senders encrypt locally to a recipient from
+its static keyring, the server stores ciphertext + public metadata only,
+recipients fetch candidates by fingerprint and decrypt locally.
+
+The OS speaks the service's exact wire protocol
+(`nsm.daylight-bottle.*.v1`) with the same crypto library
+(`age-encryption`), so bottles interlock both ways — proven by decrypting
+an OS-sealed bottle with the bottle app's own adapter code, metadata
+assertions included. Fingerprints use the service's canon:
+`sha256:` of SHA-256 over `nsm.daylight-bottle.key.v1\n<keyname>\n<age recipient>`.
+
+The service sends no CORS headers by design, so service calls ride
+`functions/api/bottle.ts`, a same-origin bridge to a fixed destination
+(keyring, list, evidence, and schema-validated drops only — no
+caller-supplied URLs). The bottle Worker remains the authority: it
+re-validates every drop, enforces keyring membership, and applies its own
+rate limits. Plaintext and private identities never leave the browser;
+the OS keeps an identity in memory unless the operator explicitly saves
+it into the virtual filesystem. Under EMCON, drops are an active
+transmission (refused at Bravo/Alpha); reads stand down at Alpha.

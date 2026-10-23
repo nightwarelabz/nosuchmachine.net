@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@astrojs/check": "0.9.10",
+    "age-encryption": "^0.3.0",
     "astro": "7.3.5",
     "github-slugger": "2.0.0",
     "satteri": "0.10.5",

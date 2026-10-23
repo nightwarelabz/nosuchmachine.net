@@ -85,6 +85,8 @@ assert.match(home, /one knock, read, grade/i, "Homepage must state the bench doc
 assert.match(home, /public targets only/i, "Homepage must state the public-target guard");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
+assert.ok(home.includes("Daylight Bottle"), "Homepage must carry the Daylight Bottle plug");
+assert.ok(home.includes("/blacksite/#bottle"), "Homepage must deep-link the OS bottle desk");
 for (const marker of ["os-boot", "os-desktop", "os-taskbar", "os-emcon-chip", "BLACKSITE OS"]) {
   assert.ok(osPage.includes(marker), `BLACKSITE OS page missing marker: ${marker}`);
 }
