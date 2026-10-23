@@ -1,15 +1,15 @@
-# No Such Machine
+# NIGHTWARE LABZ
 
-Chase Bryan’s independent work in mathematics and cryptography, centered on Orange.
+The home of NIGHTWARE LABZ and nightjar, Chase Bryan’s native network instrument for iPhone and Mac.
 
 **Production domain:** [nosuchmachine.net](https://nosuchmachine.net)
 
-![Orange-focused homepage preview](docs/redesign-preview.jpg)
-
 ## Structure
 
-- The homepage presents Orange as the sole main project, followed by a brief introduction to Chase. Navigation leads to Orange, the Orange Book, About, and GitHub.
-- A restrained layout, readable type, and orange accents replace the project catalog and animated background. The homepage has no canvas visuals or motion controls.
+- The homepage introduces nightjar, its network instruments, and Skelli, then gives visitors a clear installation path. Releases, source code, and the installation manual use the canonical `nightwarelabz/nightjar` repository.
+- The NIGHTWARE LABZ identity uses the project's existing stallion and wordmark, black and steel surfaces, silver type, and crimson accents. Product claims and asset provenance are recorded in [Nightjar sources](docs/nightjar-sources.md).
+- Installation copy distinguishes an iOS release package, which still needs suitable signing, from building the native iPhone and Mac apps with Xcode. It does not imply an App Store listing, a Mac binary download, or a universal one-tap install.
+- The lab section retains a path to Orange and the Orange Book. Existing homepage anchors remain available for incoming links.
 - The complete Orange Book is hosted at `/book/`, with a table of contents, 24 chapter pages, chapter navigation, section links, and local full-text search. The reader follows the original manuscript's order, including its preface, appendices, manuscript map, and source disclosure.
 - All 40 existing project pages remain available at `/projects/<slug>/`, with their purpose, implementation, maturity, limitations, repository, and documentation links.
 - `src/data/catalog.json` owns the project content. The [repository inventory](docs/repository-inventory.json) and [review report](docs/portfolio-review.md) record the public-repository review and earlier curation decisions.
@@ -28,7 +28,7 @@ npm run verify
 npm run preview
 ```
 
-`verify` confirms that Orange is the only featured catalog project and the only project linked from the homepage, and that the homepage has no canvas visuals or motion controls. It checks every hosted book chapter, reading order, previous/next links, active chapter navigation, search-index coverage, and consistency with the vendored manuscript. It also checks all generated project routes and source references, sitemap entries, internal links and anchors, image/script assets, unique IDs, one main landmark and heading per page, and CSP-compatible script output. CI runs the type check, build, and this integration check.
+`verify` confirms the NIGHTWARE LABZ / nightjar identity, homepage section anchors, source and release destinations, installation guidance, and retained Orange and book links. It checks every hosted book chapter, reading order, previous/next links, active chapter navigation, search-index coverage, and consistency with the vendored manuscript. It also checks unique catalog slugs, all generated project routes and source references, sitemap entries, internal links and anchors, image/script assets, unique IDs, one main landmark and heading per page, and CSP-compatible script output. CI runs the type check, build, and this integration check.
 
 ## Update the Orange Book
 
