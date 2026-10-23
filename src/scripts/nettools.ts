@@ -75,6 +75,92 @@ export async function runRecon(domainOverride?: string) {
   return data;
 }
 
+/** Email security: SPF, DMARC, DKIM selectors, MTA-STS, TLS-RPT — graded. */
+export async function runMail(domainOverride?: string) {
+  const domain = (domainOverride || val("mail-domain") || globalTarget()).replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").split("/")[0];
+  if (!domain) return show("mail-out", "Give me a domain first.");
+  busy("mail-out", `Reading the mail ledgers for ${domain} — SPF, DMARC, DKIM selectors, MTA-STS…`);
+  const q = async (name: string, type: string) => {
+    const d = await api(`/api/dns?name=${encodeURIComponent(name)}&type=${type}`);
+    const rows: any[] = [];
+    for (const r of d?.results || []) for (const a of r.answers || []) rows.push(a.data);
+    return rows as string[];
+  };
+  try {
+    const [mx, txt, dmarc, mtaSts, tlsRpt] = await Promise.all([
+      q(domain, "MX"), q(domain, "TXT"), q(`_dmarc.${domain}`, "TXT"), q(`_mta-sts.${domain}`, "TXT"), q(`_smtp._tls.${domain}`, "TXT"),
+    ]);
+    const spf = txt.find((t) => /^v=spf1\b/i.test(t.replace(/^"|"$/g, "")));
+    const dkimSelectors = ["default", "google", "selector1", "selector2", "s1", "k1", "mail", "dkim"];
+    const dkimHits: string[] = [];
+    await Promise.all(dkimSelectors.map(async (s) => {
+      const rows = await q(`${s}._domainkey.${domain}`, "TXT");
+      if (rows.some((t) => /v=DKIM1/i.test(t))) dkimHits.push(s);
+    }));
+    const lines: string[] = [];
+    let score = 100; const findings: string[] = [];
+    lines.push(`EMAIL SECURITY — ${domain}`, `resolved via the bench's three public resolvers (Cloudflare shown).`, "");
+    lines.push("MX — mail exchangers");
+    if (mx.length) for (const m of mx) lines.push(`  ${m}`);
+    else { lines.push("  (none — this domain accepts no mail)"); score -= 5; findings.push("no MX records"); }
+    if (mx.some((m) => /^\s*0\s+\.$/.test(m))) { lines.push("  note: null MX (RFC 7505) — the domain declares it accepts NO mail, deliberately."); }
+    lines.push("", "SPF — sender policy");
+    if (spf) {
+      lines.push(`  ${spf.replace(/^"|"$/g, "")}`);
+      if (/-all\s*$/.test(spf)) lines.push("  ending: -all (hard fail — the strict posture)");
+      else if (/~all\s*$/.test(spf)) { lines.push("  ending: ~all (soft fail — common, weaker)"); score -= 8; findings.push("SPF softfail (~all) instead of -all"); }
+      else if (/\?all\s*$/.test(spf)) { lines.push("  ending: ?all (neutral — barely a policy)"); score -= 15; findings.push("SPF neutral (?all)"); }
+      else if (/\+all\s*$/.test(spf)) { lines.push("  ending: +all (PASS ANYONE — SPF is void here)"); score -= 40; findings.push("SPF +all authorizes everyone"); }
+    } else { lines.push("  (no SPF record — anyone can spoof this domain's mail)"); score -= 30; findings.push("no SPF record"); }
+    lines.push("", "DMARC — enforcement");
+    const dm = dmarc.find((t) => /^v=DMARC1/i.test(t.replace(/^"|"$/g, "")));
+    if (dm) {
+      lines.push(`  ${dm.replace(/^"|"$/g, "")}`);
+      const policy = /p=(reject|quarantine|none)/i.exec(dm)?.[1]?.toLowerCase();
+      if (policy === "reject") lines.push("  policy: reject — spoofed mail is refused. the strong posture.");
+      else if (policy === "quarantine") { lines.push("  policy: quarantine — spoofed mail is junked, not refused."); score -= 8; findings.push("DMARC policy is quarantine, not reject"); }
+      else { lines.push("  policy: none — monitoring only; spoofing still delivers."); score -= 20; findings.push("DMARC policy is none (monitor only)"); }
+      const pct = /pct=(\d+)/.exec(dm); if (pct && Number(pct[1]) < 100) { score -= 5; findings.push(`DMARC applies to ${pct[1]}% of mail`); }
+    } else { lines.push("  (no DMARC record — no spoofing policy at all)"); score -= 25; findings.push("no DMARC record"); }
+    lines.push("", "DKIM — signing selectors probed");
+    lines.push(dkimHits.length ? `  publishing keys under: ${dkimHits.join(", ")}` : "  (none of the common selectors answer — mail may be unsigned, or selectors are nonstandard)");
+    if (!dkimHits.length) { score -= 10; findings.push("no common DKIM selector publishes a key"); }
+    lines.push("", "MTA-STS / TLS-RPT — transport enforcement");
+    lines.push(mtaSts.some((t) => /v=STSv1/i.test(t)) ? "  MTA-STS: published (v=STSv1)" : "  MTA-STS: not published");
+    if (!mtaSts.some((t) => /v=STSv1/i.test(t))) { score -= 5; findings.push("no MTA-STS"); }
+    lines.push(tlsRpt.some((t) => /v=TLSRPTv1/i.test(t)) ? "  TLS-RPT: published (v=TLSRPTv1)" : "  TLS-RPT: not published");
+    score = Math.max(0, score);
+    const grade = score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
+    lines.push("", `GRADE: ${grade} (${score}/100)`);
+    lines.push(findings.length ? `findings: ${findings.join("; ")}` : "findings: none — this domain's mail posture is tight.");
+    const text = lines.join("\n");
+    show("mail-out", text);
+    emitReport("mail", `Email security: ${domain} — grade ${grade} (${score}/100)`, text);
+    return { ok: true, domain, grade, score };
+  } catch (e: any) { show("mail-out", `mail audit failed: ${e?.message || e}`); }
+}
+
+/** Subdomain census: the Certificate Transparency names for a domain, via recon. */
+export async function runSubs(domainOverride?: string) {
+  const domain = (domainOverride || val("subs-domain") || globalTarget()).replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").split("/")[0];
+  if (!domain) return show("subs-out", "Give me a domain first.");
+  busy("subs-out", `Censusing Certificate Transparency for ${domain} — this reads the public issuance ledger (~15s)…`);
+  const data = await api(`/api/recon?domain=${encodeURIComponent(domain)}`);
+  if (!data.ok) { show("subs-out", data); return data; }
+  const names: string[] = data.transparency?.names || [];
+  const lines = [
+    `SUBDOMAIN CENSUS — ${domain}`,
+    `source: Certificate Transparency (public issuance ledger) — ${data.transparency?.certificates ?? "?"} certificates`,
+    `${names.length} distinct names have ever appeared on a certificate for this domain:`, "",
+    ...names.map((n) => `  ${n}`),
+    "", "Reading it: names here are public by design when a certificate is issued. Forgotten staging and dev names are the classic finding — each one is a door worth a knock (authorized, of course). The live/dead state of each name is a job for the DNS panel.",
+  ];
+  const text = lines.join("\n");
+  show("subs-out", text);
+  emitReport("subs", `Subdomain census: ${domain} — ${names.length} names`, text);
+  return data;
+}
+
 export async function runEcho() {
   busy("echo-out", "Asking the edge what it sees…");
   const data = await api(`/api/echo`);
@@ -90,15 +176,17 @@ export async function runFullBattery() {
   if (!target) { status("Set a global target first — a public hostname like example.com."); return; }
   const host = target.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").split("/")[0];
   try {
-    status(`1/5 DNS — full record sweep for ${host}…`);
+    status(`1/6 DNS — full record sweep for ${host}…`);
     await runDns(host, "ALL");
-    status(`2/5 TLS — handshake + certificate chain for ${host}…`);
+    status(`2/6 TLS — handshake + certificate chain for ${host}…`);
     await runTls(host);
-    status(`3/5 HTTP — audit + security grade for https://${host}/…`);
+    status(`3/6 HTTP — audit + security grade for https://${host}/…`);
     await runHttpAudit(`https://${host}/`);
-    status(`4/5 PORTS — connect check (common services) for ${host}…`);
+    status(`4/6 PORTS — connect check (common services) for ${host}…`);
     await runTcp(host);
-    status(`5/5 RECON — registration, certificate census, well-known files for ${host}…`);
+    status(`5/6 MAIL — SPF, DMARC, DKIM, MTA-STS for ${host}…`);
+    await runMail(host);
+    status(`6/6 RECON — registration, certificate census, well-known files for ${host}…`);
     await runRecon(host);
     status(`Battery complete for ${host}. Everything is in the Report tab — export it before you close the page.`);
     emitReport("battery", `Full battery complete: ${host}`, { target: host, note: "Individual probe results are in their own report entries." });
@@ -113,6 +201,8 @@ export function initNetTools() {
   on("http-run", "click", () => void runHttpAudit());
   on("tcp-run", "click", () => void runTcp());
   on("recon-run", "click", () => void runRecon());
+  on("mail-run", "click", () => void runMail());
+  on("subs-run", "click", () => void runSubs());
   on("echo-run", "click", () => void runEcho());
   on("battery-run", "click", () => void runFullBattery());
 }

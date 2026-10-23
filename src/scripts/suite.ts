@@ -79,6 +79,8 @@ function syncTargetToTools() {
   set("tls-host", host);
   set("tcp-host", host);
   set("recon-domain", host);
+  set("mail-domain", host);
+  set("subs-domain", host);
   const http = document.getElementById("http-url") as HTMLInputElement | null;
   if (http && !http.value) http.value = /^[a-z][a-z0-9+.-]*:\/\//i.test(target) ? target : `https://${host}/`;
 }

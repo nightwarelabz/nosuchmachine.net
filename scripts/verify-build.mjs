@@ -55,14 +55,14 @@ for (const section of [
 for (const panel of [
   "panel-overview", "panel-dns", "panel-tls", "panel-http", "panel-ports",
   "panel-recon", "panel-jwt", "panel-vault", "panel-codecs", "panel-subnet",
-  "panel-cert", "panel-payload", "panel-mirror", "panel-report",
+  "panel-cert", "panel-payload", "panel-mirror", "panel-report", "panel-mail", "panel-subs", "panel-pqc",
 ]) {
   assert.ok(home.includes(`id="${panel}"`), `Missing suite panel: #${panel}`);
 }
 for (const control of [
   "global-target", "battery-run", "dns-run", "tls-run", "http-run", "tcp-run",
   "recon-run", "jwt-run", "hash-run", "vault-seal", "codec-run", "subnet-run",
-  "cert-run", "payload-run", "echo-run", "webrtc-run", "fingerprint-run",
+  "cert-run", "payload-run", "echo-run", "webrtc-run", "fingerprint-run", "mail-run", "subs-run", "pqc-run",
   "ble-run", "report-export-md", "report-export-json",
 ]) {
   assert.ok(home.includes(`id="${control}"`), `Missing suite control: #${control}`);

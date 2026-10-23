@@ -261,7 +261,10 @@ function tokenize(line: string, os: BlacksiteOS): string[] {
     const ch = line[i];
     if (quote) {
       if (ch === quote) quote = null;
-      else if (ch === "\\" && quote === '"' && i + 1 < line.length) { cur += line[++i]; }
+      // POSIX: inside double quotes a backslash escapes only $ ` " \ and
+      // newline — every other sequence keeps its backslash, so regexes
+      // ("\d+") and printf formats ("%s\n") survive tokenizing intact.
+      else if (ch === "\\" && quote === '"' && i + 1 < line.length && ['"', "\\", "$", "`"].includes(line[i + 1])) { cur += line[++i]; }
       else cur += ch;
       continue;
     }
