@@ -63,28 +63,25 @@ export async function onRequestPost(context: any) {
     const chunks: Uint8Array[] = [];
     let total = 0;
     const deadline = Date.now() + timeoutMs;
+    // ONE pending read at a time: racing read() calls and abandoning the
+    // loser breaks the Workers socket stream (the port-22 banner case:
+    // data arrived, the quiet race lost, the next read threw). Keep the
+    // same pending promise across phases instead.
+    let pending: Promise<any> = reader.read();
+    const raceTimeout = (p: Promise<any>, ms: number) => Promise.race([p, new Promise<any>((resolve) => setTimeout(() => resolve({ timeout: true }), ms))]);
     while (total < readCap && Date.now() < deadline) {
-      const remaining = deadline - Date.now();
-      const read = await Promise.race([
-        reader.read(),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ timeout: true }), remaining)),
-      ]);
+      const read = await raceTimeout(pending, Math.max(1, deadline - Date.now()));
       if (read.timeout || read.done || !read.value) break;
       chunks.push(read.value);
       total += read.value.length;
+      pending = reader.read();
       // Many banner doors speak once; a short quiet period ends the read.
-      if (total > 0) {
-        const quiet = await Promise.race([
-          reader.read(),
-          new Promise<any>((resolve) => setTimeout(() => resolve({ timeout: true }), 350)),
-        ]);
-        if (!quiet.timeout && !quiet.done && quiet.value) {
-          chunks.push(quiet.value);
-          total += quiet.value.length;
-        } else if (!quiet.timeout && quiet.done) {
-          break;
-        }
-      }
+      const quiet = await raceTimeout(pending, 350);
+      if (quiet.timeout) break;
+      if (quiet.done || !quiet.value) break;
+      chunks.push(quiet.value);
+      total += quiet.value.length;
+      pending = reader.read();
     }
     try { reader.releaseLock(); } catch { /* noop */ }
     const received = new Uint8Array(total);

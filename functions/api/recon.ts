@@ -16,9 +16,24 @@ async function fetchText(url: string, timeoutMs = 8000): Promise<{ status: numbe
   }
 }
 
+async function rdapBootstrap(domain: string): Promise<string | null> {
+  try {
+    const tld = domain.split(".").pop() || "";
+    const res = await fetch("https://data.iana.org/rdap/dns.json", { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    for (const [tlds, urls] of data.services || []) {
+      if ((tlds as string[]).includes(tld) && urls?.[0]) return String(urls[0]).replace(/\/$/, "");
+    }
+  } catch { /* fall through */ }
+  return null;
+}
+
 async function rdap(domain: string) {
   try {
-    const res = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`, { headers: { accept: "application/rdap+json" }, signal: AbortSignal.timeout(8000) });
+    const base = await rdapBootstrap(domain);
+    const endpoint = base ? `${base}/domain/${encodeURIComponent(domain)}` : `https://rdap.org/domain/${encodeURIComponent(domain)}`;
+    const res = await fetch(endpoint, { headers: { accept: "application/rdap+json", "user-agent": userAgent() }, signal: AbortSignal.timeout(10000) });
     if (!res.ok) return { ok: false, error: `RDAP answered HTTP ${res.status} (the TLD registry may not publish RDAP).` };
     const d: any = await res.json();
     const events = (d.events || []).map((e: any) => ({ action: e.eventAction, date: e.eventDate }));
@@ -60,7 +75,23 @@ async function ct(domain: string) {
     const subdomains = [...names].filter((n) => n !== domain).sort();
     return { ok: true, certificatesLogged: rows.length, uniqueNames: names.size, subdomains: subdomains.slice(0, 500), truncated: subdomains.length > 500, mostRecentCertNotBefore: latest };
   } catch {
-    return { ok: false, error: "Certificate Transparency lookup failed or timed out — crt.sh is a volunteer service and rate-limits; try again shortly." };
+    // crt.sh is a volunteer service and sulks often; Cert Spotter's API is
+    // the second witness for the same public logs.
+    try {
+      const res = await fetch(`https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(domain)}&include_subdomains=true&expand=dns_names`, { headers: { "user-agent": userAgent(), accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error("certspotter");
+      const rows: any[] = await res.json();
+      const names = new Set<string>();
+      let latest: string | null = null;
+      for (const row of rows) {
+        for (const n of row.dns_names || []) { const name = String(n).toLowerCase(); if (name && !name.startsWith("*")) names.add(name); }
+        if (row.not_before && (!latest || row.not_before > latest)) latest = row.not_before;
+      }
+      const subdomains = [...names].filter((n) => n !== domain).sort();
+      return { ok: true, source: "certspotter", certificatesLogged: rows.length, uniqueNames: names.size, subdomains: subdomains.slice(0, 500), truncated: subdomains.length > 500, mostRecentCertNotBefore: latest };
+    } catch {
+      return { ok: false, error: "Certificate Transparency lookups failed (crt.sh and Cert Spotter both unreachable or rate-limited) — try again shortly." };
+    }
   }
 }
 

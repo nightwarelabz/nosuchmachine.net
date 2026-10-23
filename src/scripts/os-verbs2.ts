@@ -133,7 +133,7 @@ function registerWire() {
     const ports = ctx.args[1] || "common";
     const data = await api(`/api/tcp?host=${encodeURIComponent(ctx.args[0])}&ports=${encodeURIComponent(ports)}`);
     if (!data.ok) return `knock: ${data.error}`;
-    return [`${data.host} — ${data.summary}`, ...data.results.map((r: any) => `  ${String(r.port).padStart(5)}/${r.service.padEnd(16)} ${r.state}${r.state === "open" ? ` (${r.ms} ms)` : ""}`)].join("\n");
+    return [`${data.host} — ${data.summary}`, ...data.results.map((r: any) => `  ${String(r.port).padStart(5)}/${r.service.padEnd(16)} ${r.state}${r.state === "open" ? ` (${r.ms} ms)` : ""}`), ...(data.warning ? [`! ${data.warning}`] : [])].join("\n");
   });
   verb("portscan", "EDGE", "portscan <host> [top|a-b|list] — every door in the set, banners on the open ones", async (ctx) => {
     if (!need(ctx, 1, "portscan <host> [top|a-b|list]")) return;
@@ -148,7 +148,7 @@ function registerWire() {
     const refusal = gateActive(ctx); if (refusal) return refusal;
     const data = await api(`/api/tcp?host=${encodeURIComponent(ctx.args[0])}&ports=${encodeURIComponent(ports)}`);
     if (!data.ok) return `portscan: ${data.error}`;
-    return [`${data.host} — ${data.summary}`, ...data.results.map((r: any) => `  ${String(r.port).padStart(5)}/${(r.service || "").padEnd(16)} ${r.state}`)].join("\n");
+    return [`${data.host} — ${data.summary}`, ...data.results.map((r: any) => `  ${String(r.port).padStart(5)}/${(r.service || "").padEnd(16)} ${r.state}`), ...(data.warning ? [`! ${data.warning}`] : [])].join("\n");
   });
   verb("cert", "EDGE", "cert <host> [port] — audit the TLS papers", async (ctx) => {
     if (!need(ctx, 1, "cert <host> [port]")) return;
