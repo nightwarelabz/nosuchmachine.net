@@ -121,6 +121,8 @@
 .os-term-text.dim { color: var(--os-muted); }
 .os-term-text.err { color: #ff848c; }
 .os-term-text.cmd { color: var(--os-accent); }
+.os-term-text.ok { color: #3fb950; }
+.os-term-text.warn { color: #e3b341; }
 .os-term-line { display: flex; align-items: baseline; gap: 0.4rem; border-top: 1px dashed var(--os-line-soft); padding-top: 0.5rem; }
 .os-term-prompt { color: var(--os-green); font-size: 0.8rem; white-space: nowrap; text-shadow: 0 0 8px rgba(125, 255, 154, 0.3); }
 .os-term-input { flex: 1; background: transparent; border: none; color: var(--os-ink); font: inherit; font-size: 0.86rem; caret-color: var(--os-accent); }
