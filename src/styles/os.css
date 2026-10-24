@@ -81,7 +81,7 @@
 .os-win-resize { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; }
 
 /* ————— taskbar ————— */
-.os-taskbar { display: flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0.65rem; background: rgba(8, 11, 17, 0.88); border-top: 1px solid var(--os-line-soft); z-index: 90; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.os-taskbar { display: flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0.65rem calc(0.4rem + env(safe-area-inset-bottom)); background: rgba(8, 11, 17, 0.88); border-top: 1px solid var(--os-line-soft); z-index: 90; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .os-start { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 88%, #fff 6%), var(--os-accent)); color: #fff; border: none; border-radius: 8px; padding: 0.46rem 0.8rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 4px 16px var(--os-accent-soft); transition: transform 0.1s, filter 0.12s; }
 .os-start:hover { filter: brightness(1.1); }
 .os-start:active { transform: scale(0.97); }
@@ -229,4 +229,14 @@
   .os-file-row { min-height: 44px; }
   .os-btn { min-height: 40px; }
   .os-btn.small { min-height: 30px; }
+}
+
+/* ————— wave 7: coarse pointers get honest targets; the room goes dark-schemed ————— */
+.os-root { color-scheme: dark; }
+@media (pointer: coarse) {
+  .os-win-btn { min-width: 38px; min-height: 34px; }
+  .os-icon { padding: 10px 4px 8px; }
+  .os-launcher-list button, .os-launcher-item { min-height: 48px; }
+  .os-btn { min-height: 38px; }
+  .os-file-row { min-height: 44px; }
 }
