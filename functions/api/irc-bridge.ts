@@ -13,6 +13,27 @@ const NETWORKS: Record<string, number[]> = {
   "irc.hackint.org": [6697, 6667],
 };
 
+/* Claimed names — the operator's own. Nobody wears one of these through
+   this bridge without the house claim code, so nobody on the wire can
+   impersonate the house. A nick counts as claimed when, lowercased and
+   stripped of decoration characters, it equals a protected name or is a
+   protected name followed only by digits (chasebryan, chasebryan_ and
+   chasebryan99 are all the same claim). The code itself never appears
+   here — only its SHA-256; the client presents it as PASS nsm-claim:<code>
+   before NICK, the bridge verifies and swallows that line, and the code
+   never crosses to the network. Network-wide, NickServ registration is
+   the second lock; this lock guards every door this site opens. */
+const PROTECTED = ["nightwarelabz", "nosuchmachine", "chasebryan", "chase", "nightjar"];
+const CLAIM_SHA256 = "02f61fd0c47816f3400fafcdcc05c33b01c13c636075ac6edbccaa983acfac01";
+function claimedName(nick: string): string | null {
+  const base = nick.toLowerCase().replace(/[_`^|\\-]/g, "");
+  for (const p of PROTECTED) {
+    if (base === p) return p;
+    if (base.startsWith(p) && /^\d+$/.test(base.slice(p.length))) return p;
+  }
+  return null;
+}
+
 export async function onRequest(context: any) {
   const { request } = context;
   if (request.headers.get("Upgrade") !== "websocket") return err("relay bridge: websocket upgrade required.", 426);
@@ -64,10 +85,40 @@ export async function onRequest(context: any) {
     } catch { /* the wire ended */ }
     closeBoth();
   })();
+  let claimed = false;
+  let refused = false;
+  let lineBuf = "";
   server.addEventListener("message", async (event: any) => {
+    if (refused) return;
     try {
-      const data = event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : new TextEncoder().encode(String(event.data));
-      await writer.write(data);
+      const text = event.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(event.data)) : String(event.data);
+      lineBuf += text;
+      let idx;
+      while ((idx = lineBuf.indexOf("\n")) >= 0) {
+        const raw = lineBuf.slice(0, idx).replace(/\r$/, "");
+        lineBuf = lineBuf.slice(idx + 1);
+        if (!raw) continue;
+        const upper = raw.toUpperCase();
+        if (upper.startsWith("PASS NSM-CLAIM:")) {
+          const token = raw.slice(raw.indexOf(":") + 1).trim();
+          const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+          const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+          claimed = hex === CLAIM_SHA256;
+          continue;
+        }
+        if (upper.startsWith("NICK ")) {
+          const want = raw.slice(5).trim().split(" ")[0];
+          if (claimedName(want) && !claimed) {
+            refused = true;
+            try {
+              server.send(new TextEncoder().encode(`:relay.bridge NOTICE * :the name "${want}" is claimed \u2014 it belongs to the house, and it opens only with the house claim code. Pick another nick, or enter the claim code in Relay.\r\n`));
+            } catch { /* the refusal still closes */ }
+            setTimeout(closeBoth, 300);
+            return;
+          }
+        }
+        await writer.write(new TextEncoder().encode(raw + "\r\n"));
+      }
     } catch { closeBoth(); }
   });
   server.addEventListener("close", closeBoth);
