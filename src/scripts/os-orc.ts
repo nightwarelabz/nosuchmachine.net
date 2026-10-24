@@ -17,6 +17,8 @@
  * The OS shell widens its own CSP for this room's scope with
  * frame-src https: (see public/_headers). */
 
+import { DEPTH, MAX_NEST } from "./os-depth";
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -45,6 +47,16 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   get.setAttribute("target", "_blank");
   get.setAttribute("rel", "noreferrer");
   bar.append(addr, go, get);
+  if (DEPTH >= 1) bar.append(el("span", "os-note", `nest ${DEPTH}`));
+  // The hall has a floor: at MAX_NEST the room stops framing and
+  // says so, rather than melting the browser one mirror later.
+  if (DEPTH >= MAX_NEST) {
+    const floor = el("p", "os-note", `the mirrors end here — ${MAX_NEST} nests deep is where physics collects. orc standalone starts fresh at the surface.`);
+    floor.style.padding = "1.2rem";
+    wrap.append(hero, bar, floor);
+    body.appendChild(wrap);
+    return;
+  }
   const frame = document.createElement("iframe");
   frame.className = "os-orc-frame";
   frame.setAttribute("title", "orc preview pane");
