@@ -350,3 +350,30 @@
 .os-winmenu-x { background: rgba(255, 255, 255, 0.09); border: 1px solid var(--os-line); color: inherit; border-radius: 7px; width: 32px; height: 32px; cursor: pointer; font-size: 0.9rem; line-height: 1; }
 .os-aegis-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 200; max-width: min(92vw, 560px); background: rgba(10, 6, 8, 0.94); border: 1px solid var(--os-accent); border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.78rem; line-height: 1.45; box-shadow: 0 10px 34px rgba(0,0,0,0.55); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .os-aegis-banner strong { color: var(--os-accent); }
+
+/* ————— the depth pass (overhaul wave 5) —————
+   Light, layered honestly: a glow off the wallpaper's top corner, a
+   vignette that seats the desk, windows that recede when they lose
+   focus and take the theme's wash when they hold it, tiles that lift,
+   scrollbars in the house's own metal. Everything re-skins with the
+   theme because everything is mixed from its variables. */
+.os-desktop::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(ellipse 90% 55% at 16% -4%, var(--os-accent-soft), transparent 55%); opacity: 0.55; }
+.os-desktop::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.38) 100%); }
+.os-window:not(.focused) { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), 0 3px 12px rgba(0, 0, 0, 0.35); }
+.os-window:not(.focused) .os-win-head { background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008)); }
+.os-window.focused .os-win-head { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 17%, transparent), color-mix(in srgb, var(--os-accent) 5%, transparent)); }
+.os-icon:hover { background: rgba(255, 255, 255, 0.07); border-color: var(--os-line-soft); transform: translateY(-2px); }
+.os-icon:active { transform: translateY(0) scale(0.96); }
+.os-icon-label { text-shadow: 0 1px 7px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9); }
+.os-taskbar { border-top: 1px solid color-mix(in srgb, var(--os-accent) 32%, var(--os-line-soft)); box-shadow: 0 -12px 34px -18px var(--os-accent-soft); }
+.os-root ::-webkit-scrollbar { width: 9px; height: 9px; }
+.os-root ::-webkit-scrollbar-track { background: transparent; }
+.os-root ::-webkit-scrollbar-thumb { background: var(--os-line); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+.os-root ::-webkit-scrollbar-thumb:hover { background: var(--os-accent); border: 2px solid transparent; background-clip: padding-box; }
+.os-root { scrollbar-width: thin; scrollbar-color: var(--os-line) transparent; }
+.os-btn:hover:not(:disabled) { border-color: var(--os-accent); color: var(--os-accent); }
+.os-btn.primary:hover:not(:disabled) { color: var(--os-on-accent); box-shadow: 0 0 18px -4px var(--os-accent); }
+.os-btn:active:not(:disabled) { transform: scale(0.97); }
+.os-root input:focus-visible, .os-root textarea:focus-visible, .os-root select:focus-visible { outline: none; border-color: var(--os-accent); box-shadow: 0 0 0 3px var(--os-accent-soft); }
+.os-boot::after { content: ""; width: min(620px, 88vw); height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--os-accent), transparent); background-size: 200% 100%; animation: os-boot-scan 1.5s linear infinite; opacity: 0.85; }
+@keyframes os-boot-scan { from { background-position: 200% 0; } to { background-position: -100% 0; } }
