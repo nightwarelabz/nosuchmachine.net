@@ -357,6 +357,7 @@ export class SimAudio {
     this.pluckAt = c.currentTime + 2.5;
     this.started = true;
     this.applyGain(0.8);
+    void c.resume();
   }
 
   private applyGain(t = 0.2) {
@@ -864,6 +865,12 @@ export function buildSimulacrum(body: HTMLElement) {
   canvas.width = 1024; canvas.height = 640;
   const shade = el("div", "os-sim-shade");
   const whisper = el("div", "os-sim-whisper", "");
+  const titleScr = el("div", "os-sim-title");
+  const titleName = el("div", "os-sim-title-name", "");
+  const titleSub = el("div", "os-sim-title-sub", "");
+  const titleMood = el("div", "os-sim-title-mood", "");
+  const titleEnter = el("div", "os-sim-title-enter", "click to enter");
+  titleScr.append(titleName, titleSub, titleMood, titleEnter);
   const opening = el("div", "os-sim-opening");
   const openingBar = el("div", "os-sim-opening-bar");
   const openingClose = el("button", "os-btn", "close the opening");
@@ -876,7 +883,7 @@ export function buildSimulacrum(body: HTMLElement) {
   const powers = el("div", "os-sim-powers");
   const uw = el("div", "os-sim-uw");
   const stage = el("div", "os-sim-stage");
-  stage.append(canvas, shade, uw, whisper, opening);
+  stage.append(canvas, shade, uw, whisper, opening, titleScr);
   const hud = el("div", "os-sim-hud");
   const seedLabel = el("span", "os-note", "");
   const newBtn = el("button", "os-btn", "new world");
@@ -992,9 +999,17 @@ export function buildSimulacrum(body: HTMLElement) {
   };
   const leanOf = (r: DreamRecord) => (r.light - r.shadow) / (6 + r.light + r.shadow);
   const persistRec = () => { rec.ts = Date.now(); try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ } };
+  const moodLines = ["it is dreaming of you", "the weather is being decided", "something here is awake", "it has been waiting", "the account is open"];
+  const setTitle = () => {
+    titleName.textContent = wName;
+    titleSub.textContent = `a simulacrum · seed ${seed}`;
+    titleMood.textContent = moodLines[Math.abs(seed) % moodLines.length];
+    titleEnter.textContent = `click to enter ${wName.toLowerCase()}`;
+  };
   const refreshLabel = () => {
     const lean = leanOf(rec);
     seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}${lean > 0.45 ? " · it trusts you" : lean < -0.45 ? " · it is wary of you" : ""}`;
+    setTitle();
   };
   let rec = dreamRecord(seed);
   rec.visits++;
@@ -1474,12 +1489,22 @@ export function buildSimulacrum(body: HTMLElement) {
   const spawn = () => { px = 8; pz = 8; py = height(px, pz) + 26; yaw = 0.7; pitch = -0.16; vx = 0; vz = 0; vy = 0; };
   spawn();
 
-  canvas.addEventListener("click", () => {
+  const takeWorld = () => {
     touched = true;
+    titleScr.classList.add("taken");
     if (!audio.live) { audio.start(); audio.ui("take"); }
+    audio.kick();
     if (!greeted) { greeted = true; dreamer.greet(rec.visits > 1, wName); }
     if (!locked && document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
-  });
+  };
+  canvas.addEventListener("click", takeWorld);
+  titleScr.addEventListener("click", takeWorld);
+  /* Safari keeps an AudioContext suspended until a resume() lands
+     inside a genuine gesture — so every real gesture in the app
+     kicks it, not just the first click */
+  wrap.addEventListener("pointerdown", () => audio.kick(), true);
+  const visKick = () => { if (!document.hidden) audio.kick(); };
+  document.addEventListener("visibilitychange", visKick);
   document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
   document.addEventListener("mousemove", (e) => {
     if (!locked) return;
@@ -1488,6 +1513,7 @@ export function buildSimulacrum(body: HTMLElement) {
   });
   const kd = (e: KeyboardEvent) => {
     if (!body.isConnected) return;
+    audio.kick();
     if (locked || touched) keys.add(e.code);
     if ((locked || touched) && e.code === "KeyF") { flying = !flying; flyBtn.textContent = flying ? "fly" : "walk"; audio.ui("toggle"); if (!flying) py = Math.max(py, height(px, pz) + 1.7); }
     if ((locked || touched) && e.code === "KeyT") castTimeslip();
@@ -1634,7 +1660,7 @@ export function buildSimulacrum(body: HTMLElement) {
   ];
   for (const [label, keyHint, fn] of powerDefs) {
     const b = el("button", "os-btn os-sim-power", `${label} · ${keyHint}`);
-    b.addEventListener("click", () => { if (!audio.live) audio.start(); touched = true; fn(); });
+    b.addEventListener("click", () => { if (!audio.live) audio.start(); audio.kick(); touched = true; titleScr.classList.add("taken"); fn(); });
     powers.append(b);
   }
   sndBtn.addEventListener("click", () => {
@@ -1671,6 +1697,7 @@ export function buildSimulacrum(body: HTMLElement) {
     persistRec();
     dreamer = new Dreamer(seed, rec.rapport, leanOf(rec));
     greeted = false;
+    titleScr.classList.remove("taken");
     if (stoneMesh) { gl.deleteBuffer(stoneMesh.buf); stoneMesh = null; }
     refreshLabel();
     spawn();
@@ -2239,6 +2266,7 @@ export function buildSimulacrum(body: HTMLElement) {
     if (!body.isConnected) {
       document.removeEventListener("keydown", kd);
       document.removeEventListener("keyup", ku);
+      document.removeEventListener("visibilitychange", visKick);
       audio.dispose();
       return;
     }
