@@ -375,7 +375,7 @@
   "section": "pentest bench",
   "cmd": "relay",
   "verb": "relay",
-  "desc": "the house wire — Relay, a real IRC client (house channel #nosuchmachine on Libera.Chat)"
+  "desc": "the house wire — Relay, a real IRC client (house channel #nosuchmachine on OFTC)"
  },
  {
   "section": "pentest bench",

@@ -513,10 +513,10 @@ function registerEngines() {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "ssh", arg: ctx.args[0] } }));
     return "the SSH window opens on the desk — the fingerprint must be trusted there before any password moves, and the session's cryptography never leaves this tab.";
   });
-  verb("relay", "EDGE", "relay — open Relay, the house wire: a real IRC client in the room (Libera.Chat, OFTC, hackint; the house channel is #nosuchmachine)", async (ctx) => {
+  verb("relay", "EDGE", "relay — open Relay, the house wire: a real IRC client in the room (OFTC, Libera.Chat, hackint; the house channel is #nosuchmachine)", async (ctx) => {
     const refusal = ctx.os.gate("active"); if (refusal) return refusal;
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "relay" } }));
-    return "Relay opens on the desk — pick a nick and step onto the wire. The house channel is #nosuchmachine on Libera.Chat.";
+    return "Relay opens on the desk — pick a nick and step onto the wire. The house channel is #nosuchmachine on OFTC.";
   });
   verb("chip8", "LIVE", "chip8 [file.ch8] — open the CHIP-8 console (the demo ROM runs if you name none)", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "chip8", arg: ctx.args[0] || "" } }));
