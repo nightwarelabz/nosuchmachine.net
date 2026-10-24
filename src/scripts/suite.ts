@@ -94,9 +94,12 @@ async function edgeChip() {
     const res = await fetch("/api/echo", { headers: { accept: "application/json" } });
     const data = await res.json();
     const ms = Math.round(performance.now() - t0);
-    const v = data?.visitor || data?.seenByTheEdge || data || {};
-    const where = v.country || v.cfCountry || data?.cf?.country || "";
-    chip.innerHTML = `EDGE <b>● ONLINE</b> · ${ms} ms${where ? ` · ${where}` : ""}`;
+    const where = data?.network?.country || "";
+    chip.textContent = "";
+    chip.append("EDGE ");
+    const b = document.createElement("b");
+    b.textContent = "● ONLINE";
+    chip.append(b, ` · ${ms} ms${where ? ` · ${where}` : ""}`);
   } catch { chip.textContent = "EDGE ● UNREACHABLE"; }
 }
 

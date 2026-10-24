@@ -85,6 +85,22 @@ caps, one GET per hop, self-identifying User-Agent, no concurrency cannon,
 no exploitation primitives. Operators are told, on the page itself, to test
 only systems they own or are authorized to test.
 
+## Hardening (2026-10-24 pass)
+
+- Every guarded endpoint's DNS-over-HTTPS lookup carries a 5 s timeout —
+  a hung resolver can no longer stall the guard itself; the git proxy's
+  upstream fetch is bounded at 120 s like the other bridges.
+- Rendering discipline: anything a remote party controls (an SSH server's
+  output, an echo payload, IRC traffic) reaches the page as text or as
+  escaped, attribute-free spans — never as raw HTML. The SSH screen's
+  renderer escapes `<`, `&`, and `>`; the bench's edge chip is composed
+  from DOM text nodes.
+- Default-scope responses carry `Cross-Origin-Opener-Policy: same-origin`,
+  `X-Permitted-Cross-Domain-Policies: none`, and `Origin-Agent-Cluster: ?1`
+  alongside the standing CSP/HSTS/nosniff set. The OS scope keeps its
+  eval-by-design CSP, deliberately and only there.
+- `/.well-known/security.txt` (RFC 9116) tells researchers where to knock.
+
 ## The Daylight Bottle plug
 
 BLACKSITE OS carries a Daylight Bottle desk (desktop icon, the `bottle`
