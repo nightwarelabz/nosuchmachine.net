@@ -177,6 +177,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   input.className = "os-relay-input";
   input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /part · /nick name";
   input.maxLength = 400;
+  const sendBtn = el("button", "os-btn small", "send ▸");
+  sendBtn.title = "send it on the wire";
   const idBtn = el("button", "os-btn small", "identity");
   idBtn.title = "a name of your own — with a password if you want one";
   idBtn.addEventListener("click", () => showIdentityBox());
@@ -186,7 +188,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     void navigator.clipboard.writeText((buffers.get(current) || []).join("\n")).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
     input.focus();
   });
-  inputRow.append(input, idBtn, copyBtn);
+  input.setAttribute("enterkeyhint", "send");
+  inputRow.append(input, sendBtn, idBtn, copyBtn);
   main.append(linesEl, inputRow);
   const usersEl = el("div", "os-relay-users");
   view.append(targetsEl, main, usersEl);
@@ -272,9 +275,20 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         else push(target, `<${m.nick}> ${text}`);
         break;
       }
-      case "NOTICE":
-        push("server", `-${m.nick}- ${m.params[1] || ""}`);
+      case "NOTICE": {
+        const text = m.params[1] || "";
+        if (m.nick.includes(".")) {
+          // a server speaking: its connection housekeeping (hostname and
+          // ident lookups against the bridge) can never succeed and is
+          // not news — it never reaches the page. Anything else it says
+          // arrives in house dress, without the *** shout.
+          if (/looking up your hostname|checking ident|found your hostname|couldn'?t look up your hostname|no ident response|looking up your host/i.test(text)) break;
+          push("server", `— the network: ${text.replace(/^\*\*\*\s*/, "")}`);
+          break;
+        }
+        push("server", `-${m.nick}- ${text}`);
         break;
+      }
       case "JOIN": {
         const chan = m.params[0];
         if (m.nick === myNick) { joinedChans.add(chan); push(chan, `— you stepped into ${chan}`); current = chan; renderTargets(); }
@@ -407,11 +421,12 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     }
   }, 2000);
 
-  input.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
+  const submit = () => {
     const text = input.value.trim();
+    if (!text) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) { push(current, "— the wire is down this second; your line stays in the box and goes out when the wire is back."); return; }
+    if (current === "server" && !text.startsWith("/")) { push("server", "— join a channel first (the house channel opens on connect)"); return; }
     input.value = "";
-    if (!text || !ws) return;
     if (text.startsWith("/")) {
       const [cmd, ...rest] = text.slice(1).split(" ");
       const arg = rest.join(" ");
@@ -427,8 +442,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       }
       return;
     }
-    if (current === "server") { push("server", "— join a channel first (the house channel opens on connect)"); return; }
     send(`PRIVMSG ${current} :${text}`);
     push(current, `<${myNick}> ${text}`);
-  });
+  };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  sendBtn.addEventListener("click", () => { submit(); input.focus(); });
 }
