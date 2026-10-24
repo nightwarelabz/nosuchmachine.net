@@ -15,6 +15,23 @@ import { Chip8, CHIP8_DEMO } from "./os-engines2";
 import { SshSession } from "./os-ssh";
 
 const os = new BlacksiteOS();
+/* AEGIS keeps its own cadence: a snapshot every five minutes of room
+   life, so a mass-encryption run always has a recent past to undo to. */
+setInterval(() => { try { os.maybeSnapshot(); } catch { /* the watch does not break the room */ } }, 60_000);
+/* When containment trips, the desk itself says so — a banner over the
+   wallpaper, with the way out named. */
+window.addEventListener("blacksite:aegis", (e) => {
+  const detail = (e as CustomEvent).detail || {};
+  document.querySelector(".os-aegis-banner")?.remove();
+  const b = el("div", "os-aegis-banner");
+  b.append(el("strong", "", "AEGIS — containment. "), document.createTextNode(`the real filesystem is frozen and the attack is writing to a mirage. (${detail.reason || "bulk mutation"}) `));
+  const sys = el("button", "os-btn small", "open system");
+  sys.addEventListener("click", () => { b.remove(); openApp("system"); });
+  const x = el("button", "os-btn small", "stand down");
+  x.addEventListener("click", () => b.remove());
+  b.append(sys, x);
+  document.querySelector(".os-desktop")?.appendChild(b);
+});
 let zTop = 10;
 const windows = new Map<string, HTMLElement>();
 let winCounter = 0;
@@ -674,7 +691,23 @@ function buildSystem(body: HTMLElement) {
   const note = el("p", "os-note", "The register is the WUCI OS discipline carried to the web: components are declared, budgets are visible, and limits are named instead of hidden. Run `posture` in the terminal for the room's graded self-assessment, `register` for this table as text.");
   const refresh = el("button", "os-btn", "refresh the budgets");
   refresh.addEventListener("click", () => { body.innerHTML = ""; buildSystem(body); });
-  wrap.append(stats, h, table, note, refresh);
+  const ah = el("h3", "", "AEGIS — the room's immune system");
+  const ast = os.aegisStatus();
+  const astate = el("p", "os-note", ast.contained
+    ? "CONTAINED — the real filesystem is frozen. Everything written since the trip lives in the mirage: visible to whoever wrote it, weightless to the room. Restore, or lift and judge the mirage yourself."
+    : "Standing watch. Snapshots at boot, every five minutes, and at the first whisper of noise; bulk mutation, entropy runs, ransom-note shapes, and hands on the decoy files in ~/documents trip containment — and containment answers with a mirage.");
+  if (ast.contained) astate.style.color = "var(--os-accent)";
+  const ainfo = el("p", "os-note", `snapshots: ${ast.snaps.length ? ast.snaps.map((x) => `${new Date(x.at).toLocaleTimeString()} (${x.why})`).join(" · ") : "none"}${ast.trips.length ? `\ntrips: ${ast.trips.map((t) => t.reason).join(" · ")}` : ""}`);
+  ainfo.style.whiteSpace = "pre-line";
+  const arow = el("div", "os-sys-actions");
+  const snapBtn = el("button", "os-btn", "snapshot now");
+  snapBtn.addEventListener("click", () => { os.snapshotNow("manual"); body.innerHTML = ""; buildSystem(body); });
+  const restoreBtn = el("button", "os-btn", "restore last good snapshot");
+  restoreBtn.addEventListener("click", () => { os.aegisRestore(); body.innerHTML = ""; buildSystem(body); });
+  const liftBtn = el("button", "os-btn", "lift containment");
+  liftBtn.addEventListener("click", () => { os.aegisLift(false); body.innerHTML = ""; buildSystem(body); });
+  arow.append(snapBtn, restoreBtn, ...(ast.contained ? [liftBtn] : []));
+  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow);
   body.appendChild(wrap);
 }
 
@@ -872,7 +905,7 @@ function boot() {
   let i = 0;
   const tick = () => {
     if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, 110); }
-    else setTimeout(() => { overlay.classList.add("done"); restoreSession(); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
+    else setTimeout(() => { overlay.classList.add("done"); restoreSession(); if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } })); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
   };
   tick();
   // desktop icons

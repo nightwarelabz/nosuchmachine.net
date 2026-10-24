@@ -304,3 +304,6 @@
 .os-wp-thumb { display: flex; flex-direction: column; gap: 4px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--os-line-soft); border-radius: 10px; padding: 6px; cursor: pointer; font-size: 0.68rem; color: var(--os-muted); transition: border-color 0.12s, transform 0.1s; }
 .os-wp-thumb:hover { border-color: var(--os-accent); transform: translateY(-1px); color: var(--os-ink); }
 .os-wp-thumb img.os-wp-canvas { object-fit: cover; }
+.os-sys-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.os-aegis-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 200; max-width: min(92vw, 560px); background: rgba(10, 6, 8, 0.94); border: 1px solid var(--os-accent); border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.78rem; line-height: 1.45; box-shadow: 0 10px 34px rgba(0,0,0,0.55); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.os-aegis-banner strong { color: var(--os-accent); }
