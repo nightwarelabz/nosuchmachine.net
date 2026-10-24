@@ -155,11 +155,12 @@ export function openApp(app: string, arg?: string) {
   desktop().appendChild(win);
   placeNewWindow(win);
   windows.set(key, win);
+  deskProcs.set(key, { pid: ++pidTop, key, app, since: Date.now(), win });
   addTaskbarButton(key, meta.title, win);
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); });
+  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); });
   minBtn.addEventListener("click", () => { win.style.display = "none"; saveSession(); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
@@ -202,6 +203,31 @@ function toggleWinMenu() {
     if (winMenuEl && !winMenuEl.contains(ev.target as Node) && (ev.target as HTMLElement).id !== "os-winmenu-btn") { toggleWinMenu(); document.removeEventListener("pointerdown", outside); }
   }), 0);
 }
+/* ——— the desk process registry ———
+   Every window that stands open IS a process of this room: it gets a
+   pid, a birth time, a state. The Processes board reads this table —
+   it is the desk's real table, not a story. */
+interface DeskProc { pid: number; key: string; app: string; since: number; win: HTMLElement }
+let pidTop = 200;
+const deskProcs = new Map<string, DeskProc>();
+function visibleWindows(): HTMLElement[] { return [...windows.values()].filter((w) => w.style.display !== "none"); }
+function restorePrevRect(win: HTMLElement) {
+  const prev = (win as any)._prevRect as { l: string; t: string; w: string; h: string } | undefined;
+  if (prev) { win.style.left = prev.l; win.style.top = prev.t; win.style.width = prev.w; win.style.height = prev.h; }
+}
+function snapWindow(win: HTMLElement, side: "l" | "r") {
+  if (win.classList.contains("maxed")) toggleMaximize(win);
+  (win as any)._prevRect = { l: win.style.left, t: win.style.top, w: win.style.width, h: win.style.height };
+  const stage = desktop();
+  const sw = stage.clientWidth, sh = stage.clientHeight, gap = 8;
+  const half = Math.floor((sw - gap * 3) / 2);
+  win.style.width = `${half}px`;
+  win.style.height = `${sh - gap * 2}px`;
+  win.style.top = `${gap}px`;
+  win.style.left = side === "l" ? `${gap}px` : `${gap * 2 + half}px`;
+  win.dataset.snap = side;
+  focusWindow(win);
+}
 function focusWindow(win: HTMLElement) {
   win.style.zIndex = String(++zTop);
   win.style.display = "";
@@ -232,17 +258,46 @@ function toggleMaximize(win: HTMLElement) {
 }
 function startDrag(e: PointerEvent, win: HTMLElement) {
   if (win.classList.contains("maxed")) return;
+  if (win.dataset.snap) { restorePrevRect(win); win.dataset.snap = ""; }
+  const stage = desktop();
   const startX = e.clientX - win.offsetLeft;
   const startY = e.clientY - win.offsetTop;
+  let hint: HTMLElement | null = null;
+  const showHint = (kind: "l" | "r" | "t") => {
+    if (!hint) { hint = el("div", "os-snap-hint"); stage.appendChild(hint); }
+    hint.dataset.kind = kind;
+    const gap = 8, sw = stage.clientWidth, sh = stage.clientHeight;
+    const half = Math.floor((sw - gap * 3) / 2);
+    hint.style.top = `${gap}px`;
+    hint.style.height = `${sh - gap * 2}px`;
+    hint.style.left = kind === "r" ? `${gap * 2 + half}px` : `${gap}px`;
+    hint.style.width = kind === "t" ? `${sw - gap * 2}px` : `${half}px`;
+  };
+  const clearHint = () => { hint?.remove(); hint = null; };
   const move = (ev: PointerEvent) => {
     win.style.left = `${Math.max(-40, Math.min(window.innerWidth - 80, ev.clientX - startX))}px`;
     win.style.top = `${Math.max(0, Math.min(window.innerHeight - 60, ev.clientY - startY))}px`;
+    const r = stage.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    if (y <= 6) showHint("t");
+    else if (x <= 8) showHint("l");
+    else if (x >= r.width - 8) showHint("r");
+    else clearHint();
   };
-  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); };
+  const up = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    const kind = hint?.dataset.kind;
+    clearHint();
+    if (kind === "t") toggleMaximize(win);
+    else if (kind === "l" || kind === "r") snapWindow(win, kind);
+    saveSession();
+  };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
 function startResize(e: PointerEvent, win: HTMLElement) {
+  win.dataset.snap = "";
   e.preventDefault();
   const startW = win.offsetWidth, startH = win.offsetHeight, startX = e.clientX, startY = e.clientY;
   const move = (ev: PointerEvent) => {
@@ -770,9 +825,25 @@ function buildSystem(body: HTMLElement) {
 
 /* ---------------- Processes / Journal / Gauntlet / Settings / Help ---------------- */
 function buildProcesses(body: HTMLElement) {
+  const deskHead = el("div", "os-launch-head", "DESK PROCESSES — THE WINDOWS OF THIS ROOM, REAL");
+  const desk = el("div", "os-desk-procs");
+  const shellHead = el("div", "os-launch-head", "SHELL PROCESSES — THE blacksite sh TABLE");
   const pre = el("pre", "os-plain");
-  body.appendChild(pre);
+  body.append(deskHead, desk, shellHead, pre);
   const render = () => {
+    desk.innerHTML = "";
+    if (!deskProcs.size) desk.append(el("div", "os-desk-proc", "no windows stand open."));
+    for (const p of deskProcs.values()) {
+      const st = p.win.style.display === "none" ? "minimized" : p.win.classList.contains("focused") ? "focused" : "running";
+      const row = el("div", "os-desk-proc");
+      row.append(el("span", "os-desk-proc-main", `${p.pid}  ${p.app} — ${st} · ${Math.floor((Date.now() - p.since) / 1000)}s`));
+      const go = el("button", "os-btn small", "focus");
+      go.addEventListener("click", () => focusWindow(p.win));
+      const kill = el("button", "os-btn small", "close");
+      kill.addEventListener("click", () => p.win.querySelector<HTMLElement>(".os-win-close")?.click());
+      row.append(go, kill);
+      desk.append(row);
+    }
     pre.textContent = ["  PID  STATE    ELAPSED  COMMAND", ...os.procs.slice(-30).map((p) => `${String(p.pid).padStart(5)}  ${p.state.padEnd(8)} ${String(Math.floor((Date.now() - p.started) / 1000)).padStart(6)}s  ${p.cmd}`)].join("\n") || "no processes yet.";
   };
   render();
@@ -998,6 +1069,18 @@ function boot() {
   window.addEventListener("hashchange", () => { const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); });
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); toggleLauncher(); }
+    if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      const win = document.querySelector<HTMLElement>(".os-window.focused");
+      if (win) {
+        e.preventDefault();
+        if (e.key === "ArrowLeft") snapWindow(win, "l");
+        else if (e.key === "ArrowRight") snapWindow(win, "r");
+        else if (e.key === "ArrowUp") { if (!win.classList.contains("maxed")) toggleMaximize(win); }
+        else if (win.classList.contains("maxed")) toggleMaximize(win);
+        else if (win.dataset.snap) { restorePrevRect(win); win.dataset.snap = ""; focusWindow(win); }
+        else { win.style.display = "none"; saveSession(); }
+      }
+    }
     if (e.altKey && e.key === "Tab") {
       e.preventDefault();
       const wins = [...windows.values()].filter((w) => w.style.display !== "none");
@@ -1027,6 +1110,38 @@ export function osToast(text: string) {
   setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity 0.4s"; setTimeout(() => t.remove(), 420); }, 4200);
 }
 let launcherEl: HTMLElement | null = null;
+function tileWindows() {
+  const wins = visibleWindows();
+  if (!wins.length) return;
+  for (const w of wins) if (w.classList.contains("maxed")) toggleMaximize(w);
+  const stage = desktop();
+  const sw = stage.clientWidth, sh = stage.clientHeight, gap = 8;
+  const cols = Math.ceil(Math.sqrt(wins.length));
+  const rows = Math.ceil(wins.length / cols);
+  const cw = Math.max(240, Math.floor((sw - gap * (cols + 1)) / cols));
+  const ch = Math.max(160, Math.floor((sh - gap * (rows + 1)) / rows));
+  wins.forEach((w, i) => {
+    (w as any)._prevRect = { l: w.style.left, t: w.style.top, w: w.style.width, h: w.style.height };
+    w.dataset.snap = "";
+    w.style.left = `${gap + (i % cols) * (cw + gap)}px`;
+    w.style.top = `${gap + Math.floor(i / cols) * (ch + gap)}px`;
+    w.style.width = `${cw}px`;
+    w.style.height = `${ch}px`;
+  });
+  focusWindow(wins[0]);
+  saveSession();
+}
+function cascadeWindows() {
+  for (const w of visibleWindows()) {
+    if (w.classList.contains("maxed")) toggleMaximize(w);
+    w.dataset.snap = "";
+    placeNewWindow(w);
+  }
+  saveSession();
+}
+function closeAllWindows() {
+  [...windows.values()].forEach((w) => w.querySelector<HTMLElement>(".os-win-close")?.click());
+}
 function toggleLauncher() { if (launcherEl) { launcherEl.remove(); launcherEl = null; } else openLauncher(); }
 function openLauncher() {
   const desk = desktop();
@@ -1043,15 +1158,21 @@ function openLauncher() {
   const render = () => {
     list.innerHTML = "";
     const q = input.value.trim().toLowerCase();
-    const items: Array<{ label: string; small: string; icon?: string; go: () => void }> = [];
-    if (!q) list.appendChild(el("div", "os-launch-head", "APPS"));
-    for (const [key, label, icon] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: "APP", icon, go: () => openApp(key) });
-    if (q) {
-      const cmdItems: Array<{ label: string; small: string; go: () => void }> = [];
-      for (const [name, def] of VERBS) if (name.includes(q)) cmdItems.push({ label: `▸_ ${name}`, small: def.status, go: () => { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: name })), 60); } });
-      if (cmdItems.length) { const h = el("div", "os-launch-head", "COMMANDS — ENTER RUNS IN THE TERMINAL"); list.appendChild(h); items.push(...cmdItems.slice(0, 8)); }
+    const items: Array<{ label: string; small: string; icon?: string; section?: string; go: () => void }> = [];
+    for (const [key, label, icon] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: "APP", icon, section: "APPS", go: () => openApp(key) });
+    if (!q) {
+      items.push({ label: "tile all windows", small: "ACTION", icon: "grid", section: "ACTIONS", go: tileWindows });
+      items.push({ label: "cascade — re-center every window", small: "ACTION", icon: "system", section: "ACTIONS", go: cascadeWindows });
+      items.push({ label: "close all windows", small: "ACTION", icon: "gauntlet", section: "ACTIONS", go: closeAllWindows });
     }
+    if (q) {
+      const cmdItems: Array<{ label: string; small: string; section?: string; go: () => void }> = [];
+      for (const [name, def] of VERBS) if (name.includes(q)) cmdItems.push({ label: `▸_ ${name}`, small: def.status, section: "COMMANDS — ENTER RUNS IN THE TERMINAL", go: () => { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: name })), 60); } });
+      items.push(...cmdItems.slice(0, 8));
+    }
+    let lastSection = "";
     items.forEach((it, i) => {
+      if (it.section && it.section !== lastSection) { lastSection = it.section; list.appendChild(el("div", "os-launch-head", it.section)); }
       const b = el("button", "os-launch-item" + (i === selected ? " sel" : ""));
       if (it.icon) b.appendChild(iconEl(it.icon, "os-launch-icon"));
       b.appendChild(document.createTextNode(it.label));

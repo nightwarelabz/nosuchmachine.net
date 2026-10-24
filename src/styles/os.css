@@ -335,6 +335,10 @@
 .os-guest-key:hover:not(:disabled) { border-color: var(--os-accent); color: var(--os-accent); }
 .os-guest-key:disabled { opacity: 0.38; cursor: default; }
 .os-guest-line { padding: 0.45rem 0.55rem 0.55rem; }
+.os-snap-hint { position: absolute; border: 1.5px dashed var(--os-accent); background: var(--os-accent-soft); border-radius: 12px; z-index: 80; pointer-events: none; }
+.os-desk-procs { margin-bottom: 0.4rem; }
+.os-desk-proc { display: flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.2rem; border-bottom: 1px solid var(--os-line-soft); font-size: 0.74rem; }
+.os-desk-proc-main { flex: 1; }
 .os-phantom-live { opacity: 0.92; }
 .os-sys-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
 .os-winmenu-btn { display: none; }
