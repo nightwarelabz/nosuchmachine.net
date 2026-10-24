@@ -442,3 +442,4 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-sim-stage .os-sim-canvas { flex: 1; }
 .os-sim-shade { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: radial-gradient(ellipse at center, transparent 58%, rgba(2, 6, 10, 0.38) 100%); }
 .os-sim-uw { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: rgba(10, 60, 110, 0.28); opacity: 0; transition: opacity 0.35s; }
+.os-sim-whisper { position: absolute; left: 14px; bottom: 12px; pointer-events: none; font-style: italic; font-size: 12.5px; letter-spacing: 0.04em; color: rgba(215, 235, 225, 0.85); text-shadow: 0 1px 8px rgba(0,0,0,0.6); opacity: 0; transition: opacity 1.6s; }

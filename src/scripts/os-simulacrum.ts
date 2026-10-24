@@ -146,7 +146,7 @@ export const SKY_FS = `
 precision mediump float;
 varying vec3 vDir;
 uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uNight;
-uniform float uTime; uniform float uCover; uniform float uGloom; uniform float uFlash; uniform vec3 uMoonDir;
+uniform float uTime; uniform float uCover; uniform float uGloom; uniform float uFlash; uniform vec3 uMoonDir; uniform float uAurora;
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -165,7 +165,7 @@ void main() {
   float s = max(dot(d, normalize(uSunDir)), 0.0);
   c += uSunCol * (pow(s, 600.0) * 1.6 + pow(s, 18.0) * 0.28);
   float md = max(dot(d, normalize(uMoonDir)), 0.0);
-  c += vec3(0.82, 0.88, 1.0) * (pow(md, 1400.0) * 1.1 + pow(md, 60.0) * 0.05) * uNight;
+  c += vec3(0.82, 0.88, 1.0) * (pow(md, 900.0) * 1.35 + pow(md, 60.0) * 0.05) * uNight;
   if (uNight > 0.02 && d.y > 0.0) {
     vec2 sp = floor(d.xz / max(0.035, d.y) * 14.0);
     float st = step(0.9975, hash21(sp)) * uNight;
@@ -176,7 +176,7 @@ void main() {
     float curt = fbm2(vec2(d.x * 4.0 + uTime * 0.045, d.z * 2.0 - uTime * 0.02));
     float rays = 0.5 + 0.5 * sin(d.x * 22.0 + curt * 14.0 + uTime * 0.5);
     vec3 aur = mix(vec3(0.10, 0.95, 0.45), vec3(0.45, 0.25, 0.95), clamp(d.y * 1.6 - 0.15, 0.0, 1.0));
-    c += aur * band * (0.25 + 0.75 * curt) * rays * (uNight - 0.2) * 0.55;
+    c += aur * band * (0.25 + 0.75 * curt) * rays * (uNight - 0.2) * 0.55 * uAurora;
   }
   if (d.y > 0.015) {
     vec2 cuv = d.xz / (d.y + 0.22);
@@ -353,6 +353,8 @@ export class SimAudio {
     o.start(t0); o.stop(t0 + dur + 0.1);
   }
 
+  private sparse = 0;
+  setMood(sparse: number) { this.sparse = sparse; }
   tick(dayFrac: number) {
     if (!this.ctx || !this.musicBus) return;
     const c = this.ctx, now = c.currentTime;
@@ -370,7 +372,7 @@ export class SimAudio {
       this.chordAt = now + dur * 0.92;
     }
     if (now >= this.pluckAt) {
-      if (this.rnd() < (dark ? 0.4 : 0.68)) {
+      if (this.rnd() < (dark ? 0.4 : 0.68) * (1 - this.sparse * 0.55)) {
         const chord = this.chords[(this.chordIdx + this.chords.length - 1) % this.chords.length];
         const base = chord[0];
         const note = this.scale[Math.floor(this.rnd() * this.scale.length)];
@@ -378,7 +380,7 @@ export class SimAudio {
         this.tone(this.musicBus, f, now, 2.2, 0.045, "sine");
         this.tone(this.musicBus, f * 2, now, 2.2, 0.012, "sine");
       }
-      this.pluckAt = now + 2.6 + this.rnd() * (dark ? 7 : 4.5);
+      this.pluckAt = now + 2.6 + this.rnd() * (dark ? 7 : 4.5) + this.sparse * 4.5;
     }
   }
 
@@ -439,6 +441,97 @@ export class SimAudio {
   }
 }
 
+/* ---------------- the sub-consciousness ----------------
+ * Beneath the world runs a small second mind — the Dreamer.
+ * It is not an NPC and it never speaks in paragraphs: it PERCEIVES
+ * the walker (pace, idleness, biome, the hour, the water) and it
+ * ACTS on the only body it has — the world itself. It owns the
+ * weather, leans the music, sends the birds to look, raises the
+ * aurora, and once in a while shakes the stars loose. Its temper
+ * is seeded like everything else here: some worlds dream serene,
+ * some dream tempestuous, some are playful. Manual overrides from
+ * the operator are respected — it yields, and waits. */
+
+export interface Perception {
+  speed: number; idleFor: number; biome: string; night: number;
+  inWater: boolean; flying: boolean; chimes: number; explored: number; dayT: number;
+}
+export interface Intents {
+  weather: Weather; aurora: number; attend: number; sparse: number; shower: boolean;
+}
+
+export class Dreamer {
+  private rnd: () => number;
+  private serenity: number; private tempest: number; private play: number;
+  private weather: Weather = "clear";
+  private holdFor = 50;
+  private insistUntil = 0;
+  private lastBiome = "";
+  private idleActs = 0;
+  private saidSwim = false;
+  private aurora = 1;
+  private attend = 0;
+  private shower = false;
+  private showerCool = 120;
+  private whisperQ: string[] = [];
+  intents: Intents = { weather: "clear", aurora: 1, attend: 0, sparse: 0, shower: false };
+
+  constructor(seed: number) {
+    this.rnd = mulberry32(seed ^ 0xd12e & 0xffffff);
+    const a = this.rnd(), b = this.rnd(), c = this.rnd();
+    const tot = a + b + c;
+    this.serenity = a / tot; this.tempest = b / tot; this.play = c / tot;
+  }
+  insist(seconds: number, now: number) { this.insistUntil = now + seconds; }
+  forceWeather(w: Weather) { this.weather = w; this.holdFor = 60; }
+  drainWhispers(): string[] { const q = this.whisperQ; this.whisperQ = []; return q; }
+  private say(...lines: string[]) { this.whisperQ.push(lines[Math.floor(this.rnd() * lines.length)]); }
+
+  think(dt: number, now: number, p: Perception) {
+    this.holdFor -= dt;
+    this.showerCool -= dt;
+    /* weather — its oldest prerogative */
+    if (now > this.insistUntil && this.holdFor <= 0) {
+      const r = this.rnd();
+      const rainLine = 0.16 + this.tempest * 0.30 - this.serenity * 0.08;
+      const mistLine = rainLine + 0.22 + this.serenity * 0.10;
+      const next: Weather = r < rainLine ? "rain" : r < mistLine ? "mist" : "clear";
+      if (next !== this.weather) {
+        this.weather = next;
+        if (next === "rain") this.say("it decides on rain", "the sky is told to open", "it wants weather");
+        if (next === "mist") this.say("it pulls the fog closer", "a hush is arranged");
+        if (next === "clear") this.say("the world exhales", "it clears its throat of clouds");
+      }
+      this.holdFor = 45 + this.rnd() * 65;
+    }
+    /* the idle walker is interesting */
+    if (p.idleFor > 22 && this.idleActs < 3) {
+      this.idleActs++;
+      this.attend = 1;
+      if (this.idleActs === 1) this.say("it watches you rest", "stillness is noticed", "it wonders at the pause");
+    } else if (p.idleFor < 2) { this.idleActs = 0; this.attend = Math.max(0, this.attend - dt * 0.2); }
+    else this.attend = Math.max(0, this.attend - dt * 0.05);
+    /* new country is noticed */
+    if (p.biome !== this.lastBiome) {
+      if (this.lastBiome && this.rnd() < 0.3) this.say(`it takes note: ${p.biome}`);
+      this.lastBiome = p.biome;
+    }
+    /* swimming, learned once */
+    if (p.inWater && !this.saidSwim) { this.saidSwim = true; this.say("it learns that you swim"); }
+    /* night work: aurora lean + sparser music + the odd shower */
+    const night = p.night;
+    const auroraTarget = night > 0.5 ? 0.7 + this.serenity * 1.5 + this.play * 0.4 : 1;
+    this.aurora += (auroraTarget - this.aurora) * Math.min(1, dt * 0.1);
+    if (night > 0.6 && this.showerCool <= 0 && this.rnd() < dt * 0.01 * (0.5 + this.play)) {
+      this.shower = true; this.showerCool = 150 + this.rnd() * 200;
+      this.say("it shakes the stars loose");
+      window.setTimeout(() => { this.shower = false; }, 9000);
+    }
+    const sparse = Math.max(0, Math.min(1, night * 0.7 + (p.idleFor > 15 ? 0.3 : 0) - p.speed * 0.02));
+    this.intents = { weather: this.weather, aurora: this.aurora, attend: this.attend, sparse, shower: this.shower };
+  }
+}
+
 /* ---------------- the world ---------------- */
 
 const CHUNK = 48, STEP = 2, RADIUS = 3;
@@ -467,9 +560,10 @@ export function buildSimulacrum(body: HTMLElement) {
   canvas.className = "os-sim-canvas";
   canvas.width = 1024; canvas.height = 640;
   const shade = el("div", "os-sim-shade");
+  const whisper = el("div", "os-sim-whisper", "");
   const uw = el("div", "os-sim-uw");
   const stage = el("div", "os-sim-stage");
-  stage.append(canvas, shade, uw);
+  stage.append(canvas, shade, uw, whisper);
   const hud = el("div", "os-sim-hud");
   const seedLabel = el("span", "os-note", "");
   const newBtn = el("button", "os-btn", "new world");
@@ -544,6 +638,7 @@ export function buildSimulacrum(body: HTMLElement) {
   const moisture = (x: number, z: number) => moistNoise.fbm(x * 0.008 + 99, z * 0.008 + 3, 3);
   seedLabel.textContent = `seed ${seed}`;
   let audio = new SimAudio(seed);
+  let dreamer = new Dreamer(seed);
 
   interface Chunk { key: string; terrain: Mesh; lit: Mesh | null; glow: Mesh | null; crystals: Array<[number, number]> }
   const chunks = new Map<string, Chunk>();
@@ -721,6 +816,7 @@ export function buildSimulacrum(body: HTMLElement) {
   };
   let motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
   let rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
+  let meteorPts = makePoints(170, [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
   const bindPoints = (pts: { buf: WebGLBuffer }) => {
     gl.bindBuffer(gl.ARRAY_BUFFER, pts.buf);
     const aPos = gl.getAttribLocation(ptsPr, "aPos");
@@ -750,8 +846,9 @@ export function buildSimulacrum(body: HTMLElement) {
   let dayT = 0.32;
   let weather: Weather = "clear";
   let mistAmt = 0, rainAmt = 0, flash = 0;
-  let wxNext = 55, wxClock = 0;
-  const wxRnd = mulberry32(seed ^ 0x3f5 & 0xffffff);
+  let idleFor = 0, explored = 0, chimeCount = 0, thinkClock = 0, hSpeedNow = 0;
+  let auroraAmt = 1, attendAmt = 0, showerAmt = 0;
+  let whisperTimer = 0;
   const spawn = () => { px = 8; pz = 8; py = height(px, pz) + 26; yaw = 0.7; pitch = -0.16; vx = 0; vz = 0; vy = 0; };
   spawn();
 
@@ -777,8 +874,9 @@ export function buildSimulacrum(body: HTMLElement) {
   document.addEventListener("keyup", ku);
   flyBtn.addEventListener("click", () => { flying = !flying; flyBtn.textContent = flying ? "fly" : "walk"; audio.ui("toggle"); if (!flying) py = Math.max(py, height(px, pz) + 1.7); });
   wxBtn.addEventListener("click", () => {
-    weather = weather === "clear" ? "mist" : weather === "mist" ? "rain" : "clear";
-    wxClock = 0; wxNext = 70;
+    const next: Weather = weather === "clear" ? "mist" : weather === "mist" ? "rain" : "clear";
+    dreamer.forceWeather(next);
+    dreamer.insist(90, performance.now() / 1000);
     audio.ui("toggle");
   });
   hourBtn.addEventListener("click", () => { dayT = (dayT + 1 / 24) % 1; audio.ui("toggle"); });
@@ -799,6 +897,7 @@ export function buildSimulacrum(body: HTMLElement) {
     waterCell = [1e9, 1e9];
     audio.dispose();
     audio = new SimAudio(seed);
+    dreamer = new Dreamer(seed);
     if (touched) { audio.start(); audio.ui("world"); }
     motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
     rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
@@ -900,6 +999,7 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniform1f(gl.getUniformLocation(skyPr, "uCover"), cover);
     gl.uniform1f(gl.getUniformLocation(skyPr, "uGloom"), gloom);
     gl.uniform1f(gl.getUniformLocation(skyPr, "uFlash"), flash);
+    gl.uniform1f(gl.getUniformLocation(skyPr, "uAurora"), auroraAmt);
     {
       gl.bindBuffer(gl.ARRAY_BUFFER, skyMesh.buf);
       const a = gl.getAttribLocation(skyPr, "aPos");
@@ -928,7 +1028,7 @@ export function buildSimulacrum(body: HTMLElement) {
       const bv: number[] = [];
       const t = nowS;
       for (const b of birds) {
-        const cx = px + b.ox, cz = pz + b.oz;
+        const cx = px + b.ox * (1 - attendAmt * 0.62), cz = pz + b.oz * (1 - attendAmt * 0.62);
         const a = b.ph + t * b.sp;
         const bx = cx + Math.cos(a) * b.r, bz = cz + Math.sin(a) * b.r;
         const by = height(cx, cz) + b.h + Math.sin(t * 0.9 + b.ph) * 1.6;
@@ -1003,6 +1103,13 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), 0.22 + sc.night * 0.6);
     bindPoints(motes);
     gl.drawArrays(gl.POINTS, 0, motes.n);
+    if (showerAmt > 0.02) {
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 52);
+      gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [90, 40, 90]);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), showerAmt * 0.85);
+      bindPoints(meteorPts);
+      gl.drawArrays(gl.POINTS, 0, meteorPts.n);
+    }
     if (rainAmt > 0.02) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 26);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [70, 44, 70]);
@@ -1022,13 +1129,29 @@ export function buildSimulacrum(body: HTMLElement) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     dayT = (dayT + dt / 300) % 1;
-    /* weather machine */
-    wxClock += dt;
-    if (wxClock > wxNext) {
-      wxClock = 0; wxNext = 45 + wxRnd() * 60;
-      const r = wxRnd();
-      weather = r < 0.5 ? "clear" : r < 0.78 ? "mist" : "rain";
+    /* the sub-consciousness thinks a few times a second, and the
+       world follows its intents — weather included */
+    thinkClock += dt;
+    if (thinkClock > 0.6) {
+      thinkClock = 0;
+      dreamer.think(0.6, now / 1000, {
+        speed: hSpeedNow, idleFor, biome: biomeAt(px, pz), night: skyColors(dayT, 0).night,
+        inWater: py < 0.4 && height(px, pz) < -0.4, flying, chimes: chimeCount, explored, dayT,
+      });
+      const ints = dreamer.intents;
+      weather = ints.weather;
+      auroraAmt += (ints.aurora - auroraAmt) * 0.4;
+      attendAmt += (ints.attend - attendAmt) * 0.4;
+      showerAmt += ((ints.shower ? 1 : 0) - showerAmt) * 0.3;
+      audio.setMood(ints.sparse);
+      for (const w of dreamer.drainWhispers()) {
+        whisper.textContent = w;
+        whisper.style.opacity = "1";
+        whisperTimer = 7;
+      }
     }
+    whisperTimer = Math.max(0, whisperTimer - dt);
+    if (whisperTimer === 0) whisper.style.opacity = "0";
     mistAmt += ((weather === "mist" ? 1 : 0) - mistAmt) * Math.min(1, dt * 0.25);
     rainAmt += ((weather === "rain" ? 1 : 0) - rainAmt) * Math.min(1, dt * 0.25);
     flash = Math.max(0, flash - dt * 1.4);
@@ -1064,7 +1187,8 @@ export function buildSimulacrum(body: HTMLElement) {
     vx += (txv - vx) * Math.min(1, dt * accel);
     vz += (tzv - vz) * Math.min(1, dt * accel);
     px += vx * dt; pz += vz * dt;
-    const hSpeed = Math.hypot(vx, vz);
+    hSpeedNow = Math.hypot(vx, vz);
+    const hSpeed = hSpeedNow;
     if (flying) {
       if (keys.has("Space")) py += baseSpeed * 0.8 * dt;
       if (keys.has("KeyC")) py -= baseSpeed * 0.8 * dt;
@@ -1092,6 +1216,8 @@ export function buildSimulacrum(body: HTMLElement) {
     /* water entry/exit */
     if (inWater && !wasInWater) audio.splash(py < -1);
     wasInWater = inWater;
+    if (touched && hSpeedNow < 0.5 && !keys.size) idleFor += dt; else idleFor = 0;
+    explored += hSpeedNow * dt;
     /* head-bob + footsteps */
     landDip = Math.max(0, landDip - dt * 1.8);
     if (wasGrounded && hSpeed > 1.2) {
@@ -1113,7 +1239,7 @@ export function buildSimulacrum(body: HTMLElement) {
         ch.crystals.forEach(([cxp, czp], idx) => {
           const d2 = (cxp - px) * (cxp - px) + (czp - pz) * (czp - pz);
           const k = `${ch.key}:${idx}`;
-          if (d2 < 42 && now - (lastChime.get(k) ?? 0) > 9000) { lastChime.set(k, now); audio.chime(Math.floor(cxp * 7 + czp * 13)); }
+          if (d2 < 42 && now - (lastChime.get(k) ?? 0) > 9000) { lastChime.set(k, now); chimeCount++; audio.chime(Math.floor(cxp * 7 + czp * 13)); }
         });
       }
       if (Math.random() < dt * 0.05 && sunDir(dayT)[1] > 0.1) audio.chirp();
