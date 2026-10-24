@@ -151,7 +151,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     const cancelBtn = el("button", "os-btn", "back to the room");
     const syncClaim = () => { claimWrap.hidden = !isHouseName(nickIn.value.trim()); };
     nickIn.addEventListener("input", syncClaim);
-    cancelBtn.addEventListener("click", () => { hideIdentityBox(); input.focus(); });
+    cancelBtn.addEventListener("click", () => { hideIdentityBox(); });
     enterBtn.addEventListener("click", () => {
       const nick = (nickIn.value.trim() || machineName()).replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || machineName();
       const claim = claimIn.value.trim();
@@ -164,7 +164,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     card.append(note, netSel, nickIn, chanIn, passIn, regWrap, mailIn, claimWrap, tlsWrap, enterBtn, cancelBtn, msg);
     syncClaim();
     card.hidden = false;
-    nickIn.focus();
   };
 
   /* ————— session view ————— */
@@ -186,7 +185,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   copyBtn.title = "copy this conversation";
   copyBtn.addEventListener("click", () => {
     void navigator.clipboard.writeText((buffers.get(current) || []).join("\n")).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
-    input.focus();
   });
   input.setAttribute("enterkeyhint", "send");
   inputRow.append(input, sendBtn, idBtn, copyBtn);
@@ -234,7 +232,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     targetsEl.textContent = "";
     for (const t of buffers.keys()) {
       const b = el("button", `os-relay-target${t === current ? " active" : ""}`, t);
-      b.addEventListener("click", () => { current = t; renderTargets(); renderLines(); input.focus(); });
+      b.addEventListener("click", () => { current = t; renderTargets(); renderLines(); });
       targetsEl.appendChild(b);
     }
   };
@@ -356,7 +354,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     push("server", `— reaching ${o.host}:${o.port} through the house bridge…`);
     renderTargets();
     openWire();
-    input.focus();
   };
 
   /* One bridge connection. The edge lets a held connection go after a few

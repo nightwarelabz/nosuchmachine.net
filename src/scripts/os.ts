@@ -138,7 +138,7 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); });
+  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); });
   minBtn.addEventListener("click", () => { win.style.display = "none"; saveSession(); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
@@ -147,6 +147,38 @@ export function openApp(app: string, arg?: string) {
   focusWindow(win);
   BUILDERS[app]?.(body, arg);
   saveSession();
+}
+/* The mobile bar has no room for a button per window: one button
+   carries the count, and its panel does the switching. Desktop keeps
+   the per-window buttons and never sees this one (CSS decides). */
+function syncWinMenu() {
+  const wm = document.getElementById("os-winmenu-btn") as HTMLButtonElement | null;
+  if (!wm) return;
+  const n = document.querySelectorAll(".os-task-btn").length;
+  wm.hidden = n === 0;
+  wm.textContent = `▦ ${n}`;
+}
+let winMenuEl: HTMLElement | null = null;
+function toggleWinMenu() {
+  if (winMenuEl) { winMenuEl.remove(); winMenuEl = null; return; }
+  const panel = el("div", "os-launcher os-winmenu");
+  panel.appendChild(el("div", "os-winmenu-head", "open windows — tap one to bring it forward"));
+  document.querySelectorAll<HTMLElement>(".os-task-btn").forEach((b) => {
+    const key = b.dataset.task || "";
+    const row = el("div", "os-winmenu-row");
+    const go = el("button", "os-winmenu-go", b.textContent || key);
+    go.addEventListener("click", () => { const w = windows.get(key); if (w) { w.style.display = ""; focusWindow(w); } toggleWinMenu(); });
+    const x = el("button", "os-winmenu-x", "×");
+    x.title = "close the window";
+    x.addEventListener("click", () => { windows.get(key)?.querySelector<HTMLElement>(".os-win-close")?.click(); toggleWinMenu(); });
+    row.append(go, x);
+    panel.appendChild(row);
+  });
+  document.querySelector(".os-root")!.appendChild(panel);
+  winMenuEl = panel;
+  setTimeout(() => document.addEventListener("pointerdown", function outside(ev) {
+    if (winMenuEl && !winMenuEl.contains(ev.target as Node) && (ev.target as HTMLElement).id !== "os-winmenu-btn") { toggleWinMenu(); document.removeEventListener("pointerdown", outside); }
+  }), 0);
 }
 function focusWindow(win: HTMLElement) {
   win.style.zIndex = String(++zTop);
@@ -160,6 +192,7 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   btn.dataset.task = key;
   btn.addEventListener("click", () => { win.style.display = win.style.display === "none" ? "" : win.style.display; focusWindow(win); });
   bar.appendChild(btn);
+  syncWinMenu();
 }
 function toggleMaximize(win: HTMLElement) {
   if (win.classList.contains("maxed")) {
@@ -214,7 +247,6 @@ function buildTerminal(body: HTMLElement) {
   copyBtn.addEventListener("click", () => {
     const text = [...transcript.children].map((c) => c.textContent || "").join("\n");
     void navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
-    input.focus();
   });
   line.append(prompt, input, copyBtn);
   body.append(transcript, line);
@@ -256,12 +288,13 @@ function buildTerminal(body: HTMLElement) {
         win?.querySelector<HTMLButtonElement>(".os-win-close")?.click();
         return;
       }
+      const hadFocus = document.activeElement === input;
       input.disabled = true;
       await execLine(os, cmd, io);
       input.disabled = false;
       histIdx = os.history.length;
       setPrompt();
-      input.focus();
+      if (hadFocus) input.focus();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (histIdx > 0) input.value = os.history[--histIdx] || "";
@@ -286,8 +319,6 @@ function buildTerminal(body: HTMLElement) {
       io.print("^C", "dim");
     }
   });
-  body.addEventListener("click", () => input.focus());
-  setTimeout(() => input.focus(), 50);
 }
 
 /* ---------------- Files ---------------- */
@@ -434,7 +465,7 @@ function buildEditor(body: HTMLElement, arg?: string) {
     if (e.key === "Escape") { mode = "normal"; setStatus(); }
   });
   body.append(area, status);
-  setTimeout(() => area.focus(), 50);
+
 }
 
 
@@ -595,7 +626,7 @@ function buildSsh(body: HTMLElement, arg?: string) {
     const cancel = el("button", "os-btn", "cancel");
     promptRow.append(lab, input, ok, cancel);
     promptRow.style.display = "flex";
-    setTimeout(() => input.focus(), 30);
+
     const done = (v: string | null) => { promptRow.style.display = "none"; promptRow.innerHTML = ""; screenEl.focus(); resolve(v); };
     ok.addEventListener("click", () => done(input.value));
     cancel.addEventListener("click", () => done(null));
@@ -934,6 +965,8 @@ function boot() {
   updateEmconChip();
   document.getElementById("os-emcon-chip")?.addEventListener("click", () => openApp("settings"));
   document.getElementById("os-start")?.addEventListener("click", () => toggleLauncher());
+  document.getElementById("os-winmenu-btn")?.addEventListener("click", () => toggleWinMenu());
+  syncWinMenu();
   document.addEventListener("blacksite:openapp", (e) => { const d = (e as CustomEvent).detail || {}; if (d.app) openApp(d.app, d.arg); });
   window.addEventListener("hashchange", () => { const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); });
   document.addEventListener("keydown", (e) => {
@@ -1015,7 +1048,6 @@ function openLauncher() {
     } else if (e.key === "Escape") toggleLauncher();
   });
   render();
-  input.focus();
   setTimeout(() => document.addEventListener("pointerdown", function outside(ev) {
     if (launcherEl && !launcherEl.contains(ev.target as Node) && (ev.target as HTMLElement).id !== "os-start") { toggleLauncher(); document.removeEventListener("pointerdown", outside); }
   }), 0);
