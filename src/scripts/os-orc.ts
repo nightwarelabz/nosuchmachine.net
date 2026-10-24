@@ -159,6 +159,8 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     frame.src = d.src;
     setTimeout(() => autopsy("t+2s"), 2000);
     setTimeout(() => autopsy("t+7s"), 7000);
+    setTimeout(() => autopsy("t+20s"), 20000);
+    setTimeout(() => autopsy("t+45s"), 45000);
   };
   go.addEventListener("click", () => navigate(addr.value));
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
