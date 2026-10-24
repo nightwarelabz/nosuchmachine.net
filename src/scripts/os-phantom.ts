@@ -1,3 +1,4 @@
+import { sfx } from "./os-sound";
 /* phantom · phase1 (Bryforge/phase1 v7.0.1), ported to the
  * room. The Rust binary runs unmodified-in-spirit as wasm32-wasip1 in
  * a worker (public/phantom/phantom-worker.js holds the WASI world:
@@ -218,7 +219,14 @@ export function buildPhantomApp(body: HTMLElement) {
   type GuestState = "asleep" | "off" | "booting" | "menu" | "running" | "halted" | "fault";
   let state: GuestState = "booting";
   const setState = (st: GuestState, word: string) => {
+    const prev = state;
     state = st;
+    if (prev !== st) {
+      if (st === "menu") sfx("beep");
+      else if (st === "running") sfx("boot2");
+      else if (st === "halted") sfx("halt");
+      else if (st === "fault" || st === "asleep") sfx("err");
+    }
     lamp.dataset.state = st;
     stateWord.textContent = word;
     const live = st === "menu" || st === "running";

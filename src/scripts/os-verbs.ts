@@ -8,6 +8,7 @@ import {
 import type { ShellIO } from "./os-shell";
 import { identifyFile, hexdump } from "./os-parse";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
+import { sfx, armAudio, soundPrefs, setSoundPrefs } from "./os-sound";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -84,6 +85,15 @@ function registerHouse() {
     const rows = sectionMatch ? sections.get(sectionMatch)! : (rosterData as any[]).filter((r) => r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q));
     if (!rows.length) return `no command matches "${q}".`;
     return rows.slice(0, 90).map((r: any) => `${statusOf(r.verb).padEnd(5)} ${r.cmd.padEnd(38)} ${r.desc}`).join("\n");
+  });
+  verb("sound", "LIVE", "sound [on|off|vol <0-100>|test] — the room's synthesized voice", async (ctx) => {
+    const p = soundPrefs();
+    const a = (ctx.args[0] || "").toLowerCase();
+    if (a === "on") { setSoundPrefs({ enabled: true }); armAudio(); sfx("open"); return "the room's voice is on."; }
+    if (a === "off") { setSoundPrefs({ enabled: false }); return "the room is mute. (EMCON alpha silences it too, whatever this says.)"; }
+    if (a === "vol") { const v = parseInt(ctx.args[1] || "", 10); if (isNaN(v) || v < 0 || v > 100) return "sound vol <0-100>"; setSoundPrefs({ volume: v / 100 }); armAudio(); sfx("ping"); return `volume ${v}.`; }
+    if (a === "test") { armAudio(); sfx("live"); return "the voice, tested — the boot swell, on demand."; }
+    return `sound: ${p.enabled ? "on" : "off"} · volume ${Math.round(p.volume * 100)} · synthesized in-tab, no audio files · arms on your first click or keypress · EMCON alpha is total silence.`;
   });
   verb("ver", "LIVE", "version of the room", async () => "BLACKSITE OS — web edition 2.0 'NOETHER' · the nightjar bench, ported\nkernel: blacksite-web · shell: blacksite sh · engines: skulpt python, native javascript\nthe register: `register` · the budgets: `sysinfo` · the grade: `posture`");
   verb("sys", "LIVE", "the whole house state", async (ctx) => {

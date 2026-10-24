@@ -5,6 +5,7 @@
 // what a browser cannot do).
 import roster from "../data/blacksite-commands.json";
 import { identifyFile, hexdump as parseHexdump } from "./os-parse";
+import { sfx } from "./os-sound";
 
 export interface ShellIO {
   print(text: string, cls?: string): void;
@@ -410,8 +411,8 @@ export class BlacksiteOS {
   }
   /** The EMCON gate. Returns a refusal line, or null when the verb may run. */
   gate(kind: "active" | "ledger"): string | null {
-    if (this.emcon === "alpha") return "the Standard forbids this: emcon alpha is total silence — no wire contact at all.";
-    if (this.emcon === "bravo" && kind === "active") return "the Standard forbids this: emcon bravo is receive-only — active probes stand down.";
+    if (this.emcon === "alpha") { sfx("deny"); return "the Standard forbids this: emcon alpha is total silence — no wire contact at all."; }
+    if (this.emcon === "bravo" && kind === "active") { sfx("deny"); return "the Standard forbids this: emcon bravo is receive-only — active probes stand down."; }
     return null;
   }
   gateNote(kind: "active" | "ledger"): string | null {

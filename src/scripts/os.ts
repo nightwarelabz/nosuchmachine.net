@@ -10,6 +10,7 @@ import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
 import { iconEl } from "./os-icons";
+import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -156,12 +157,13 @@ export function openApp(app: string, arg?: string) {
   placeNewWindow(win);
   windows.set(key, win);
   deskProcs.set(key, { pid: ++pidTop, key, app, since: Date.now(), win });
+  sfx("open");
   addTaskbarButton(key, meta.title, win);
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => win.remove(), 150); });
-  minBtn.addEventListener("click", () => { if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
+  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => win.remove(), 150); });
+  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
@@ -226,6 +228,7 @@ function snapWindow(win: HTMLElement, side: "l" | "r") {
   win.style.top = `${gap}px`;
   win.style.left = side === "l" ? `${gap}px` : `${gap * 2 + half}px`;
   win.dataset.snap = side;
+  sfx("snap");
   focusWindow(win);
 }
 const REDUCED = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -233,7 +236,7 @@ function focusWindow(win: HTMLElement) {
   const wasHidden = win.style.display === "none";
   win.style.zIndex = String(++zTop);
   win.style.display = "";
-  if (wasHidden && !REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); }
+  if (wasHidden) { sfx("back"); if (!REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); } }
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
   saveSession();
 }
@@ -346,7 +349,7 @@ function buildTerminal(body: HTMLElement) {
   const setPrompt = () => { prompt.textContent = `${os.env.USER}@blacksite:${os.cwd.replace(os.env.HOME, "~")}$ `; };
   setPrompt();
   const io: ShellIO = {
-    print: (text, cls) => { cls = termCls(text, cls);
+    print: (text, cls) => { cls = termCls(text, cls); if (cls === "err") sfx("err");
       const pre = el("pre", "os-term-text" + (cls ? ` ${cls}` : ""));
       pre.textContent = text;
       transcript.appendChild(pre);
@@ -376,6 +379,7 @@ function buildTerminal(body: HTMLElement) {
       const cmd = input.value;
       input.value = "";
       io.print(`${prompt.textContent}${cmd}`, "cmd");
+      sfx("send");
       if (cmd.trim() === "exit" || cmd.trim() === "logout") {
         const win = body.closest<HTMLElement>(".os-window");
         win?.querySelector<HTMLButtonElement>(".os-win-close")?.click();
@@ -876,7 +880,7 @@ function buildGauntlet(body: HTMLElement) {
   const runD = el("button", "os-btn", "RUN DIAGNOSE");
   row.append(runG, runD);
   body.append(row, outPane);
-  const io: ShellIO = { print: (t, cls) => { const c = termCls(t, cls); const p = el("pre", "os-term-text" + (c ? ` ${c}` : "")); p.textContent = t; outPane.appendChild(p); }, clear: () => (outPane.innerHTML = ""), openApp, setWallpaper, setTheme: applyTheme };
+  const io: ShellIO = { print: (t, cls) => { const c = termCls(t, cls); if (c === "err") sfx("err"); const p = el("pre", "os-term-text" + (c ? ` ${c}` : "")); p.textContent = t; outPane.appendChild(p); }, clear: () => (outPane.innerHTML = ""), openApp, setWallpaper, setTheme: applyTheme };
   runG.addEventListener("click", () => void execLine(os, "gauntlet", io));
   runD.addEventListener("click", () => void execLine(os, "diagnose", io));
 }
@@ -908,11 +912,28 @@ function buildSettings(body: HTMLElement) {
     wpRow.appendChild(b);
   }
   { const b = el("button", "os-btn", "none — bare black"); b.addEventListener("click", () => setWallpaper("none")); wpRow.appendChild(b); }
+  const soundTitle = el("h3", "", "Sound — the room's voice");
+  const soundRow = el("div", "os-btnrow");
+  {
+    const sp = soundPrefs();
+    const sToggle = el("button", "os-btn" + (sp.enabled ? " primary" : ""), sp.enabled ? "sound ON" : "sound OFF");
+    sToggle.addEventListener("click", () => { setSoundPrefs({ enabled: !soundPrefs().enabled }); if (soundPrefs().enabled) { armAudio(); sfx("open"); } buildSettingsRefresh(body); });
+    const vol = document.createElement("input");
+    vol.type = "range"; vol.min = "0"; vol.max = "100"; vol.value = String(Math.round(sp.volume * 100));
+    vol.setAttribute("aria-label", "sound volume");
+    vol.style.accentColor = "var(--os-accent)";
+    vol.addEventListener("input", () => setSoundPrefs({ volume: Number(vol.value) / 100 }));
+    vol.addEventListener("change", () => { armAudio(); sfx("ping"); });
+    const sTest = el("button", "os-btn", "test the voice");
+    sTest.addEventListener("click", () => { armAudio(); sfx("live"); });
+    soundRow.append(sToggle, vol, sTest);
+  }
+  const soundNote = el("p", "os-note", "Every sound is synthesized in this tab — oscillators and filtered noise, no audio files. The browser forbids sound before your first click or keypress, so the room arms then. EMCON alpha silences the voice entirely, whatever the toggle says.");
   const dangerTitle = el("h3", "", "The reset");
   const resetBtn = el("button", "os-btn danger", "FACTORY RESET THE ROOM (wipes files, macros, settings)");
   resetBtn.addEventListener("click", () => { if (confirm("Wipe the room back to first boot?")) { os.reset(); applyTheme(os.theme); updateEmconChip(); window.location.reload(); } });
   const note = el("p", "os-note", "Files live in this browser's storage. A cleared browser is a wiped room. EMCON gates every wire verb: bravo refuses active probes, alpha refuses the wire entirely — try it, the refusals speak.");
-  wrap.append(themeTitle, themeRow, emconTitle, emconRow, wpTitle, wpRow, dangerTitle, resetBtn, note);
+  wrap.append(themeTitle, themeRow, emconTitle, emconRow, wpTitle, wpRow, soundTitle, soundRow, soundNote, dangerTitle, resetBtn, note);
   body.appendChild(wrap);
 }
 function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSettings(body); }
@@ -1032,6 +1053,10 @@ function boot() {
   registerBottleVerbs();
   registerLimitReasons();
   applyTheme(os.theme);
+  document.addEventListener("pointerdown", armAudio);
+  document.addEventListener("keydown", armAudio);
+  window.addEventListener("blacksite:aegis", () => sfx("aegis"));
+  soundGate(() => os.emcon === "alpha");
   const overlay = document.getElementById("os-boot")!;
   const bootText = document.getElementById("os-boot-text")!;
   const lines = [
@@ -1047,7 +1072,7 @@ function boot() {
   let i = 0;
   const tick = () => {
     if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, 110); }
-    else setTimeout(() => { overlay.classList.add("done"); restoreSession(); if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } })); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
+    else setTimeout(() => { sfx("live"); overlay.classList.add("done"); restoreSession(); if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } })); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
   };
   tick();
   // desktop icons

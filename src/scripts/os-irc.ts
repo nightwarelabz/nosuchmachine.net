@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { sfx } from "./os-sound";
 /* Relay — the house wire. A real IRC client in the tab: it speaks the IRC
    protocol itself (registration, PING/PONG, channels, private messages,
    NAMES) over a WebSocket to the site's own bridge, which pipes it to a
@@ -271,6 +272,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         if (text.startsWith("\x01PING ") && text.endsWith("\x01")) { send(`NOTICE ${m.nick} :${text}`); break; }
         if (text.startsWith("\x01ACTION ") && text.endsWith("\x01")) push(target, `· ${m.nick} ${text.slice(8, -1)}`);
         else push(target, `<${m.nick}> ${text}`);
+        sfx("ping");
         break;
       }
       case "NOTICE": {
