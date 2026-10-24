@@ -11,6 +11,7 @@ import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
 import { Chip8, CHIP8_DEMO } from "./os-engines2";
+import { SshSession } from "./os-ssh";
 
 const os = new BlacksiteOS();
 let zTop = 10;
@@ -419,6 +420,160 @@ function buildChip8(body: HTMLElement, arg: string) {
   };
   requestAnimationFrame(frame);
   setTimeout(() => canvas.focus(), 80);
+}
+
+/* ————— SSH app: a real terminal over the room's SSH client ————— */
+const ANSI_FG = ["#3a4458", "#ff5f57", "#3ddc84", "#ffb02e", "#58a6ff", "#d368d8", "#39c5cf", "#d7e3f4", "#6b7a94", "#ff848c", "#7bf0ab", "#ffd479", "#8fc2ff", "#eba8f2", "#7ae3ea", "#ffffff"];
+function buildSsh(body: HTMLElement, arg: string) {
+  const wrap = el("div", "os-ssh");
+  const bar = el("div", "os-files-bar");
+  const hostIn = document.createElement("input"); hostIn.className = "os-bottle-input"; hostIn.placeholder = "host"; hostIn.style.flex = "1";
+  const portIn = document.createElement("input"); portIn.className = "os-bottle-input"; portIn.placeholder = "22"; portIn.style.width = "64px"; portIn.value = "22";
+  const userIn = document.createElement("input"); userIn.className = "os-bottle-input"; userIn.placeholder = "user"; userIn.style.width = "110px";
+  const connectBtn = el("button", "os-btn", "connect");
+  bar.append(hostIn, portIn, userIn, connectBtn);
+  if (arg) {
+    const m = arg.match(/^(?:([^@]+)@)?([^:]+)(?::(\d+))?$/);
+    if (m) { userIn.value = m[1] || ""; hostIn.value = m[2] || ""; if (m[3]) portIn.value = m[3]; }
+  }
+  const status = el("p", "os-note", "ssh — the room's own client. curve25519 + aes-gcm; the host key's fingerprint must be trusted by your hand before any password moves. the wire rides this site's bridge as ciphertext.");
+  const promptRow = el("div", "os-ssh-prompt"); promptRow.style.display = "none";
+  const screenEl = el("div", "os-ssh-screen");
+  screenEl.tabIndex = 0;
+  wrap.append(bar, status, promptRow, screenEl);
+  body.appendChild(wrap);
+
+  // the VT grid
+  let cols = 80, rows = 24;
+  type Cell = { ch: string; fg: number; bg: number; bold: boolean };
+  const blank = (): Cell => ({ ch: " ", fg: 7, bg: -1, bold: false });
+  let grid: Cell[][] = Array.from({ length: rows }, () => Array.from({ length: cols }, blank));
+  let cx = 0, cy = 0, fg = 7, bg = -1, bold = false;
+  const scrollback: string[] = [];
+  const renderLine = (line: Cell[]): string => {
+    let out = "", cur = "";
+    const flush = () => { if (cur) { out += cur; cur = ""; } };
+    let lastKey = "";
+    for (const cell of line) {
+      const key = `${cell.fg}|${cell.bg}|${cell.bold ? 1 : 0}`;
+      if (key !== lastKey) { flush(); cur = `<span style="color:${ANSI_FG[cell.fg]}${cell.bg >= 0 ? `;background:${ANSI_FG[cell.bg]}` : ""}${cell.bold ? ";font-weight:700" : ""}">`; lastKey = key; }
+      cur += cell.ch === "<" ? "&lt;" : cell.ch === "&" ? "&amp;" : cell.ch;
+    }
+    flush();
+    return out ? out + "</span>" : "";
+  };
+  const repaint = () => { screenEl.innerHTML = grid.map(renderLine).join("\n") || " "; };
+  const scrollUp = () => { scrollback.push(grid[0].map((c) => c.ch).join("").replace(/\s+$/, "")); if (scrollback.length > 400) scrollback.shift(); grid.shift(); grid.push(Array.from({ length: cols }, blank)); };
+  const decoder = new TextDecoder();
+  let escState = 0; let escBuf = "";
+  const feedText = (text: string) => {
+    for (const ch of text) {
+      if (escState === 1) { escState = ch === "[" ? 2 : ch === "]" ? 3 : 0; escBuf = ""; continue; }
+      if (escState === 3) { if (ch === "\x07") escState = 0; continue; }
+      if (escState === 2) {
+        if (/[0-9;? ]/.test(ch)) { escBuf += ch; continue; }
+        const params = escBuf.replace(/^\?/, "").split(";").map((x) => parseInt(x || "0", 10) || 0);
+        const p = (i: number, d: number) => params[i] || d;
+        if (ch === "H" || ch === "f") { cy = Math.min(rows - 1, p(0, 1) - 1); cx = Math.min(cols - 1, p(1, 1) - 1); }
+        else if (ch === "A") cy = Math.max(0, cy - p(0, 1));
+        else if (ch === "B") cy = Math.min(rows - 1, cy + p(0, 1));
+        else if (ch === "C") cx = Math.min(cols - 1, cx + p(0, 1));
+        else if (ch === "D") cx = Math.max(0, cx - p(0, 1));
+        else if (ch === "G") cx = Math.min(cols - 1, p(0, 1) - 1);
+        else if (ch === "d") cy = Math.min(rows - 1, p(0, 1) - 1);
+        else if (ch === "J") { const mode = params[0] || 0; if (mode === 2) grid = Array.from({ length: rows }, () => Array.from({ length: cols }, blank)); else if (mode === 0) { for (let x = cx; x < cols; x++) grid[cy][x] = blank(); for (let y = cy + 1; y < rows; y++) grid[y] = Array.from({ length: cols }, blank); } }
+        else if (ch === "K") { const mode = params[0] || 0; if (mode === 0) for (let x = cx; x < cols; x++) grid[cy][x] = blank(); else if (mode === 2) grid[cy] = Array.from({ length: cols }, blank); }
+        else if (ch === "m") { if (!escBuf) { fg = 7; bg = -1; bold = false; } for (const v of params) { if (v === 0) { fg = 7; bg = -1; bold = false; } else if (v === 1) bold = true; else if (v === 22) bold = false; else if (v >= 30 && v <= 37) fg = v - 30; else if (v >= 40 && v <= 47) bg = v - 40; else if (v >= 90 && v <= 97) fg = v - 90 + 8; else if (v >= 100 && v <= 107) bg = v - 100 + 8; else if (v === 39) fg = 7; else if (v === 49) bg = -1; } }
+        escState = 0; continue;
+      }
+      if (ch === "\x1b") { escState = 1; continue; }
+      if (ch === "\r") { cx = 0; continue; }
+      if (ch === "\n") { cy++; if (cy >= rows) { scrollUp(); cy = rows - 1; } continue; }
+      if (ch === "\x08") { cx = Math.max(0, cx - 1); continue; }
+      if (ch === "\x07") continue;
+      if (ch === "\t") { cx = Math.min(cols - 1, (Math.floor(cx / 8) + 1) * 8); continue; }
+      if (ch < " ") continue;
+      if (cx >= cols) { cx = 0; cy++; if (cy >= rows) { scrollUp(); cy = rows - 1; } }
+      grid[cy][cx] = { ch, fg, bg, bold };
+      cx++;
+    }
+    repaint();
+  };
+  repaint();
+
+  let session: SshSession | null = null;
+  let ws: WebSocket | null = null;
+  const askInWindow = (label: string, secret: boolean): Promise<string | null> => new Promise((resolve) => {
+    promptRow.innerHTML = "";
+    const lab = el("span", "os-note", label);
+    const input = document.createElement("input");
+    input.className = "os-bottle-input"; input.type = secret ? "password" : "text"; input.style.flex = "1";
+    const ok = el("button", "os-btn", "send");
+    const cancel = el("button", "os-btn", "cancel");
+    promptRow.append(lab, input, ok, cancel);
+    promptRow.style.display = "flex";
+    setTimeout(() => input.focus(), 30);
+    const done = (v: string | null) => { promptRow.style.display = "none"; promptRow.innerHTML = ""; screenEl.focus(); resolve(v); };
+    ok.addEventListener("click", () => done(input.value));
+    cancel.addEventListener("click", () => done(null));
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") done(input.value); e.stopPropagation(); });
+  });
+  const confirmKey = (fingerprint: string, algorithm: string): Promise<boolean> => new Promise((resolve) => {
+    promptRow.innerHTML = "";
+    const lab = el("span", "os-note", `host key ${algorithm} — ${fingerprint} — trust this key?`);
+    const ok = el("button", "os-btn", "trust & continue");
+    const no = el("button", "os-btn danger", "refuse");
+    promptRow.append(lab, ok, no);
+    promptRow.style.display = "flex";
+    ok.addEventListener("click", () => { promptRow.style.display = "none"; promptRow.innerHTML = ""; resolve(true); });
+    no.addEventListener("click", () => { promptRow.style.display = "none"; promptRow.innerHTML = ""; resolve(false); });
+  });
+
+  const connect = () => {
+    const refusal = os.gate("active");
+    if (refusal) { status.textContent = refusal; return; }
+    const host = hostIn.value.trim(); const port = Number(portIn.value) || 22; const user = userIn.value.trim();
+    if (!host || !user) { status.textContent = "host and user, both — then connect."; return; }
+    connectBtn.setAttribute("disabled", "true");
+    status.textContent = `connecting to ${user}@${host}:${port} through the bridge…`;
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${proto}//${location.host}/api/ssh-bridge?host=${encodeURIComponent(host)}&port=${port}`);
+    ws.binaryType = "arraybuffer";
+    const queue: Uint8Array[] = [];
+    let open = false;
+    session = new SshSession((bytes) => { if (open && ws?.readyState === 1) ws!.send(bytes as BufferSource); else queue.push(bytes.slice()); }, {
+      onStatus: (m) => { status.textContent = m; },
+      onData: (bytes) => feedText(decoder.decode(bytes, { stream: true })),
+      confirmHostKey: confirmKey,
+      getPassword: () => askInWindow(`password for ${user}@${host}`, true),
+      onClose: (reason) => { status.textContent = `closed — ${reason}`; connectBtn.removeAttribute("disabled"); try { ws?.close(); } catch { /* gone */ } },
+    }, user);
+    ws.addEventListener("open", () => { open = true; for (const b of queue) ws!.send(b as BufferSource); queue.length = 0; void session!.connect(cols, rows).catch((e: any) => { status.textContent = `failed — ${e?.message || e}`; connectBtn.removeAttribute("disabled"); }); });
+    ws.addEventListener("message", (ev) => { if (ev.data instanceof ArrayBuffer) session?.feed(new Uint8Array(ev.data)); });
+    ws.addEventListener("close", () => { if (session) status.textContent = "closed — the bridge let go."; connectBtn.removeAttribute("disabled"); });
+    ws.addEventListener("error", () => { status.textContent = "the bridge did not answer — the target may be unreachable or refused by the guard."; connectBtn.removeAttribute("disabled"); });
+  };
+  connectBtn.addEventListener("click", connect);
+  screenEl.addEventListener("keydown", (e) => {
+    if (!session) return;
+    const send = (s: string) => session!.sendData(new TextEncoder().encode(s));
+    if (e.key === "Enter") send("\r");
+    else if (e.key === "Backspace") send("\x7f");
+    else if (e.key === "Tab") { send("\t"); e.preventDefault(); }
+    else if (e.key === "ArrowUp") send("\x1b[A");
+    else if (e.key === "ArrowDown") send("\x1b[B");
+    else if (e.key === "ArrowRight") send("\x1b[C");
+    else if (e.key === "ArrowLeft") send("\x1b[D");
+    else if (e.key === "Home") send("\x1b[H");
+    else if (e.key === "End") send("\x1b[F");
+    else if (e.key === "Delete") send("\x1b[3~");
+    else if (e.ctrlKey && e.key.length === 1) send(String.fromCharCode(e.key.toLowerCase().charCodeAt(0) - 96));
+    else if (e.key.length === 1 && !e.metaKey) send(e.key);
+    else return;
+    e.preventDefault();
+  });
+  screenEl.addEventListener("paste", (e) => { const text = e.clipboardData?.getData("text"); if (text && session) { session.sendData(new TextEncoder().encode(text)); e.preventDefault(); } });
+  if (arg && hostIn.value) setTimeout(connect, 60);
 }
 
 function buildSystem(body: HTMLElement) {
