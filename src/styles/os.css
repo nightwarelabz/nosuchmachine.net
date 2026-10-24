@@ -317,6 +317,24 @@
 .os-wp-thumb:hover { border-color: var(--os-accent); transform: translateY(-1px); color: var(--os-ink); }
 .os-wp-thumb img.os-wp-canvas { object-fit: cover; }
 .os-phantom .os-term-text { min-height: 1.25em; }
+/* — phantom as a guest machine: a rail, a framed screen, quick keys — */
+.os-win-body.os-guest { padding: 0; }
+.os-guest-rail { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; padding: 0.42rem 0.6rem; border-bottom: 1px solid var(--os-line-soft); background: rgba(255, 255, 255, 0.03); }
+.os-guest-lamp { width: 9px; height: 9px; border-radius: 50%; background: #69707d; flex: none; }
+.os-guest-lamp[data-state="booting"] { background: #e8b13c; box-shadow: 0 0 9px #e8b13c; animation: os-pulse 1.1s ease-in-out infinite; }
+.os-guest-lamp[data-state="menu"] { background: #58c4dc; box-shadow: 0 0 9px #58c4dc; }
+.os-guest-lamp[data-state="running"] { background: #3ddc84; box-shadow: 0 0 9px #3ddc84; }
+.os-guest-lamp[data-state="asleep"], .os-guest-lamp[data-state="fault"] { background: #e5534b; box-shadow: 0 0 9px #e5534b; }
+@keyframes os-pulse { 50% { opacity: 0.3; } }
+.os-guest-state { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.14em; }
+.os-guest-plate { flex: 1; min-width: 120px; font-size: 0.62rem; color: var(--os-muted); letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.os-guest-screen { flex: 1; overflow: auto; margin: 0.55rem 0.55rem 0; border: 1px solid var(--os-line); border-radius: 10px; padding: 0.55rem 0.65rem; background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.25)), repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px); box-shadow: inset 0 0 42px rgba(0, 0, 0, 0.55); }
+.os-guest-screen .os-term-out { flex: none; overflow: visible; }
+.os-guest-keys { display: flex; gap: 0.35rem; flex-wrap: wrap; padding: 0.5rem 0.55rem 0; }
+.os-guest-key { font: inherit; font-size: 0.66rem; letter-spacing: 0.05em; padding: 0.28rem 0.55rem; border-radius: 6px; border: 1px solid var(--os-line-soft); background: rgba(255, 255, 255, 0.05); color: var(--os-ink); cursor: pointer; transition: border-color 0.12s, color 0.12s; }
+.os-guest-key:hover:not(:disabled) { border-color: var(--os-accent); color: var(--os-accent); }
+.os-guest-key:disabled { opacity: 0.38; cursor: default; }
+.os-guest-line { padding: 0.45rem 0.55rem 0.55rem; }
 .os-phantom-live { opacity: 0.92; }
 .os-sys-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
 .os-winmenu-btn { display: none; }
