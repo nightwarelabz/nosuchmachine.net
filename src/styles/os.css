@@ -415,3 +415,19 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 @keyframes os-item-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
 .os-launch-item.fresh { animation: os-item-in 0.18s ease both; animation-delay: calc(var(--i, 0) * 16ms); }
 .os-window, .os-win-head, .os-taskbar, .os-launcher, .os-desktop { transition: background-color 0.3s ease, border-color 0.3s ease; }
+
+/* ——— SIGINT bench ——— */
+.os-sigint { display: flex; flex-direction: column; gap: 0.55rem; height: 100%; }
+.os-sigint-head { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+.os-sigint-freq { font-family: ui-monospace, monospace; font-size: 1.35rem; width: 7.2rem; background: #04140b; color: #7dffa8; border: 1px solid var(--os-line); border-radius: 6px; padding: 0.15rem 0.5rem; text-align: right; }
+.os-sigint-fall { width: 100%; height: 300px; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; touch-action: none; cursor: crosshair; }
+.os-sigint-modes { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.os-sigint-sel { background: var(--os-panel, #0b0e14); color: inherit; border: 1px solid var(--os-line); border-radius: 6px; padding: 0.2rem 0.4rem; }
+.os-sigint-slider { width: 7rem; accent-color: #3ddc84; }
+.os-sigint-lower { display: grid; grid-template-columns: 1fr 1.4fr; gap: 0.6rem; min-height: 0; flex: 1; }
+.os-sigint-pane { border: 1px solid var(--os-line); border-radius: 8px; padding: 0.45rem 0.6rem; overflow: auto; min-height: 8rem; }
+.os-sigint-pane h4 { margin: 0 0 0.35rem; font-size: 0.72rem; letter-spacing: 0.12em; opacity: 0.75; }
+.os-sigint-copy { font-family: ui-monospace, monospace; font-size: 0.82rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 11rem; overflow: auto; }
+.os-sigint-reg { width: 100%; border-collapse: collapse; font-family: ui-monospace, monospace; font-size: 0.72rem; }
+.os-sigint-reg th, .os-sigint-reg td { text-align: left; padding: 0.14rem 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
+.os-sigint-reg tr { cursor: pointer; }

@@ -11,6 +11,7 @@ import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
 import { buildWolf3d } from "./os-wolf3d";
 import { buildOrc } from "./os-orc";
+import { buildSigint } from "./os-sigint";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
 import { DEPTH, MAX_NEST, skey, sweepNestKeys } from "./os-depth";
@@ -69,6 +70,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   phantom: { title: "phantom", icon: "phantom" },
   wolf3d: { title: "Wolfenstein 3D", icon: "wolf3d" },
   orc: { title: "orc — the house browser", icon: "orc" },
+  sigint: { title: "SIGINT Bench — the wide ear", icon: "sigint" },
 };
 
 /* ————— session retention —————
@@ -975,6 +977,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   phantom: buildPhantomApp,
   wolf3d: buildWolf3d,
   orc: buildOrc,
+  sigint: buildSigint,
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
