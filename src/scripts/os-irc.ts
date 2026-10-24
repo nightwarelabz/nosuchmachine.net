@@ -73,54 +73,102 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   body.textContent = "";
   const wrap = el("div", "os-relay");
 
-  /* ————— connect card ————— */
+  /* ————— the identity box — dynamically allocated —————
+     No box stands on the desk by default: Relay opens straight onto the
+     wire wearing an issued machine name. This box is BUILT only when the
+     operator asks for an identity of their own (the identity button) and
+     torn down when they leave it. A name may carry a password — the
+     network's NickServ password for that name — and the box can register
+     a fresh name as well. Passwords and the house claim code live in
+     memory for this visit only: nothing here is written to disk, ever.
+     Older builds saved the claim code into the filesystem; that practice
+     is retired, and any copy found is destroyed on sight. */
+  try { if (os.read(CLAIM_PATH)) os.remove(CLAIM_PATH); } catch { /* nothing saved, nothing to scrub */ }
   const card = el("div", "os-relay-card");
-  const intro = el("p", "os-note",
-    "The house wire: a real IRC client in this tab, bridged by the site's edge to a public network over TLS. " +
-    "Opening Relay drops you straight into #nosuchmachine on OFTC wearing a machine name the room issues — " +
-    "machine1A, machine2D, on without end. No account, no registration, " +
-    "no name to file; /nick names you once you are in the room. This card is only for changing network or " +
-    "wearing a name of your own. (Libera.Chat currently turns bridged guests away — it demands " +
-    "SASL from the bridge's network range — so the house room lives on OFTC.) The house names — nightwarelabz, nosuchmachine, chasebryan " +
-    "and kin — are claimed: the bridge opens them only with the house claim code, so nobody on this wire wears " +
-    "the operator's name but the operator.");
-  const netSel = document.createElement("select");
-  netSel.className = "os-bottle-select";
-  for (const n of NETWORKS) {
-    const o = document.createElement("option");
-    o.value = n.host; o.textContent = n.label;
-    netSel.appendChild(o);
-  }
-  const nickIn = document.createElement("input");
-  nickIn.className = "os-bottle-input";
-  nickIn.value = machineName();
-  nickIn.placeholder = "nick";
-  nickIn.maxLength = 24;
-  const chanIn = document.createElement("input");
-  chanIn.className = "os-bottle-input";
-  chanIn.value = HOUSE_CHANNEL;
-  chanIn.placeholder = "channel";
-  const tlsWrap = el("label", "os-relay-tls");
-  const tlsIn = document.createElement("input");
-  tlsIn.type = "checkbox"; tlsIn.checked = true;
-  tlsWrap.append(tlsIn, document.createTextNode(" TLS (port 6697)"));
-  const claimIn = document.createElement("input");
-  claimIn.className = "os-bottle-input";
-  claimIn.type = "password";
-  claimIn.placeholder = "claim code — house names only";
-  claimIn.autocomplete = "off";
-  try {
-    const saved = os.read(CLAIM_PATH);
-    if (saved) claimIn.value = saved.split("\n").map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith("#")).pop() || "";
-  } catch { /* no saved code — the field just stays empty */ }
-  const cardMsg = el("p", "os-note", "");
-  const joinBtn = el("button", "os-btn", "enter the wire ▸");
-  card.append(intro, netSel, nickIn, chanIn, claimIn, tlsWrap, joinBtn, cardMsg);
+  card.hidden = true;
   wrap.appendChild(card);
+
+  const hideIdentityBox = () => { card.replaceChildren(); card.hidden = true; };
+
+  const showIdentityBox = () => {
+    card.replaceChildren();
+    const note = el("p", "os-note",
+      "A name of your own — only if you want one. The room never asks: you are already in it wearing a " +
+      "machine name. Add a password if the name is registered to you on the network (NickServ) and Relay " +
+      "identifies you as you enter; tick register to claim a fresh name — the network mails you a code, " +
+      "and from then on the password is the name's key. Passwords ride this visit in memory only and are " +
+      "never stored. Wearing a new name re-enters the wire as that name; the room keeps your conversation. " +
+      "(Libera.Chat turns bridged guests away — it demands SASL from the bridge's range — so the house " +
+      "room lives on OFTC. The house names are the operator's own; they don't open for visitors.)");
+    const netSel = document.createElement("select");
+    netSel.className = "os-bottle-select";
+    for (const n of NETWORKS) {
+      const o = document.createElement("option");
+      o.value = n.host; o.textContent = n.label;
+      if (n.host === wireHost) o.selected = true;
+      netSel.appendChild(o);
+    }
+    const nickIn = document.createElement("input");
+    nickIn.className = "os-bottle-input";
+    nickIn.value = myNick || machineName();
+    nickIn.placeholder = "the name you want to wear";
+    nickIn.maxLength = 24;
+    const chanIn = document.createElement("input");
+    chanIn.className = "os-bottle-input";
+    chanIn.value = [...joinedChans][0] || HOUSE_CHANNEL;
+    chanIn.placeholder = "channel";
+    const passIn = document.createElement("input");
+    passIn.className = "os-bottle-input";
+    passIn.type = "password";
+    passIn.placeholder = "password — only if this name is registered (NickServ)";
+    passIn.autocomplete = "current-password";
+    passIn.value = wirePassword;
+    const regWrap = el("label", "os-relay-tls");
+    const regIn = document.createElement("input");
+    regIn.type = "checkbox";
+    regWrap.append(regIn, document.createTextNode(" register this name to me"));
+    const mailIn = document.createElement("input");
+    mailIn.className = "os-bottle-input";
+    mailIn.type = "email";
+    mailIn.placeholder = "email — NickServ sends the verification code here";
+    mailIn.hidden = true;
+    regIn.addEventListener("change", () => { mailIn.hidden = !regIn.checked; if (regIn.checked) mailIn.focus(); });
+    const claimWrap = el("div", "");
+    claimWrap.hidden = true;
+    const claimNote = el("p", "os-note", "— that name is claimed by the house. Its code opens it, and nothing else does.");
+    const claimIn = document.createElement("input");
+    claimIn.className = "os-bottle-input";
+    claimIn.type = "password";
+    claimIn.placeholder = "house claim code";
+    claimIn.autocomplete = "off";
+    claimWrap.append(claimNote, claimIn);
+    const tlsWrap = el("label", "os-relay-tls");
+    const tlsIn = document.createElement("input");
+    tlsIn.type = "checkbox"; tlsIn.checked = wirePort !== 6667;
+    tlsWrap.append(tlsIn, document.createTextNode(" TLS (port 6697)"));
+    const msg = el("p", "os-note", "");
+    const enterBtn = el("button", "os-btn", "enter as this name ▸");
+    const cancelBtn = el("button", "os-btn", "back to the room");
+    const syncClaim = () => { claimWrap.hidden = !isHouseName(nickIn.value.trim()); };
+    nickIn.addEventListener("input", syncClaim);
+    cancelBtn.addEventListener("click", () => { hideIdentityBox(); input.focus(); });
+    enterBtn.addEventListener("click", () => {
+      const nick = (nickIn.value.trim() || machineName()).replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || machineName();
+      const claim = claimIn.value.trim();
+      if (isHouseName(nick) && !claim) { msg.textContent = `— "${nick}" stays shut without its code. Take any other name — or the machine name.`; return; }
+      if (regIn.checked && (!passIn.value.trim() || !mailIn.value.trim())) { msg.textContent = "— registering takes both a password and an email for the code."; return; }
+      const channel = chanIn.value.trim().startsWith("#") ? chanIn.value.trim() : HOUSE_CHANNEL;
+      hideIdentityBox();
+      connectWith({ host: netSel.value, port: tlsIn.checked ? 6697 : 6667, nick, channel, password: passIn.value, registerEmail: regIn.checked ? mailIn.value.trim() : "", claim });
+    });
+    card.append(note, netSel, nickIn, chanIn, passIn, regWrap, mailIn, claimWrap, tlsWrap, enterBtn, cancelBtn, msg);
+    syncClaim();
+    card.hidden = false;
+    nickIn.focus();
+  };
 
   /* ————— session view ————— */
   const view = el("div", "os-relay-view");
-  view.hidden = true;
   const targetsEl = el("div", "os-relay-targets");
   const main = el("div", "os-relay-main");
   const linesEl = el("div", "os-relay-lines");
@@ -129,9 +177,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   input.className = "os-relay-input";
   input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /part · /nick name";
   input.maxLength = 400;
-  const idBtn = el("button", "os-btn small", "name / network");
-  idBtn.title = "change name or network";
-  idBtn.addEventListener("click", () => { card.hidden = false; cardMsg.textContent = "— wearing a new name re-enters the wire as that name; the room keeps your conversation."; nickIn.focus(); });
+  const idBtn = el("button", "os-btn small", "identity");
+  idBtn.title = "a name of your own — with a password if you want one";
+  idBtn.addEventListener("click", () => showIdentityBox());
   const copyBtn = el("button", "os-btn small", "copy");
   copyBtn.title = "copy this conversation";
   copyBtn.addEventListener("click", () => {
@@ -156,6 +204,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   let wireHost = "";
   let wirePort = 6697;
   let wireClaim = "";
+  let wirePassword = "";
+  let wireRegister: { password: string; email: string } | null = null;
+  let joinTarget = HOUSE_CHANNEL;
   const buffers = new Map<string, string[]>();
   const users = new Map<string, Set<string>>();
 
@@ -201,8 +252,16 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       case "001":
         attempts = 0;
         push("server", `— registered on the network as ${myNick}`);
+        if (wireRegister) {
+          send(`PRIVMSG NickServ :REGISTER ${wireRegister.password} ${wireRegister.email}`);
+          push("server", `— registering ${myNick} with NickServ: watch your inbox for the code, then send /msg NickServ VERIFY REGISTER ${myNick} <code> — after that, the identity box's password field is this name's key.`);
+          wireRegister = null;
+        } else if (wirePassword) {
+          send("PRIVMSG NickServ :IDENTIFY " + wirePassword);
+          push("server", `— identifying to NickServ as ${myNick}…`);
+        }
         if (joinedChans.size) for (const c of joinedChans) send(`JOIN ${c}`);
-        else send(`JOIN ${chanIn.value.trim() || HOUSE_CHANNEL}`);
+        else send(`JOIN ${joinTarget}`);
         break;
       case "PRIVMSG": {
         const target = m.params[0] === myNick ? m.nick : m.params[0];
@@ -269,24 +328,18 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     }
   };
 
-  const connect = () => {
+  interface IdentityOpts { host: string; port: number; nick: string; channel: string; password: string; registerEmail: string; claim: string; }
+  const connectWith = (o: IdentityOpts) => {
     const refusal = os.gate("active");
-    if (refusal) { card.hidden = false; cardMsg.textContent = refusal; return; }
-    const host = netSel.value;
-    const port = tlsIn.checked ? 6697 : 6667;
-    myNick = (nickIn.value.trim() || machineName()).replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || machineName();
-    const claim = claimIn.value.trim();
-    if (isHouseName(myNick) && !claim) {
-      card.hidden = false; view.hidden = true;
-      cardMsg.textContent = `— "${myNick}" is a claimed house name. It opens only with the house claim code — enter it above, or pick any other nick.`;
-      return;
-    }
+    if (refusal) { push("server", refusal); return; }
+    myNick = o.nick || machineName();
     if (ws) { intentionalClose = true; if (keepalive) { clearInterval(keepalive); keepalive = null; } try { ws.close(); } catch { /* already gone */ } }
-    buffers.clear(); users.clear(); current = "server";
+    users.clear(); current = "server";
     joinedChans.clear(); intentionalClose = false; attempts = 0;
-    wireHost = host; wirePort = port; wireClaim = claim;
-    card.hidden = true; view.hidden = false;
-    push("server", `— reaching ${host}:${port} through the house bridge…`);
+    wireHost = o.host; wirePort = o.port; wireClaim = o.claim; wirePassword = o.password;
+    wireRegister = o.registerEmail && o.password ? { password: o.password, email: o.registerEmail } : null;
+    joinTarget = o.channel || HOUSE_CHANNEL;
+    push("server", `— reaching ${o.host}:${o.port} through the house bridge…`);
     renderTargets();
     openWire();
     input.focus();
@@ -306,12 +359,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     let pending = "";
     ws.addEventListener("open", () => {
       push("server", "— bridge open; registering…");
-      if (wireClaim) {
-        send(`PASS nsm-claim:${wireClaim}`);
-        if (isHouseName(myNick)) {
-          try { os.write(CLAIM_PATH, `# relay claim code — secret. kept in this browser's blacksite filesystem only.\n${wireClaim}\n`); } catch { /* the code still rides this session */ }
-        }
-      }
+      if (wireClaim) send(`PASS nsm-claim:${wireClaim}`);
       send(`NICK ${myNick}`);
       send(`USER ${myNick} 0 * :BLACKSITE Relay machine`);
       if (keepalive) clearInterval(keepalive);
@@ -339,7 +387,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     });
     ws.addEventListener("error", () => push("server", "— bridge hiccup; the rejoin below covers it"));
   };
-  joinBtn.addEventListener("click", connect);
+  /* No box, no form: Relay opens already standing in the house channel,
+     wearing an issued machine name. Identity is opt-in, from the button. */
+  connectWith({ host: NETWORKS[0].host, port: 6697, nick: machineName(), channel: HOUSE_CHANNEL, password: "", registerEmail: "", claim: "" });
 
   /* No registration, no form to clear: opening Relay steps straight into
      the house channel as a guest. The card above is for changing network
@@ -372,7 +422,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         case "me": send(`PRIVMSG ${current} :\x01ACTION ${arg}\x01`); push(current, `· ${myNick} ${arg}`); break;
         case "nick": send(`NICK ${arg}`); break;
         case "topic": send(`TOPIC ${current} :${arg}`); break;
-        case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); card.hidden = false; view.hidden = true; break;
+        case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); push("server", "— off the wire. The identity box is up if you want back in — any name, or none."); showIdentityBox(); break;
         default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /topic /quit)`);
       }
       return;
