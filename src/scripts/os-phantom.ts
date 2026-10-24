@@ -177,7 +177,7 @@ export function buildPhantomApp(body: HTMLElement) {
         print(`— the phantom could not wake: ${m.message}`, "err");
       }
     };
-    worker.onerror = () => { setState("fault", "FAULTED"); print("— the phantom worker faulted. wake to try again.", "err"); };
+    worker.onerror = (e) => { setState("fault", "FAULTED"); print(`— the phantom worker faulted: ${e.message || "no reason given"}. wake to try again.`, "err"); };
     setState("booting", "RAISING");
     print("— raising phantom — its boot menu takes an empty line for BOOT.", "dim");
     worker.postMessage({ type: "init", sab, wasmUrl: "/phantom/phantom.wasm", env: { COLUMNS: "100" } });
