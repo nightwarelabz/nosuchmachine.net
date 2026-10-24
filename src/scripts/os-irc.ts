@@ -2,9 +2,9 @@
 /* Relay — the house wire. A real IRC client in the tab: it speaks the IRC
    protocol itself (registration, PING/PONG, channels, private messages,
    NAMES) over a WebSocket to the site's own bridge, which pipes it to a
-   public network — Libera.Chat, OFTC, or hackint — over TLS. No account,
+   public network — OFTC, Libera.Chat, or hackint — over TLS. No account,
    no tracking: a nick, a channel, and the wire. The house channel is
-   #nosuchmachine on Libera.Chat; on IRC, whoever arrives first opens
+   #nosuchmachine on OFTC; on IRC, whoever arrives first opens
    the room. */
 
 export interface IrcMessage {
@@ -38,8 +38,8 @@ export function parseIrcLine(line: string): IrcMessage {
 }
 
 const NETWORKS = [
-  { host: "irc.libera.chat", label: "Libera.Chat — the house network" },
-  { host: "irc.oftc.net", label: "OFTC" },
+  { host: "irc.oftc.net", label: "OFTC — the house network" },
+  { host: "irc.libera.chat", label: "Libera.Chat — refuses bridged guests (SASL wall)" },
   { host: "irc.hackint.org", label: "hackint" },
 ];
 const HOUSE_CHANNEL = "#nosuchmachine";
@@ -68,8 +68,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const card = el("div", "os-relay-card");
   const intro = el("p", "os-note",
     "The house wire: a real IRC client in this tab, bridged by the site's edge to a public network over TLS. " +
-    "No account and nothing stored — pick a nick and step in. The house channel is #nosuchmachine on Libera.Chat; " +
-    "on IRC, whoever arrives first opens the room. The house names — nightwarelabz, nosuchmachine, chasebryan " +
+    "No account and nothing stored — pick a nick and step in. The house channel is #nosuchmachine on OFTC; " +
+    "on IRC, whoever arrives first opens the room. (Libera.Chat currently turns bridged guests away — it demands " +
+    "SASL from the bridge's network range — so the house room lives on OFTC.) The house names — nightwarelabz, nosuchmachine, chasebryan " +
     "and kin — are claimed: the bridge opens them only with the house claim code, so nobody on this wire wears " +
     "the operator's name but the operator.");
   const netSel = document.createElement("select");
