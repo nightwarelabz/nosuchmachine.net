@@ -8,8 +8,11 @@
  * the door to it from inside the OS, and a working preview pane for
  * pages that allow being framed.
  *
- * Honest physics, named in the room itself: many sites refuse framing
- * (X-Frame-Options / frame-ancestors). Those do not load here — orc
+ * Honest physics, named in the room itself: the OS page rides COEP
+ * require-corp (phantom's SharedArrayBuffer ring), so the preview
+ * frame is credentialless — the framed page loads cookie-less and
+ * owes no COEP headers. Sites that refuse framing outright
+ * (X-Frame-Options / frame-ancestors) still do not load here — orc
  * the browser has no such limit, because there the page is top-level.
  * The OS shell widens its own CSP for this room's scope with
  * frame-src https: (see public/_headers). */
@@ -45,12 +48,22 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   const frame = document.createElement("iframe");
   frame.className = "os-orc-frame";
   frame.setAttribute("title", "orc preview pane");
-  frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups");
+  // The OS page itself rides COEP require-corp (phantom's
+  // SharedArrayBuffer ring demands cross-origin isolation), and a
+  // plain cross-origin frame without COEP headers of its own is
+  // blocked by that policy — "refused to connect". The credentialless
+  // attribute is the sanctioned door: the framed page loads in an
+  // ephemeral, cookie-less context and owes no COEP headers. Sites
+  // that forbid framing outright still refuse, and browsers without
+  // credentialless frames fall back to the open-out button.
+  frame.setAttribute("credentialless", "");
+  frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
   frame.setAttribute("referrerpolicy", "no-referrer");
   const note = el("p", "os-note",
     "orc is the house browser — our version of LibreWolf, wrapped so you install it once and it carries its own engine: " +
     "nosuchmachine.net and everything else, the same on every machine, with no telemetry and no sponsored anything. " +
-    "This room previews pages that allow framing; a page that refuses will stay blank here — that refusal is the site's, " +
+    "This room previews pages inside a credentialless frame (no cookies ride along — the OS page's own isolation policy demands it); " +
+    "a page that forbids framing will still stay blank here — that refusal is the site's, " +
     "and orc itself is never refused, because there the page stands top-level.");
   wrap.append(hero, bar, frame, note);
   body.appendChild(wrap);
