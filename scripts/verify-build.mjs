@@ -113,6 +113,8 @@ assert.ok(astroJs.includes("ORC — Orchestration"), "OS bundle must carry orc's
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");
 assert.ok(headersOut.includes("/wolf3d/*"), "Served _headers must carry the /wolf3d/* scope");
 assert.ok(headersOut.includes("frame-src 'self' https:"), "OS CSP must allow the orc room's frames");
+assert.ok(headersOut.includes("frame-ancestors 'self'"), "OS pages must be framable by the house itself (the orc room recursion) - and only by the house");
+assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");
