@@ -33,7 +33,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   const heroText = el("div");
   heroText.append(
     el("h3", "", "ORC — Orchestration"),
-    el("p", "os-note", "the house browser. Our version of LibreWolf, wrapped to be installed anywhere — the engine travels with it, so every site stands on the same ground."),
+    el("p", "os-note", "the house browser."),
   );
   hero.append(face, heroText);
   const bar = el("div", "os-files-bar");
@@ -41,7 +41,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   addr.className = "os-bottle-input";
   addr.style.flex = "1";
   addr.setAttribute("aria-label", "Address");
-  addr.placeholder = "https://example.org — or a word to search";
+  addr.placeholder = "address or search";
   const go = el("button", "os-btn", "go");
   const out = el("button", "os-btn", "open in your browser");
   bar.append(addr, go, out);
@@ -59,13 +59,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   frame.setAttribute("credentialless", "");
   frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
   frame.setAttribute("referrerpolicy", "no-referrer");
-  const note = el("p", "os-note",
-    "orc is the house browser — our version of LibreWolf, wrapped so you install it once and it carries its own engine: " +
-    "nosuchmachine.net and everything else, the same on every machine, with no telemetry and no sponsored anything. " +
-    "This room previews pages inside a credentialless frame (no cookies ride along — the OS page's own isolation policy demands it); " +
-    "a page that forbids framing will still stay blank here — that refusal is the site's, " +
-    "and orc itself is never refused, because there the page stands top-level.");
-  wrap.append(hero, bar, frame, note);
+  wrap.append(hero, bar, frame);
   body.appendChild(wrap);
 
   let current = "";
