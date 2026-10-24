@@ -436,3 +436,9 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-sim { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
 .os-sim-canvas { width: 100%; flex: 1; min-height: 320px; background: #0a1420; border: 1px solid var(--os-line); border-radius: 8px; cursor: crosshair; touch-action: none; }
 .os-sim-hud { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ——— Simulacrum v2: stage, shade, underwater ——— */
+.os-sim-stage { position: relative; flex: 1; display: flex; min-height: 320px; }
+.os-sim-stage .os-sim-canvas { flex: 1; }
+.os-sim-shade { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: radial-gradient(ellipse at center, transparent 58%, rgba(2, 6, 10, 0.38) 100%); }
+.os-sim-uw { position: absolute; inset: 0; pointer-events: none; border-radius: 8px; background: rgba(10, 60, 110, 0.28); opacity: 0; transition: opacity 0.35s; }
