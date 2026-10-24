@@ -35,15 +35,23 @@ assert.equal(
   "Project slugs must be unique",
 );
 const sitemap = fs.readFileSync(path.join(root, "sitemap.xml"), "utf8");
-const home = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const homeLinks = new Set(anchors(home).map((anchor) => anchor.href));
-const homeHeading = home.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1]
+const osHome = fs.readFileSync(path.join(root, "index.html"), "utf8");
+// The swap (Chase's directive): BLACKSITE OS is the main site view at /;
+// the bench suite lives at /bench/. The homepage carries the OS markers.
+for (const marker of ["os-boot", "os-desktop", "os-taskbar", "os-emcon-chip", "BLACKSITE OS"]) {
+  assert.ok(osHome.includes(marker), `Homepage (BLACKSITE OS) missing marker: ${marker}`);
+}
+assert.ok(osHome.includes("/bench/"), "Homepage OS must link the bench suite at /bench/");
+const bench = fs.readFileSync(path.join(root, "bench/index.html"), "utf8");
+const homeLinks = new Set(anchors(bench).map((anchor) => anchor.href));
+const homeHeading = bench.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1]
   .replace(/<[^>]*>/g, " ")
   .replace(/\s+/g, " ")
   .trim();
-assert.match(homeHeading ?? "", /bench/i, "Homepage must present the BLACKSITE WEB bench");
-assert.match(home, /blacksite[\s-]*web/i, "Homepage must identify BLACKSITE WEB");
-assert.match(home, /nightware[\s-]*labz/i, "Homepage must identify NIGHTWARE LABZ");
+const home = bench;
+assert.match(homeHeading ?? "", /bench/i, "Bench page must present the BLACKSITE WEB bench");
+assert.match(home, /blacksite[\s-]*web/i, "Bench page must identify BLACKSITE WEB");
+assert.match(home, /nightware[\s-]*labz/i, "Bench page must identify NIGHTWARE LABZ");
 for (const section of [
   "hero", "instrument", "skelli", "get-started", "lab", "about", "work", "current",
 ]) {
@@ -85,8 +93,8 @@ assert.match(home, /one knock, read, grade/i, "Homepage must state the bench doc
 assert.match(home, /public targets only/i, "Homepage must state the public-target guard");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
-assert.ok(home.includes("Daylight Bottle"), "Homepage must carry the Daylight Bottle plug");
-assert.ok(home.includes("/blacksite/#bottle"), "Homepage must deep-link the OS bottle desk");
+assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");
+assert.ok(home.includes("/#bottle"), "Bench page must deep-link the OS bottle desk");
 for (const marker of ["os-boot", "os-desktop", "os-taskbar", "os-emcon-chip", "BLACKSITE OS"]) {
   assert.ok(osPage.includes(marker), `BLACKSITE OS page missing marker: ${marker}`);
 }
@@ -292,5 +300,5 @@ for (const file of files) {
   }
 }
 console.log(
-  `Verified NIGHTWARE LABZ / BLACKSITE WEB bench homepage, BLACKSITE OS page markers, suite panels and controls, installation and source links, ${book.chapters.length} hosted book chapters with reading navigation and search, ${catalog.length} project routes and source references, ${files.length} HTML pages, ${checkedLinks} local links/assets, sitemap, and CSP-compatible scripts.`,
+  `Verified NIGHTWARE LABZ / BLACKSITE OS homepage with the bench suite at /bench/, BLACKSITE OS alias page markers, suite panels and controls, installation and source links, ${book.chapters.length} hosted book chapters with reading navigation and search, ${catalog.length} project routes and source references, ${files.length} HTML pages, ${checkedLinks} local links/assets, sitemap, and CSP-compatible scripts.`,
 );

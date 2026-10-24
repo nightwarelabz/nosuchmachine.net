@@ -1,6 +1,6 @@
 # NIGHTWARE LABZ — BLACKSITE WEB
 
-**nosuchmachine.net is a working pentest bench, not a brochure.** The homepage is
+**nosuchmachine.net is a working pentest bench, not a brochure.** The homepage is BLACKSITE OS itself; the bench suite lives at `/bench/`. The homepage is
 BLACKSITE WEB: the [nightjar](https://github.com/nightwarelabz/nightjar) Blacksite
 bench rebuilt for the browser — DNS, TLS, HTTP security grading, TCP connect
 checks, domain recon, JWT/certificate inspection, hashes, codecs, subnet math,
@@ -24,18 +24,17 @@ refused in `functions/_lib/guard.ts` before contact and on every redirect hop.
   `nsm.daylight-bottle.*.v1` protocol through a same-origin edge bridge
   (`functions/api/bottle.ts`), because the service deliberately sends no
   CORS headers. Plaintext and identities never leave the browser.
-- `/blacksite/` is **BLACKSITE OS**: the nightjar console ported whole — a
+- `/` (and its alias `/blacksite/`) is **BLACKSITE OS**: the nightjar console ported whole — a
   windowed web OS (boot, desktop, taskbar, process board) with a real shell
   over a persistent virtual filesystem, pipes/redirects/jobs, the full
-  426-command Blacksite roster (197 verbs working: 97 in-room, 100 via the
-  guarded edge) from nightjar's own generated reference
+  426-command Blacksite roster from nightjar's own generated reference
   (`src/data/blacksite-commands.json`) with each command LIVE, EDGE, or a
   named LIMIT, Python (vendored Skulpt) and JavaScript engines, a
   vim-mannered editor, the Wave-10 file parsers, the Gauntlet self-test
   battery, EMCON gating, themes, and room-generated wallpapers. Its wire
   verbs ride the same guarded edge functions (`/api/fetch`, `/api/exchange`,
   `/api/ping` included: one connection, ≤4KB spoken, ≤64KB read).
-- The homepage (`src/pages/index.astro`) is the suite console: a global target
+- The bench page (`src/pages/bench/index.astro`, served at `/bench/`) is the suite console: a global target
   bar with a one-click full battery, a tool rail, and a session Report with
   JSON/Markdown export. Network probes live in Cloudflare Pages Functions under
   `functions/api/` (`dns`, `tls`, `http-audit`, `tcp`, `recon`, `echo`); local

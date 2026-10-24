@@ -88,7 +88,7 @@ only systems they own or are authorized to test.
 ## The Daylight Bottle plug
 
 BLACKSITE OS carries a Daylight Bottle desk (desktop icon, the `bottle`
-verb family, deep link `/blacksite/#bottle`). Daylight Bottle
+verb family, deep link `/#bottle`). Daylight Bottle
 (bottle.nosuchmachine.net, from the Wuci-Ji project) is an age-encrypted
 message-in-a-bottle service: senders encrypt locally to a recipient from
 its static keyring, the server stores ciphertext + public metadata only,
