@@ -335,7 +335,7 @@ body::before { animation: bs-drift 30s ease-in-out infinite alternate; }
 .bs-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 59, 71, 0.45), transparent); pointer-events: none; }
 .bs-card:hover { border-color: var(--bs-line); box-shadow: 0 14px 38px rgba(0, 0, 0, 0.42); }
 .bs-card h3::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--bs-red); margin-right: 0.55rem; vertical-align: 2px; box-shadow: 0 0 9px rgba(255, 59, 71, 0.65); }
-.bs-top { box-shadow: 0 1px 0 rgba(255, 59, 71, 0.16), 0 14px 34px -20px rgba(255, 59, 71, 0.35); }
+.bs-topbar { box-shadow: 0 1px 0 rgba(255, 59, 71, 0.16), 0 14px 34px -20px rgba(255, 59, 71, 0.35); }
 .bs-hero-art img { animation: bs-breathe 5.2s ease-in-out infinite; }
 @keyframes bs-breathe { 0%, 100% { filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 34px rgba(255, 255, 255, 0.1)); } 50% { filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 58px rgba(255, 255, 255, 0.2)); } }
 .bs input:focus, .bs textarea:focus, .bs select:focus { border-color: var(--bs-red-dim); box-shadow: 0 0 0 3px rgba(255, 59, 71, 0.14); }
