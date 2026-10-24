@@ -20,7 +20,7 @@ confusing their evidence with its own.
 
 ## The edges
 
-The [research analysis](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RESEARCH.md#45-end-to-end-proof-still-needs-interoperability)
+The [research analysis](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RESEARCH.md#45-end-to-end-proof-still-needs-interoperability)
 lists the places where even a complete Orange toolchain must meet existing
 systems:
 
@@ -65,7 +65,7 @@ set of approved modes, entropy strategy, self-tests, and operational
 environment, examined by an accredited laboratory.
 
 Those are not proofs, and proofs are not those. The
-[assurance model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#11-external-validation-posture) draws the lines
+[assurance model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#11-external-validation-posture) draws the lines
 carefully:
 
 - a local ACVP-compatible test run is not an algorithm certificate;
@@ -83,7 +83,7 @@ modes are all things a laboratory would ask for.
 
 ## Orange's posture
 
-[D-016](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-016--validation-and-certification-posture) records the
+[D-016](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-016--validation-and-certification-posture) records the
 **proposed** posture:
 
 - support ACVP-compatible input and output, and record validation status;
@@ -144,7 +144,7 @@ Releases meet another set of external systems: software bills of materials in
 SPDX and CycloneDX form, a cryptographic bill of materials that lists
 algorithms and their parameters, SLSA and in-toto build provenance, and
 signature and transparency evidence. The
-[assurance model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#91-framework-targets) proposes targets against
+[assurance model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#91-framework-targets) proposes targets against
 current frameworks such as NIST SSDF, SLSA, and the OpenSSF OSPS Baseline,
 pinned to exact versions at release time.
 

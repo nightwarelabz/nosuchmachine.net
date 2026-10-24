@@ -29,7 +29,7 @@ small, because it never has to be clever.
 The project's charter turns that asymmetry into a principle: *soundness before
 automation*. Solvers are search engines. Their answer is accepted only through a
 checked certificate or through an explicitly disclosed external-trust claim.
-The [research analysis](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RESEARCH.md#43-the-solver-should-search-not-legislate)
+The [research analysis](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RESEARCH.md#43-the-solver-should-search-not-legislate)
 states the same idea more bluntly: the solver should search, not legislate.
 
 F\* is a useful point of comparison because it is both successful and candid.
@@ -43,7 +43,7 @@ named part of the trusted base rather than a silent convenience.
 
 ## The proposed checker
 
-The [architecture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARCHITECTURE.md#22-orange-check) describes an authoritative
+The [architecture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARCHITECTURE.md#22-orange-check) describes an authoritative
 offline checker, `orange-check`, with a deliberately austere feature list. It
 has no network access, no package resolution, no tactics, no plugins, and no
 code generation. Its behavior is deterministic and resource bounded. It
@@ -65,7 +65,7 @@ fingerprint that changes whenever the definition, axioms, semantic edition, or
 target model changes is what keeps a proof from quietly migrating to a
 different subject.
 
-[D-007](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-007--orange-owned-proof-format-and-checker) proposes that
+[D-007](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-007--orange-owned-proof-format-and-checker) proposes that
 Orange own this proof format and checker rather than making a host prover's
 compiled environment the permanent public artifact. The register is plain about
 the risk: a custom kernel is a major soundness and schedule risk, and its logic
@@ -79,14 +79,14 @@ independent.
 ## Choosing a foundation
 
 The logic that the checker implements has to be defined and proved sound in
-something. [D-006](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-006--proof-foundation) compares two
+something. [D-006](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-006--proof-foundation) compares two
 candidates, Rocq and Lean 4, and selects neither. Rocq brings the closest
 existing ecosystem of verified compilers, cryptographic synthesis, and
 extraction. Lean 4 brings an integrated implementation, kernel, and tooling
 model. The register treats both strengths as hypotheses to measure, not reasons
 to preselect a winner.
 
-The [proof-foundation suite](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/PROOF_FOUNDATION_DECISION_SUITE.md) asks each
+The [proof-foundation suite](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/PROOF_FOUNDATION_DECISION_SUITE.md) asks each
 candidate to do the same concrete work: define and check a proposed Core
 fragment, mechanize progress and preservation plus a leakage lemma, validate a
 canonical serialization, produce and replay an LRAT-backed bit-vector proof,
@@ -97,7 +97,7 @@ executed. D-006 is marked **investigate**, and no proof toolchain is admitted.
 ## What counts as a checked answer
 
 Automation produces many kinds of output, and only some of them should be able
-to close a claim. The [proposed automation portfolio](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARCHITECTURE.md#7-proof-automation)
+to close a claim. The [proposed automation portfolio](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARCHITECTURE.md#7-proof-automation)
 sorts them:
 
 - **Bit-vector and finite equivalence** goes through verified bit-blasting to
@@ -122,9 +122,9 @@ or be cached under a status that suggests it did.
 
 ## Three policies for solver trust
 
-How strict should that rule be? [D-009](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-009--solver-trust) frames
+How strict should that rule be? [D-009](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-009--solver-trust) frames
 the choice as three candidates, compared symmetrically in the
-[solver-trust suite](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SOLVER_TRUST_DECISION_SUITE.md):
+[solver-trust suite](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SOLVER_TRUST_DECISION_SUITE.md):
 
 | ID | Policy | Where authority lives |
 | --- | --- | --- |

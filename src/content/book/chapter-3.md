@@ -34,12 +34,12 @@ Lean, or Rocq, inheriting a mature kernel and library. It could accept a subset
 of Rust with proof annotations and meet implementers where they already work.
 
 Orange examined those options as candidates rather than dismissing them. The
-[product-form decision](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-003--product-form) compared four forms
+[product-form decision](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-003--product-form) compared four forms
 against eight hard gates and accepted candidate PF-01, a standalone
 domain-specific language with its own editioned semantics and canonical Core
 formats. That decision is **current and accepted**: the project owner accepted
 it on 2026-07-26 and
-[OEP-0004](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0004-standalone-orange-product-form.md) binds it
+[OEP-0004](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0004-standalone-orange-product-form.md) binds it
 to exact revision `a82a5cec2ee4359dc2fe66171f17c93146747333`.
 
 The reasoning is the seam argument from Chapter 1 turned on the language
@@ -57,7 +57,7 @@ describes the leading proposal and the discipline that any answer must obey.
 
 ## Five roles, one module system
 
-The [project charter](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/PROJECT_CHARTER.md#4-product-thesis) proposes one module
+The [project charter](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/PROJECT_CHARTER.md#4-product-thesis) proposes one module
 system with several deliberately separated declaration roles:
 
 - **Specification** for total mathematical functions and relations;
@@ -79,14 +79,14 @@ never influence a running program. A vector intrinsic has meaning only on a
 target that provides it.
 
 A **claim** is conspicuously absent from that list. In the
-[semantic-strata proposal](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SEMANTIC_STRATA_DECISION_SUITE.md#31-source-declaration-roles),
+[semantic-strata proposal](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SEMANTIC_STRATA_DECISION_SUITE.md#31-source-declaration-roles),
 a claim is a record that binds a subject, a relation, assumptions, and evidence.
 It is not a sixth semantic world with its own execution rules. Foreign imports
 and deliberate declassification are similar: they are cross-cutting boundaries
 that must be declared, not annotations that switch off a stratum's rules.
 
 All of this is **proposed**. The role map is a hypothesis under
-[D-004](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-004--semantic-strata), which remains open.
+[D-004](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-004--semantic-strata), which remains open.
 
 ## The crossings are the design
 
@@ -138,7 +138,7 @@ calculus. A small **Shared Pure** subset would let deterministic definitions be
 reused across roles without importing state or randomness.
 
 That recommendation is not a selection. The
-[D-004 suite](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SEMANTIC_STRATA_DECISION_SUITE.md#2-candidate-architectures)
+[D-004 suite](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SEMANTIC_STRATA_DECISION_SUITE.md#2-candidate-architectures)
 compares it symmetrically with four alternatives:
 
 | ID | Candidate | Idea |

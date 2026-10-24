@@ -36,7 +36,7 @@ difference the observer can detect.
 
 The definition immediately raises the question the label hides: *what does the
 observer see?* The answer is a model, and different models make different
-claims. Orange's [assurance model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#41-baseline-model) proposes a
+claims. Orange's [assurance model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#41-baseline-model) proposes a
 baseline observation trace containing at least:
 
 - branch decisions and targets;
@@ -54,7 +54,7 @@ Those are excluded unless a separate profile models them.
 
 Because the observation model is part of the claim, Orange proposes to replace
 a single `constant_time` flag with versioned leakage policies. The
-[architecture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARCHITECTURE.md#45-ct-ir) sketches a family:
+[architecture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARCHITECTURE.md#45-ct-ir) sketches a family:
 
 | Policy | What it constrains |
 | --- | --- |
@@ -120,7 +120,7 @@ constant-time is a distinct compiler proof, not a free consequence of ordinary
 semantic preservation.
 
 So a leakage claim about shipped bytes needs more than a source-level argument.
-The [proposed evidence stack](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#43-evidence-stack) for a target
+The [proposed evidence stack](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#43-evidence-stack) for a target
 leakage claim runs through seven layers: source or CT IR noninterference;
 pass-by-pass leakage preservation or checked translation validation;
 correspondence between final object bytes and the accepted final semantics;
@@ -183,11 +183,11 @@ distinguisher.
 
 ## Where things stand
 
-The leakage baseline is [D-012](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-012--baseline-leakage-claim),
+The leakage baseline is [D-012](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-012--baseline-leakage-claim),
 marked **investigate**. Its acceptance evidence includes a formal trace
 semantics, a target instruction-classification process, positive and negative
 examples, and a preservation plan through final bytes. The initial target
-envelope is [D-011](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-011--initial-native-target-envelope),
+envelope is [D-011](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-011--initial-native-target-envelope),
 **proposed** as x86-64 Linux and AArch64 Linux, possibly only one of them if
 solo capacity requires it.
 

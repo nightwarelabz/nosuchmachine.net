@@ -10,49 +10,49 @@ smaller than most, and it is small on purpose. This chapter is a guided tour of
 Orange 2026 as it exists: every construct it accepts, every value it can
 compute, and the precise places where it stops. It is **current** throughout,
 and every example in it was run against the compiler in this repository. The
-normative sources are the [lexical and grammar specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LANGUAGE_2026.md),
-the accepted [typed-literal semantics](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SEMANTICS_2026.md) of S3a, the
-[pure expression specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/EXPRESSIONS_2026.md) of S3b, the
-[bindings and conversions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BINDINGS_2026.md) of S3c, the
-[arrays specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARRAYS_2026.md) of S3d, the
-[loops specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOPS_2026.md) of S3e, the
-[conditions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/CONDITIONS_2026.md) of S3f, the
-[lookups specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOKUPS_2026.md) of S3g, the
-[modules specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULES_2026.md) of S3h, the
-[modular arithmetic specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULAR_2026.md) of S3i, the
-[blocks specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BLOCKS_2026.md) of S3j, the
-[tuples specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TUPLES_2026.md) of S3k, the
-[bytes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BYTES_2026.md) of S3l, the
-[sizes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SIZES_2026.md) of S3m, the
-[byte order specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ORDER_2026.md) of S3n, the
-[type parameters specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TYPE_PARAMETERS_2026.md) of S3o, the
-[lengths specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LENGTHS_2026.md) of S3p, the
-[tests specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TESTS_2026.md) of S3q, and the
-[computed amounts specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/AMOUNTS_2026.md) of S3r, the
-[nested arrays specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/NESTED_ARRAYS_2026.md) of S3s, the
-[static moduli specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/STATIC_MODULI_2026.md) of S3t, and the
-[array dimensions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DIMENSIONS_2026.md) of S3u. S3b through
+normative sources are the [lexical and grammar specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LANGUAGE_2026.md),
+the accepted [typed-literal semantics](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SEMANTICS_2026.md) of S3a, the
+[pure expression specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/EXPRESSIONS_2026.md) of S3b, the
+[bindings and conversions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BINDINGS_2026.md) of S3c, the
+[arrays specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARRAYS_2026.md) of S3d, the
+[loops specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOPS_2026.md) of S3e, the
+[conditions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/CONDITIONS_2026.md) of S3f, the
+[lookups specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOKUPS_2026.md) of S3g, the
+[modules specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULES_2026.md) of S3h, the
+[modular arithmetic specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULAR_2026.md) of S3i, the
+[blocks specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BLOCKS_2026.md) of S3j, the
+[tuples specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TUPLES_2026.md) of S3k, the
+[bytes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BYTES_2026.md) of S3l, the
+[sizes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SIZES_2026.md) of S3m, the
+[byte order specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ORDER_2026.md) of S3n, the
+[type parameters specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TYPE_PARAMETERS_2026.md) of S3o, the
+[lengths specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LENGTHS_2026.md) of S3p, the
+[tests specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TESTS_2026.md) of S3q, and the
+[computed amounts specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/AMOUNTS_2026.md) of S3r, the
+[nested arrays specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/NESTED_ARRAYS_2026.md) of S3s, the
+[static moduli specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/STATIC_MODULI_2026.md) of S3t, and the
+[array dimensions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DIMENSIONS_2026.md) of S3u. S3b through
 S3u are implemented and tested, but their specifications are **proposed**:
-[OEP-0005](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0005-orange-2026-pure-spec-expressions.md),
-[OEP-0006](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0006-orange-2026-bindings-and-conversions.md),
-[OEP-0007](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0007-orange-2026-fixed-length-arrays.md),
-[OEP-0008](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0008-orange-2026-bounded-loops.md),
-[OEP-0009](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0009-orange-2026-conditions.md),
-[OEP-0010](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0010-orange-2026-lookups.md),
-[OEP-0011](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0011-orange-2026-modules.md),
-[OEP-0012](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0012-orange-2026-modular-arithmetic.md),
-[OEP-0013](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0013-orange-2026-blocks.md),
-[OEP-0014](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0014-orange-2026-tuples.md),
-[OEP-0015](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0015-orange-2026-bytes.md),
-[OEP-0016](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0016-orange-2026-sizes.md),
-[OEP-0017](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0017-orange-2026-byte-order.md),
-[OEP-0018](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0018-orange-2026-type-parameters.md),
-[OEP-0019](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0019-orange-2026-lengths.md),
-[OEP-0020](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0020-orange-2026-tests.md),
-[OEP-0021](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0021-orange-2026-computed-amounts.md),
-[OEP-0023](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0023-orange-2026-nested-arrays.md),
-[OEP-0024](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0024-orange-2026-static-moduli.md), and
-[OEP-0025](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0025-orange-2026-array-dimensions.md) are in
+[OEP-0005](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0005-orange-2026-pure-spec-expressions.md),
+[OEP-0006](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0006-orange-2026-bindings-and-conversions.md),
+[OEP-0007](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0007-orange-2026-fixed-length-arrays.md),
+[OEP-0008](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0008-orange-2026-bounded-loops.md),
+[OEP-0009](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0009-orange-2026-conditions.md),
+[OEP-0010](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0010-orange-2026-lookups.md),
+[OEP-0011](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0011-orange-2026-modules.md),
+[OEP-0012](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0012-orange-2026-modular-arithmetic.md),
+[OEP-0013](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0013-orange-2026-blocks.md),
+[OEP-0014](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0014-orange-2026-tuples.md),
+[OEP-0015](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0015-orange-2026-bytes.md),
+[OEP-0016](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0016-orange-2026-sizes.md),
+[OEP-0017](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0017-orange-2026-byte-order.md),
+[OEP-0018](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0018-orange-2026-type-parameters.md),
+[OEP-0019](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0019-orange-2026-lengths.md),
+[OEP-0020](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0020-orange-2026-tests.md),
+[OEP-0021](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0021-orange-2026-computed-amounts.md),
+[OEP-0023](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0023-orange-2026-nested-arrays.md),
+[OEP-0024](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0024-orange-2026-static-moduli.md), and
+[OEP-0025](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0025-orange-2026-array-dimensions.md) are in
 the owner's review and have not been accepted. Where this chapter and
 those documents disagree, they win.
 
@@ -409,7 +409,7 @@ spec double_round(x: Word[32]^16) -> Word[32]^16 {
 The last literal is the one place the text asks for care: it puts each
 diagonal round's four words back where the state keeps them, and a reader can
 check every position against the RFC's matrix. The
-[ChaCha20 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3d/valid-chacha20-block.or) adds the
+[ChaCha20 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3d/valid-chacha20-block.or) adds the
 rest of the block function, the constants, the key and nonce read as
 little-endian words, ten double rounds, and the final addition, and
 `orangec eval` prints the serialized block of section 2.3.2 word for word:
@@ -446,7 +446,7 @@ another. The next section removes that repetition.
 A standard says how many times. FIPS 180-4 prepares the SHA-256 message
 schedule "for t = 16 to 63" and then applies sixty-four rounds; RFC 8439 runs
 "10 iterations of the double round". The S3e slice, proposed in the
-[loops specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOPS_2026.md), writes those sentences directly. A loop
+[loops specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOPS_2026.md), writes those sentences directly. A loop
 names its index and its range, both given by literals, then an accumulator
 with a stated type and a first value, then a step that gives the
 accumulator's next value:
@@ -522,7 +522,7 @@ A byte does have a bound, 0 through 255, and a lookup keyed by a byte is how
 [Tables keyed by data](/book/chapter-8/#tables-keyed-by-data) writes AES.
 
 With loops, a whole primitive fits in one short module. The
-[SHA-256 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3e/valid-sha256.or) computes the
+[SHA-256 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3e/valid-sha256.or) computes the
 message schedule, runs the sixty-four rounds as
 `for t in 0..64 with v: Word[32]^8 = h { round(v, k[t], w[t]) }`, adds the
 result back into the hash value, and prints the digests FIPS 180-4 publishes
@@ -533,7 +533,7 @@ sha256::abc_digest: Word[32]^8 = [0xba7816bf, 0x8f01cfea, 0x414140de, 0x5dae2223
 sha256::long_digest: Word[32]^8 = [0x248d6a61, 0xd20638b8, 0xe5c02693, 0x0c3e6039, 0xa33ce459, 0x64ff2167, 0xf6ecedd4, 0x19db06c1]
 ```
 
-The [ChaCha20 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3e/valid-chacha20.or) does the
+The [ChaCha20 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3e/valid-chacha20.or) does the
 same for RFC 8439. Loops load the key and the nonce as little-endian words, the
 ten double rounds are one loop, and two nested loops serialize the state as
 sixty-four bytes with `b with [4 * i + j] = le_bytes(s[i])[j]`, an index the
@@ -553,7 +553,7 @@ Public-key cryptography lives in prime fields. RFC 7748 defines X25519 over
 the integers modulo p = 2^255 − 19, and RFC 8439 defines Poly1305 over
 p = 2^130 − 5. Their algorithms reduce "mod p" after every product, read one
 bit of a secret scalar at a time, and swap two values when the bit is set. The
-S3f slice, proposed in the [conditions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/CONDITIONS_2026.md),
+S3f slice, proposed in the [conditions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/CONDITIONS_2026.md),
 adds exactly what those sentences need: a remainder, a truth value, and a
 choice.
 
@@ -637,16 +637,16 @@ error[ORC0223]: this index runs from 0 through 7, out of range for `Word[8]^4`
   = note: every value an index can take, over every loop index and word in it, must select an element
 ```
 
-The [X25519 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3f/valid-x25519.or) computes the
+The [X25519 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3f/valid-x25519.or) computes the
 first test vector of RFC 7748 section 5.2, byte for byte:
 
 ```text
 x25519::test_vector: Word[8]^32 = [0xc3, 0xda, 0x55, 0x37, 0x9d, 0xe9, 0xc6, 0x90, 0x8e, 0x94, 0xea, 0x4d, 0xf2, 0x8d, 0x08, 0x4f, 0x32, 0xec, 0xcf, 0x03, 0x49, 0x1c, 0x71, 0xf7, 0x54, 0xb4, 0x07, 0x55, 0x77, 0xa2, 0x85, 0x52]
 ```
 
-The [Poly1305 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3f/valid-poly1305.or)
+The [Poly1305 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3f/valid-poly1305.or)
 reproduces the tag of RFC 8439 section 2.5.2, and the
-[AEAD fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3f/valid-aead.or) seals the "sunscreen"
+[AEAD fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3f/valid-aead.or) seals the "sunscreen"
 message of section 2.8.2 with ChaCha20-Poly1305: ChaCha20 with counter 0 makes
 the one-time Poly1305 key, the plaintext is encrypted from counter 1, and
 Poly1305 authenticates the additional data, the ciphertext, and both lengths.
@@ -670,7 +670,7 @@ Much of symmetric cryptography is written with tables. FIPS 197 defines AES's
 SubBytes by the S-box, and each byte of the state selects one of its 256
 entries. DES has eight S-boxes, Camellia, ARIA, and SM4 are specified with
 tables, and the table-driven CRC reads one entry per input byte. The S3g slice,
-proposed in the [lookups specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOKUPS_2026.md), lets an index depend
+proposed in the [lookups specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOKUPS_2026.md), lets an index depend
 on data and keeps the rule that every index is proved in range before anything
 runs. SubBytes is then one line:
 
@@ -716,7 +716,7 @@ spec substitute(exp: Word[8]^256, log: Word[8]^256, a: Word[8]) -> Word[8] {
 
 `log[a]` is a word index, and `(255 - (log[a] as Int)) % 255` is an `Int`
 index that runs from 0 through 254. The
-[AES-128 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3g/valid-aes128.or) builds the tables
+[AES-128 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3g/valid-aes128.or) builds the tables
 themselves with updates keyed by data: `t with [exp[i]] = i as Word[8]` stores
 each logarithm where its power points, and the inverse S-box is the S-box read
 backwards, `t with [s[i]] = i as Word[8]`. It derives all 256 entries, checks
@@ -756,7 +756,7 @@ it. RFC 2104 defines HMAC over any iterated hash function, RFC 5869 defines
 HKDF over HMAC, and an AEAD is built from a cipher and an authenticator.
 Through S3g an Orange program was one module, so every construction carried
 its own copy of every primitive beneath it. The S3h slice, proposed in the
-[modules specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULES_2026.md), lets a module name the modules it
+[modules specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULES_2026.md), lets a module name the modules it
 uses at its head and call their functions by module name:
 
 ```orange
@@ -799,7 +799,7 @@ read once, however many modules use it. That is a rule of the command line,
 not of the language. A program is a root module and the modules it reaches
 among those supplied with it, and another host may supply them another way.
 
-The [module fixtures](https://github.com/chasebryan/orange/tree/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3h/) write SHA-256, HMAC, and HKDF
+The [module fixtures](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3h/valid-vectors.or) write SHA-256, HMAC, and HKDF
 as three files. The program that uses them holds four modules, `hkdf` using
 `hmac` and `hmac` using `sha256`, and `orangec eval` prints only the root's
 values: the SHA-256 digest of "abc" from FIPS 180-4, test cases 1 and 2 of RFC
@@ -828,7 +828,7 @@ reduction in X25519 and Poly1305 was a `%` written by hand. RFC 7748 writes
 `AA = A^2` and means the square in the field of 2^255 − 19 elements. A
 transcription that multiplies and forgets to reduce is still a valid program,
 merely a wrong one, and only a test vector notices. The S3i slice, proposed in
-the [modular arithmetic specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULAR_2026.md), puts the field in the
+the [modular arithmetic specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULAR_2026.md), puts the field in the
 type. `Mod[m]` is the ring of integers modulo m, and a `type` declaration
 names it once for the rest of its module:
 
@@ -931,11 +931,11 @@ error[ORC0215]: `<` is not defined for `Mod[(1 << 255) - 19]`
   = note: residues are compared with `==` and `!=`; they have no order, so compare least residues, such as `(x as Int) < (y as Int)`
 ```
 
-The [modular fixtures](https://github.com/chasebryan/orange/tree/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3i/) write X25519 over `F` with
+The [modular fixtures](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3i/valid-x25519.or) write X25519 over `F` with
 no `%` anywhere and reproduce the first test vector of RFC 7748 section 5.2,
-keep Poly1305's accumulator in `Mod[(1 << 130) - 5]` and reproduce the tag of
-RFC 8439 section 2.5.2, and compute constants in the rings their standards
-define: the three above, Ed25519's square root of −1, and a check, made in
+keep [Poly1305](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3i/valid-poly1305.or)'s accumulator in `Mod[(1 << 130) - 5]` and reproduce the tag of
+RFC 8439 section 2.5.2, and [compute constants in the rings their standards define](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3i/valid-fields.or):
+the three above, Ed25519's square root of −1, and a check, made in
 P-256's own field, that its generator lies on its curve:
 
 ```text
@@ -964,14 +964,14 @@ RFC 7748 writes each step of the Montgomery ladder as nine named values, A,
 AA, B, BB, E, C, D, DA, and CB, before the new coordinates. Through S3i, a
 `let` could stand only at the start of a function's body, so those names had
 to live in a helper function, apart from the loop that runs it. The
-[SHA-256 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3e/valid-sha256.or) of
+[SHA-256 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3e/valid-sha256.or) of
 [Rounds as one expression](/book/chapter-8/#rounds-as-one-expression) calls a `round`
 function with the state, the round's constant, and its message word, and reads
 a through h as `v[0]` through `v[7]`; the ladder of
 [Fields as types](/book/chapter-8/#fields-as-types) is three functions where the RFC writes
 one loop.
 
-The S3j slice, proposed in the [blocks specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BLOCKS_2026.md), lets a
+The S3j slice, proposed in the [blocks specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BLOCKS_2026.md), lets a
 loop's step and each branch of a conditional begin with `let` bindings,
 exactly as a body does. The specification calls a step or a branch written
 this way a block. The round then stands where it runs, in the standard's own
@@ -1001,7 +1001,7 @@ spec compress(hash: Word[32]^8, m: Word[32]^16) -> Word[32]^8 {
 The last line of the step is the standard's step 3, read left to right: the
 new a is T1 + T2, the new e is d + T1, and every other variable moves down one
 place. A reviewer comparing this text with FIPS 180-4 compares names with
-names. The [block fixtures](https://github.com/chasebryan/orange/tree/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3j/) hash the same two
+names. The [block fixtures](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3j/valid-sha256.or) hash the same two
 messages to the same digests as before:
 
 ```text
@@ -1064,7 +1064,7 @@ error[ORC0219]: duplicate name `t`
 
 Names whose scopes do not overlap may repeat. Two branches of one conditional
 may each bind `t`, and so may two loops, one after the other. That is what
-lets the [X25519 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3j/valid-x25519.or) write the
+lets the [X25519 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3j/valid-x25519.or) write the
 whole ladder as the RFC does, with the conditional swap and every one of the
 RFC's names inside one loop, and still bind `x_2` and `z_2` again after it for
 the last swap:
@@ -1114,7 +1114,7 @@ gave one value and a loop carried one accumulator, so each of those states had
 to become an array, and each round began by reading its words back out by
 index.
 
-The S3k slice, proposed in the [tuples specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TUPLES_2026.md), adds
+The S3k slice, proposed in the [tuples specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TUPLES_2026.md), adds
 tuples. A tuple type lists its element types in parentheses, as
 `(Word[64], Bool)`; a tuple lists its values the same way; `p.0` selects the
 first element of `p`; and a tuple pattern, written where a binding or a loop's
@@ -1150,7 +1150,7 @@ tuples::wraps: (Word[64]^4, Word[64]) = ([0x0000000000000000, 0x0000000000000000
 ```
 
 With a pattern for its accumulator, the round of SHA-256 from the previous
-section needs no array at all. The [tuple fixtures](https://github.com/chasebryan/orange/tree/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3k/)
+section needs no array at all. The [tuple fixtures](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3k/valid-sha256.or)
 carry a through h themselves:
 
 ```orange
@@ -1284,7 +1284,7 @@ four bytes at a time; RFC 8439 takes the first 32 bytes of a block as a
 one-time key. Through S3k, each of those inputs was a list of numbers typed
 by hand, and each run of bytes was copied one element at a time by a loop.
 
-The S3l slice, proposed in the [bytes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BYTES_2026.md), writes
+The S3l slice, proposed in the [bytes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BYTES_2026.md), writes
 them as the standards do. A byte string `"..."` is the array `Word[8]^n` of
 the ASCII codes of its characters; a hex string `hex"..."` is the array of its
 hex digit pairs, spaced wherever the reader likes between bytes; `a ++ b`
@@ -1317,7 +1317,7 @@ directly, and a parameter named `hex` keeps its meaning. `++` is an operator
 group of its own, so it never shares a level with `+` or `^` without
 parentheses.
 
-The [HMAC fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3l/valid-hmac.or) pads its messages
+The [HMAC fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3l/valid-hmac.or) pads its messages
 as FIPS 180-4 section 5.1.1 says and reads the sixteen words of each block
 through slices, so the schedule of section 6.2.2 is written over bytes:
 
@@ -1369,7 +1369,7 @@ test case 1 and FIPS 180-4's digest of "abc". The arithmetic of the padding
 is still the writer's: each join's lengths must sum to the declared length,
 and the analyzer says so, with both lengths, when they do not.
 
-The [AEAD fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3l/valid-aead.or) writes
+The [AEAD fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3l/valid-aead.or) writes
 ChaCha20-Poly1305 as RFC 8439 section 2.8 does. Its plaintext is the
 sentence of section 2.8.2, as text:
 
@@ -1490,7 +1490,7 @@ holding what is left. Through S3l every length in an Orange program was an
 integer written in its source, so a program could hash a message of 3 bytes
 or of 56, but a function for both had to be written twice.
 
-The S3m slice, proposed in the [sizes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SIZES_2026.md), writes
+The S3m slice, proposed in the [sizes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SIZES_2026.md), writes
 it once. A `spec` declares **size parameters** in square brackets before its
 parameters, each with a finite range, and writes them wherever a length or a
 loop bound is written:
@@ -1538,7 +1538,7 @@ A size is built from integer literals and size parameters with `+`, `-`,
 `*`, `/`, `%`, and parentheses, and computed exactly, with `/` and `%`
 Euclidean and total, as for `Int`. A length computed from sizes is written in
 parentheses. That is enough for SHA-256. The
-[SHA-256 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3m/sha256.or) writes the padding of
+[SHA-256 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3m/sha256.or) writes the padding of
 FIPS 180-4 section 5.1.1 once for every message of 1 through 119 bytes: the
 message, the byte 80, zeros, and the message's length in bits fill
 ((len + 8) / 64) + 1 blocks, and that length, 8 · len, is under 2^16, so all
@@ -1584,7 +1584,7 @@ and `digest` are the functions of the byte slice, unchanged: a function
 without sizes has one instance, and it is the function it always was.
 
 HMAC is now RFC 2104's formula and nothing else. The
-[HMAC fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3m/valid-hmac.or) uses the sized SHA-256
+[HMAC fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3m/valid-hmac.or) uses the sized SHA-256
 as a module, pads any key of 1 through 63 bytes with zeros to one block, and
 authenticates any message of 1 through 55 bytes:
 
@@ -1610,7 +1610,7 @@ hash of 119, the last length `sha256` takes. The MAC is RFC 4231's, and so
 is that of test case 1, whose key is twenty bytes 0b.
 
 Where an expression stands, a size's name is an `Int` constant: its value in
-the instance. The [Poly1305 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3m/valid-poly1305.or)
+the instance. The [Poly1305 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3m/valid-poly1305.or)
 writes RFC 8439 section 2.5 once for every message of 1 through 255 bytes,
 over the type `P` of the integers modulo 2^130 − 5. Its loop runs over the
 message's sixteen-byte blocks, and the byte 01 that each block carries above
@@ -1725,7 +1725,7 @@ and three ors, its inverse was four shifts called in another loop, and
 Poly1305 read a block with a loop of sixteen multiplications. A reader checked every index against
 the standard's few words, and the evaluator ran every step.
 
-The S3n slice, proposed in the [byte order specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ORDER_2026.md),
+The S3n slice, proposed in the [byte order specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ORDER_2026.md),
 says it as the standards do. A conversion may name a **byte order**, `big`
 or `little`, between `as` and its type, and the type may then be an array:
 
@@ -1806,7 +1806,7 @@ as before, and `Bool`, tuples, and arrays of anything but words convert in
 none.
 
 SHA-256 then reads and writes its words where FIPS 180-4 says to. The
-[SHA-256 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3n/valid-sha256.or) is the sized
+[SHA-256 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3n/valid-sha256.or) is the sized
 SHA-256 of [One algorithm for every length](/book/chapter-8/#one-algorithm-for-every-length)
 with its byte functions gone. The first sixteen words of the message schedule
 are the block, read as big-endian words, and the padding ends in the
@@ -1838,7 +1838,7 @@ The S3m fixture wrote a function `word` of four bytes and called it sixteen
 times in a loop, wrote the digest one word at a time in another, and wrote
 only the length's last two bytes, all that a message of at most 119 bytes
 needs. Here each of those is one conversion. The
-[SHA-512 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3n/valid-sha512.or) is the same
+[SHA-512 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3n/valid-sha512.or) is the same
 program over 64-bit words, reading `block as big Word[64]^16` and writing its
 length as `(8 * len) as big Word[8]^16`, sixteen bytes, and both hash FIPS
 180-4's examples, a message that fills its last block exactly, and the
@@ -1858,7 +1858,7 @@ state as little Word[8]^64
 ```
 
 The constant is text, as RFC 8439 prints it, "expand 32-byte k", and the
-[ChaCha20 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3n/valid-chacha20.or) gives the
+[ChaCha20 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3n/valid-chacha20.or) gives the
 serialized block of section 2.3.2 byte for byte and encrypts the sunscreen
 sentence of section 2.4.2 to its ciphertext:
 
@@ -1871,7 +1871,7 @@ A number in a field is where a byte order earns the most. RFC 8439 section
 reads each block of the message as a little-endian number with a byte 01
 above it, and writes the low 128 bits of the accumulator plus s as sixteen
 little-endian bytes. The
-[Poly1305 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3n/valid-poly1305.or) says so, over
+[Poly1305 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3n/valid-poly1305.or) says so, over
 the type `P` of the integers modulo 2^130 − 5:
 
 ```orange
@@ -1905,7 +1905,7 @@ X25519 decodes a coordinate as RFC 7748's decodeUCoordinate does, the top bit
 masked and the 32 bytes read as a little-endian number modulo 2^255 − 19,
 and encodes its result as encodeUCoordinate does, the least residue as 32
 little-endian bytes. In the
-[X25519 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3n/valid-x25519.or) each is one line
+[X25519 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3n/valid-x25519.or) each is one line
 around the ladder of
 [Rounds in the words of their standard](/book/chapter-8/#rounds-in-the-words-of-their-standard):
 
@@ -2014,7 +2014,7 @@ of SHA-256 and SHA-512 by the same formulas, once on 32-bit words and once on
 word the same, and a reader compared the copies by eye.
 
 The S3o slice, proposed in the
-[type parameters specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TYPE_PARAMETERS_2026.md), writes each once.
+[type parameters specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TYPE_PARAMETERS_2026.md), writes each once.
 Beside its sizes, or instead of them, a `spec` may declare a **type
 parameter**, a name and the list of types the function is written for, and
 write that name wherever a type is written:
@@ -2096,7 +2096,7 @@ types, and so could `zero()`, which has no argument at all; each sits where
 an `Int` is expected, and each is its `Int` instance.
 
 That is enough for the fields. The
-[field fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3o/valid-fields.or) writes
+[field fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3o/valid-fields.or) writes
 exponentiation, inversion, and Euler's criterion once, for the five prime
 fields of Curve25519, its subgroup, Poly1305, ML-KEM, and ML-DSA:
 
@@ -2165,7 +2165,7 @@ exactly the order its standard names, since a root of smaller order would
 divide 128 or 256 and give 1.
 
 SHA-256 and SHA-512 share their round. The
-[SHA-2 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3o/valid-sha2.or) writes Ch, Maj, the
+[SHA-2 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3o/valid-sha2.or) writes Ch, Maj, the
 round that updates the eight working variables, and their addition to the
 hash value once, over `W in {Word[32], Word[64]}`, and each compression
 function calls them without brackets, on its own words:
@@ -2297,8 +2297,8 @@ bytes, and RSA-4096's are 512. Even RFC 8439 prints test vectors of 375 and
 265 bytes. Through S3o an array held at most 256 elements, so each of these
 was cut into a head and a tail, and a reader had to reassemble the RFC's
 vector from pieces. The S3p slice, proposed in the
-[lengths specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LENGTHS_2026.md) and in the owner's review under
-[OEP-0019](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0019-orange-2026-lengths.md), lets an array,
+[lengths specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LENGTHS_2026.md) and in the owner's review under
+[OEP-0019](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0019-orange-2026-lengths.md), lets an array,
 an array literal, and a byte string hold up to 65,536 elements, and the
 vectors are written as printed. The text that RFC 8439 encrypts in
 appendix A.2 and authenticates in appendix A.3 is one byte string of 375
@@ -2467,9 +2467,9 @@ encryption round by round. They are how an implementer knows the code is the
 algorithm and not something near it. Through S3p an Orange program could
 compute a known answer and print it, but the claim that the answer matched
 the standard lived outside the program, in a runner that compared text. The
-S3q slice, proposed in the [tests specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TESTS_2026.md) and in the
+S3q slice, proposed in the [tests specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TESTS_2026.md) and in the
 owner's review under
-[OEP-0020](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0020-orange-2026-tests.md), puts the claim in
+[OEP-0020](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0020-orange-2026-tests.md), puts the claim in
 the program, beside the functions it is about:
 
 ```orange
@@ -2517,7 +2517,7 @@ The cost of a comparison is chosen with a cryptographer's suspicion. It
 compares every part, whether or not an earlier part differs: one step for each
 64 words or truth values of an array, what each pair costs for numbers and
 residues, and the sum of its parts for a tuple. The
-[equality fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3q/valid-equality.or) builds two
+[equality fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3q/valid-equality.or) builds two
 arrays of 256 bytes that differ in their first byte and two that differ in
 their last, and both functions cost 17 steps; two arrays of 65,536 bytes cost
 1,024 steps to compare wherever they differ. The equality a tag check needs is
@@ -2545,7 +2545,7 @@ exit status says whether every claim held: 0 when all did, 1 when any did not.
 When the claim is a single `left == right`, the report shows both values and,
 for arrays and tuples, where they first differ, as an index or a part followed
 into its elements, so a wrong byte deep in a block is found at once. The
-[failing fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3q/failing-tests.or) shows each shape:
+[failing fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3q/failing-tests.or) shows each shape:
 
 ```text
 test "an array" ... FAILED
@@ -2599,9 +2599,9 @@ scalar, `(k >> i) & 1`, and ML-KEM orders the constants of its transform by
 moving bit i of an index to bit 6 − i. Through S3q an amount was a literal,
 so each of these was a table that a reader had to check against the one line
 the standard prints. The S3r slice, proposed in the
-[computed amounts specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/AMOUNTS_2026.md) and in the owner's review
+[computed amounts specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/AMOUNTS_2026.md) and in the owner's review
 under
-[OEP-0021](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0021-orange-2026-computed-amounts.md), writes
+[OEP-0021](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0021-orange-2026-computed-amounts.md), writes
 the line:
 
 ```orange
@@ -2624,7 +2624,7 @@ computed from the loop index. Nothing in the program says "modulo 64",
 because a rotation already means it: `a <<< k` turns a word of n bits by k
 modulo n, whatever k is. The standard's table of offsets, whose first row
 reads 0, 1, 62, 28, 27, is written nowhere in the
-[SHA3-256 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3r/valid-sha3.or). The fixture
+[SHA3-256 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3r/valid-sha3.or). The fixture
 computes it, and its tests of NIST's examples pass only if every offset is
 right.
 
@@ -2673,7 +2673,7 @@ let b1: Word[32] = (l[k % 4] + a1 + b) <<< (a1 + b);
 (b, ((c ^ u) <<< t) + s[2 * i + 1], d, ((a ^ t) <<< u) + s[2 * i])
 ```
 
-The [RC6 fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3r/valid-rc6.or) states the paper's
+The [RC6 fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3r/valid-rc6.or) states the paper's
 test vectors for 128-bit keys as tests, each run both ways:
 
 ```console
@@ -2695,7 +2695,7 @@ spec bit_rev7(r: Word[8]) -> Word[8] {
 }
 ```
 
-The [zetas fixture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/fixtures/s3r/valid-zetas.or) derives all 128
+The [zetas fixture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/fixtures/s3r/valid-zetas.or) derives all 128
 constants of the transform and all 128 of its multiplication this way, and
 its tests reproduce the start of both tables in FIPS 203's Appendix A.
 
@@ -2871,8 +2871,11 @@ entries or a call that several instances fit, `ORC0211` for a type
 parameter's name used as a value, and `ORC0101` for a malformed list. The
 length slice adds no language code: its limits are the old codes with 65536
 in their messages, a number too wide for the evaluator is the `ORC0301` of
-every exact integer, and `orangec` adds `ORC1016` for a `--spec` name that
-matches no function without parameters. The test slice adds `ORC0242` for a
+every exact integer, and `orangec` adds `ORC1016` for a `--spec` or
+`--function` name that selects nothing, and for an analysis whose selector
+or shape the command cannot take, and `ORC1017` for an
+analysis whose bits, table, or layer the search cannot accept. A step overrun
+during that analysis is still `ORC0301`. The test slice adds `ORC0242` for a
 test's title that is empty, longer than 128 bytes, not printable ASCII,
 holding a backslash, or repeating another's, and it reuses `ORC0101` for a
 test without a quoted title or a body, `ORC0214` for a claim that is not a
@@ -2889,7 +2892,15 @@ each use.
 
 ## The command line
 
-`orangec` has eleven commands:
+`orangec` has twelve commands. `analyze` computes the properties of one
+checked function. An S-box or a Boolean function is evaluated at every
+input. A linear layer with `--linear` is checked at every input when it has
+at most 16 bits. A wider layer is checked only at zero, at each single-bit
+input, and at each two-bit input: the summary says that shows no term of
+degree 2 and that higher degrees are unchecked. The branch numbers are those
+of the matrix read from zero and the single-bit inputs, or they read
+`not computed` when the search is too large. With `--layer` and `--rounds`
+it bounds the trails of a small substitution-permutation network.
 
 ```text
 orangec [OPTIONS] <check|eval|lex> <FILE>...
@@ -2900,6 +2911,10 @@ orangec fmt --check <FILE>...
 orangec doc <FILE>
 orangec replay --function <MODULE::NAME> [--instance <N[,N...]>]
                --witness <FILE> [--steps <N>] [--stats] <SOURCE>
+orangec analyze --function <MODULE::NAME> [--instance <N[,N...]>]
+                [--bits <N[,M]> | --linear [--word <W>]]
+                [--layer <MODULE::NAME> --rounds <R>]
+                [--table <TABLE>] [--steps <N>] [--stats] <SOURCE>
 orangec keygen [--scheme <NAME>] [-o <FILE>]
 orangec <enc|dec> [--key <FILE>] [--scheme <NAME>] [-o <FILE>] <FILE>
 orangec schemes [<NAME>...]
@@ -2926,23 +2941,34 @@ orangec schemes [<NAME>...]
 - `replay` validates one program and reference-evaluates one selected Boolean
   function/instance for a typed local witness file; both completed Boolean
   outcomes use status 0.
+- `analyze` reads the modules a program imports the way `replay` does, then
+  computes the exact metrics of one checked S-box or Boolean function, the
+  branch numbers of a linear layer, or the bounded trail weights of a small
+  substitution-permutation network. `--function` and `--instance` select that
+  function, as they do for `replay`. `--bits`, `--linear`, `--word`,
+  `--table`, `--layer`, and `--rounds` belong to `analyze` alone, and
+  `--rounds` is a canonical decimal from 1 through 32. `--steps` and
+  `--stats` apply to `analyze` as well.
+  A clean run is not a proof that a cipher is secure, not a constant-time or
+  side-channel check, and not a verification of the implementation. It
+  reports properties of the one function it was given.
 - `keygen`, `enc`, `dec`, and `schemes` seal files with authenticated ciphers
   written in Orange. `orangec keygen` makes a key, `orangec enc FILE` writes
   `FILE.orange`, and `orangec dec FILE.orange` writes the file back only when
   every chunk is authentic. A scheme is any Orange program with the
   specifications `seal`, `open`, and `authentic`, and it may use other
   modules; XChaCha20-Poly1305, the default, ChaCha20-Poly1305, and
-  Ascon-AEAD128 are built in. The [scheme guide](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/schemes/README.md)
+  Ascon-AEAD128 are built in. The [scheme guide](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/schemes/README.md)
   gives the interface and the sealed-file format, and states the limits: the
   ciphers run on the reference evaluator, which is not constant-time, nothing
   about them is verified, and keys are stored unencrypted.
 
-`check`, `eval`, `test` and `replay` treat each source as the root of a
+`check`, `eval`, `test`, `replay` and `analyze` treat each source as the root of a
 program and read the modules it uses from beside it, as
 [Standards built on standards](/book/chapter-8/#standards-built-on-standards) describes; `lex`,
 `fmt` and `doc` read only the source they are given.
 
-The [formatter contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/FORMATTER_2026.md) defines a syntax-only tool. It uses
+The [formatter contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/FORMATTER_2026.md) defines a syntax-only tool. It uses
 the parsed structure to lay out whitespace between tokens, preserving every
 token's spelling and each comment's bytes, order and anchor. Before returning
 text it re-lexes and re-parses the bounded result; formatting that result again
@@ -2952,7 +2978,7 @@ check types. It changes source bytes, spans and digests and does not preserve
 or migrate source-bound proof/evidence identities. It adds no proof claim and
 leaves the language marker unchanged.
 
-The [documentation generator](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DOCUMENTATION_2026.md) describes the module's
+The [documentation generator](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DOCUMENTATION_2026.md) describes the module's
 imports, aliases, specifications, implementation declarations and tests in
 source order, with written signatures, finite domains, unique ordinal anchors
 and source locations. It includes a full escaped source listing with comments;
@@ -2961,9 +2987,9 @@ is bounded and deterministic and adds no ambient filename, host path or date.
 It describes parsed source, with no type checking, imported-module loading,
 evaluation or test pass status. It provides no proof/evidence identity or
 checked claim matrix. The remaining product documentation and complete 1.0
-obligations stay explicit in the [execution record](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RELEASE_1_0_EXECUTION.md).
+obligations stay explicit in the [execution record](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RELEASE_1_0_EXECUTION.md).
 
-The [local witness contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/WITNESS_REPLAY_2026.md) defines a complete outer
+The [local witness contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/WITNESS_REPLAY_2026.md) defines a complete outer
 argument list using exact current value spellings. Checked parameter types
 supply widths, shapes and residue moduli; no expression or implicit reduction
 is accepted. `--function MODULE::NAME` selects a Boolean specification and
@@ -2983,7 +3009,7 @@ failure makes `eval` print no values at all; if writing the output itself
 fails, `eval` exits with status 1, although a prefix the stream already
 accepted may remain, and that prefix is never reported as a result.
 
-A separate workbench, [Tabula](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/tabula/README.md), puts `orangec` beside an
+A separate workbench, [Tabula](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/tabula/README.md), puts `orangec` beside an
 editor in the browser. It runs `check`, `eval`, and `lex` as you write and
 shows their diagnostics, values, and tokens next to the source and this book.
 It is a tool for writing Orange, not part of the language, and it reports only
@@ -3122,8 +3148,8 @@ scalar with deterministic interpreter costs; those costs are not a timing
 guarantee. A byte-order conversion must select a row explicitly, because a
 matrix has no implicit flattening order.
 
-The [nested-array specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/NESTED_ARRAYS_2026.md) and
-[OEP-0023](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0023-orange-2026-nested-arrays.md) record S3s as
+The [nested-array specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/NESTED_ARRAYS_2026.md) and
+[OEP-0023](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0023-orange-2026-nested-arrays.md) record S3s as
 implemented and in owner review. It supplies vocabulary for the polynomial
 vectors of the development plan, without accepting a ring transformation,
 proof rule, machine layout, or backend. The conformance corpus includes
@@ -3150,11 +3176,11 @@ type. An invalid unused instance rejects the definition. The function's own
 sizes may also occur in expressions such as `Mod[(1 << bits) - 19]`, in body
 annotations and conversions, and in direct explicit type arguments. Global
 aliases and finite type lists remain concrete; this is finite specialization,
-not universal dependent typing. The [static-modulus specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/STATIC_MODULI_2026.md)
-and [OEP-0024](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0024-orange-2026-static-moduli.md) remain
+not universal dependent typing. The [static-modulus specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/STATIC_MODULI_2026.md)
+and [OEP-0024](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0024-orange-2026-static-moduli.md) remain
 in owner review.
 
-The [five-limb field definitions](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/algorithms/x25519/field25519-limbs.or)
+The [five-limb field definitions](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/algorithms/x25519/field25519-limbs.or)
 implement OEP-0022 P2: reconstruction, abstraction and tight/loose/canonical
 predicates, followed by addition, carrying and canonicalization. Partial P4
 mathematical preparation adds multiplication, biased subtraction, dedicated
@@ -3169,7 +3195,7 @@ pass can be needed to keep every output digit below 2^51. These definitions
 supply no native wide multiplication primitive and do not complete P4.
 Transparent type aliases do not enforce the predicates, and these tests are
 not P3 checked refinement proofs. The
-[complete 1.0 execution record](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RELEASE_1_0_EXECUTION.md) keeps those later
+[complete 1.0 execution record](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RELEASE_1_0_EXECUTION.md) keeps those later
 proof, compiler, corpus and release obligations explicit.
 
 ## Four dimensions, one index each
@@ -3228,8 +3254,8 @@ examples of Appendices B and C.1; SHA3-256 with its lanes `A[x][y]` as
 FIPS 202 indexes them; and ML-KEM-512's NTT over a 2 × 2 matrix of
 polynomials, checked against Appendix A's zetas, against reduction modulo
 each of its 128 quadratic factors, and against multiplication in
-Z_q[X]/(X^256 + 1). The [array dimensions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DIMENSIONS_2026.md)
-and [OEP-0025](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0025-orange-2026-array-dimensions.md)
+Z_q[X]/(X^256 + 1). The [array dimensions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DIMENSIONS_2026.md)
+and [OEP-0025](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0025-orange-2026-array-dimensions.md)
 record S3u in owner review. The corpus tests representation and arithmetic;
 it makes no complete ML-KEM claim.
 

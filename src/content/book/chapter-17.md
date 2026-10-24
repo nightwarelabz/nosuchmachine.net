@@ -20,7 +20,7 @@ merge, archive, CI artifact, or local build is not a release.
 
 ## What a release would be
 
-The [release policy](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/RELEASE_POLICY.md#release-classes) defines three
+The [release policy](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/RELEASE_POLICY.md#release-classes) defines three
 classes that the owner could later authorize through a recorded decision:
 
 - a **source preview**: an immutable source snapshot for experimentation;
@@ -61,7 +61,7 @@ makes no leakage claim from the absence of a field.
 ## The solo release gate
 
 When a preview is eventually authorized, the
-[solo release gate](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/RELEASE_POLICY.md#solo-release-gate) requires an explicit
+[solo release gate](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/RELEASE_POLICY.md#solo-release-gate) requires an explicit
 owner decision and versioned scope; a frozen dependency graph and pinned
 toolchain; a clean, network-disabled build where the toolchain permits it; two
 separately provisioned owner rebuilds with byte comparison; every test,
@@ -100,8 +100,8 @@ quietly disappear is strongest.
 
 Two open decisions currently block crate, package-registry, and binary
 distribution. The outbound license under
-[D-018](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-018--licenses) is unselected, and the working name under
-[D-017](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-017--project-and-package-name) has no trademark
+[D-018](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-018--licenses) is unselected, and the working name under
+[D-017](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-017--project-and-package-name) has no trademark
 clearance. Until both are recorded for an exact release boundary, crate
 publication, package-registry publication, and binary distribution are
 prohibited. Local development by the owner is unaffected.
@@ -109,7 +109,7 @@ prohibited. Local development by the owner is unaffected.
 ## Updates are claims too
 
 A new version is not automatically a better one. The proposed
-[update journey](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/USER_JOURNEYS.md#j-07--update-deprecate-withdraw-or-replace-a-profile)
+[update journey](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/USER_JOURNEYS.md#j-07--update-deprecate-withdraw-or-replace-a-profile)
 treats every update, deprecation, or withdrawal as a change to a claim graph.
 Its steps are to detect the event through authenticated metadata; resolve its
 exact affected tuple, authority, urgency, and downstream claim impact; publish
@@ -129,7 +129,7 @@ retroactively strengthens an old evidence bundle.
 ## When something is wrong
 
 Every serious project eventually discovers that something it shipped is wrong.
-Orange's [assurance model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#10-vulnerability-response) lists the
+Orange's [assurance model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#10-vulnerability-response) lists the
 classes of failure specific to a verified cryptography toolchain:
 
 - proof-system unsoundness;
@@ -147,7 +147,7 @@ product is claims. Documentation that leads careful users to misuse an API is a
 vulnerability even if every function behaves as specified.
 
 The proposed
-[response journey](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/USER_JOURNEYS.md#j-08--respond-to-a-vulnerability-or-invalidated-claim)
+[response journey](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/USER_JOURNEYS.md#j-08--respond-to-a-vulnerability-or-invalidated-claim)
 contains the report privately; reproduces it and identifies every affected
 identity; stops publication and marks dependent claims invalid or unresolved
 whenever the impact cannot be bounded; corrects every coupled artifact
@@ -163,7 +163,7 @@ is repaired or withdrawn, and the record shows both.
 ## Stop-ship
 
 Some findings block a release outright. The
-[assurance model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#8-stop-ship-conditions) lists them: an
+[assurance model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#8-stop-ship-conditions) lists them: an
 unresolved proof-soundness flaw; incorrect cryptographic output;
 secret-dependent behavior within a promised target and leakage profile; an
 undocumented axiom, trusted-base expansion, foreign boundary, or claim
@@ -180,7 +180,7 @@ flaw stops a release, and the work to fix it proceeds.
 
 ## Support that can actually be given
 
-[D-022](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-022--support-policy) directs best-effort support by the
+[D-022](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-022--support-policy) directs best-effort support by the
 owner during pre-alpha, with no service-level agreement, long-term support
 window, compatibility promise, or migration service. An earlier institutional
 target of five plus two years of support is explicitly not an active
@@ -192,7 +192,7 @@ Security response works the same way. The project targets acknowledgement of a
 private report within one business day and an initial technical assessment
 within three, as targets rather than a contract. There is no staffed security
 team. Reports go through GitHub's private vulnerability reporting, described
-in [the security policy](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/SECURITY.md), and never into a public issue.
+in [the security policy](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/SECURITY.md), and never into a public issue.
 
 Support also attaches to the whole affected tuple rather than a single version
 number: language edition, Core and evidence editions, toolchain release,
@@ -203,7 +203,7 @@ which processor model was assumed.
 
 ## The end of the beginning
 
-The [project charter](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/PROJECT_CHARTER.md#9-what-end-means) says what "end"
+The [project charter](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/PROJECT_CHARTER.md#9-what-end-means) says what "end"
 means: not the end of maintenance, but the first stable, supportable 1.0
 system. It lists ten conditions, from published and versioned semantics to an
 exercised vulnerability-response process. After 1.0, new targets, leakage

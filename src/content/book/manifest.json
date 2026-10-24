@@ -2,206 +2,358 @@
   "schemaVersion": 1,
   "repository": "https://github.com/chasebryan/orange",
   "ref": "main",
-  "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4",
+  "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41",
   "title": "The Orange Book",
   "author": "Chase Bryan",
   "version": "0.27",
   "snapshot": "2026-10-05",
   "manuscript": "docs/THE_ORANGE_BOOK.md",
-  "docsBook": false,
-  "orangeManifest": null,
+  "docsBook": true,
+  "orangeManifest": "docs/book/manifest.json",
   "chapters": [
     {
-      "part": "Front matter",
+      "part": "Novice",
+      "slug": "opening",
+      "title": "A word before we begin",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_OPENING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n1",
+      "title": "Chapter 1: Before You Hide Anything",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_OPENING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n2",
+      "title": "Chapter 2: Two Marks, Many Possibilities",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_OPENING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n3",
+      "title": "Chapter 3: A Rule You Can Undo",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_OPENING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n4",
+      "title": "Chapter 4: A Place to Work",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_PROGRAMMING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n5",
+      "title": "Chapter 5: Tell the Machine Exactly",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_PROGRAMMING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n6",
+      "title": "Chapter 6: Words Have Edges",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_PROGRAMMING.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n7",
+      "title": "N7. Name the Intermediate Step",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_N7_NAME_THE_INTERMEDIATE_STEP.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n8",
+      "title": "N8. Read and Repair a Program",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_N8_READ_AND_REPAIR.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n9",
+      "title": "N9. Say What You Mean",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_LOGIC.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n10",
+      "title": "N10. Count What You Do Not Know",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_PROBABILITY.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n11",
+      "title": "N11. Protect More Than Appearance",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_PROTECT.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n12",
+      "title": "N12. The First Complete Study",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_N12_THE_FIRST_COMPLETE_STUDY.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n13",
+      "title": "N13. Modules and Provenance",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_N13_MODULES_AND_PROVENANCE.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Novice",
+      "slug": "n14",
+      "title": "N14. Ready for Standards",
+      "status": "drafted",
+      "source": "docs/book/NOVICE_N14_READY_FOR_STANDARDS.md",
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Journeyman",
+      "slug": "j2",
+      "title": "J2",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Journeyman",
+      "slug": "j3",
+      "title": "J3",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Journeyman",
+      "slug": "j4",
+      "title": "J4",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Journeyman",
+      "slug": "j5",
+      "title": "J5. SHA-256 compression and message schedule",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Journeyman",
+      "slug": "journeyman-connecting-studies",
+      "title": "Journeyman connecting studies",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Master",
+      "slug": "master-connecting-studies",
+      "title": "Master connecting studies",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
+      "part": "Master",
+      "slug": "master-capstone",
+      "title": "Auditable claim dossier",
+      "status": "planned",
+      "source": null,
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
+    },
+    {
       "slug": "preface",
       "title": "Preface",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part I: Why Orange",
       "slug": "chapter-1",
       "title": "Chapter 1: The Seams Are the System",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part I: Why Orange",
       "slug": "chapter-2",
       "title": "Chapter 2: Claims, Not Labels",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part I: Why Orange",
       "slug": "chapter-3",
       "title": "Chapter 3: One Language, Several Semantic Worlds",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part II: Meaning and Trust",
       "slug": "chapter-4",
       "title": "Chapter 4: From Surface Text to Meaning",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part II: Meaning and Trust",
       "slug": "chapter-5",
       "title": "Chapter 5: Proof Search Is Not Proof Checking",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part II: Meaning and Trust",
       "slug": "chapter-6",
       "title": "Chapter 6: Secrets Are a Semantic Concern",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part III: Building the Language",
       "slug": "chapter-7",
       "title": "Chapter 7: No Disposable Prototype",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part III: Building the Language",
       "slug": "chapter-8",
       "title": "Chapter 8: Orange 2026: The Smallest Honest Slice",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part III: Building the Language",
       "slug": "chapter-9",
       "title": "Chapter 9: From Core to Native Bytes",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part III: Building the Language",
       "slug": "chapter-10",
       "title": "Chapter 10: The Foreign Boundary",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part IV: Cryptography in Practice",
       "slug": "chapter-11",
       "title": "Chapter 11: Standards as Versioned Inputs",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part IV: Cryptography in Practice",
       "slug": "chapter-12",
       "title": "Chapter 12: The Corpus as Acceptance Test",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part IV: Cryptography in Practice",
       "slug": "chapter-13",
       "title": "Chapter 13: Interoperability and External Validation",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part V: Operating Orange",
       "slug": "chapter-14",
       "title": "Chapter 14: Evidence That Survives the Build",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part V: Operating Orange",
       "slug": "chapter-15",
       "title": "Chapter 15: Offline Replay and Trust Budgets",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part V: Operating Orange",
       "slug": "chapter-16",
       "title": "Chapter 16: Solo Work Through Incremental Gates",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Part V: Operating Orange",
       "slug": "chapter-17",
       "title": "Chapter 17: Releases, Updates, and Failure",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Appendices",
       "slug": "appendix-a",
       "title": "Appendix A: Current Grammar and CLI",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Appendices",
       "slug": "appendix-b",
       "title": "Appendix B: Decision Ledger",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Appendices",
       "slug": "appendix-c",
       "title": "Appendix C: Claim Vocabulary",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Appendices",
       "slug": "appendix-d",
       "title": "Appendix D: Source Notes",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Back matter",
       "slug": "manuscript-map",
       "title": "Manuscript map",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     },
     {
-      "part": "Back matter",
       "slug": "sources-and-drafting-disclosure",
       "title": "Sources and drafting disclosure",
       "status": "drafted",
       "source": "docs/THE_ORANGE_BOOK.md",
-      "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4"
+      "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41"
     }
   ]
 }

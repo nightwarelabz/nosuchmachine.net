@@ -14,8 +14,8 @@ describing the consequences of one fact about the project's circumstances.
 This chapter describes how Orange works under that fact without letting it
 distort either the engineering or the claims. The operating model is
 **directed**: it is set by explicit owner decisions,
-[D-023](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-023--solo-project-operating-model) and the accepted
-[OEP-0001](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0001-solo-development.md), and it controls the
+[D-023](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-023--solo-project-operating-model) and the accepted
+[OEP-0001](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0001-solo-development.md), and it controls the
 repository today.
 
 ## The plan that assumed an institution
@@ -100,7 +100,7 @@ true. Authority decides what the project will do. It cannot make a proof pass.
 ## The order of authority
 
 With one person holding every role, it matters which record wins when two
-disagree. [Governance](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/GOVERNANCE.md#current-authority) gives the order:
+disagree. [Governance](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/GOVERNANCE.md#current-authority) gives the order:
 
 1. explicit direction from the project owner;
 2. directed decisions in the decision register;
@@ -126,7 +126,7 @@ about leakage, however many other checks happened to pass in the same run.
 
 ## The roadmap as a ladder
 
-The [solo roadmap](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ROADMAP.md#5-capability-stages) orders the work into
+The [solo roadmap](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ROADMAP.md#5-capability-stages) orders the work into
 capability stages, each with a permanent outcome and an exit test:
 
 | Stage | Capability | State |

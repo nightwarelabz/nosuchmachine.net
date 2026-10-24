@@ -15,9 +15,9 @@ or two readers, can disagree about what was written.
 This chapter follows one small Orange program from bytes to value. Everything
 in the walk-through is **current**: it describes what the `orangec` compiler in
 this repository does today, under the normative
-[lexical and grammar specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LANGUAGE_2026.md), the accepted
-[typed-literal semantics](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SEMANTICS_2026.md), and the
-[pure expression specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/EXPRESSIONS_2026.md) now in the owner's
+[lexical and grammar specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LANGUAGE_2026.md), the accepted
+[typed-literal semantics](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SEMANTICS_2026.md), and the
+[pure expression specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/EXPRESSIONS_2026.md) now in the owner's
 review. The last part of the chapter
 turns to what the complete semantic Core is meant to become, which remains
 open.
@@ -289,8 +289,8 @@ failure, a Game Core for probabilistic experiments, and a Proof IR checked by
 a small authoritative checker. A canonical Core would have a deterministic
 encoding, so that two tools, or two revisions, can agree on exactly which
 definition a theorem is about. The
-[architecture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARCHITECTURE.md#4-core-semantic-family) describes those
-proposals in detail; [D-004](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-004--semantic-strata) decides their
+[architecture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARCHITECTURE.md#4-core-semantic-family) describes those
+proposals in detail; [D-004](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-004--semantic-strata) decides their
 number and relationships.
 
 ## The next steps of meaning

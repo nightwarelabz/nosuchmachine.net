@@ -13,17 +13,21 @@
  * text. --offline is refused when CI is set, so a continuous-integration build
  * cannot publish the committed snapshot after a missed fetch.
  *
- * Chapter rows in src/content/book/manifest.json use the site reader's
- * fields: part, slug, title, status ("drafted" or "planned"), and source.
+ * Chapter rows in src/content/book/manifest.json use slug, title, status
+ * ("drafted" or "planned"), and source. Curriculum rows also set part.
  * The orange commit is stored once at the top level (commit, ref) and again
  * on each chapter so a checker can read it from the row. Orange "draft" is
  * stored as "drafted" and "planned" as "planned". "original" is the
  * manuscript rollup: it does not mark the preface and it does not add a row.
- * Any other token is reported and not stored. A hosted chapter with no
- * orange token is "drafted", which is the only status the reader will show
- * for a page. A planned orange chapter with no hosted page is omitted,
- * because the site check refuses a manifest row that does not build. This
- * script does not claim the Book is complete.
+ * Curriculum part and status come from docs/book/manifest.json when orange
+ * ships one, and otherwise from the curriculum map (a CURRICULUM_MAP file,
+ * or docs/book/README.md). Part is exactly Novice, Journeyman, or Master,
+ * in that order. Titles keep orange's labels (N7, J2, and the rest).
+ * Planned rows with no chapter file are listed and do not get a page or a
+ * link. The 24 manuscript rows do not get part; the site falls back to the
+ * hosted chapter's part. A curriculum file missing from the manifest or map,
+ * or a curriculum part other than those three names, fails the sync before
+ * any chapter file is written. This script does not claim the Book is complete.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -216,19 +220,6 @@ function chapterPart(slug) {
   return slug === "preface" ? "Front matter" : "Back matter";
 }
 
-function sectionSlug(file, title) {
-  const lesson = title.match(/^(N\d+)\s*:/);
-  if (lesson) return lesson[1].toLowerCase();
-  const chapter = title.match(/^Chapter (\d+)\s*:/);
-  if (chapter) {
-    const prefix = /\/NOVICE_/i.test(`/${file}`) ? "novice" : path.posix.basename(file, ".md").toLowerCase().replaceAll("_", "-");
-    return `${prefix}-chapter-${chapter[1]}`;
-  }
-  if (title === "A word before we begin") return "a-word-before-we-begin";
-  const stem = path.posix.basename(file, ".md").toLowerCase().replaceAll("_", "-");
-  return `${stem}-${new GithubSlugger().slug(title)}`;
-}
-
 function splitHash(destination) {
   const match = destination.split(/#(.*)/s);
   return [match[0], match[1]];
@@ -373,76 +364,6 @@ function entryIdentity(entry) {
   return { slug, title, source, anchor };
 }
 
-function selectMatches(pages, identity) {
-  const found = (predicate) => {
-    const matches = pages.filter(predicate);
-    return matches.length ? matches : null;
-  };
-  if (identity.source && identity.anchor) {
-    const matches = found((page) => page.file === identity.source && page.sourceAnchor === identity.anchor);
-    if (matches) return matches;
-  }
-  if (identity.slug) {
-    const matches = found((page) => page.slug === identity.slug);
-    if (matches) return matches;
-  }
-  if (identity.source && identity.title) {
-    const matches = found((page) => page.file === identity.source && page.title === identity.title);
-    if (matches) return matches;
-  }
-  if (identity.title) {
-    const matches = found((page) => page.title === identity.title);
-    if (matches) return matches;
-  }
-  if (identity.source && !identity.slug && !identity.title && !identity.anchor) {
-    return pages.filter((page) => page.file === identity.source);
-  }
-  return [];
-}
-
-function readingParts(readme) {
-  const anchors = new Map();
-  const files = new Map();
-  if (!readme) return { anchors, files };
-  const lines = manuscriptLines(readme);
-  let part = null;
-  let prose = "";
-  const flush = () => {
-    if (!part || !prose) return;
-    rewriteProse(prose, (destination) => {
-      const target = linkedFile("docs/book/README.md", destination);
-      if (!target || target.file.startsWith("../")) return destination;
-      if (target.fragment) {
-        const key = `${target.file}#${target.fragment}`;
-        const previous = anchors.get(key);
-        anchors.set(key, anchors.has(key) && previous !== part ? null : part);
-      }
-      const seen = files.get(target.file) ?? new Set();
-      seen.add(part);
-      files.set(target.file, seen);
-      return destination;
-    });
-  };
-  for (const line of lines) {
-    if (line.heading?.level === 2) {
-      flush();
-      prose = "";
-      part = canonicalPart(line.heading.title);
-    } else if (line.prose) prose += line.text;
-  }
-  flush();
-  return { anchors, files };
-}
-
-function assignPart(page, parts) {
-  const specific = parts.anchors.get(`${page.file}#${page.sourceAnchor}`);
-  if (specific) return specific;
-  if (specific === null) return null;
-  const seen = parts.files.get(page.file);
-  if (seen?.size === 1) return [...seen][0];
-  return null;
-}
-
 function destinationAt(text, start) {
   if (text[start] === "<") {
     const end = text.indexOf(">", start + 1);
@@ -535,14 +456,29 @@ function firstParagraph(markdown) {
   return `${(space > 160 ? cut.slice(0, space) : cut).trim()}...`;
 }
 
-function pageHeading(file, heading) {
+function pageHeading(file, heading, index, pageIndexes) {
   if (!heading || heading.level !== 2 || partDivider.test(heading.title)) return false;
   if (file === manuscriptPath) return heading.title !== "Contents";
-  if (file === "docs/book/README.md") return false;
-  return true;
+  if (pageIndexes) return pageIndexes.has(index);
+  return false;
 }
 
 function bodyLines(doc, page, pages) {
+  if (page.kind === "curriculum") {
+    const same = pages
+      .filter((candidate) => candidate.file === doc.file && candidate.kind === "curriculum")
+      .sort((left, right) => left.headingIndex - right.headingIndex);
+    const position = same.indexOf(page);
+    const next = same[position + 1];
+    const region = doc.lines.slice(page.headingIndex, next?.headingIndex ?? doc.lines.length);
+    if (position === 0) {
+      const lead = doc.lines.slice(0, page.headingIndex).filter((line) =>
+        !(line.heading && (line.heading.level === 1 || partDivider.test(line.heading.title)))
+      );
+      region.unshift(...lead);
+    }
+    return region.filter((line) => !(line.heading && partDivider.test(line.heading.title)));
+  }
   if (doc.file === manuscriptPath) {
     const next = pages.find((candidate) => candidate.file === doc.file && candidate.headingIndex > page.headingIndex);
     return doc.lines.slice(page.headingIndex + 1, next?.headingIndex ?? doc.lines.length);
@@ -584,7 +520,7 @@ function mapAnchors(doc, pages) {
       pendingDividers.push(key);
       continue;
     }
-    if (pageHeading(doc.file, line.heading)) {
+    if (pageHeading(doc.file, line.heading, index, doc.pageHeadingIndexes)) {
       page = pages.find((candidate) => candidate.file === doc.file && candidate.headingIndex === index);
       local = new GithubSlugger();
       page.sourceAnchor = sourceAnchor;
@@ -598,6 +534,7 @@ function mapAnchors(doc, pages) {
   }
   if (doc.file === "docs/book/README.md") {
     const readme = pages.find((candidate) => candidate.file === doc.file);
+    if (!readme) return anchors;
     const localSlugger = new GithubSlugger();
     const source = new GithubSlugger();
     for (const line of doc.lines) {
@@ -612,38 +549,174 @@ function mapAnchors(doc, pages) {
   return anchors;
 }
 
-function applyManifest(pages, document, warnings) {
+const curriculumPartOrder = ["Novice", "Journeyman", "Master"];
+
+function curriculumLabel(identity) {
+  return identity.slug ?? identity.title ?? identity.source ?? "an unnamed chapter";
+}
+
+function isManuscriptTarget(identity) {
+  if (identity.source === manuscriptPath) return true;
+  if (identity.source?.startsWith("docs/book/")) return false;
+  return Boolean(identity.slug && expectedSlugs.includes(identity.slug));
+}
+
+function isCurriculumChapterFile(file) {
+  if (!file.startsWith("docs/book/") || !/\.md$/i.test(file)) return false;
+  const base = path.posix.basename(file);
+  if (/^readme\.md$/i.test(base)) return false;
+  if (/curriculum.?map/i.test(base)) return false;
+  return true;
+}
+
+function findCurriculumMap(bookFiles) {
+  const maps = [...bookFiles.keys()].filter((file) => /curriculum.?map/i.test(path.posix.basename(file))).sort();
+  if (maps.length > 1) {
+    throw new Error(`Found more than one curriculum map under docs/book/: ${maps.join(", ")}. Keep a single map so chapter parts are unambiguous.`);
+  }
+  return maps[0] ?? (bookFiles.has("docs/book/README.md") ? "docs/book/README.md" : null);
+}
+
+function orderCurriculum(entries) {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((left, right) => {
+      const rank = (part) => {
+        const found = curriculumPartOrder.indexOf(part);
+        if (found < 0) {
+          throw new Error(`Curriculum part ${JSON.stringify(part ?? "")} is not Novice, Journeyman, or Master. Refusing to leave part blank.`);
+        }
+        return found;
+      };
+      return rank(left.entry.part) - rank(right.entry.part) || left.index - right.index;
+    })
+    .map(({ entry }) => entry);
+}
+
+function entriesFromManifest(document, warnings) {
+  const entries = [];
+  const seen = new Set();
   for (const entry of manifestEntries(document)) {
     const identity = entryIdentity(entry);
+    const label = curriculumLabel(identity);
     const rawStatus = entry.status ?? entry.state;
-    if (knownOriginal(rawStatus)) continue;
-    const status = canonicalStatus(rawStatus);
+    if (knownOriginal(rawStatus) || knownOriginal(entry.part)) continue;
+    if (isManuscriptTarget(identity)) {
+      if (rawStatus != null && rawStatus !== "" && !canonicalStatus(rawStatus)) {
+        warnings.push(`Manifest status ${JSON.stringify(rawStatus)} for ${label} is not "drafted" or "planned"; that token was not stored.`);
+      }
+      continue;
+    }
     const part = canonicalPart(entry.part);
-    const label = identity.slug ?? identity.title ?? identity.source ?? "an unnamed chapter";
-    if (rawStatus != null && rawStatus !== "" && !status) {
-      warnings.push(`Manifest status ${JSON.stringify(rawStatus)} for ${label} is not "drafted" or "planned"; that token was not stored.`);
+    const status = canonicalStatus(rawStatus);
+    if (!part) {
+      throw new Error(`Curriculum entry ${label} has part ${JSON.stringify(entry.part ?? "")}, which is not Novice, Journeyman, or Master. Refusing to leave part blank.`);
     }
-    if (entry.part != null && entry.part !== "" && !part && !knownOriginal(entry.part)) {
-      warnings.push(`Manifest part ${JSON.stringify(entry.part)} for ${label} is not Novice, Journeyman, or Master; left unassigned.`);
+    if (!status) {
+      throw new Error(`Curriculum entry ${label} has status ${JSON.stringify(rawStatus ?? "")}, which is not drafted or planned.`);
     }
-    const matches = selectMatches(pages, identity);
-    if (matches.length > 1) {
-      warnings.push(`Manifest entry ${label} matches more than one hosted chapter; status left unmarked on those chapters.`);
-      continue;
-    }
-    if (matches.length === 1) {
-      const match = matches[0];
-      if (status) match.status = status;
-      if (part) match.manifestPart = part;
-      match.manifestMatched = true;
-      continue;
-    }
-    if (!status || (!identity.title && !identity.slug)) {
-      warnings.push(`Manifest entry ${JSON.stringify(identity.source ?? identity.title ?? identity.slug)} did not match a hosted chapter and has no usable status; skipped.`);
-      continue;
-    }
-    warnings.push(`Manifest chapter ${label} is ${status} but has no hosted page; omitted from manifest.json.`);
+    const title = identity.title?.trim();
+    if (!title) throw new Error(`Curriculum entry ${label} has no title.`);
+    const slug = (identity.slug?.trim() || identity.anchor || new GithubSlugger().slug(title)).toLowerCase();
+    if (seen.has(slug)) throw new Error(`Duplicate curriculum slug ${slug} (${title}).`);
+    seen.add(slug);
+    entries.push({ slug, title, part, status, source: identity.source, anchor: identity.anchor });
   }
+  return orderCurriculum(entries);
+}
+
+function entriesFromMap(text, file) {
+  const entries = [];
+  const seen = new Set();
+  let part = null;
+  let headers = null;
+  const push = (entry) => {
+    if (seen.has(entry.slug)) return;
+    seen.add(entry.slug);
+    entries.push(entry);
+  };
+  for (const line of manuscriptLines(text)) {
+    if (line.heading?.level === 2) {
+      part = canonicalPart(line.heading.title);
+      headers = null;
+      continue;
+    }
+    if (!line.prose) continue;
+    const trimmed = line.text.trim();
+    if (trimmed.startsWith("|")) {
+      const cells = trimmed.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+      if (cells.every((cell) => /^:?-+:?$/.test(cell))) continue;
+      if (!headers) {
+        headers = cells.map((cell) => cell.toLowerCase());
+        continue;
+      }
+      const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
+      const rowPart = canonicalPart(row.part ?? "");
+      const planned = row["only planned"] ?? "";
+      if (!rowPart || !planned || /^none$/i.test(planned) || /no further/i.test(planned)) continue;
+      const codes = [...planned.matchAll(/\b([NJM]\d+)\b/g)];
+      if (codes.length) {
+        for (const match of codes) {
+          push({ slug: match[1].toLowerCase(), title: match[1], part: rowPart, status: "planned", source: null, anchor: null });
+        }
+      } else {
+        const title = planned.replace(/\s+/g, " ").trim();
+        push({ slug: new GithubSlugger().slug(title), title, part: rowPart, status: "planned", source: null, anchor: null });
+      }
+      continue;
+    }
+    if (!part) continue;
+    for (const labeled of trimmed.matchAll(/(?:\*\*([NJM]\d+)\.\*\*\s+)?\[([^\]]+)\]\(([^)\s]+)\)/g)) {
+      const target = linkedFile(file, labeled[3]);
+      if (!target?.file.endsWith(".md") || target.file === manuscriptPath || !target.file.startsWith("docs/book/")) continue;
+      const linkTitle = labeled[2].replace(/\s+/g, " ").trim();
+      const title = labeled[1] ? `${labeled[1]}. ${linkTitle}` : linkTitle;
+      const slug = (target.fragment || new GithubSlugger().slug(title)).toLowerCase();
+      push({ slug, title, part, status: "drafted", source: target.file, anchor: target.fragment ?? null });
+    }
+  }
+  return orderCurriculum(entries);
+}
+
+function curriculumCatalog(source, warnings) {
+  if (source.bookFiles.size === 0) return [];
+  const entries = source.manifestText != null
+    ? entriesFromManifest(parseChapterManifest(source.manifestText, source.manifestPath), warnings)
+    : entriesFromMapFile(source);
+  const covered = new Set(entries.map((entry) => entry.source).filter(Boolean));
+  const missing = [...source.bookFiles.keys()].filter((file) => isCurriculumChapterFile(file) && !covered.has(file)).sort();
+  if (missing.length) {
+    const noun = missing.length === 1 ? "file" : "files";
+    const verb = missing.length === 1 ? "is" : "are";
+    throw new Error(`Curriculum chapter ${noun} ${missing.join(", ")} ${verb} not in orange's curriculum manifest or map. Refusing to leave part blank.`);
+  }
+  return entries;
+}
+
+function entriesFromMapFile(source) {
+  const mapFile = findCurriculumMap(source.bookFiles);
+  if (!mapFile) {
+    throw new Error("docs/book/ is present but has no manifest.json and no curriculum map, so curriculum parts cannot be assigned.");
+  }
+  return entriesFromMap(source.bookFiles.get(mapFile), mapFile);
+}
+
+function headingIndex(doc) {
+  const slugger = new GithubSlugger();
+  const headings = [];
+  doc.lines.forEach((line, index) => {
+    if (!line.heading) return;
+    headings.push({ index, level: line.heading.level, title: line.heading.title, anchor: slugger.slug(line.heading.title) });
+  });
+  return headings;
+}
+
+function matchHeading(headings, entry) {
+  return headings.find((heading) => {
+    if (heading.level !== 2 || partDivider.test(heading.title)) return false;
+    if (entry.anchor) return heading.anchor === entry.anchor;
+    return heading.title === entry.title;
+  });
 }
 
 function generate(source) {
@@ -653,88 +726,73 @@ function generate(source) {
   const version = source.manuscript.match(/^Manuscript version: (.+)$/m)?.[1];
   const snapshot = source.manuscript.match(/^Snapshot: (\d{4}-\d{2}-\d{2})$/m)?.[1];
   if (!title || !author || !version || !snapshot) throw new Error("Missing manuscript identity fields.");
+  const warnings = [];
+  const catalog = curriculumCatalog(source, warnings);
   const documents = [{ file: manuscriptPath, text: source.manuscript }];
   for (const [file, text] of [...source.bookFiles].sort(([left], [right]) => left.localeCompare(right))) {
-    if (file.endsWith(".md")) documents.push({ file, text });
+    if (isCurriculumChapterFile(file)) documents.push({ file, text });
   }
   for (const doc of documents) doc.lines = manuscriptLines(doc.text);
-  const pages = [];
+  const manuscriptPages = [];
   for (const doc of documents) {
-    if (doc.file === "docs/book/README.md") {
-      const heading = doc.lines.find((line) => line.heading?.level === 1);
-      pages.push({
-        file: doc.file, headingIndex: -1, slug: "book-readme", title: heading?.heading.title ?? "The Orange Book",
-        sidebarPart: "Front matter", manifestPart: null, status: null, promote: false, kind: "readme",
+    if (doc.file !== manuscriptPath) continue;
+    doc.lines.forEach((line, index) => {
+      if (!pageHeading(doc.file, line.heading)) return;
+      const slug = chapterSlug(line.heading.title);
+      manuscriptPages.push({
+        file: doc.file, headingIndex: index, slug, title: line.heading.title,
+        sidebarPart: chapterPart(slug), status: null, promote: true, kind: "manuscript",
       });
-      continue;
-    }
-    if (doc.file === manuscriptPath) {
-      doc.lines.forEach((line, index) => {
-        if (!pageHeading(doc.file, line.heading)) return;
-        const slug = chapterSlug(line.heading.title);
-        pages.push({
-          file: doc.file, headingIndex: index, slug, title: line.heading.title,
-          sidebarPart: chapterPart(slug), manifestPart: null, status: null, promote: true, kind: "manuscript",
-        });
-      });
-      continue;
-    }
-    const headings = [];
-    doc.lines.forEach((line, index) => { if (pageHeading(doc.file, line.heading)) headings.push({ index, title: line.heading.title }); });
-    if (headings.length === 0) {
-      const heading = doc.lines.find((line) => line.heading?.level === 1);
-      pages.push({
-        file: doc.file, headingIndex: -1, slug: sectionSlug(doc.file, heading?.heading.title ?? path.posix.basename(doc.file)),
-        title: heading?.heading.title ?? path.posix.basename(doc.file),
-        sidebarPart: "Front matter", manifestPart: null, status: null, promote: false, kind: "file",
-      });
-      continue;
-    }
-    for (const heading of headings) {
-      pages.push({
-        file: doc.file, headingIndex: heading.index, slug: sectionSlug(doc.file, heading.title), title: heading.title,
-        sidebarPart: "Front matter", manifestPart: null, status: null, promote: true, kind: "section",
-      });
-    }
+    });
   }
-  const manuscriptPages = pages.filter((page) => page.kind === "manuscript");
   if (manuscriptPages.map((page) => page.slug).join() !== expectedSlugs.join()) {
     throw new Error(`The manuscript structure changed (${manuscriptPages.map((page) => page.slug).join(", ")}). Update the importer before syncing.`);
   }
-  const slugs = new Set();
-  for (const page of pages) {
-    if (slugs.has(page.slug)) throw new Error(`Duplicate book slug: ${page.slug}`);
-    slugs.add(page.slug);
+  const slugs = new Set(manuscriptPages.map((page) => page.slug));
+  for (const entry of catalog) {
+    if (slugs.has(entry.slug)) {
+      throw new Error(`Curriculum slug ${entry.slug} (${entry.title}) collides with another chapter. Refusing to leave its part blank.`);
+    }
+    slugs.add(entry.slug);
   }
+  const curriculumPages = [];
+  for (const doc of documents) {
+    if (doc.file === manuscriptPath) continue;
+    const headings = headingIndex(doc);
+    const indexes = new Set();
+    for (const entry of catalog.filter((item) => item.source === doc.file && source.bookFiles.has(doc.file))) {
+      const heading = matchHeading(headings, entry);
+      if (!heading) {
+        throw new Error(`Curriculum chapter ${entry.title} (${entry.slug}) in ${doc.file} has no heading for ${entry.anchor ?? entry.title}. Refusing to leave its part blank.`);
+      }
+      if (indexes.has(heading.index)) {
+        throw new Error(`Curriculum chapter ${entry.title} (${entry.slug}) shares a heading in ${doc.file} with another entry.`);
+      }
+      indexes.add(heading.index);
+      curriculumPages.push({
+        file: doc.file, headingIndex: heading.index, slug: entry.slug, title: entry.title,
+        sidebarPart: entry.part, status: entry.status, promote: false, kind: "curriculum", sourceAnchor: heading.anchor,
+      });
+    }
+    doc.pageHeadingIndexes = indexes;
+  }
+  for (const entry of catalog) {
+    if (entry.status !== "drafted") continue;
+    if (!entry.source || !source.bookFiles.has(entry.source)) {
+      throw new Error(`Curriculum chapter ${entry.title} (${entry.slug}) is drafted but ${entry.source ?? "no source file"} is not in docs/book/.`);
+    }
+    if (!curriculumPages.some((page) => page.slug === entry.slug)) {
+      throw new Error(`Curriculum chapter ${entry.title} (${entry.slug}) was not hosted. Refusing to leave its part blank.`);
+    }
+  }
+  curriculumPages.sort((left, right) => catalog.findIndex((entry) => entry.slug === left.slug) - catalog.findIndex((entry) => entry.slug === right.slug));
+  manuscriptPages.forEach((page, order) => { page.order = order; });
+  curriculumPages.forEach((page, order) => { page.order = manuscriptPages.length + order; });
+  const pages = [...manuscriptPages, ...curriculumPages];
   const anchors = new Map();
   for (const doc of documents) for (const [key, route] of mapAnchors(doc, pages)) anchors.set(key, route);
   const firstPage = new Map();
   for (const page of pages) if (!firstPage.has(page.file)) firstPage.set(page.file, `/book/${page.slug}/`);
-  const parts = readingParts(source.bookFiles.get("docs/book/README.md"));
-  for (const page of pages) {
-    if (page.kind === "manuscript" || page.kind === "section" || page.kind === "file") {
-      const assigned = assignPart(page, parts);
-      if (assigned) {
-        page.manifestPart = assigned;
-        if (page.kind !== "manuscript") page.sidebarPart = assigned;
-      }
-    }
-  }
-  const warnings = [];
-  if (source.manifestText != null) applyManifest(pages, parseChapterManifest(source.manifestText, source.manifestPath), warnings);
-  const readme = source.bookFiles.get("docs/book/README.md") ?? "";
-  const extrasInOrder = pages.filter((page) => page.kind !== "manuscript").sort((left, right) => {
-    if (left.kind === "readme") return -1;
-    if (right.kind === "readme") return 1;
-    const rank = (page) => {
-      const needle = page.sourceAnchor ? `#${page.sourceAnchor}` : path.posix.basename(page.file);
-      const index = readme.indexOf(needle);
-      return index < 0 ? Number.MAX_SAFE_INTEGER : index;
-    };
-    return rank(left) - rank(right) || left.file.localeCompare(right.file) || left.headingIndex - right.headingIndex;
-  });
-  const ordered = [...manuscriptPages, ...extrasInOrder];
-  ordered.forEach((page, order) => { page.order = order; });
   let hostedLinks = 0;
   let repositoryLinks = 0;
   const broken = [];
@@ -743,9 +801,9 @@ function generate(source) {
     const target = linkedFile(fromFile, destination);
     if (!target) return destination;
     if (target.file === "assets/identity/orange-book-cover.svg") return "/projects/orange/book-cover.svg";
-    const hosted = target.file === manuscriptPath || target.file.startsWith("docs/book/");
-    if (hosted && (source.bookFiles.has(target.file) || target.file === manuscriptPath) && target.file.endsWith(".md")) {
-      const route = target.fragment ? anchors.get(`${target.file}#${target.fragment}`) : firstPage.get(target.file) ?? "/book/";
+    const hostedChapter = target.file === manuscriptPath || firstPage.has(target.file);
+    if (hostedChapter && target.file.endsWith(".md")) {
+      const route = target.fragment ? anchors.get(`${target.file}#${target.fragment}`) : firstPage.get(target.file);
       if (route) { hostedLinks++; return route; }
       if (target.file === manuscriptPath) throw new Error(`Unknown manuscript anchor: ${destination}`);
       broken.push({ source: fromFile, destination, reason: "no hosted heading for this anchor" });
@@ -759,11 +817,9 @@ function generate(source) {
     return `${repositoryUrl}/${kind}/${source.commit}/${target.file}${suffix}${rawFragment}`;
   }
   const files = new Map([[vendorPath, source.manuscript], [downloadPath, source.manuscript]]);
-  for (const page of ordered) {
+  for (const page of pages) {
     const doc = documents.find((candidate) => candidate.file === page.file);
-    const lines = page.kind === "readme"
-      ? doc.lines.filter((line) => line.heading?.level !== 1)
-      : bodyLines(doc, page, ordered);
+    const lines = bodyLines(doc, page, pages);
     const description = page.kind === "manuscript"
       ? descriptions[manuscriptPages.indexOf(page)]
       : firstParagraph(lines.map((line) => line.text).join("")) ?? page.title;
@@ -785,25 +841,34 @@ function generate(source) {
     manuscript: manuscriptPath,
     docsBook: source.bookFiles.size > 0,
     orangeManifest: source.manifestPath,
-    chapters: ordered.map((page) => ({
-      part: page.manifestPart || page.sidebarPart,
-      slug: page.slug,
-      title: page.title,
-      status: page.status ?? "drafted",
-      source: page.file,
-      commit: source.commit,
-    })),
+    chapters: [
+      ...catalog.map((entry) => ({
+        part: entry.part,
+        slug: entry.slug,
+        title: entry.title,
+        status: entry.status,
+        source: entry.source,
+        commit: source.commit,
+      })),
+      ...manuscriptPages.map((page) => ({
+        slug: page.slug,
+        title: page.title,
+        status: "drafted",
+        source: page.file,
+        commit: source.commit,
+      })),
+    ],
   };
   files.set(manifestOutput, `${JSON.stringify(manifest, null, 2)}\n`);
   const metadata = {
     title, author, version, snapshot, revision: source.commit, ref: source.ref,
     sourceUrl: `${repositoryUrl}/blob/${source.commit}/${manuscriptPath}`,
-    chapters: ordered.map((page) => ({
+    chapters: manuscriptPages.map((page) => ({
       slug: page.slug, title: page.title, part: page.sidebarPart, order: page.order, description: page.description,
     })),
   };
   files.set(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
-  return { files, ordered, broken, warnings, hostedLinks, repositoryLinks, manifest };
+  return { files, ordered: manuscriptPages, curriculum: catalog, broken, warnings, hostedLinks, repositoryLinks, manifest };
 }
 
 async function loadSnapshot() {
@@ -913,36 +978,94 @@ function selfTest() {
     manuscript,
     bookFiles: new Map([
       ["docs/book/README.md", "## Part 1, The Novice\n\n- [Before](NOVICE_OPENING.md#chapter-1-before-you-hide-anything)\n\n## Part 3, The Master\n\n- [Seams](../THE_ORANGE_BOOK.md#chapter-1-the-seams-are-the-system)\n"],
-      ["docs/book/NOVICE_OPENING.md", "# The Orange Book\n\n## Chapter 1: Before You Hide Anything\n\nA message can be read by someone it was not meant for.\n"],
+      ["docs/book/NOVICE_OPENING.md", "# The Orange Book\n\n## Chapter 1: Before You Hide Anything\n\nA message can be read by someone it was not meant for.\n\nSee [the book](../book/).\n\nSee [the index](README.md).\n"],
       ["docs/book/manifest.json", manifestText],
     ]),
     manifestPath: "docs/book/manifest.json",
     manifestText,
   });
   const chapters = result.manifest.chapters;
-  const novice = chapters.find((chapter) => chapter.slug === "novice-chapter-1");
+  const novice = chapters.find((chapter) => chapter.slug === "n1");
   const preface = chapters.find((chapter) => chapter.slug === "preface");
   const seams = chapters.find((chapter) => chapter.slug === "chapter-1");
   const rings = chapters.find((chapter) => chapter.slug === "rings");
-  if (novice?.status !== "drafted" || novice.part !== "Novice" || novice.slug !== "novice-chapter-1" || novice.commit !== "a".repeat(40) || novice.source !== "docs/book/NOVICE_OPENING.md") {
+  const commit = "a".repeat(40);
+  if (novice?.status !== "drafted" || novice.part !== "Novice" || novice.title !== "N1. Before You Hide Anything" || novice.commit !== commit || novice.source !== "docs/book/NOVICE_OPENING.md") {
     throw new Error(`Novice chapter was not marked from the manifest: ${JSON.stringify(novice)}`);
   }
-  if (preface?.status !== "drafted" || preface.commit !== "a".repeat(40) || !preface.part) {
-    throw new Error(`Preface row was not a hosted drafted chapter: ${JSON.stringify(preface)}`);
+  if (chapters[0]?.slug !== "n1" || chapters[1]?.slug !== "rings" || chapters.slice(2).map((chapter) => chapter.slug).join() !== expectedSlugs.join()) {
+    throw new Error(`Curriculum parts were not ordered Novice, Journeyman, Master ahead of the manuscript: ${chapters.map((chapter) => chapter.slug).join(", ")}`);
   }
-  if (chapters.some((chapter) => !chapter.part || !chapter.slug || !chapter.title || !chapter.source || !/^[a-f0-9]{40}$/.test(chapter.commit) || (chapter.status !== "drafted" && chapter.status !== "planned"))) {
-    throw new Error(`A manifest row is missing part, slug, title, source, commit, or a drafted|planned status.`);
+  if (preface?.status !== "drafted" || preface.commit !== commit || Object.hasOwn(preface, "part")) {
+    throw new Error(`Preface row must stay drafted without a curriculum part: ${JSON.stringify(preface)}`);
   }
-  if (chapters.some((chapter) => chapter.slug === "original-manuscript" || chapter.slug === "rings" || chapter.status === "draft" || chapter.status === "original" || chapter.status == null)) {
-    throw new Error(`Rollup, omitted plan, or orange vocabulary leaked into the site manifest: ${JSON.stringify(chapters.map((chapter) => chapter.slug + ":" + chapter.status))}`);
+  if (expectedSlugs.some((slug) => {
+    const row = chapters.find((chapter) => chapter.slug === slug);
+    return !row || Object.hasOwn(row, "part") || row.status !== "drafted" || row.commit !== commit;
+  })) {
+    throw new Error("A manuscript row was given a part or lost its drafted status.");
   }
-  if (seams?.part !== "Master" || seams.status !== "drafted" || seams.commit !== "a".repeat(40)) throw new Error(`Manuscript part mapping failed: ${JSON.stringify(seams)}`);
-  if (rings) throw new Error(`Planned chapter without a page was listed: ${JSON.stringify(rings)}`);
+  if (seams?.status !== "drafted" || Object.hasOwn(seams, "part")) throw new Error(`Manuscript part was overwritten from the curriculum map: ${JSON.stringify(seams)}`);
+  if (rings?.status !== "planned" || rings.part !== "Journeyman" || rings.title !== "Rings and Fields" || rings.commit !== commit) {
+    throw new Error(`Planned chapter was not kept: ${JSON.stringify(rings)}`);
+  }
   if (result.files.has(`${chapterDirectory}/rings.md`)) throw new Error("A planned chapter with no source file was given a page.");
+  const hosted = result.files.get(`${chapterDirectory}/n1.md`) ?? "";
+  const tree = `https://github.com/chasebryan/orange/tree/${commit}/docs/book/`;
+  const index = `https://github.com/chasebryan/orange/blob/${commit}/docs/book/README.md`;
+  if (!hosted.includes(tree) || !hosted.includes(index) || !hosted.includes("## Chapter 1: Before You Hide Anything") || !hosted.includes('title: "N1. Before You Hide Anything"')) {
+    throw new Error(`Hosted novice page did not keep its heading and pinned links: ${hosted.slice(0, 700)}`);
+  }
+  const metadata = JSON.parse(result.files.get(metadataPath));
+  if (metadata.chapters.length !== expectedSlugs.length || metadata.chapters.some((chapter) => chapter.part === "Novice" || chapter.part === "Journeyman" || chapter.part === "Master")) {
+    throw new Error("book.json must stay the earlier manuscript, without curriculum parts.");
+  }
+  if (result.manifest.docsBook !== true || result.manifest.commit !== commit) throw new Error("docsBook or commit was not recorded.");
+  if (chapters.some((chapter) => chapter.slug === "original-manuscript" || chapter.status === "draft" || chapter.status === "original" || chapter.status == null || !chapter.slug || !chapter.title || !/^[a-f0-9]{40}$/.test(chapter.commit))) {
+    throw new Error(`Rollup or orange vocabulary leaked into the site manifest: ${JSON.stringify(chapters.map((chapter) => `${chapter.slug}:${chapter.status}`))}`);
+  }
   if (!result.warnings.some((warning) => warning.includes("complete"))) throw new Error("Unrecognized status was not reported.");
-  if (!result.warnings.some((warning) => warning.includes("rings") && warning.includes("omitted"))) throw new Error(`Planned chapter was not omitted: ${result.warnings.join(" | ")}`);
   if (result.warnings.some((warning) => /original/i.test(warning))) throw new Error(`Original rollup was warned: ${result.warnings.join(" | ")}`);
+  const mapped = generate({
+    ref: "self-test",
+    commit: "b".repeat(40),
+    manuscript,
+    bookFiles: new Map([
+      ["docs/book/README.md", "## Part 1, The Novice\n\n- **N1.** [Before You Hide Anything](NOVICE_OPENING.md#chapter-1-before-you-hide-anything)\n\n| Part | Drafted in this tree | Only planned |\n| --- | --- | --- |\n| Part 2, The Journeyman | None | J2 |\n"],
+      ["docs/book/NOVICE_OPENING.md", "# The Orange Book\n\n## Chapter 1: Before You Hide Anything\n\nA message can be read by someone it was not meant for.\n"],
+    ]),
+    manifestPath: null,
+    manifestText: null,
+  });
+  const mappedNovice = mapped.manifest.chapters.find((chapter) => chapter.title === "N1. Before You Hide Anything");
+  const mappedPlan = mapped.manifest.chapters.find((chapter) => chapter.slug === "j2");
+  if (mappedNovice?.part !== "Novice" || mappedNovice.status !== "drafted" || mappedPlan?.part !== "Journeyman" || mappedPlan.status !== "planned" || mappedPlan.title !== "J2" || mapped.files.has(`${chapterDirectory}/j2.md`)) {
+    throw new Error(`Curriculum map fallback failed: ${JSON.stringify({ mappedNovice, mappedPlan })}`);
+  }
+  const refuse = (bookFiles, text, pattern) => {
+    let failed = false;
+    try {
+      generate({ ref: "self-test", commit, manuscript, bookFiles, manifestPath: "docs/book/manifest.json", manifestText: text });
+    } catch (error) {
+      failed = pattern.test(error.message);
+    }
+    if (!failed) throw new Error(`Sync should have failed matching ${pattern}`);
+  };
+  const badPart = JSON.parse(manifestText);
+  badPart.chapters[0].part = "Wizard";
+  refuse(resultBookFiles(manifestText), JSON.stringify(badPart), /Wizard/);
+  const extra = resultBookFiles(manifestText);
+  extra.set("docs/book/EXTRA.md", "# Extra\n\n## Extra chapter\n\nNot in the map.\n");
+  refuse(extra, manifestText, /EXTRA\.md/);
   console.log("Orange Book sync self-test passed.");
+}
+
+function resultBookFiles(manifestText) {
+  return new Map([
+    ["docs/book/README.md", "## Part 1, The Novice\n\n- [Before](NOVICE_OPENING.md#chapter-1-before-you-hide-anything)\n"],
+    ["docs/book/NOVICE_OPENING.md", "# The Orange Book\n\n## Chapter 1: Before You Hide Anything\n\nA message can be read by someone it was not meant for.\n"],
+    ["docs/book/manifest.json", manifestText],
+  ]);
 }
 
 async function main() {
@@ -952,6 +1075,7 @@ async function main() {
   if (source.manifestPath && source.manifestText == null) {
     throw new Error(`Orange manifest ${source.manifestPath} was recorded but not found in the snapshot.`);
   }
+  // Throws from generate() happen before any write, so a failed sync leaves src/content/book unchanged.
   const result = generate(source);
   const existing = await readdir(path.join(root, chapterDirectory)).catch((error) => {
     if (error.code === "ENOENT") return [];
@@ -980,8 +1104,16 @@ async function main() {
   }
   const mode = args.check ? "Verified" : "Synced";
   const book = source.bookFiles.size ? `${source.bookFiles.size} docs/book files` : "docs/book absent";
-  const listed = source.manifestPath ? `manifest ${source.manifestPath}` : "no orange manifest; hosted chapters recorded as drafted";
-  console.log(`${mode} ${result.ordered.length} Orange Book pages from ${source.ref} at ${source.commit}. ${book}; ${listed}.`);
+  const listed = source.manifestPath ? `manifest ${source.manifestPath}` : "no orange manifest; curriculum parts from the curriculum map";
+  const curriculum = result.curriculum ?? [];
+  const summary = curriculumPartOrder.map((part) => {
+    const rows = curriculum.filter((entry) => entry.part === part);
+    const drafted = rows.filter((entry) => entry.status === "drafted").length;
+    const planned = rows.filter((entry) => entry.status === "planned").length;
+    return `${part} ${rows.length} (${drafted} drafted, ${planned} planned)`;
+  }).join("; ");
+  console.log(`${mode} ${result.ordered.length} manuscript pages and ${curriculum.length} curriculum entries from ${source.ref} at ${source.commit}. docsBook ${result.manifest.docsBook}. ${book}; ${listed}.`);
+  console.log(`Curriculum: ${summary || "none"}.`);
   console.log(`${result.hostedLinks} hosted cross-references, ${result.repositoryLinks} repository links, manuscript ${result.manifest.version} (${result.manifest.snapshot}).`);
   for (const warning of result.warnings) console.log(`Warning: ${warning}`);
   if (result.broken.length) {

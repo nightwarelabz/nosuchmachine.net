@@ -11,7 +11,7 @@ it once the design settles. For many projects that is exactly right. It is
 cheap, it teaches quickly, and the prototype's shortcuts never matter because
 nobody relies on it.
 
-Orange rejects that path on purpose. [D-002](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-002--no-disposable-prototype)
+Orange rejects that path on purpose. [D-002](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-002--no-disposable-prototype)
 is a **directed** decision from the project owner: build the end product
 through permanent, production-lineage components. There is no
 prototype-to-rewrite phase and no minimum viable product that postpones the
@@ -36,13 +36,13 @@ precisely what was checked, residue is an undocumented semantic decision.
 There is also a subtler risk. A prototype makes design choices by being
 written. Once a syntax works in the prototype, it acquires momentum that has
 nothing to do with whether it was the right choice. Orange's
-[contribution rules](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/CONTRIBUTING.md#solo-development-scope) name this
+[contribution rules](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/CONTRIBUTING.md#solo-development-scope) name this
 directly: do not add syntax or architecture selected merely by implementing it
 first.
 
 ## What the doctrine requires
 
-The [project charter](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/PROJECT_CHARTER.md#7-engineering-doctrine-build-the-end-product-directly)
+The [project charter](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/PROJECT_CHARTER.md#7-engineering-doctrine-build-the-end-product-directly)
 turns D-002 into eight working rules. Paraphrased, they say:
 
 1. Normative semantics precede convenience syntax and optimization.
@@ -72,7 +72,7 @@ The doctrine does not require the early system to be large. It requires each
 small piece to be permanent. The current compiler shows what that looks like in
 practice.
 
-The first slice, under [D-024](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-024--initial-compiler-foundation),
+The first slice, under [D-024](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-024--initial-compiler-foundation),
 contained only source identities, byte spans, a deterministic lexer, structured
 diagnostics, and the `orangec` command-line boundary. That is a tiny amount of
 language. But each piece was built as the permanent version of itself:

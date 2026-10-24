@@ -8,80 +8,80 @@ description: "The source documents, manuscript revision history, authorship, and
 This manuscript is an explanatory synthesis of repository-local material. Its
 principal sources for version 0.1 are:
 
-- the [project charter](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/PROJECT_CHARTER.md) for mission, users, scope, and
+- the [project charter](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/PROJECT_CHARTER.md) for mission, users, scope, and
   engineering doctrine;
-- the [research and landscape analysis](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RESEARCH.md) for the polyglot seam and
+- the [research and landscape analysis](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RESEARCH.md) for the polyglot seam and
   vertical-artifact framing;
-- the [assurance and security model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md) for independent claim
+- the [assurance and security model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md) for independent claim
   dimensions, evidence bases, and trust boundaries;
-- the [decision register](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md) for the distinction between directed,
+- the [decision register](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md) for the distinction between directed,
   proposed, investigative, and unresolved choices;
-- the [dependency-ordered roadmap](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ROADMAP.md) for current capability status;
-- the [Orange 2026 lexical and grammar specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LANGUAGE_2026.md) for the
+- the [dependency-ordered roadmap](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ROADMAP.md) for current capability status;
+- the [Orange 2026 lexical and grammar specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LANGUAGE_2026.md) for the
   normative parser boundary;
-- the [accepted typed-literal semantics](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SEMANTICS_2026.md) and
-  [OEP-0003](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0003-orange-2026-typed-literals.md) for the
+- the [accepted typed-literal semantics](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SEMANTICS_2026.md) and
+  [OEP-0003](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0003-orange-2026-typed-literals.md) for the
   bounded S3a meaning and non-claims; and
-- the [compiler guide](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/README.md) for implemented CLI behavior.
+- the [compiler guide](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/README.md) for implemented CLI behavior.
 
 Version 0.3 adds, among others, the
-[architecture](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARCHITECTURE.md), [reproducibility contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/REPRODUCIBILITY.md),
-[user journeys](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/USER_JOURNEYS.md), [threat model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/security/THREAT_MODEL.md),
-[OEP-0001](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0001-solo-development.md),
-[governance](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/GOVERNANCE.md), [release policy](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/RELEASE_POLICY.md), and the
+[architecture](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARCHITECTURE.md), [reproducibility contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/REPRODUCIBILITY.md),
+[user journeys](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/USER_JOURNEYS.md), [threat model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/security/THREAT_MODEL.md),
+[OEP-0001](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0001-solo-development.md),
+[governance](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/GOVERNANCE.md), [release policy](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/RELEASE_POLICY.md), and the
 decision suites under `docs/`. Version 0.4 adds the
-[pure expression specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/EXPRESSIONS_2026.md) and
-[OEP-0005](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0005-orange-2026-pure-spec-expressions.md),
+[pure expression specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/EXPRESSIONS_2026.md) and
+[OEP-0005](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0005-orange-2026-pure-spec-expressions.md),
 version 0.5 adds the
-[bindings and conversions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BINDINGS_2026.md) and
-[OEP-0006](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0006-orange-2026-bindings-and-conversions.md),
-version 0.6 adds the [arrays specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARRAYS_2026.md) and
-[OEP-0007](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0007-orange-2026-fixed-length-arrays.md),
-version 0.7 adds the [loops specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOPS_2026.md) and
-[OEP-0008](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0008-orange-2026-bounded-loops.md), and
-version 0.8 adds the [conditions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/CONDITIONS_2026.md) and
-[OEP-0009](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0009-orange-2026-conditions.md),
-version 0.9 adds the [lookups specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOKUPS_2026.md) and
-[OEP-0010](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0010-orange-2026-lookups.md),
-version 0.10 adds the [modules specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULES_2026.md),
-[OEP-0011](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0011-orange-2026-modules.md), and the
-[scheme guide](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/compiler/schemes/README.md), version 0.11 adds the
-[modular arithmetic specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULAR_2026.md) and
-[OEP-0012](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0012-orange-2026-modular-arithmetic.md),
-version 0.12 adds the [blocks specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BLOCKS_2026.md) and
-[OEP-0013](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0013-orange-2026-blocks.md), version 0.13
-adds the [tuples specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TUPLES_2026.md) and
-[OEP-0014](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0014-orange-2026-tuples.md), version 0.14
-adds the [bytes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BYTES_2026.md) and
-[OEP-0015](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0015-orange-2026-bytes.md), version 0.15
-adds the [sizes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SIZES_2026.md) and
-[OEP-0016](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0016-orange-2026-sizes.md), version 0.16
-adds the [byte order specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ORDER_2026.md) and
-[OEP-0017](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0017-orange-2026-byte-order.md), version
-0.17 adds the [type parameters specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TYPE_PARAMETERS_2026.md) and
-[OEP-0018](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0018-orange-2026-type-parameters.md),
-version 0.18 adds the [lengths specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LENGTHS_2026.md) and
-[OEP-0019](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0019-orange-2026-lengths.md), version 0.19
-adds the [tests specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TESTS_2026.md) and
-[OEP-0020](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0020-orange-2026-tests.md), and version 0.20
-adds the [computed amounts specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/AMOUNTS_2026.md) and
-[OEP-0021](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0021-orange-2026-computed-amounts.md).
-Version 0.21 adds the [nested-array specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/NESTED_ARRAYS_2026.md)
-and [OEP-0023](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0023-orange-2026-nested-arrays.md);
-version 0.22 adds the [static-modulus specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/STATIC_MODULI_2026.md),
-[OEP-0024](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0024-orange-2026-static-moduli.md), P2 limb
-definitions and the [complete 1.0 execution record](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RELEASE_1_0_EXECUTION.md).
-Version 0.23 adds the permanent [formatter contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/FORMATTER_2026.md) and
+[bindings and conversions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BINDINGS_2026.md) and
+[OEP-0006](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0006-orange-2026-bindings-and-conversions.md),
+version 0.6 adds the [arrays specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARRAYS_2026.md) and
+[OEP-0007](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0007-orange-2026-fixed-length-arrays.md),
+version 0.7 adds the [loops specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOPS_2026.md) and
+[OEP-0008](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0008-orange-2026-bounded-loops.md), and
+version 0.8 adds the [conditions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/CONDITIONS_2026.md) and
+[OEP-0009](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0009-orange-2026-conditions.md),
+version 0.9 adds the [lookups specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOKUPS_2026.md) and
+[OEP-0010](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0010-orange-2026-lookups.md),
+version 0.10 adds the [modules specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULES_2026.md),
+[OEP-0011](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0011-orange-2026-modules.md), and the
+[scheme guide](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/compiler/schemes/README.md), version 0.11 adds the
+[modular arithmetic specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULAR_2026.md) and
+[OEP-0012](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0012-orange-2026-modular-arithmetic.md),
+version 0.12 adds the [blocks specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BLOCKS_2026.md) and
+[OEP-0013](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0013-orange-2026-blocks.md), version 0.13
+adds the [tuples specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TUPLES_2026.md) and
+[OEP-0014](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0014-orange-2026-tuples.md), version 0.14
+adds the [bytes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BYTES_2026.md) and
+[OEP-0015](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0015-orange-2026-bytes.md), version 0.15
+adds the [sizes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SIZES_2026.md) and
+[OEP-0016](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0016-orange-2026-sizes.md), version 0.16
+adds the [byte order specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ORDER_2026.md) and
+[OEP-0017](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0017-orange-2026-byte-order.md), version
+0.17 adds the [type parameters specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TYPE_PARAMETERS_2026.md) and
+[OEP-0018](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0018-orange-2026-type-parameters.md),
+version 0.18 adds the [lengths specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LENGTHS_2026.md) and
+[OEP-0019](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0019-orange-2026-lengths.md), version 0.19
+adds the [tests specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TESTS_2026.md) and
+[OEP-0020](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0020-orange-2026-tests.md), and version 0.20
+adds the [computed amounts specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/AMOUNTS_2026.md) and
+[OEP-0021](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0021-orange-2026-computed-amounts.md).
+Version 0.21 adds the [nested-array specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/NESTED_ARRAYS_2026.md)
+and [OEP-0023](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0023-orange-2026-nested-arrays.md);
+version 0.22 adds the [static-modulus specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/STATIC_MODULI_2026.md),
+[OEP-0024](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0024-orange-2026-static-moduli.md), P2 limb
+definitions and the [complete 1.0 execution record](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RELEASE_1_0_EXECUTION.md).
+Version 0.23 adds the permanent [formatter contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/FORMATTER_2026.md) and
 its command, identity and developer-tool status boundaries.
-Version 0.24 adds the permanent [source documentation contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DOCUMENTATION_2026.md)
+Version 0.24 adds the permanent [source documentation contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DOCUMENTATION_2026.md)
 and its syntax-only, offline rendering and product documentation boundaries.
-Version 0.25 adds the permanent [local witness replay contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/WITNESS_REPLAY_2026.md),
+Version 0.25 adds the permanent [local witness replay contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/WITNESS_REPLAY_2026.md),
 its typed value boundary, numeric instance selection and reference-only outcomes.
 Version 0.26 adds partial P4 mathematical product preparation alongside the
 existing P2 representation definitions, with exact accumulators and three
 normalization passes; it adds no P3 proof or P4 completion claim.
-Version 0.27 adds the [array dimensions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DIMENSIONS_2026.md) and
-[OEP-0025](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/governance/oeps/OEP-0025-orange-2026-array-dimensions.md), and
+Version 0.27 adds the [array dimensions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DIMENSIONS_2026.md) and
+[OEP-0025](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/governance/oeps/OEP-0025-orange-2026-array-dimensions.md), and
 extends that partial P4 preparation with biased subtraction, dedicated squaring
 and a24 multiplication schedules; it adds no P3 proof or P4 completion claim.
 Appendix D lists the principal sources for each chapter.

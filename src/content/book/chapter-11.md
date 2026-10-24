@@ -18,13 +18,13 @@ No standard has yet been imported into Orange.
 
 ## Standards move
 
-The [research analysis](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RESEARCH.md#46-standards-are-versioned-inputs-not-timeless-citations)
+The [research analysis](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RESEARCH.md#46-standards-are-versioned-inputs-not-timeless-citations)
 gives current examples. FIPS 203 and FIPS 204, the post-quantum key
 encapsulation and signature standards, published planning notes and errata
 after their final publication. The set of algorithms and schemas supported by
 NIST's Automated Cryptographic Validation Protocol evolves. Protocol profiles
 that build on a primitive may remain Internet-Drafts, as
-[section 4.10](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/RESEARCH.md#410-primitive-correctness-is-not-protocol-interoperability)
+[section 4.10](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/RESEARCH.md#410-primitive-correctness-is-not-protocol-interoperability)
 notes, and must not be represented as finalized standards.
 
 None of that reflects badly on the standards process. It is what careful
@@ -37,7 +37,7 @@ those answers the claim cannot be audited, only believed.
 ## What provenance records
 
 For every standard that becomes a decision input, Orange's provisional
-[reproducibility contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/REPRODUCIBILITY.md#6-external-source-and-standards-capture)
+[reproducibility contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/REPRODUCIBILITY.md#6-external-source-and-standards-capture)
 requires capturing the following, and the roadmap requires the same exactness
 before any cryptographic claim:
 
@@ -53,7 +53,7 @@ before any cryptographic claim:
   without turning a technical inventory into legal advice.
 
 A provisional
-[standards-provenance schema](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/schemas/gate0/standards-provenance-v0.1.schema.json)
+[standards-provenance schema](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/schemas/gate0/standards-provenance-v0.1.schema.json)
 gives those fields a concrete shape: a standard with its issuer, identifier,
 edition, and publication date; a source with retrieval time, digest, and
 archive state; rights, patent, export, and technical review records; errata
@@ -170,7 +170,7 @@ A screenshot is never a normative input, and a generated transcription never
 replaces its source.
 
 Orange's own licensing is part of this picture.
-[D-018](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DECISIONS.md#d-018--licenses) leaves the repository's outbound license
+[D-018](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DECISIONS.md#d-018--licenses) leaves the repository's outbound license
 open, which is one reason no cryptographic package has been published. The
 working recommendation preserves vector and standards provenance according to
 each source's terms, whatever license Orange eventually adopts.

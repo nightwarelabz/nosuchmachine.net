@@ -6,28 +6,28 @@ description: "A reference for the current grammar, types, operators, commands, a
 ---
 
 This appendix restates the implemented Orange 2026 surface for convenience.
-The [lexical and grammar specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LANGUAGE_2026.md) and the
-[typed-literal semantics](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SEMANTICS_2026.md) are normative, and the
-[pure expression specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/EXPRESSIONS_2026.md), the
-[bindings and conversions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BINDINGS_2026.md), the
-[arrays specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ARRAYS_2026.md), the
-[loops specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOPS_2026.md), the
-[conditions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/CONDITIONS_2026.md), the
-[lookups specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LOOKUPS_2026.md), the
-[modules specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULES_2026.md), the
-[modular arithmetic specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/MODULAR_2026.md), the
-[blocks specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BLOCKS_2026.md), the
-[tuples specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TUPLES_2026.md), the
-[bytes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/BYTES_2026.md), the
-[sizes specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/SIZES_2026.md), the
-[byte order specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ORDER_2026.md), the
-[type parameters specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TYPE_PARAMETERS_2026.md), the
-[lengths specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/LENGTHS_2026.md), the
-[tests specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/TESTS_2026.md), the
-[computed amounts specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/AMOUNTS_2026.md), the
-[nested arrays specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/NESTED_ARRAYS_2026.md), the
-[static moduli specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/STATIC_MODULI_2026.md), and the
-[array dimensions specification](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/DIMENSIONS_2026.md) are proposed under
+The [lexical and grammar specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LANGUAGE_2026.md) and the
+[typed-literal semantics](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SEMANTICS_2026.md) are normative, and the
+[pure expression specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/EXPRESSIONS_2026.md), the
+[bindings and conversions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BINDINGS_2026.md), the
+[arrays specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ARRAYS_2026.md), the
+[loops specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOPS_2026.md), the
+[conditions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/CONDITIONS_2026.md), the
+[lookups specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LOOKUPS_2026.md), the
+[modules specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULES_2026.md), the
+[modular arithmetic specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/MODULAR_2026.md), the
+[blocks specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BLOCKS_2026.md), the
+[tuples specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TUPLES_2026.md), the
+[bytes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/BYTES_2026.md), the
+[sizes specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/SIZES_2026.md), the
+[byte order specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ORDER_2026.md), the
+[type parameters specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TYPE_PARAMETERS_2026.md), the
+[lengths specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/LENGTHS_2026.md), the
+[tests specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/TESTS_2026.md), the
+[computed amounts specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/AMOUNTS_2026.md), the
+[nested arrays specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/NESTED_ARRAYS_2026.md), the
+[static moduli specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/STATIC_MODULI_2026.md), and the
+[array dimensions specification](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/DIMENSIONS_2026.md) are proposed under
 OEP-0005 through OEP-0021 and OEP-0023 through OEP-0025 and in the owner's
 review. Where this summary and those documents differ, they control.
 
@@ -276,6 +276,10 @@ orangec fmt --check <FILE>...
 orangec doc <FILE>
 orangec replay --function <MODULE::NAME> [--instance <N[,N...]>]
                --witness <FILE> [--steps <N>] [--stats] <SOURCE>
+orangec analyze --function <MODULE::NAME> [--instance <N[,N...]>]
+                [--bits <N[,M]> | --linear [--word <W>]]
+                [--layer <MODULE::NAME> --rounds <R>]
+                [--table <TABLE>] [--steps <N>] [--stats] <SOURCE>
 orangec keygen [--scheme <NAME>] [-o <FILE>]
 orangec <enc|dec> [--key <FILE>] [--scheme <NAME>] [-o <FILE>] <FILE>
 orangec schemes [<NAME>...]
@@ -289,6 +293,7 @@ orangec schemes [<NAME>...]
 | `fmt` | Print one formatted source or check sources without changing them |
 | `doc` | Print standalone offline HTML for one parsed source |
 | `replay` | Validate one program and reference-evaluate a Boolean specification for exact typed local arguments |
+| `analyze` | Read imported modules as `replay` does, then compute the exact metrics of one checked S-box or Boolean function, the branch numbers of a linear layer, or the bounded trail weights of a small substitution-permutation network. A clean run reports properties of that one function. It is not a proof the cipher is secure, not a constant-time or side-channel check, and not a verification of the implementation |
 | `test` | Validate one program, then run its root module's tests in source order, printing `test "TITLE" ... ok` or `... FAILED` for each and a count; status 1 when any fails |
 | `keygen` | Make a random key for a scheme, mode 0600, never replacing a file |
 | `enc` | Seal one file as `FILE.orange` with its key's scheme |
@@ -296,19 +301,24 @@ orangec schemes [<NAME>...]
 | `schemes` | List the built-in schemes or check a scheme program |
 
 Options are `--edition <YEAR>` (only `2026`, at most once), for `eval`,
-`test` and `replay` `--steps <N>` (a step budget from 1 through 1,073,741,824, at most
+`test`, `replay` and `analyze` `--steps <N>` (a step budget from 1 through 1,073,741,824, at most
 once; default 1,048,576) and `--stats` (report each evaluated function's or
 test's steps and the total on standard error, after the values or the
 report), for `eval` only `--spec <NAME>` (evaluate only this function without
 parameters; up to 64 names), for `fmt` only `--check` (check one through 256
 sources without changing files; otherwise `fmt` requires exactly one source),
-for `replay` `--function <MODULE::NAME>`, `--witness <FILE>` and optional
-`--instance <N[,N...]>` (an exact numeric finite-instance vector), `--scheme <NAME>`
+for `replay` and `analyze` `--function <MODULE::NAME>` and optional
+`--instance <N[,N...]>` (an exact numeric finite-instance vector), for
+`replay` only `--witness <FILE>`, for `analyze` only `--bits <N[,M]>` (the
+low N input bits and M output bits), `--linear` (a linear layer over GF(2)),
+`--word <W>` (the word width of a `--linear` layer, defaulting to the element's width, or to 8), `--table <TABLE>`
+(`values`, `ddt`, `lat`, `bct`, `anf`, or `matrix`), `--layer <MODULE::NAME>`,
+and `--rounds <R>` (a canonical decimal from 1 through 32), `--scheme <NAME>`
 (a built-in name or a program path), `--key <FILE>` (default
 `$XDG_CONFIG_HOME/orange/key`), `-o` or `--output <FILE>`, `--` to end option
 parsing, `-h` or `--help`, and `-V` or `--version`. A file name of `-` reads
 UTF-8 source from standard input, once per invocation. For `check`, `eval`,
-`test` and `replay`, each `use m;` reads the module `m` from `m.or` beside the file that names it,
+`test`, `replay` and `analyze`, each `use m;` reads the module `m` from `m.or` beside the file that names it,
 or from the current directory for standard input, once per program. Exit status is 0 on
 success, 1 on a compile or input failure, and 2 on a usage error.
 
@@ -323,7 +333,7 @@ success, 1 on a compile or input failure, and 2 on a usage error.
 | `ORC0260`–`ORC0261` | Documentation | Documentation resource limit or inconsistent construction |
 | `ORC0270`–`ORC0274` | Witness replay | Noncanonical argument value, type mismatch, decode resource limit, invalid binding or inconsistent replay |
 | `ORC0301` | Evaluation | Step budget, call depth, or `Int` result size exhausted |
-| `ORC1001`–`ORC1016` | Command line | Unreadable or oversized input, invalid UTF-8, duplicate standard input, output limit, key file, scheme, sealed-file format, a chunk that is not authentic, randomness, a `--spec` name that matches no function |
+| `ORC1001`–`ORC1017` | Command line | Unreadable or oversized input, invalid UTF-8, duplicate standard input, output limit, key file, scheme, sealed-file format, a chunk that is not authentic, randomness, a `--spec` or `--function` name that selects nothing, an analysis whose selector or shape the command cannot take, an analysis whose bits, table, or layer the search cannot accept |
 
 Codes and their meanings are stable automation surfaces. Every resource budget
 fails closed with a diagnostic rather than a panic, hang, or partial success.

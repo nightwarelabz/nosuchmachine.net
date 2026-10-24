@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "ref": "main",
-  "commit": "1f555642dd8798b5a9f6329802af7e985d5b11e4",
-  "orangeManifest": null
+  "commit": "d794b4333c0500d7542d28b8b2ffe3cde5b1bf41",
+  "orangeManifest": "docs/book/manifest.json"
 }

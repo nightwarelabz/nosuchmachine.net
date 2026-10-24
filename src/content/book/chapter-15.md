@@ -20,7 +20,7 @@ replay and no checker to replay it with.
 ## The auditor's journey
 
 The clearest description of offline replay is the
-[auditor's journey](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/USER_JOURNEYS.md#j-06--audit-and-replay-evidence-offline),
+[auditor's journey](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/USER_JOURNEYS.md#j-06--audit-and-replay-evidence-offline),
 one of eight proposed end-to-end journeys that define Orange 1.0. An auditor
 receives a thick evidence bundle and an independently obtained artifact
 identity, and works in a clean environment with the network denied. The bundle's
@@ -55,7 +55,7 @@ generic green verdict.
 ## Replay is not reproduction by someone else
 
 Orange is careful with the words it uses for repetition. The
-[reproducibility contract](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/REPRODUCIBILITY.md#1-reproducibility-levels)
+[reproducibility contract](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/REPRODUCIBILITY.md#1-reproducibility-levels)
 distinguishes four levels:
 
 1. a **replayable method**, where inputs, tools, arguments, environment, and
@@ -86,7 +86,7 @@ foreign contract. Chapter 1 argued that trust does not disappear. The trust
 budget is how Orange proposes to make it visible and to keep it from growing
 quietly.
 
-The [assurance model](https://github.com/chasebryan/orange/blob/1f555642dd8798b5a9f6329802af7e985d5b11e4/docs/ASSURANCE.md#33-trust-budget) proposes that every release
+The [assurance model](https://github.com/chasebryan/orange/blob/d794b4333c0500d7542d28b8b2ffe3cde5b1bf41/docs/ASSURANCE.md#33-trust-budget) proposes that every release
 report:
 
 - the executable and source size of the authoritative checker;
