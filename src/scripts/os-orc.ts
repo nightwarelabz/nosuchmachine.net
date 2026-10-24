@@ -131,7 +131,19 @@ export function buildOrc(body: HTMLElement, arg?: string) {
         try { loc = cw.location.href; } catch (e) { loc = "x-origin"; }
         try { rs = cw.document.readyState; title = cw.document.title; bodyLen = cw.document.body ? cw.document.body.innerHTML.length : -2; html = (cw.document.body ? cw.document.body.innerHTML.slice(0, 120) : ""); } catch { /* cross-origin */ }
       }
-      diag.textContent = `pane autopsy (${when}): src=${frame.src} connected=${frame.isConnected} inWindow=${!!frame.closest(".os-window")} loc=${loc} ready=${rs} title=${title} bodyLen=${bodyLen} html=${html}`;
+      let canary = "?", icons = -1, bootVis = "?", clock = "?";
+      if (cw) {
+        try {
+          const d = cw.document;
+          canary = (d.getElementById("boot-canary")?.textContent || "absent").replace(/\n/g, " | ");
+          icons = d.getElementById("os-icons")?.childElementCount ?? -2;
+          const b = d.getElementById("os-boot");
+          bootVis = b ? `${getComputedStyle(b).display}/${getComputedStyle(b).opacity}` : "gone";
+          clock = d.getElementById("os-clock")?.textContent || "?";
+        } catch { /* cross-origin */ }
+      }
+      const fr = frame.getBoundingClientRect();
+      diag.textContent = `pane autopsy (${when}): src=${frame.src} connected=${frame.isConnected} inWindow=${!!frame.closest(".os-window")} loc=${loc} ready=${rs} title=${title} bodyLen=${bodyLen} frameRect=${Math.round(fr.width)}x${Math.round(fr.height)} canary=[${canary}] icons=${icons} bootVis=${bootVis} clock=${clock}`;
     } catch (e) { diag.textContent = `pane autopsy (${when}): threw ${e}`; }
   };
 
