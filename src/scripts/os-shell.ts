@@ -205,6 +205,9 @@ export class BlacksiteOS {
     for (const d of dirs) this.files.set(d, { type: "dir", mtime: Date.now() });
     this.write("/README.md", "# BLACKSITE OS — web edition\n\nThe nightjar Blacksite console, ported to the web.\nType `help` for the full 426-command roster, `limits` for what this\nroom honestly cannot do, and `gauntlet` to watch it test itself.\n\nDoctrine: one knock, read, grade. Public targets only.\n");
     this.write("/home/operator/notes.txt", "scope: only systems i own or am authorized to test.\nthe bench knocks once, reads, and grades. it does not exploit.\n");
+    this.write("/home/operator/hello.lua", "-- lua in the room (fengari)\nprint('hello from blacksite lua')\nfor i = 1, 3 do print('count', i) end\nlocal t = {bench = 'blacksite'}\nprint(t.bench)\n");
+    this.write("/home/operator/demo.scm", "; scheme in the room — run it: run demo.scm\n(define (square x) (* x x))\n(display (map square (list 3 4 12)))\n(newline)\n(display \"lisp answers in the room\")\n");
+    this.write("/home/operator/notes.sql", "-- sqlite in the room — run it: run notes.sql  (the db persists at room.db)\nCREATE TABLE IF NOT EXISTS notes (body TEXT);\nINSERT INTO notes VALUES ('the room remembers'), ('one knock, read, grade');\nSELECT COUNT(*) AS notes FROM notes;\n");
     this.write("/home/operator/hello.py", "import math\n\nprint('hello from blacksite python')\nprint('pi is', math.pi)\nbench = {'bench': 'blacksite', 'engine': 'skulpt'}\nprint(bench)\nfor i in range(3):\n    print('count', i)\n");
     this.write("/home/operator/demo.js", "console.log('hello from blacksite javascript');\nconst xs = [1,2,3,4];\nconsole.log('sum', xs.reduce((a,b)=>a+b,0));\n");
     this.write("/home/operator/scope.txt", "target: example.com\nauthorization: demonstration target (RFC 2606)\n");

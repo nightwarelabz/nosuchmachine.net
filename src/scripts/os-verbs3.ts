@@ -1,5 +1,6 @@
 // BLACKSITE OS — DNS/mail ledgers, protocol probes, batteries, engines.
 import { verb, b64ToB, bToB64, bToHex, hexToB, mmh3 } from "./os-shell";
+import { runScheme, runBrainfuck, runLua, runSql, wasmExports, runWasm } from "./os-engines2";
 import { api, exchange, edgeDns, dnsRecords, fmtBytes, hostPort, need } from "./os-verbs";
 import { asUrl, fetchEdge } from "./os-verbs2";
 
@@ -423,7 +424,12 @@ function registerEngines() {
     if (path.endsWith(".py")) return runPython(ctx, content, path);
     if (path.endsWith(".js") || path.endsWith(".mjs")) return runJs(ctx, content);
     if (path.endsWith(".sh")) { const { execLine } = await import("./os-shell"); for (const line of content.split("\n")) { if (line.trim() && !line.startsWith("#")) await execLine(ctx.os, line, ctx.io, 1); } return; }
-    return `don't know how to run ${path} — the room runs .py, .js, and .sh.`;
+    if (path.endsWith(".lua")) { const lines: string[] = []; try { await runLua(content, { out: (t) => lines.push(t) }); } catch (e: any) { lines.push(String(e?.message || e)); } return lines.join("\n"); }
+    if (path.endsWith(".scm") || path.endsWith(".ss")) { const lines: string[] = []; try { runScheme(content, { out: (t) => lines.push(t) }); } catch (e: any) { lines.push(String(e?.message || e)); } return lines.join(""); }
+    if (path.endsWith(".bf")) { const lines: string[] = []; try { runBrainfuck(content, "", { out: (t) => lines.push(t) }); } catch (e: any) { lines.push(String(e?.message || e)); } return lines.join(""); }
+    if (path.endsWith(".sql")) { const { VERBS } = await import("./os-shell"); return VERBS.get("sql")!.run({ ...ctx, args: [path] } as any); }
+    if (path.endsWith(".ch8")) return "chip-8 is a machine, not a text run — open it with: chip8 " + path;
+    return `don't know how to run ${path} — the room runs .py, .js, .sh, .lua, .scm, .bf, and .sql.`;
   });
   verb("python3", "LIVE", "python3 <file> — the room's Python (Skulpt dialect: no threads, no sockets — said out loud)", async (ctx) => {
     if (!need(ctx, 1, "python3 <file>")) return;
@@ -438,6 +444,72 @@ function registerEngines() {
     return runJs(ctx, maybeFile !== null ? maybeFile : ctx.args.join(" "));
   });
   verb("node", "LIVE", "node <file> — same engine, node manners", async (ctx) => { const { VERBS } = await import("./os-shell"); return VERBS.get("js")!.run(ctx); });
+  verb("engines", "LIVE", "engines — every engine in the room and whether it answers", async () => {
+    return [
+      "THE ENGINE ROOM — eight engines, all real, all in this tab:",
+      "  python    Skulpt (vendored) — python3 <file.py>",
+      "  js        the room's JavaScript, sandboxed — js <file|expr>",
+      "  lua       Lua 5.x on Fengari (vendored) — lua <file> · lua -e \"code\"",
+      "  scheme    a hand-built Lisp in this source — scheme <file> · scheme -e \"(...)\"",
+      "  bf        Brainfuck, 30,000 cells — bf <file> · bf -e \"code\"",
+      "  sql       SQLite itself (sql.js wasm) — sql -e \"SELECT ...\" · sql <file.sql>",
+      "            the database lives at /home/operator/room.db and persists in the tree",
+      "  wasm      WebAssembly modules from the tree — wasm exports <f> · wasm run <f> <fn> [args]",
+      "  chip8     a CHIP-8 machine (1980s, 4K, honest) — chip8 [file.ch8] opens the console",
+      "every engine states its own limits where it has them; none of them phone home.",
+    ].join("\n");
+  });
+  verb("lua", "LIVE", "lua <file.lua> | lua -e \"code\" — the room's Lua (Fengari)", async (ctx) => {
+    if (!need(ctx, 1, "lua <file.lua> | lua -e \"code\"")) return;
+    const lines: string[] = [];
+    const src = ctx.args[0] === "-e" ? ctx.args.slice(1).join(" ") : ctx.os.read(ctx.args[0]);
+    if (src === null || src === undefined) throw new Error(`no such file: ${ctx.args[0]}`);
+    try { await runLua(src as string, { out: (t) => lines.push(t) }); } catch (e: any) { lines.push(String(e?.message || e)); }
+    return lines.join("\n");
+  });
+  verb("scheme", "LIVE", "scheme <file.scm> | scheme -e \"(expr)\" — the room's Lisp", async (ctx) => {
+    if (!need(ctx, 1, "scheme <file.scm> | scheme -e \"(expr)\"")) return;
+    const lines: string[] = [];
+    const src = ctx.args[0] === "-e" ? ctx.args.slice(1).join(" ") : ctx.os.read(ctx.args[0]);
+    if (src === null || src === undefined) throw new Error(`no such file: ${ctx.args[0]}`);
+    try { runScheme(src as string, { out: (t) => lines.push(t) }); } catch (e: any) { lines.push(String(e?.message || e)); }
+    return lines.join("");
+  });
+  verb("bf", "LIVE", "bf <file.bf> | bf -e \"code\" — Brainfuck, thirty thousand cells", async (ctx) => {
+    if (!need(ctx, 1, "bf <file.bf> | bf -e \"code\"")) return;
+    const lines: string[] = [];
+    const src = ctx.args[0] === "-e" ? ctx.args.slice(1).join(" ") : ctx.os.read(ctx.args[0]);
+    if (src === null || src === undefined) throw new Error(`no such file: ${ctx.args[0]}`);
+    try { runBrainfuck(src as string, "", { out: (t) => lines.push(t) }); } catch (e: any) { lines.push(String(e?.message || e)); }
+    return lines.join("");
+  });
+  verb("sql", "LIVE", "sql -e \"SELECT ...\" | sql <file.sql> — SQLite (sql.js), db at /home/operator/room.db", async (ctx) => {
+    if (!need(ctx, 1, "sql -e \"SELECT ...\" | sql <file.sql>")) return;
+    const stmt = ctx.args[0] === "-e" ? ctx.args.slice(1).join(" ") : ctx.os.read(ctx.args[0]);
+    if (stmt === null || stmt === undefined) throw new Error(`no such file: ${ctx.args[0]}`);
+    const existing = ctx.os.readBytes("/home/operator/room.db");
+    const { text, dbBytes } = await runSql(existing, stmt as string);
+    ctx.os.writeBytes("/home/operator/room.db", dbBytes);
+    return text;
+  });
+  verb("wasm", "LIVE", "wasm exports <file.wasm> | wasm run <file.wasm> <fn> [numbers...] — run real modules from the tree", async (ctx) => {
+    if (!need(ctx, 2, "wasm exports|run <file.wasm> [fn] [args]")) return;
+    const bytes = ctx.os.readBytes(ctx.args[1]);
+    if (!bytes) throw new Error(`no such file: ${ctx.args[1]}`);
+    if (ctx.args[0] === "exports") { const ex = await wasmExports(bytes); return ex.map((e) => `${e.kind} ${e.name}`).join("\n") || "(no exports)"; }
+    if (ctx.args[0] === "run") {
+      if (!need(ctx, 3, "wasm run <file.wasm> <fn> [numbers...]")) return;
+      const lines: string[] = [];
+      const result = await runWasm(bytes, ctx.args[2], ctx.args.slice(3).map(Number), { out: (t) => lines.push(t) });
+      if (result !== "") lines.push(`→ ${result}`);
+      return lines.join("");
+    }
+    return "wasm exports <file> — list a module's exports\nwasm run <file> <fn> [numbers...] — call an exported function (its prints land here; WASI fd_write is wired)";
+  });
+  verb("chip8", "LIVE", "chip8 [file.ch8] — open the CHIP-8 console (the demo ROM runs if you name none)", async (ctx) => {
+    document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "chip8", arg: ctx.args[0] || "" } }));
+    return "the CHIP-8 console opens on the desk — 64×32, sixteen keys (your 1-4/Q-R/A-F/Z-V rows), four thousand bytes of 1977.";
+  });
   verb("decode", "LIVE", "decode <hex> — raw advertisement bytes through the decoders (BLE AD structures)", async (ctx) => {
     if (!need(ctx, 1, "decode <hex>")) return;
     const bytes = hexToB(ctx.args.join(""));
@@ -536,6 +608,7 @@ function registerSelfTests() {
     checks.push(["crypto.subtle (hashes, seals)", !!crypto?.subtle, ""]);
     checks.push(["engines: javascript", true, "native, sandboxed"]);
     try { await loadSkulpt(); checks.push(["engines: python (skulpt)", true, "vendored, loads on demand"]); } catch { checks.push(["engines: python (skulpt)", false, "failed to load"]); }
+    checks.push(["engines: lua / scheme / bf / wasm / chip8", true, "in-room; lua (fengari) and sql (sqlite wasm) load on first use"]);
     try { const echo = await api("/api/echo"); checks.push(["edge functions", !!echo.ok, echo.ok ? `colo ${echo.network?.colo}` : "no answer"]); } catch { checks.push(["edge functions", false, "unreachable"]); }
     checks.push(["emcon", true, ctx.os.emcon]);
     return ["DIAGNOSE — the house through its paces:", ...checks.map(([n, ok, note]) => `  ${ok ? "✓" : "✗"} ${n}${note ? ` — ${note}` : ""}`)].join("\n");
@@ -553,6 +626,9 @@ function registerSelfTests() {
       ["subnet of the room", () => ctx.os.norm("..", "/home/operator") === "/home"],
       ["426-command roster present", async () => { const { default: r } = await import("../data/blacksite-commands.json"); return (r as any[]).length === 426; }],
       ["python engine answers", async () => { const Sk = await loadSkulpt(); return !!Sk; }],
+      ["scheme engine evaluates", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runScheme("(define (fact n) (if (< n 2) 1 (* n (fact (- n 1))))) (display (fact 10))", { out: (t: string) => lines.push(t) }); return lines.join("") === "3628800"; }],
+      ["brainfuck engine prints HI", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runBrainfuck("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.", "", { out: (t: string) => lines.push(t) }); return lines.join("").startsWith("Hello"); }],
+      ["chip-8 cpu: add + jump", async () => { const m = await import("./os-engines2"); const cpu = new m.Chip8(); cpu.load(new Uint8Array([0x60, 0x05, 0x70, 0x03, 0x12, 0x04])); cpu.cycle(); cpu.cycle(); return cpu.V[0] === 8 && cpu.pc === 4; }],
     ];
     let passed = 0; const lines: string[] = [];
     for (const [name, fn] of cases) {
