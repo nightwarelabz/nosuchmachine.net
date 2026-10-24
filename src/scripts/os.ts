@@ -1092,10 +1092,10 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "terminal", "Terminal"], ["files", "files", "Files"], ["editor", "editor", "Editor"],
+    ["terminal", "terminal", "Terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["files", "files", "Files"], ["editor", "editor", "Editor"],
     ["processes", "processes", "Processes"], ["gauntlet", "gauntlet", "Gauntlet"], ["journal", "journal", "Journal"],
     ["help", "help", "Help — 427"], ["settings", "settings", "Settings"], ["bottle", "bottle", "Daylight Bottle"], ["system", "system", "System"],
-    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
+    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["sigint", "sigint", "SIGINT"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
     ["wolf3d", "wolf3d", "Wolfenstein 3D"], ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
