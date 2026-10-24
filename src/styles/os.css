@@ -80,29 +80,29 @@
 .os-win-head:active { cursor: grabbing; }
 .os-win-title { font-size: 0.79rem; letter-spacing: 0.05em; font-weight: 600; }
 .os-win-controls { display: flex; gap: 5px; }
-.os-win-btn { width: 28px; height: 24px; border: 1px solid var(--os-line-soft); background: rgba(255, 255, 255, 0.04); border-radius: 6px; cursor: pointer; line-height: 1; font-size: 0.8rem; transition: background 0.12s, border-color 0.12s; }
+.os-win-btn { width: 28px; height: 24px; border: 1px solid var(--os-line-soft); background: rgba(255, 255, 255, 0.08); border-radius: 6px; cursor: pointer; line-height: 1; font-size: 0.8rem; transition: background 0.12s, border-color 0.12s; }
 .os-win-btn:hover { border-color: var(--os-muted); background: rgba(255, 255, 255, 0.09); }
 .os-win-close:hover { background: var(--os-accent); border-color: var(--os-accent); color: var(--os-on-accent); }
 .os-win-body { flex: 1; overflow: auto; padding: 0.75rem; position: relative; }
 .os-win-resize { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; }
 
 /* ————— taskbar ————— */
-.os-taskbar { display: flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0.65rem calc(0.4rem + env(safe-area-inset-bottom)); background: rgba(8, 11, 17, 0.88); border-top: 1px solid var(--os-line-soft); z-index: 90; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-.os-start { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 88%, #fff 6%), var(--os-accent)); color: var(--os-on-accent); border: none; border-radius: 8px; padding: 0.46rem 0.8rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 4px 16px var(--os-accent-soft); transition: transform 0.1s, filter 0.12s; }
+.os-taskbar { display: flex; align-items: center; gap: 0.55rem; padding: 0.26rem 0.6rem calc(0.26rem + env(safe-area-inset-bottom)); background: rgba(8, 11, 17, 0.88); border-top: 1px solid var(--os-line-soft); z-index: 90; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.os-start { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 88%, #fff 6%), var(--os-accent)); color: var(--os-on-accent); border: none; border-radius: 8px; padding: 0.3rem 0.62rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 4px 16px var(--os-accent-soft); transition: transform 0.1s, filter 0.12s; }
 .os-start:hover { filter: brightness(1.1); }
 .os-start:active { transform: scale(0.97); }
 .os-taskbar-apps { display: flex; gap: 0.4rem; overflow-x: auto; flex: 1; scrollbar-width: none; }
 .os-taskbar-apps::-webkit-scrollbar { display: none; }
-.os-task-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--os-line-soft); border-radius: 8px; padding: 0.36rem 0.65rem; font-size: 0.72rem; cursor: pointer; white-space: nowrap; transition: background 0.12s; }
+.os-task-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--os-line-soft); border-radius: 8px; padding: 0.24rem 0.55rem; font-size: 0.7rem; cursor: pointer; white-space: nowrap; transition: background 0.12s; }
 .os-task-btn:hover { background: rgba(255, 255, 255, 0.1); }
 .os-task-link { color: var(--os-muted); text-decoration: none; font-size: 0.72rem; white-space: nowrap; }
 .os-task-link:hover { color: var(--os-ink); }
-.os-emcon-chip { border: 1px solid var(--os-line); background: rgba(255, 255, 255, 0.03); border-radius: 999px; padding: 0.32rem 0.7rem; font-size: 0.68rem; letter-spacing: 0.12em; cursor: pointer; white-space: nowrap; font-weight: 700; }
+.os-emcon-chip { border: 1px solid var(--os-line); background: rgba(255, 255, 255, 0.03); border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.68rem; letter-spacing: 0.12em; cursor: pointer; white-space: nowrap; font-weight: 700; }
 .os-emcon-chip[data-level="open"] { color: var(--os-green); }
 .os-emcon-chip[data-level="charlie"] { color: #ffb02e; }
 .os-emcon-chip[data-level="bravo"] { color: #ff8c2e; }
 .os-emcon-chip[data-level="alpha"] { color: var(--os-accent); border-color: var(--os-accent); box-shadow: 0 0 12px var(--os-accent-soft); }
-.os-clock { font-size: 0.74rem; color: var(--os-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.os-clock { font-size: 0.72rem; color: var(--os-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ————— terminal ————— */
 .os-term-body { display: flex; flex-direction: column; overflow: hidden; }
@@ -117,7 +117,7 @@
 .os-term-input:focus { outline: none; }
 
 /* ————— generic rooms ————— */
-.os-btn { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--os-line); border-radius: 8px; padding: 0.44rem 0.75rem; font-size: 0.77rem; cursor: pointer; transition: border-color 0.12s, background 0.12s, transform 0.1s; }
+.os-btn { background: rgba(255, 255, 255, 0.09); border: 1px solid var(--os-line); border-radius: 8px; padding: 0.44rem 0.75rem; font-size: 0.77rem; cursor: pointer; transition: border-color 0.12s, background 0.12s, transform 0.1s; }
 .os-btn:hover { border-color: var(--os-muted); background: rgba(255, 255, 255, 0.08); }
 .os-btn:active { transform: scale(0.98); }
 .os-btn.primary { background: var(--os-accent); border-color: var(--os-accent); color: var(--os-on-accent); font-weight: 700; box-shadow: 0 4px 14px var(--os-accent-soft); }
@@ -196,7 +196,7 @@
 .os-bottle-box h3 { font-size: 0.8rem; letter-spacing: 0.12em; color: var(--os-muted); margin: 0 0 0.55rem; }
 .os-bottle-area { width: 100%; background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line-soft); border-radius: 8px; font: inherit; font-size: 0.79rem; line-height: 1.55; padding: 0.6rem; resize: vertical; margin-bottom: 0.5rem; }
 .os-bottle-area:focus { outline: 1px solid var(--os-accent); }
-.os-bottle-input, .os-bottle-select { background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line-soft); border-radius: 8px; font: inherit; font-size: 0.77rem; padding: 0.44rem 0.6rem; }
+.os-bottle-input, .os-bottle-select { background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line); border-radius: 8px; font: inherit; font-size: 0.77rem; padding: 0.44rem 0.6rem; }
 
 /* ————————————————————————————————
    TABLET allocation (761–1100px): windows open near-full, dock stays left
@@ -223,7 +223,7 @@
   .os-desktop-brand { display: none; }
   .os-taskbar { gap: 0.4rem; padding: 0.35rem 0.45rem; }
   .os-start { padding: 0.5rem 0.65rem; font-size: 0.78rem; }
-  .os-task-btn { padding: 0.44rem 0.6rem; min-height: 38px; }
+  .os-task-btn { padding: 0.3rem 0.55rem; min-height: 34px; }
   .os-task-link { display: none; }
   .os-clock { font-size: 0.7rem; }
   .os-emcon-chip { padding: 0.4rem 0.6rem; }
@@ -251,16 +251,17 @@
 .os-relay { display: flex; flex-direction: column; height: 100%; gap: 0.6rem; }
 .os-relay-card { display: flex; flex-direction: column; gap: 0.55rem; max-width: 460px; }
 .os-relay-tls { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; color: var(--os-dim, #9fb0c3); }
+.os-relay { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .os-relay-view { display: grid; grid-template-columns: 128px minmax(0, 1fr) 148px; gap: 0.6rem; flex: 1; min-height: 0; }
 .os-relay-targets { display: flex; flex-direction: column; gap: 0.3rem; overflow-y: auto; }
-.os-relay-target { text-align: left; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); color: inherit; border-radius: 7px; padding: 0.42rem 0.55rem; font: inherit; font-size: 0.78rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-relay-target { text-align: left; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); color: inherit; border-radius: 7px; padding: 0.42rem 0.55rem; font: inherit; font-size: 0.78rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .os-relay-target.active { border-color: #ffb02e; color: #ffb02e; }
 .os-relay-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .os-relay-lines { flex: 1; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; line-height: 1.5; padding: 0.4rem 0.2rem; overflow-wrap: anywhere; }
 .os-relay-line { white-space: pre-wrap; }
 .os-relay-inputrow { border-top: 1px solid rgba(255,255,255,0.09); padding-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; }
 .os-relay-inputrow .os-relay-input { flex: 1; }
-.os-relay-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: inherit; font: inherit; font-size: 0.85rem; padding: 0.55rem 0.65rem; }
+.os-relay-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 7px; color: inherit; font: inherit; font-size: 0.85rem; padding: 0.55rem 0.65rem; }
 .os-relay-users { overflow-y: auto; font-size: 0.76rem; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 0.55rem; }
 .os-relay-users-h { color: var(--os-dim, #9fb0c3); margin-bottom: 0.35rem; }
 .os-relay-user { padding: 0.1rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -290,6 +291,8 @@
   .os-icon { width: auto; min-height: 80px; padding: 8px 2px 6px; border-radius: 12px; background: rgba(4, 6, 9, 0.30); }
   .os-icon-glyph { font-size: 1.55rem; }
   .os-icon-label { font-size: 0.66rem; line-height: 1.25; min-height: 2.5em; text-shadow: 0 1px 5px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9); }
+  .os-window { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
+  .os-win-resize { display: none; }
   .os-taskbar { gap: 0.4rem; padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom)); }
   .os-taskbar > * { flex-shrink: 0; }
   .os-taskbar-apps { flex: 1 1 auto; min-width: 0; }
