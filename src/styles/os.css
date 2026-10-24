@@ -385,3 +385,15 @@
 .os-ghost-mirror { visibility: hidden; }
 .os-ghost-sug { color: var(--os-muted); opacity: 0.55; }
 @media (max-width: 760px) { .os-ghost { font-size: 16px; } }
+/* ————— the motion pass (overhaul wave 8) —————
+   Windows leave like they arrived: with intent. The books (registry,
+   session, taskbar) always close instantly — only the glass lingers.
+   The reduced-motion rule above stills every frame of this. */
+@keyframes os-win-out { to { opacity: 0; transform: scale(0.96) translateY(6px); } }
+.os-window.os-win-out { animation: os-win-out 0.15s ease-in both; pointer-events: none; }
+@keyframes os-win-min { to { opacity: 0; transform: scale(0.93) translateY(10px); } }
+.os-window.os-win-min { animation: os-win-min 0.13s ease-in both; }
+.os-window.os-win-back { animation: os-win-in 0.2s ease-out both; }
+@keyframes os-item-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
+.os-launch-item.fresh { animation: os-item-in 0.18s ease both; animation-delay: calc(var(--i, 0) * 16ms); }
+.os-window, .os-win-head, .os-taskbar, .os-launcher, .os-desktop { transition: background-color 0.3s ease, border-color 0.3s ease; }

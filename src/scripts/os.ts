@@ -160,8 +160,8 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); });
-  minBtn.addEventListener("click", () => { win.style.display = "none"; saveSession(); });
+  closeBtn.addEventListener("click", () => { windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => win.remove(), 150); });
+  minBtn.addEventListener("click", () => { if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
@@ -228,9 +228,12 @@ function snapWindow(win: HTMLElement, side: "l" | "r") {
   win.dataset.snap = side;
   focusWindow(win);
 }
+const REDUCED = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function focusWindow(win: HTMLElement) {
+  const wasHidden = win.style.display === "none";
   win.style.zIndex = String(++zTop);
   win.style.display = "";
+  if (wasHidden && !REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); }
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
   saveSession();
 }
@@ -1120,6 +1123,7 @@ export function osToast(text: string) {
   setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity 0.4s"; setTimeout(() => t.remove(), 420); }, 4200);
 }
 let launcherEl: HTMLElement | null = null;
+let launcherOpenedAt = 0;
 function tileWindows() {
   const wins = visibleWindows();
   if (!wins.length) return;
@@ -1181,9 +1185,11 @@ function openLauncher() {
       items.push(...cmdItems.slice(0, 8));
     }
     let lastSection = "";
+    const fresh = Date.now() - launcherOpenedAt < 400;
     items.forEach((it, i) => {
       if (it.section && it.section !== lastSection) { lastSection = it.section; list.appendChild(el("div", "os-launch-head", it.section)); }
-      const b = el("button", "os-launch-item" + (i === selected ? " sel" : ""));
+      const b = el("button", "os-launch-item" + (i === selected ? " sel" : "") + (fresh ? " fresh" : ""));
+      b.style.setProperty("--i", String(Math.min(i, 14)));
       if (it.icon) b.appendChild(iconEl(it.icon, "os-launch-icon"));
       b.appendChild(document.createTextNode(it.label));
       b.appendChild(el("small", "", it.small));
@@ -1207,6 +1213,7 @@ function openLauncher() {
       else if (q) { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: q })), 60); }
     } else if (e.key === "Escape") toggleLauncher();
   });
+  launcherOpenedAt = Date.now();
   render();
   setTimeout(() => document.addEventListener("pointerdown", function outside(ev) {
     if (launcherEl && !launcherEl.contains(ev.target as Node) && (ev.target as HTMLElement).id !== "os-start") { toggleLauncher(); document.removeEventListener("pointerdown", outside); }
