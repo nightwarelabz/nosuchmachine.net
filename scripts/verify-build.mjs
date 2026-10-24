@@ -117,6 +117,12 @@ assert.ok(headersOut.includes("frame-ancestors 'self'"), "OS pages must be frama
 import { readFileSync as rfs2 } from "node:fs";
 const soundSrc = rfs2(new URL("../src/scripts/os-sound.ts", import.meta.url), "utf8");
 assert.ok(!soundSrc.includes("if (armed) return"), "the sound engine must re-arm on every gesture - arm-once wedges Safari silent");
+import { existsSync as ex2 } from "node:fs";
+assert.ok(ex2(new URL("../functions/lens.ts", import.meta.url)), "the orc lens function must exist (Safari's only door into the pane)");
+const lensSrc = rfs2(new URL("../functions/lens.ts", import.meta.url), "utf8");
+assert.ok(lensSrc.includes("guardUrl"), "the lens must route every target through the shared SSRF guard");
+assert.ok(!/content-security-policy[^\n]*allow-same-origin/.test(lensSrc), "lens pages must never run with this origin's privileges");
+assert.ok(astroJs.includes("/lens?u="), "the orc room must route non-credentialless browsers through the lens");
 assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
