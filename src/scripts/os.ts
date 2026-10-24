@@ -9,18 +9,18 @@ import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
-import { buildWolf3d } from "./os-wolf3d";
-import { buildOrc } from "./os-orc";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
-import { DEPTH, MAX_NEST, skey, sweepNestKeys } from "./os-depth";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
 import { Chip8, CHIP8_DEMO } from "./os-engines2";
 import { SshSession } from "./os-ssh";
 
+(window as unknown as { __bootStage?: string }).__bootStage = "entry body running";
+{ const c = document.getElementById("boot-canary"); if (c) { try { const m = await import("./os-depth"); c.textContent += `\nCANARY 2: entry body; depth=${m.DEPTH} isolated=${window.crossOriginIsolated} sab=${typeof SharedArrayBuffer}`; } catch (e) { c.textContent += `\nCANARY 2: entry body; depth import failed ${e}`; } } }
 const os = new BlacksiteOS();
+{ const c = document.getElementById("boot-canary"); if (c) c.textContent += "\nCANARY 3: shell constructed"; (window as unknown as { __bootStage?: string }).__bootStage = "shell constructed"; }
 /* AEGIS keeps its own cadence: a snapshot every five minutes of room
    life, so a mass-encryption run always has a recent past to undo to. */
 setInterval(() => { try { os.maybeSnapshot(); } catch { /* the watch does not break the room */ } }, 60_000);
@@ -67,8 +67,6 @@ const APPS: Record<string, { title: string; icon: string }> = {
   ssh: { title: "SSH", icon: "ssh" },
   relay: { title: "Relay — the house wire", icon: "relay" },
   phantom: { title: "phantom", icon: "phantom" },
-  wolf3d: { title: "Wolfenstein 3D", icon: "wolf3d" },
-  orc: { title: "orc — the house browser", icon: "orc" },
 };
 
 /* ————— session retention —————
@@ -76,7 +74,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
    stacked how, which minimized. Kept on this machine only, restored at
    boot — the plain desktop returns exactly as it was left. Files,
    settings and wallpaper already persist through the shell. */
-const SESSION_KEY = skey("blacksite-session-v1");
+const SESSION_KEY = "blacksite-session-v1";
 interface WinRect { app: string; arg?: string; l: string; t: string; w: string; h: string; maxed: boolean; min: boolean; z: number }
 let sessionTimer: ReturnType<typeof setTimeout> | null = null;
 function saveSession() {
@@ -973,8 +971,6 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
   phantom: buildPhantomApp,
-  wolf3d: buildWolf3d,
-  orc: buildOrc,
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
@@ -1054,7 +1050,6 @@ function updateEmconChip() {
 
 /* ---------------- boot ---------------- */
 function boot() {
-  sweepNestKeys();
   registerCoreVerbs();
   registerWireVerbs();
   registerBenchVerbs();
@@ -1070,7 +1065,7 @@ function boot() {
   const lines = [
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
-    DEPTH === 0 ? "kernel: blacksite sh · vfs: mounted (persistent, this browser)" : `kernel: blacksite sh · vfs: mounted (volatile — nest ${DEPTH} of ${MAX_NEST} keeps nothing)`,
+    "kernel: blacksite sh · vfs: mounted (persistent, this browser)",
     `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 427 on the roster`,
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     "doctrine loaded: one knock, read, grade.",
@@ -1079,7 +1074,7 @@ function boot() {
   ];
   let i = 0;
   const tick = () => {
-    if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, Math.max(12, Math.round(110 / (DEPTH + 1)))); }
+    if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, 110); }
     else setTimeout(() => { sfx("live"); overlay.classList.add("done"); restoreSession(); if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } })); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
   };
   tick();
@@ -1090,7 +1085,6 @@ function boot() {
     ["processes", "processes", "Processes"], ["gauntlet", "gauntlet", "Gauntlet"], ["journal", "journal", "Journal"],
     ["help", "help", "Help — 427"], ["settings", "settings", "Settings"], ["bottle", "bottle", "Daylight Bottle"], ["system", "system", "System"],
     ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
-    ["wolf3d", "wolf3d", "Wolfenstein 3D"], ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");
