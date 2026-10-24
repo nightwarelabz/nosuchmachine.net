@@ -1233,6 +1233,13 @@ export function buildSimulacrum(body: HTMLElement) {
     titleMood.textContent = moodLines[Math.abs(seed) % moodLines.length];
     titleEnter.textContent = `click to enter ${wName.toLowerCase()}`;
   };
+  /* the commons state is declared HERE, above the label that
+     names it: refreshLabel runs during construction, long
+     before the commons machinery further down exists */
+  const HOME_SEED = seed;
+  const COMMONS_SEED = 20261024;
+  let inCommons = false;
+  const peers = new Map<string, Peer>();
   const refreshLabel = () => {
     const lean = leanOf(rec);
     seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}${lean > 0.45 ? " · it trusts you" : lean < -0.45 ? " · it is wary of you" : ""}${inCommons ? " · the commons" : ""}${peers.size ? ` · ${peers.size} other${peers.size === 1 ? "" : "s"} walking` : ""}`;
@@ -2247,9 +2254,6 @@ export function buildSimulacrum(body: HTMLElement) {
 
   /* stepping between worlds is the machine's business, not a
      lever on the bar: the walker's own world, and the commons */
-  const HOME_SEED = seed;
-  const COMMONS_SEED = 20261024;
-  let inCommons = false;
   const swapWorld = (ns: number) => {
     seed = ns;
     noise = new Noise(seed);
@@ -2304,7 +2308,6 @@ export function buildSimulacrum(body: HTMLElement) {
      If the wire cannot be reached, the world stays solo and
      says nothing about it. */
   interface Peer { id: string; name: string; hue: number; x: number; z: number; y: number; yaw: number; fly: boolean; cx: number; cz: number; cy: number; cyaw: number; lastSeen: number; greeted: boolean; mesh: Mesh | null }
-  const peers = new Map<string, Peer>();
   const myId = "w" + Math.random().toString(36).slice(2, 10);
   const myName = worldName(HOME_SEED);
   const myHue = (HOME_SEED % 360) / 360;
