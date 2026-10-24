@@ -2412,8 +2412,16 @@ export function buildSimulacrum(body: HTMLElement) {
         return;
       }
       if (st.t !== "s") return;
-      const pr = peers.get(st.id);
-      if (!pr) return;
+      let pr = peers.get(st.id);
+      if (!pr) {
+        /* state IS presence: a walker already inside when you
+           joined had their roster entry eaten by your survey —
+           adopt them from their state; the roster refreshes
+           their true name within the republish cycle */
+        const hsh = djb2(st.id);
+        pr = { id: st.id, name: worldName(hsh), hue: (hsh % 100) / 100, x: 8, z: 8, y: 30, yaw: 0, fly: false, cx: 8, cz: 8, cy: 30, cyaw: 0, lastSeen: performance.now() / 1000, greeted: false, mesh: null };
+        peers.set(st.id, pr);
+      }
       const nx = Math.max(-2000, Math.min(2000, Number(st.x) || 0));
       const nz = Math.max(-2000, Math.min(2000, Number(st.z) || 0));
       if (!pr.greeted) { pr.cx = nx; pr.cz = nz; pr.greeted = true; peerSay(`${pr.name} has come into the world`); refreshLabel(); }
