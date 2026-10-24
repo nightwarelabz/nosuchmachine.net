@@ -2291,7 +2291,7 @@ export function buildSimulacrum(body: HTMLElement) {
     const s = RES_SCALE[iris.res] * dpr;
     const w = Math.max(320, Math.min(2560, Math.round(cw * s)));
     const h = Math.max(200, Math.min(1600, Math.round(ch * s)));
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h); }
   };
   const RADIUS_LADDER = [2, 3, 4];
   const SHADOW_LADDER = [0, 1024, 2048, 4096];
@@ -3646,6 +3646,10 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     step();
     if (!(xrSession && xrRef)) {
+      /* the viewport is stated, never inherited: some engines keep the
+         viewport they were born with when the buffer is resized, and
+         the world ends up drawn small in a corner of its own canvas */
+      gl.viewport(0, 0, canvas.width, canvas.height);
       const asp = canvas.width / canvas.height;
       const stretchF = anKind === "stretch" ? 1 + Math.sin(performance.now() / 1000 * 0.55) * 0.055 * anAmt : 1;
       const proj = m4.persp(1.25 * stretchF, asp, 0.1, 1200);
