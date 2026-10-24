@@ -45,6 +45,48 @@ const APPS: Record<string, { title: string; icon: string }> = {
   relay: { title: "Relay — the house wire", icon: "📻" },
 };
 
+/* ————— session retention —————
+   The desk remembers itself: which windows stand open, where, how big,
+   stacked how, which minimized. Kept on this machine only, restored at
+   boot — the plain desktop returns exactly as it was left. Files,
+   settings and wallpaper already persist through the shell. */
+const SESSION_KEY = "blacksite-session-v1";
+interface WinRect { app: string; arg?: string; l: string; t: string; w: string; h: string; maxed: boolean; min: boolean; z: number }
+let sessionTimer: ReturnType<typeof setTimeout> | null = null;
+function saveSession() {
+  if (sessionTimer) clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    try {
+      const list: WinRect[] = [];
+      for (const [key, win] of windows) {
+        const app = win.dataset.app || key;
+        list.push({ app, arg: app === "editor" ? key.slice(7) || undefined : undefined, l: win.style.left, t: win.style.top, w: win.style.width, h: win.style.height, maxed: win.classList.contains("maxed"), min: win.style.display === "none", z: parseInt(win.style.zIndex || "0", 10) || 0 });
+      }
+      list.sort((a, b) => a.z - b.z);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(list));
+    } catch { /* a disk that keeps nothing still gets a desk */ }
+  }, 250);
+}
+function restoreSession() {
+  let list: WinRect[] = [];
+  try { list = JSON.parse(localStorage.getItem(SESSION_KEY) || "[]"); } catch { list = []; }
+  if (!Array.isArray(list)) list = [];
+  for (const r of list) {
+    if (!r || !APPS[r.app]) continue;
+    openApp(r.app, r.arg);
+    const key = r.app === "editor" ? `editor:${r.arg || ""}` : r.app;
+    const win = windows.get(key);
+    if (!win) continue;
+    if (r.w) win.style.width = r.w;
+    if (r.h) win.style.height = r.h;
+    if (r.l) win.style.left = r.l;
+    if (r.t) win.style.top = r.t;
+    if (r.maxed && !win.classList.contains("maxed")) toggleMaximize(win);
+    if (r.min) win.style.display = "none";
+  }
+  saveSession();
+}
+
 export function openApp(app: string, arg?: string) {
   if (app === "bench" || app === "suite") { window.location.href = "/bench/"; return; }
   const meta = APPS[app];
@@ -79,19 +121,21 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); });
-  minBtn.addEventListener("click", () => { win.style.display = "none"; });
+  closeBtn.addEventListener("click", () => { win.remove(); windows.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); });
+  minBtn.addEventListener("click", () => { win.style.display = "none"; saveSession(); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
   win.classList.add("os-win-in");
   focusWindow(win);
   BUILDERS[app]?.(body, arg);
+  saveSession();
 }
 function focusWindow(win: HTMLElement) {
   win.style.zIndex = String(++zTop);
   win.style.display = "";
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
+  saveSession();
 }
 function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   const bar = document.getElementById("os-taskbar-apps")!;
@@ -119,7 +163,7 @@ function startDrag(e: PointerEvent, win: HTMLElement) {
     win.style.left = `${Math.max(-40, Math.min(window.innerWidth - 80, ev.clientX - startX))}px`;
     win.style.top = `${Math.max(0, Math.min(window.innerHeight - 60, ev.clientY - startY))}px`;
   };
-  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
@@ -130,7 +174,7 @@ function startResize(e: PointerEvent, win: HTMLElement) {
     win.style.width = `${Math.max(320, startW + ev.clientX - startX)}px`;
     win.style.height = `${Math.max(200, startH + ev.clientY - startY)}px`;
   };
-  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
@@ -828,7 +872,7 @@ function boot() {
   let i = 0;
   const tick = () => {
     if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, 110); }
-    else setTimeout(() => { overlay.classList.add("done"); openApp("terminal"); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
+    else setTimeout(() => { overlay.classList.add("done"); restoreSession(); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
   };
   tick();
   // desktop icons

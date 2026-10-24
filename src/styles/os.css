@@ -5,7 +5,7 @@
    mobile layout — fullscreen windows, a top icon dock, 44px targets,
    and 16px inputs so phones never force-zoom the room. */
 .os-root {
-  --os-accent: #ff3b47;
+  --os-accent: #ff3b47; --os-on-accent: #fff;
   --os-accent-soft: rgba(255, 59, 71, 0.16);
   --os-bg: #04060a;
   --os-panel: rgba(11, 15, 23, 0.86);
@@ -23,12 +23,12 @@
 }
 .os-root[data-theme="phosphor"] { --os-accent: #3ddc84; --os-accent-soft: rgba(61,220,132,.14); --os-ink: #c9f5d8; --os-green: #3ddc84; --os-line: #1d3a2a; }
 .os-root[data-theme="ember"] { --os-accent: #ff8c2e; --os-accent-soft: rgba(255,140,46,.15); --os-ink: #f5e3cd; --os-line: #3d2c17; }
-.os-root[data-theme="ghost"] { --os-accent: #e8ecf4; --os-accent-soft: rgba(232,236,244,.12); --os-ink: #e8ecf4; --os-muted: #a7b0c2; --os-line: #39415a; }
+.os-root[data-theme="ghost"] { --os-accent: #e8ecf4; --os-accent-soft: rgba(232,236,244,.12); --os-ink: #e8ecf4; --os-muted: #a7b0c2; --os-line: #39415a; --os-on-accent: #05070a; }
 .os-root[data-theme="arctic"] { --os-accent: #38c6d9; --os-accent-soft: rgba(56,198,217,.14); --os-ink: #d3f2f8; --os-line: #17384a; }
 .os-root[data-theme="plumage"] { --os-accent: #b78cff; --os-accent-soft: rgba(183,140,255,.15); --os-ink: #eadff5; --os-line: #372a4d; }
 .os-root * { box-sizing: border-box; }
 .os-root button { font: inherit; color: inherit; }
-.os-root ::selection { background: var(--os-accent); color: #fff; }
+.os-root ::selection { background: var(--os-accent); color: var(--os-on-accent); }
 .os-root ::-webkit-scrollbar { width: 10px; height: 10px; }
 .os-root ::-webkit-scrollbar-thumb { background: #22304a; border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
 .os-root :focus-visible { outline: 2px solid var(--os-accent); outline-offset: 1px; }
@@ -82,13 +82,13 @@
 .os-win-controls { display: flex; gap: 5px; }
 .os-win-btn { width: 28px; height: 24px; border: 1px solid var(--os-line-soft); background: rgba(255, 255, 255, 0.04); border-radius: 6px; cursor: pointer; line-height: 1; font-size: 0.8rem; transition: background 0.12s, border-color 0.12s; }
 .os-win-btn:hover { border-color: var(--os-muted); background: rgba(255, 255, 255, 0.09); }
-.os-win-close:hover { background: var(--os-accent); border-color: var(--os-accent); color: #fff; }
+.os-win-close:hover { background: var(--os-accent); border-color: var(--os-accent); color: var(--os-on-accent); }
 .os-win-body { flex: 1; overflow: auto; padding: 0.75rem; position: relative; }
 .os-win-resize { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; }
 
 /* ————— taskbar ————— */
 .os-taskbar { display: flex; align-items: center; gap: 0.55rem; padding: 0.4rem 0.65rem calc(0.4rem + env(safe-area-inset-bottom)); background: rgba(8, 11, 17, 0.88); border-top: 1px solid var(--os-line-soft); z-index: 90; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-.os-start { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 88%, #fff 6%), var(--os-accent)); color: #fff; border: none; border-radius: 8px; padding: 0.46rem 0.8rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 4px 16px var(--os-accent-soft); transition: transform 0.1s, filter 0.12s; }
+.os-start { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 88%, #fff 6%), var(--os-accent)); color: var(--os-on-accent); border: none; border-radius: 8px; padding: 0.46rem 0.8rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; box-shadow: 0 4px 16px var(--os-accent-soft); transition: transform 0.1s, filter 0.12s; }
 .os-start:hover { filter: brightness(1.1); }
 .os-start:active { transform: scale(0.97); }
 .os-taskbar-apps { display: flex; gap: 0.4rem; overflow-x: auto; flex: 1; scrollbar-width: none; }
@@ -120,7 +120,7 @@
 .os-btn { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--os-line); border-radius: 8px; padding: 0.44rem 0.75rem; font-size: 0.77rem; cursor: pointer; transition: border-color 0.12s, background 0.12s, transform 0.1s; }
 .os-btn:hover { border-color: var(--os-muted); background: rgba(255, 255, 255, 0.08); }
 .os-btn:active { transform: scale(0.98); }
-.os-btn.primary { background: var(--os-accent); border-color: var(--os-accent); color: #fff; font-weight: 700; box-shadow: 0 4px 14px var(--os-accent-soft); }
+.os-btn.primary { background: var(--os-accent); border-color: var(--os-accent); color: var(--os-on-accent); font-weight: 700; box-shadow: 0 4px 14px var(--os-accent-soft); }
 .os-btn.danger { border-color: #7a2027; color: #ff848c; }
 .os-btn.small { padding: 0.2rem 0.5rem; font-size: 0.67rem; border-radius: 6px; }
 .os-btnrow { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.7rem; }
