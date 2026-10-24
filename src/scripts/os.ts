@@ -20,7 +20,10 @@ import { identifyFile, hexdump } from "./os-parse";
 import { Chip8, CHIP8_DEMO } from "./os-engines2";
 import { SshSession } from "./os-ssh";
 
+(window as unknown as { __bootStage?: string }).__bootStage = "entry body running";
+{ const c = document.getElementById("boot-canary"); if (c) { try { const m = await import("./os-depth"); c.textContent += `\nCANARY 2: entry body; depth=${m.DEPTH} isolated=${window.crossOriginIsolated} sab=${typeof SharedArrayBuffer}`; } catch (e) { c.textContent += `\nCANARY 2: entry body; depth import failed ${e}`; } } }
 const os = new BlacksiteOS();
+{ const c = document.getElementById("boot-canary"); if (c) c.textContent += "\nCANARY 3: shell constructed"; (window as unknown as { __bootStage?: string }).__bootStage = "shell constructed"; }
 /* AEGIS keeps its own cadence: a snapshot every five minutes of room
    life, so a mass-encryption run always has a recent past to undo to. */
 setInterval(() => { try { os.maybeSnapshot(); } catch { /* the watch does not break the room */ } }, 60_000);
