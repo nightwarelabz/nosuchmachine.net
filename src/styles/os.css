@@ -431,3 +431,8 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-sigint-reg { width: 100%; border-collapse: collapse; font-family: ui-monospace, monospace; font-size: 0.72rem; }
 .os-sigint-reg th, .os-sigint-reg td { text-align: left; padding: 0.14rem 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
 .os-sigint-reg tr { cursor: pointer; }
+
+/* ——— Simulacrum ——— */
+.os-sim { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
+.os-sim-canvas { width: 100%; flex: 1; min-height: 320px; background: #0a1420; border: 1px solid var(--os-line); border-radius: 8px; cursor: crosshair; touch-action: none; }
+.os-sim-hud { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }

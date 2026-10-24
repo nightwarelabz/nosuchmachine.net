@@ -49,6 +49,7 @@ export const ICONS: Record<string, string> = {
   wolf3d: wrap(`<path d="M5 20.5v-11M19 20.5v-11M5 9.5h14M5 20.5h14"/><path d="M5 9.5V6.8h3v2.7M10.5 9.5V6.8h3v2.7M16 9.5V6.8h3v2.7"/><path d="M9.8 20.5v-3.6a2.2 2.2 0 0 1 4.4 0v3.6"/>${dot(12, 13.4, 0.95)}`),
   orc: wrap(`<circle cx="12" cy="12" r="8.6"/><ellipse cx="12" cy="12" rx="3.9" ry="8.6"/><path d="M3.9 9h16.2M3.9 15h16.2"/>`),
   sigint: wrap(`<path d="M4.5 20.5h15"/><path d="M6 20.5v-5.5M9.8 20.5V7.5M13.6 20.5v-8.5M17.4 20.5V4.8"/>${dot(17.4, 3.4, 1)}`),
+  simulacrum: wrap(`<circle cx="17.5" cy="6.5" r="1.8"/><path d="M3 19.5l5.2-7.5 3.8 4.6 3-3.9 6 6.8"/><path d="M2.5 19.5h19"/>`),
   bench: wrap(`<circle cx="12" cy="12" r="6.8"/><path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21"/>${dot(12, 12, 1)}`),
   grid: wrap(`<rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/>`),
 };
