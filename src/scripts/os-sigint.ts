@@ -66,7 +66,7 @@ function synthBand(sr: number, seconds: number): AudioBuffer {
   };
   /* noise floor */
   let lp = 0;
-  for (let i = 0; i < n; i++) { const w = rnd() * 2 - 1; lp += 0.08 * (w - lp); buf[i] += lp * 0.05 + w * 0.006; }
+  for (let i = 0; i < n; i++) { const w = rnd() * 2 - 1; lp += 0.08 * (w - lp); buf[i] += lp * 0.03 + w * 0.006; }
 
   /* CW beacon @ 3.2 kHz — keyed carrier, shaped edges */
   const msg = "VVV VVV DE NIGHTWARE LABZ · SDR TEST · 599 · ";
@@ -247,7 +247,12 @@ export function buildSigint(body: HTMLElement) {
   let bandBuffer: AudioBuffer | null = null;
   let freq = 3200, mode = "cw", running = false;
   let latestMag: Float32Array | null = null;
+  const hist = document.createElement("canvas");
+  hist.width = 1024; hist.height = 226;
+  const hx = hist.getContext("2d")!;
+  hx.fillStyle = "#020604"; hx.fillRect(0, 0, hist.width, hist.height);
   let stations: Station[] = [];
+  const candidates: Array<{ f: number; n: number }> = [];
   try {
     const saved = JSON.parse(localStorage.getItem(skey(REG_KEY)) || "[]") as Station[];
     if (Array.isArray(saved)) stations = saved.map((s) => ({ ...s, trail: [], freqHist: [] }));
@@ -255,6 +260,7 @@ export function buildSigint(body: HTMLElement) {
 
   /* CW decoder state */
   let envMin = 0.02, envMax = 0.4, markStart = 0, spaceStart = 0, inMark = false;
+  let rawMark = false, rawSince = 0;
   let unit = 60; /* ms, adapts */
   let curCode = "";
   const setCopy = (txt: string) => {
@@ -332,7 +338,25 @@ export function buildSigint(body: HTMLElement) {
         node.connect(master); master.connect(ctx.destination);
         node.port.onmessage = (e: MessageEvent) => {
           const d = e.data as { type: string; mag?: Float32Array; v?: number; open?: boolean; chunk?: Float32Array };
-          if (d.type === "spectrum" && d.mag) latestMag = d.mag;
+          if (d.type === "spectrum" && d.mag) {
+            latestMag = d.mag;
+            /* one waterfall row per spectrum frame, kept on a history
+               canvas — the old per-frame translucent fade erased rows
+               almost as fast as they were drawn. */
+            hx.drawImage(hist, 0, 1);
+            const img = hx.createImageData(hist.width, 1);
+            const n = d.mag.length;
+            for (let x = 0; x < hist.width; x++) {
+              const db = d.mag[Math.floor((x / hist.width) * (n - 1))];
+              const t = Math.max(0, Math.min(1, (db + 105) / 55));
+              img.data[x * 4] = Math.floor(20 + t * 60);
+              img.data[x * 4 + 1] = Math.floor(30 + t * 220);
+              img.data[x * 4 + 2] = Math.floor(24 + t * 70);
+              img.data[x * 4 + 3] = 255;
+            }
+            hx.putImageData(img, 0, 0);
+            registryTick(d.mag, ctx ? ctx.sampleRate : 48000);
+          }
           if (d.type === "env") feedDecoder(d.v ?? 0, !!d.open);
           if (d.type === "rec" && d.chunk && recording) recChunks.push(d.chunk);
         };
@@ -414,11 +438,13 @@ export function buildSigint(body: HTMLElement) {
   /* ---------------- CW decoder ---------------- */
   function feedDecoder(v: number, open: boolean) {
     if (!open) v = 0;
-    envMin = Math.min(envMin + 0.0004, v);
-    envMax = Math.max(envMax - 0.0004, v, envMin + 0.05);
-    const thr = envMin + (envMax - envMin) * 0.45;
+    envMin = v < envMin ? v : envMin + (v - envMin) * 0.002;
+    envMax = Math.max(v, envMax - 0.0006, envMin + 0.04);
     const now = performance.now();
-    const mark = v > thr;
+    const want = inMark ? v > envMin + (envMax - envMin) * 0.32 : v > envMin + (envMax - envMin) * 0.55;
+    if (want !== rawMark) { rawMark = want; rawSince = now; }
+    if (rawMark === inMark || now - rawSince < 22) return; /* debounce */
+    const mark = rawMark;
     if (mark && !inMark) {
       inMark = true; markStart = now;
       const space = now - spaceStart;
@@ -434,11 +460,23 @@ export function buildSigint(body: HTMLElement) {
 
   /* ---------------- registry engine ---------------- */
   const classify = (st: Station): [string, string] => {
-    const span = st.freqHist.length > 6 ? Math.max(...st.freqHist) - Math.min(...st.freqHist) : 0;
-    if (span > 100 && span < 500) return ["RTTY · FSK", "probable"];
+    if (st.hits < 12) return ["carrier", "possible"];
+    /* RTTY/FSK is a BIMODAL claim: two stable tones, not jitter. */
+    if (st.freqHist.length >= 16 && st.widthHz < 700) {
+      const sorted = [...st.freqHist].sort((a, b) => a - b);
+      const med = sorted[Math.floor(sorted.length / 2)];
+      const lo = st.freqHist.filter((f) => f < med - 40).length;
+      const hi = st.freqHist.filter((f) => f > med + 40).length;
+      const span = sorted[sorted.length - 1] - sorted[0];
+      if (span > 110 && span < 520 && lo > st.freqHist.length * 0.22 && hi > st.freqHist.length * 0.22) {
+        return ["RTTY · FSK", st.hits > 60 ? "firm" : "probable"];
+      }
+    }
     if (st.widthHz > 6000) return ["FM voice", "probable"];
     if (st.widthHz > 1800) return ["SSB/AM voice band", "possible"];
-    if (st.hits > 40) return ["CW beacon", "firm"];
+    const keyed = st.trail.slice(-30).includes(1) && st.trail.slice(-30).includes(0);
+    if (st.widthHz < 320 && keyed && st.hits > 60) return ["CW beacon", "firm"];
+    if (st.widthHz < 320 && st.hits > 30) return ["CW?", "probable"];
     return ["carrier", "possible"];
   };
 
@@ -447,15 +485,32 @@ export function buildSigint(body: HTMLElement) {
     const sorted = Array.from(mag).sort((a, b) => a - b);
     const floor = sorted[Math.floor(n * 0.5)];
     const now = Date.now();
-    const peaks: Array<{ f: number; db: number; w: number }> = [];
+    const rawPeaks: Array<{ f: number; db: number; w: number }> = [];
     for (let i = 2; i < n - 2; i++) {
-      if (mag[i] > floor + 11 && mag[i] >= mag[i - 1] && mag[i] >= mag[i + 1] && mag[i] > mag[i - 2] && mag[i] > mag[i + 2]) {
-        let w = 0; for (let j = i; j < n && mag[j] > floor + 7; j++) w++;
-        for (let j = i - 1; j > 0 && mag[j] > floor + 7; j--) w++;
-        peaks.push({ f: (i / (n - 1)) * (sr / 2), db: mag[i], w: (w / (n - 1)) * (sr / 2) });
+      if (mag[i] > floor + 15 && mag[i] >= mag[i - 1] && mag[i] >= mag[i + 1] && mag[i] > mag[i - 2] + 1.5 && mag[i] > mag[i + 2] + 1.5) {
+        let w = 0; for (let j = i; j < n && mag[j] > floor + 8; j++) w++;
+        for (let j = i - 1; j > 0 && mag[j] > floor + 8; j--) w++;
+        rawPeaks.push({ f: (i / (n - 1)) * (sr / 2), db: mag[i], w: (w / (n - 1)) * (sr / 2) });
       }
     }
-    for (const p of peaks.slice(0, 14)) {
+    /* non-max suppression: one peak per 90 Hz neighbourhood */
+    rawPeaks.sort((a, b) => b.db - a.db);
+    const peaks: Array<{ f: number; db: number; w: number }> = [];
+    for (const p of rawPeaks) {
+      if (peaks.every((q) => Math.abs(q.f - p.f) > 90)) peaks.push(p);
+      if (peaks.length >= 14) break;
+    }
+    /* candidate persistence: a peak must return 3 ticks running
+       before it earns a registry row — transients stay noise. */
+    for (const p of peaks) {
+      const cand = candidates.find((c) => Math.abs(c.f - p.f) < 110);
+      if (cand) { cand.f = cand.f * 0.6 + p.f * 0.4; cand.n++; } else candidates.push({ f: p.f, n: 1 });
+    }
+    for (let i = candidates.length - 1; i >= 0; i--) {
+      if (!peaks.some((p) => Math.abs(p.f - candidates[i].f) < 110)) candidates.splice(i, 1);
+    }
+    const confirmed = peaks.filter((p) => (candidates.find((c) => Math.abs(c.f - p.f) < 110)?.n ?? 0) >= 3);
+    for (const p of confirmed) {
       let st = stations.find((s) => Math.abs(s.freq - p.f) < 130);
       if (!st) {
         st = { freq: p.f, first: now, last: now, hits: 0, peakDb: p.db, widthHz: p.w, guess: "carrier", grade: "possible", trail: [], freqHist: [] };
@@ -477,7 +532,7 @@ export function buildSigint(body: HTMLElement) {
   };
 
   const renderRegistry = () => {
-    const rows = stations.slice().sort((a, b) => a.freq - b.freq).map((st) => {
+    const rows = stations.filter((st) => Date.now() - st.last < 90000 || st.hits > 200).slice().sort((a, b) => a.freq - b.freq).map((st) => {
       const tr = document.createElement("tr");
       const alive = Date.now() - st.last < 5000;
       tr.style.opacity = alive ? "1" : "0.45";
@@ -503,22 +558,9 @@ export function buildSigint(body: HTMLElement) {
   const draw = () => {
     if (!body.isConnected) return;
     const W = fall.width, H = fall.height, specH = 74;
-    fx.fillStyle = "rgba(3,8,6,0.55)";
-    fx.fillRect(0, specH, W, H - specH);
+    fx.drawImage(hist, 0, specH);
     if (latestMag) {
       const mag = latestMag, n = mag.length;
-      /* waterfall row */
-      const img = fx.createImageData(W, 1);
-      for (let x = 0; x < W; x++) {
-        const db = mag[Math.floor((x / W) * (n - 1))];
-        const t = Math.max(0, Math.min(1, (db + 105) / 55));
-        img.data[x * 4] = Math.floor(20 + t * 60);
-        img.data[x * 4 + 1] = Math.floor(30 + t * 220);
-        img.data[x * 4 + 2] = Math.floor(24 + t * 70);
-        img.data[x * 4 + 3] = 255;
-      }
-      fx.putImageData(img, 0, specH);
-      fx.drawImage(fall, 0, specH, W, H - specH - 1, 0, specH + 1, W, H - specH - 1);
       /* spectrum */
       fx.fillStyle = "#020604"; fx.fillRect(0, 0, W, specH);
       fx.strokeStyle = "rgba(120,255,170,0.9)"; fx.beginPath();
@@ -528,7 +570,6 @@ export function buildSigint(body: HTMLElement) {
         if (x === 0) fx.moveTo(x, y); else fx.lineTo(x, y);
       }
       fx.stroke();
-      registryTick(mag, ctx ? ctx.sampleRate : 48000);
     }
     /* tuning marker + passband */
     const nyq = (ctx ? ctx.sampleRate : 48000) / 2;

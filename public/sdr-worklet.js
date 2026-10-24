@@ -141,6 +141,17 @@ class SdrDsp extends AudioWorkletProcessor {
       this.lpQ += alpha * (zq - this.lpQ);
       zi = this.lpI; zq = this.lpQ;
       this.slicePow += 0.001 * (zi * zi + zq * zq - this.slicePow);
+      const sliceDbEarly = 10 * Math.log10(this.slicePow + 1e-12);
+      /* envelope for the CW decoder: slice magnitude BEFORE demod/AGC,
+         windowed RMS — the AGC'd audio envelope is useless for keying
+         (the AGC flattens marks and lifts spaces into false dots). */
+      if (this.mode === "cw") {
+        this.envAcc += zi * zi + zq * zq; this.envN++;
+        if (this.envN >= 480) {
+          this.port.postMessage({ type: "env", v: Math.sqrt(this.envAcc / this.envN), open: sliceDbEarly > this.squelch });
+          this.envAcc = 0; this.envN = 0;
+        }
+      }
       const sliceDb = 10 * Math.log10(this.slicePow + 1e-12);
       let y = 0;
       if (this.mode === "am") {
@@ -162,13 +173,6 @@ class SdrDsp extends AudioWorkletProcessor {
       const norm = y / Math.max(0.08, this.agc * 2.2);
       const open = sliceDb > this.squelch;
       out[i] = open ? Math.max(-1, Math.min(1, norm)) * 0.7 * this.gain : 0;
-      if (this.mode === "cw") {
-        this.envAcc += out[i] * out[i]; this.envN++;
-        if (this.envN >= 480) { /* ~10ms at 48k */
-          this.port.postMessage({ type: "env", v: Math.sqrt(this.envAcc / this.envN), open });
-          this.envAcc = 0; this.envN = 0;
-        }
-      }
     }
     if (outputs[0][1]) outputs[0][1].set(out);
     return true;
