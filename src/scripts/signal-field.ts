@@ -1,3 +1,4 @@
+import { skey } from "./os-depth";
 /** A synthetic field: no sensors, network requests, or visitor telemetry. */
 const background = document.querySelector<HTMLCanvasElement>("#ambient-canvas");
 const instrument = document.querySelector<HTMLCanvasElement>("#phase-canvas");
@@ -7,7 +8,7 @@ const motionButtons = document.querySelectorAll<HTMLButtonElement>(
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let manualPause = false;
 try {
-  manualPause = localStorage.getItem("nsm-motion") === "paused";
+  manualPause = localStorage.getItem(skey("nsm-motion")) === "paused";
 } catch {
   /* Storage is optional. */
 }
@@ -161,7 +162,7 @@ motionButtons.forEach((button) =>
     paused = !paused;
     manualPause = paused;
     try {
-      localStorage.setItem("nsm-motion", paused ? "paused" : "running");
+      localStorage.setItem(skey("nsm-motion"), paused ? "paused" : "running");
     } catch {
       /* Optional preference. */
     }

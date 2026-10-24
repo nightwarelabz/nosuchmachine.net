@@ -13,6 +13,7 @@ import { buildWolf3d } from "./os-wolf3d";
 import { buildOrc } from "./os-orc";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
+import { DEPTH, MAX_NEST, skey, sweepNestKeys } from "./os-depth";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -75,7 +76,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
    stacked how, which minimized. Kept on this machine only, restored at
    boot — the plain desktop returns exactly as it was left. Files,
    settings and wallpaper already persist through the shell. */
-const SESSION_KEY = "blacksite-session-v1";
+const SESSION_KEY = skey("blacksite-session-v1");
 interface WinRect { app: string; arg?: string; l: string; t: string; w: string; h: string; maxed: boolean; min: boolean; z: number }
 let sessionTimer: ReturnType<typeof setTimeout> | null = null;
 function saveSession() {
@@ -1053,6 +1054,7 @@ function updateEmconChip() {
 
 /* ---------------- boot ---------------- */
 function boot() {
+  sweepNestKeys();
   registerCoreVerbs();
   registerWireVerbs();
   registerBenchVerbs();
@@ -1068,7 +1070,7 @@ function boot() {
   const lines = [
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
-    "kernel: blacksite sh · vfs: mounted (persistent, this browser)",
+    DEPTH === 0 ? "kernel: blacksite sh · vfs: mounted (persistent, this browser)" : `kernel: blacksite sh · vfs: mounted (volatile — nest ${DEPTH} of ${MAX_NEST} keeps nothing)`,
     `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 427 on the roster`,
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     "doctrine loaded: one knock, read, grade.",
@@ -1077,7 +1079,7 @@ function boot() {
   ];
   let i = 0;
   const tick = () => {
-    if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, 110); }
+    if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, Math.max(12, Math.round(110 / (DEPTH + 1)))); }
     else setTimeout(() => { sfx("live"); overlay.classList.add("done"); restoreSession(); if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } })); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
   };
   tick();

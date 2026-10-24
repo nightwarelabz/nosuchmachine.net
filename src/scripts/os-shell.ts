@@ -6,6 +6,7 @@
 import roster from "../data/blacksite-commands.json";
 import { identifyFile, hexdump as parseHexdump } from "./os-parse";
 import { sfx } from "./os-sound";
+import { skey } from "./os-depth";
 
 export interface ShellIO {
   print(text: string, cls?: string): void;
@@ -119,10 +120,10 @@ export const VERBS = new Map<string, VerbDef>();
 export function verb(name: string, status: VerbStatus, help: string, run: VerbDef["run"]) { VERBS.set(name, { status, help, run }); }
 export const LIMIT_REASONS = new Map<string, string>();
 
-const VFS_KEY = "blacksite-vfs-v1";
-const MACRO_KEY = "blacksite-macros-v1";
-const SET_KEY = "blacksite-settings-v1";
-const AEGIS_KEY = "blacksite-aegis-v1";
+const VFS_KEY = skey("blacksite-vfs-v1");
+const MACRO_KEY = skey("blacksite-macros-v1");
+const SET_KEY = skey("blacksite-settings-v1");
+const AEGIS_KEY = skey("blacksite-aegis-v1");
 
 /* ————— AEGIS — the room's immune system —————
    Ransomware against this OS meets three facts it did not expect:
@@ -402,7 +403,7 @@ export class BlacksiteOS {
       } catch { /* storage full/blocked — the room runs volatile and says so in limits */ }
     }, 250);
   }
-  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem("blacksite-session-v1"); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
+  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
   spawn(cmd: string): Proc {
     const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now() };
     this.procs.push(proc);

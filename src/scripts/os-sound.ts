@@ -12,7 +12,8 @@
 export type SfxName = "live" | "open" | "close" | "min" | "back" | "snap" | "send" | "err" | "deny" | "ping" | "aegis" | "beep" | "boot2" | "halt";
 
 interface SoundPrefs { enabled: boolean; volume: number }
-const KEY = "blacksite-sound-v1";
+import { skey } from "./os-depth";
+const KEY = skey("blacksite-sound-v1");
 
 export function soundPrefs(): SoundPrefs {
   try {
