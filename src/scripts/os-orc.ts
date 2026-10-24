@@ -42,11 +42,12 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   addr.setAttribute("aria-label", "Address");
   addr.placeholder = "address or search";
   const go = el("button", "os-btn", "go");
+  const lens = el("button", "os-btn", "lens");
   const get = el("a", "os-btn", "get orc");
   get.setAttribute("href", "https://github.com/nightwarelabz/orc/releases/latest");
   get.setAttribute("target", "_blank");
   get.setAttribute("rel", "noreferrer");
-  bar.append(addr, go, get);
+  bar.append(addr, go, lens, get);
   if (DEPTH >= 1) bar.append(el("span", "os-note", `nest ${DEPTH}`));
   // The hall has a floor: at MAX_NEST the room stops framing and
   // says so, rather than melting the browser one mirror later.
@@ -108,12 +109,17 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // the page from this origin and rewrites it to stay framed.
   // House pages frame directly on every browser — same-origin loads
   // owe no COEP slip, which is also what makes the recursion work.
-  const HAS_CREDLESS = "credentialless" in HTMLIFrameElement.prototype;
+  // Gecko advertises the credentialless attribute but its frames
+  // still die on this page's COEP wall (NS_ERROR_DOM_COEP_FAILED,
+  // seen in orc standalone 2026-10-24) — for Gecko the lens is the
+  // working door, same as Safari.
+  const HAS_CREDLESS = "credentialless" in HTMLIFrameElement.prototype && !navigator.userAgent.includes("Firefox");
+  let lensForced = false;
   const door = (url: string): { src: string; credless: boolean } => {
     let u: URL;
     try { u = new URL(url); } catch { return { src: url, credless: false }; }
     if (u.origin === window.location.origin) return { src: url, credless: false };
-    if (HAS_CREDLESS) return { src: url, credless: true };
+    if (HAS_CREDLESS && !lensForced) return { src: url, credless: true };
     return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false };
   };
 
@@ -129,10 +135,11 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     frame.src = d.src;
   };
   go.addEventListener("click", () => navigate(addr.value));
+  lens.addEventListener("click", () => { lensForced = true; navigate(addr.value); });
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
-  // The starter pane is example.org on purpose: it permits framing
-  // everywhere (and through the lens where framing is walled), so the
-  // room opens alive on every browser.
-  navigate(arg || "https://example.org");
+  // The starter pane is the house itself (Chase's ruling,
+  // 2026-10-24): the room opens on nosuchmachine.net — on the house
+  // origin that is the first mirror of the nest.
+  navigate(arg || "https://nosuchmachine.net/");
   setTimeout(() => addr.focus(), 80);
 }
