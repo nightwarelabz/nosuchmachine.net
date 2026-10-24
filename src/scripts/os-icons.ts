@@ -46,6 +46,8 @@ export const ICONS: Record<string, string> = {
   ssh: wrap(`<circle cx="8" cy="15.5" r="4.2"/><path d="M11 12.5L19.5 4"/><path d="M16.8 6.7l2.4.4M14.9 8.6l2.3.5"/>`),
   relay: wrap(`${dot(12, 12.4, 1.15)}<path d="M9.2 15.4a4.4 4.4 0 0 1 0-5.8M14.8 9.6a4.4 4.4 0 0 1 0 5.8"/><path d="M6.7 17.9a8.8 8.8 0 0 1 0-10.8M17.3 7.1a8.8 8.8 0 0 1 0 10.8"/>`),
   phantom: wrap(`<path d="M6 20.6V11a6 6 0 0 1 12 0v9.6l-2-1.7-2 1.7-2-1.7-2 1.7Z"/>${dot(9.7, 10.6)}${dot(14.3, 10.6)}`),
+  wolf3d: wrap(`<path d="M5 20.5v-11M19 20.5v-11M5 9.5h14M5 20.5h14"/><path d="M5 9.5V6.8h3v2.7M10.5 9.5V6.8h3v2.7M16 9.5V6.8h3v2.7"/><path d="M9.8 20.5v-3.6a2.2 2.2 0 0 1 4.4 0v3.6"/>${dot(12, 13.4, 0.95)}`),
+  orc: wrap(`<circle cx="12" cy="12" r="8.6"/><ellipse cx="12" cy="12" rx="3.9" ry="8.6"/><path d="M3.9 9h16.2M3.9 15h16.2"/>`),
   bench: wrap(`<circle cx="12" cy="12" r="6.8"/><path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21"/>${dot(12, 12, 1)}`),
   grid: wrap(`<rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/>`),
 };

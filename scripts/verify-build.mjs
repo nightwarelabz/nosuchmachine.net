@@ -92,6 +92,22 @@ assert.match(
 assert.match(home, /one knock, read, grade/i, "Homepage must state the bench doctrine");
 assert.match(home, /public targets only/i, "Homepage must state the public-target guard");
 
+// Wolfenstein 3D + orc: the DOS machine's assets must ship whole, and
+// the OS bundle must carry both rooms.
+for (const asset of ["wolf3d/js-dos.js", "wolf3d/js-dos.css", "wolf3d/NOTICE.txt", "wolf3d/emulators/emulators.js", "wolf3d/emulators/wdosbox.js", "wolf3d/emulators/wdosbox.wasm", "wolf3d/emulators/wlibzip.js", "wolf3d/emulators/wlibzip.wasm"]) {
+  assert.ok(fs.existsSync(path.join(root, asset)), `Missing wolf3d asset: ${asset}`);
+}
+const bundleSize = fs.statSync(path.join(root, "wolf3d/wolf3d.jsdos")).size;
+assert.ok(bundleSize > 600_000 && bundleSize < 900_000, `wolf3d.jsdos bundle size looks wrong: ${bundleSize}`);
+const astroJs = fs.readdirSync(path.join(root, "_astro")).filter((f) => f.endsWith(".js"))
+  .map((f) => fs.readFileSync(path.join(root, "_astro", f), "utf8")).join("\n");
+for (const marker of ["wolf3d.jsdos", "os-wolf-stage", "os-orc-frame", "Wolfenstein 3D"]) {
+  assert.ok(astroJs.includes(marker), `OS bundle missing marker: ${marker}`);
+}
+const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");
+assert.ok(headersOut.includes("/wolf3d/*"), "Served _headers must carry the /wolf3d/* scope");
+assert.ok(headersOut.includes("frame-src 'self' https:"), "OS CSP must allow the orc room's frames");
+
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");
 assert.ok(home.includes("/#bottle"), "Bench page must deep-link the OS bottle desk");
