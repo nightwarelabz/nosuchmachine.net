@@ -9,6 +9,7 @@ import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
+import { iconEl } from "./os-icons";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -48,20 +49,20 @@ function tdDecode(bytes: Uint8Array): string { return new TextDecoder().decode(b
 function desktop(): HTMLElement { return document.querySelector(".os-desktop")!; }
 
 const APPS: Record<string, { title: string; icon: string }> = {
-  terminal: { title: "Terminal — blacksite sh", icon: "▸_" },
-  files: { title: "Files", icon: "📁" },
-  editor: { title: "Editor", icon: "✎" },
-  processes: { title: "Processes — the board", icon: "☰" },
-  journal: { title: "Journal", icon: "📖" },
-  gauntlet: { title: "Gauntlet & Diagnose", icon: "⚔" },
-  settings: { title: "House Settings", icon: "⚙" },
-  help: { title: "Help — the 427", icon: "?" },
-  bottle: { title: "Daylight Bottle", icon: "☀" },
-  system: { title: "System — the Noether register", icon: "◆" },
-  chip8: { title: "CHIP-8 Console", icon: "👾" },
-  ssh: { title: "SSH", icon: "🔐" },
-  relay: { title: "Relay — the house wire", icon: "📻" },
-  phantom: { title: "phantom", icon: "👻" },
+  terminal: { title: "Terminal — blacksite sh", icon: "terminal" },
+  files: { title: "Files", icon: "files" },
+  editor: { title: "Editor", icon: "editor" },
+  processes: { title: "Processes — the board", icon: "processes" },
+  journal: { title: "Journal", icon: "journal" },
+  gauntlet: { title: "Gauntlet & Diagnose", icon: "gauntlet" },
+  settings: { title: "House Settings", icon: "settings" },
+  help: { title: "Help — the 427", icon: "help" },
+  bottle: { title: "Daylight Bottle", icon: "bottle" },
+  system: { title: "System — the Noether register", icon: "system" },
+  chip8: { title: "CHIP-8 Console", icon: "chip8" },
+  ssh: { title: "SSH", icon: "ssh" },
+  relay: { title: "Relay — the house wire", icon: "relay" },
+  phantom: { title: "phantom", icon: "phantom" },
 };
 
 /* ————— session retention —————
@@ -136,7 +137,8 @@ export function openApp(app: string, arg?: string) {
   win.dataset.app = app;
   win.style.zIndex = String(++zTop);
   const head = el("header", "os-win-head");
-  const title = el("span", "os-win-title", `${meta.icon}  ${meta.title}${app === "editor" && arg ? ` — ${arg}` : ""}`);
+  const title = el("span", "os-win-title");
+  title.append(iconEl(meta.icon, "os-win-icon"), document.createTextNode(meta.title + (app === "editor" && arg ? ` — ${arg}` : "")));
   const controls = el("span", "os-win-controls");
   const minBtn = el("button", "os-win-btn", "–");
   minBtn.setAttribute("aria-label", "Minimize");
@@ -175,7 +177,8 @@ function syncWinMenu() {
   if (!wm) return;
   const n = document.querySelectorAll(".os-task-btn").length;
   wm.hidden = n === 0;
-  wm.textContent = `▦ ${n}`;
+  const count = document.getElementById("os-winmenu-count");
+  if (count) count.textContent = String(n);
 }
 let winMenuEl: HTMLElement | null = null;
 function toggleWinMenu() {
@@ -207,7 +210,10 @@ function focusWindow(win: HTMLElement) {
 }
 function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   const bar = document.getElementById("os-taskbar-apps")!;
-  const btn = el("button", "os-task-btn", title);
+  const btn = el("button", "os-task-btn");
+  const app = key.split(":")[0];
+  if (APPS[app]) btn.append(iconEl(APPS[app].icon, "os-task-icon"));
+  btn.append(document.createTextNode(title));
   btn.dataset.task = key;
   btn.addEventListener("click", () => { win.style.display = win.style.display === "none" ? "" : win.style.display; focusWindow(win); });
   bar.appendChild(btn);
@@ -362,7 +368,8 @@ function buildFiles(body: HTMLElement) {
     for (const name of os.list(current)) {
       const path = (current === "/" ? "" : current) + "/" + name;
       const isDir = os.isDir(path);
-      const row = el("button", "os-file-row", `${isDir ? "📁" : "📄"} ${name}${isDir ? "/" : ""}`);
+      const row = el("button", "os-file-row");
+      row.append(iconEl(isDir ? "files" : "file", "os-file-icon"), document.createTextNode(`${name}${isDir ? "/" : ""}`));
       row.addEventListener("dblclick", () => {
         if (isDir) { current = path; render(); }
         else openApp("editor", path);
@@ -962,20 +969,20 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "▸_", "Terminal"], ["files", "📁", "Files"], ["editor", "✎", "Editor"],
-    ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "📖", "Journal"],
-    ["help", "?", "Help — 427"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "◆", "System"],
-    ["chip8", "👾", "CHIP-8"], ["ssh", "🔐", "SSH"], ["relay", "📻", "Relay"],
+    ["terminal", "terminal", "Terminal"], ["files", "files", "Files"], ["editor", "editor", "Editor"],
+    ["processes", "processes", "Processes"], ["gauntlet", "gauntlet", "Gauntlet"], ["journal", "journal", "Journal"],
+    ["help", "help", "Help — 427"], ["settings", "settings", "Settings"], ["bottle", "bottle", "Daylight Bottle"], ["system", "system", "System"],
+    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");
-    b.append(el("span", "os-icon-glyph", icon), el("span", "os-icon-label", label));
+    b.append(iconEl(icon, "os-icon-glyph"), el("span", "os-icon-label", label));
     b.addEventListener("dblclick", () => openApp(app, app === "editor" ? os.norm(`${os.cwd}/notes.txt`) : undefined));
     b.addEventListener("click", () => openApp(app, app === "editor" ? os.norm(`${os.cwd}/notes.txt`) : undefined));
     icons.appendChild(b);
   }
   const suiteIcon = el("button", "os-icon");
-  suiteIcon.append(el("span", "os-icon-glyph", "⌖"), el("span", "os-icon-label", "Bench (web suite)"));
+  suiteIcon.append(iconEl("bench", "os-icon-glyph"), el("span", "os-icon-label", "Bench (web suite)"));
   suiteIcon.addEventListener("click", () => { window.location.href = "/bench/"; });
   icons.appendChild(suiteIcon);
   // clock
@@ -1032,20 +1039,22 @@ function openLauncher() {
   desk.appendChild(box);
   launcherEl = box;
   let selected = 0;
-  const appDefs: Array<[string, string]> = Object.entries(APPS).map(([k, v]) => [k, `${v.icon}  ${v.title}`]);
+  const appDefs: Array<[string, string, string]> = Object.entries(APPS).map(([k, v]) => [k, v.title, v.icon]);
   const render = () => {
     list.innerHTML = "";
     const q = input.value.trim().toLowerCase();
-    const items: Array<{ label: string; small: string; go: () => void }> = [];
+    const items: Array<{ label: string; small: string; icon?: string; go: () => void }> = [];
     if (!q) list.appendChild(el("div", "os-launch-head", "APPS"));
-    for (const [key, label] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: "APP", go: () => openApp(key) });
+    for (const [key, label, icon] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: "APP", icon, go: () => openApp(key) });
     if (q) {
       const cmdItems: Array<{ label: string; small: string; go: () => void }> = [];
       for (const [name, def] of VERBS) if (name.includes(q)) cmdItems.push({ label: `▸_ ${name}`, small: def.status, go: () => { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: name })), 60); } });
       if (cmdItems.length) { const h = el("div", "os-launch-head", "COMMANDS — ENTER RUNS IN THE TERMINAL"); list.appendChild(h); items.push(...cmdItems.slice(0, 8)); }
     }
     items.forEach((it, i) => {
-      const b = el("button", "os-launch-item" + (i === selected ? " sel" : ""), it.label);
+      const b = el("button", "os-launch-item" + (i === selected ? " sel" : ""));
+      if (it.icon) b.appendChild(iconEl(it.icon, "os-launch-icon"));
+      b.appendChild(document.createTextNode(it.label));
       b.appendChild(el("small", "", it.small));
       b.addEventListener("click", () => { toggleLauncher(); it.go(); });
       list.appendChild(b);
