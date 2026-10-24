@@ -57,31 +57,47 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     body.appendChild(wrap);
     return;
   }
-  const frame = document.createElement("iframe");
-  frame.className = "os-orc-frame";
-  frame.setAttribute("title", "orc preview pane");
-  // The OS page itself rides COEP require-corp (phantom's
-  // SharedArrayBuffer ring demands cross-origin isolation), and a
-  // plain cross-origin frame without COEP headers of its own is
-  // blocked by that policy — "refused to connect". The credentialless
-  // attribute is the sanctioned door: the framed page loads in an
-  // ephemeral, cookie-less context and owes no COEP headers. Sites
-  // that forbid framing outright still refuse, and browsers without
-  // credentialless frames are the only door in; there is no
-  // open-out button by Chase's ruling — orc proper, or your own
-  // browser, is where pages live top-level.
-  frame.setAttribute("credentialless", "");
-  // NO sandbox attribute — deliberately. A sandboxed frame without
-  // allow-same-origin gets an opaque origin, which makes the framed
-  // page's OWN subresources cross-origin: under the framed OS's COEP
-  // its CSS and module scripts then die for want of CORP/CORS slips,
-  // and the nest renders as raw static HTML (giant icons, no styles,
-  // no JS) — the exact corpse Chase screenshotted. Credentialless
-  // already isolates credentials and storage; origin rules already
-  // keep a framed page out of the parent. The lens door re-adds its
-  // own sandbox at the response level, where it belongs.
-  frame.setAttribute("referrerpolicy", "no-referrer");
-  wrap.append(hero, bar, frame);
+  // The frame's credentialless-ness is a property of the DOOR, not
+  // of the room, and the element is rebuilt whenever a navigation
+  // crosses doors (the attribute is read at navigation start).
+  //
+  // Cross-origin direct frames need it: the OS page rides COEP
+  // require-corp (phantom's SharedArrayBuffer ring), and a plain
+  // cross-origin frame without COEP headers of its own is blocked
+  // by that policy — "refused to connect". Credentialless is the
+  // sanctioned waiver: the framed page loads in an ephemeral,
+  // cookie-less context and owes no COEP headers.
+  //
+  // House pages and lens pages ride PLAIN frames — they are
+  // same-origin and owe no waiver. This is also what lets the
+  // mirrors compose: credentialless does not nest in Chromium (a
+  // credentialless frame's own credentialless child loses the
+  // waiver, and the depth-2 OS load died silently with the pane
+  // frozen on its previous page — proven live, 2026-10-24). A nest
+  // in a plain frame is an ordinary same-origin document, so its
+  // own orc room starts from surface physics again.
+  //
+  // NO sandbox attribute, ever — deliberately. A sandboxed frame
+  // without allow-same-origin gets an opaque origin, which makes
+  // the framed page's OWN subresources cross-origin: under the
+  // framed OS's COEP its CSS and module scripts then die for want
+  // of CORP/CORS slips, and the nest renders as raw static HTML —
+  // the exact corpse Chase screenshotted. The lens door carries
+  // its own sandbox at the response level, where it belongs.
+  let frame: HTMLIFrameElement;
+  let frameCredless: boolean | null = null;
+  const mountFrame = (credless: boolean) => {
+    const f = document.createElement("iframe");
+    f.className = "os-orc-frame";
+    f.setAttribute("title", "orc preview pane");
+    if (credless) f.setAttribute("credentialless", "");
+    f.setAttribute("referrerpolicy", "no-referrer");
+    if (frame) frame.replaceWith(f); else wrap.appendChild(f);
+    frame = f;
+    frameCredless = credless;
+  };
+  wrap.append(hero, bar);
+  mountFrame(false);
   body.appendChild(wrap);
 
   // Two doors into the pane. Browsers with credentialless frames
@@ -93,12 +109,12 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // House pages frame directly on every browser — same-origin loads
   // owe no COEP slip, which is also what makes the recursion work.
   const HAS_CREDLESS = "credentialless" in HTMLIFrameElement.prototype;
-  const paneUrl = (url: string): string => {
+  const door = (url: string): { src: string; credless: boolean } => {
     let u: URL;
-    try { u = new URL(url); } catch { return url; }
-    if (u.origin === window.location.origin) return url;
-    if (HAS_CREDLESS) return url;
-    return `/lens?u=${encodeURIComponent(url)}`;
+    try { u = new URL(url); } catch { return { src: url, credless: false }; }
+    if (u.origin === window.location.origin) return { src: url, credless: false };
+    if (HAS_CREDLESS) return { src: url, credless: true };
+    return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false };
   };
 
   const navigate = (raw: string) => {
@@ -108,7 +124,9 @@ export function buildOrc(body: HTMLElement, arg?: string) {
       url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
     }
     addr.value = url;
-    frame.src = paneUrl(url);
+    const d = door(url);
+    if (frameCredless !== d.credless) mountFrame(d.credless);
+    frame.src = d.src;
   };
   go.addEventListener("click", () => navigate(addr.value));
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
