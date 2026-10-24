@@ -194,9 +194,10 @@ void main() {
   /* the turning year, written on the land: foliage goes amber
      in autumn and brightens in spring; snow takes the high,
      flat ground as the cold deepens */
-  float fol = smoothstep(0.06, 0.16, c.g - max(c.r, c.b)) * step(0.04, c.g);
-  vec3 amber = vec3(0.80, 0.42, 0.13) * (0.35 + 0.65 * (c.g + 0.2));
-  c = mix(c, amber, fol * uSeason.y * 0.85);
+  float fol = smoothstep(0.02, 0.10, c.g - max(c.r, c.b) * 0.92) * step(0.03, c.g);
+  float hueVar = dnoise(vWP.xz * 0.045);
+  vec3 amber = mix(vec3(0.88, 0.47, 0.09), vec3(0.72, 0.20, 0.10), hueVar) * (0.4 + 0.6 * (c.g + 0.2));
+  c = mix(c, amber, fol * uSeason.y);
   c = mix(c, c * vec3(1.07, 1.03, 0.88) + vec3(0.015), fol * uSeason.z * 0.45);
   float snow = uSeason.x * smoothstep(1.2, 7.5, vWY + (dnoise(vWP.xz * 0.33) - 0.5) * 7.0) * smoothstep(0.42, 0.72, n.y);
   c = mix(c, vec3(0.90, 0.93, 0.99), clamp(snow, 0.0, 1.0) * 0.92);
@@ -452,6 +453,11 @@ export class SimAudio {
     this.rainGain = c.createGain(); this.rainGain.gain.value = 0;
     rain.connect(rf); rf.connect(this.rainGain); this.rainGain.connect(this.ambBus);
     rain.start();
+    /* the night drone: a sub breath under everything, fed in tick */
+    const drone = c.createOscillator(); drone.type = "sine"; drone.frequency.value = this.root / 2;
+    this.droneGain = c.createGain(); this.droneGain.gain.value = 0;
+    drone.connect(this.droneGain); this.droneGain.connect(this.ambBus);
+    drone.start();
     this.chordAt = c.currentTime + 0.1;
     this.pluckAt = c.currentTime + 2.5;
     this.started = true;
@@ -469,6 +475,15 @@ export class SimAudio {
   setHush(v: number) { if (v !== this.hush) { this.hush = v; this.applyGain(0.5); } }
   private echoOn = false;
   setEcho(on: boolean) { this.echoOn = on; }
+  murmur() {
+    if (!this.ctx || !this.ambBus) return;
+    let t0 = this.ctx.currentTime + 0.1;
+    const syllables = 5 + Math.floor(this.rnd() * 4);
+    for (let i = 0; i < syllables; i++) {
+      this.noiseBurst(t0, 0.16 + this.rnd() * 0.14, 0.016, 420 + this.rnd() * 480, "bandpass", 7);
+      t0 += 0.22 + this.rnd() * 0.3;
+    }
+  }
   bell() {
     if (!this.ctx || !this.ambBus) return;
     const t = this.ctx.currentTime;
@@ -506,6 +521,8 @@ export class SimAudio {
   }
 
   private sparse = 0;
+  private droneGain: GainNode | null = null;
+  private callAt = 0;
   setMood(sparse: number) { this.sparse = sparse; }
   tick(dayFrac: number) {
     if (!this.ctx || !this.musicBus) return;
@@ -522,6 +539,23 @@ export class SimAudio {
       }
       this.tone(this.musicBus, this.root * Math.pow(2, chord[0] / 12) / 2, now, dur, 0.055, "sine");
       this.chordAt = now + dur * 0.92;
+    }
+    if (this.droneGain) this.droneGain.gain.setTargetAtTime(dark ? 0.030 : 0.006, now, 1.5);
+    /* the call: something far off answers the world, rarely —
+       three gliding tones and a breath, never explained */
+    if (this.callAt === 0) this.callAt = now + 34 + this.rnd() * 60;
+    if (now >= this.callAt) {
+      this.callAt = now + 55 + this.rnd() * 85;
+      if (this.rnd() < 0.8 && this.ambBus) {
+        const base = this.root * 2 * Math.pow(2, this.scale[Math.floor(this.rnd() * 4)] / 12);
+        let t0 = now + 0.05;
+        for (let nI = 0; nI < 3; nI++) {
+          const f0 = base * (1 + (this.rnd() - 0.5) * 0.06);
+          this.tone(this.ambBus, f0, t0, 1.6 + this.rnd() * 0.9, 0.020, "sine", f0 * (1 + (this.rnd() - 0.5) * 0.22));
+          t0 += 1.1 + this.rnd() * 0.9;
+        }
+        this.noiseBurst(now, 2.5, 0.006, 700, "bandpass", 0.7);
+      }
     }
     if (now >= this.pluckAt) {
       if (this.rnd() < (dark ? 0.4 : 0.68) * (1 - this.sparse * 0.55)) {
@@ -716,7 +750,7 @@ export class Dreamer {
       this.attend = 1;
       if (now >= this.idleWhisperAt) {
         this.idleWhisperAt = now + 24 + this.rnd() * 14;
-        this.say("it watches you rest", "stillness is noticed", "it wonders at the pause", "the birds have come to look at you", "it keeps the weather off you, for now");
+        this.say("it watches you rest", "stillness is noticed", "it wonders at the pause", "the birds have come to look at you", "it keeps the weather off you, for now", "it has sent the birds to count you", "even the trees lean to look", "somewhere, it is telling the hills about you");
       }
     } else if (p.idleFor < 2) { this.attend = Math.max(0, this.attend - dt * 0.2); }
     else this.attend = Math.max(0, this.attend - dt * 0.05);
@@ -750,6 +784,7 @@ export class Dreamer {
         ["glass", 20, 2 * kindBoost], ["rainup", 16, 2], ["bell", 3, 2.5 * (1 + Math.abs(j) * 0.4)],
         ["star", 30, night > 0.4 ? 3.5 * darkBoost : 0], ["procession", 40, night > 0.25 ? 3 * (1 + Math.abs(j) * 0.4) : 0],
         ["secondsun", 26, night < 0.45 ? 2.5 : 0], ["stone", 24, this.stoneShown ? 0 : 2 * darkBoost],
+        ["stretch", 18, 1.8 * darkBoost], ["murmur", 9, 1.8],
       ];
       let tot = 0;
       for (const [, , w] of pool) tot += w;
@@ -760,7 +795,7 @@ export class Dreamer {
       this.anomalyDur = dur;
       this.anomalyUntil = now + dur;
       if (kind === "stone") this.stoneShown = true;
-      const gap = (330 - this.strangeness * 235) * (night > 0.5 ? 0.62 : 1) * (1 - this.rapport * 0.25) + this.rnd() * 200;
+      const gap = (640 - this.strangeness * 300) * (night > 0.5 ? 0.7 : 1) * (1 - this.rapport * 0.15) + this.rnd() * 380;
       this.nextAnomalyAt = now + dur + gap;
       if (this.rnd() < 0.55) {
         if (kind === "hush") this.say("it is listening", "hold still. it is listening");
@@ -773,6 +808,8 @@ export class Dreamer {
         if (kind === "chroma") this.say("the light is the wrong colour here");
         if (kind === "bell") this.say("a bell, from no tower");
         if (kind === "glass") this.say("the sea has gone to glass");
+        if (kind === "stretch") this.say("the world is breathing in");
+        if (kind === "murmur") this.say("something is saying your name, almost");
       }
     }
     /* the account, and the crossing of it */
@@ -1083,7 +1120,6 @@ export function buildSimulacrum(body: HTMLElement) {
   const powers = el("div", "os-sim-powers");
   const uw = el("div", "os-sim-uw");
   const stage = el("div", "os-sim-stage");
-  stage.append(canvas, shade, uw, whisper, opening, titleScr);
   const hud = el("div", "os-sim-hud");
   const seedLabel = el("span", "os-note", "");
   const flyBtn = el("button", "os-btn", "walk");
@@ -1092,15 +1128,17 @@ export function buildSimulacrum(body: HTMLElement) {
   const commonsBtn = el("button", "os-btn", "commons");
   commonsBtn.setAttribute("aria-pressed", "false");
   const photoBtn = el("button", "os-btn", "photo");
+  const fsBtn = el("button", "os-btn", "fullscreen");
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
-  hud.append(seedLabel, flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, xrBtn, posLabel);
-  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · the gifts are on the bar · matter here obeys UNDERTOW · the year turns with yours · the iris judges your machine");
-  wrap.append(stage, hud, powers, hint);
+  hud.append(seedLabel, flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, fsBtn, xrBtn, posLabel);
+  stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, powers);
+  wrap.append(stage);
+  wrap.classList.add("chrome-on");
   body.appendChild(wrap);
 
   const gl = canvas.getContext("webgl", { antialias: true, preserveDrawingBuffer: true }) as WebGLRenderingContext | null;
-  if (!gl) { hint.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; return; }
+  if (!gl) { titleName.textContent = "the simulacrum"; titleMood.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; titleEnter.textContent = ""; return; }
 
   const program = (vs: string, fs: string) => {
     const sh = (type: number, src: string) => {
@@ -1312,7 +1350,7 @@ export function buildSimulacrum(body: HTMLElement) {
     refreshLabel();
   };
 
-  interface Chunk { key: string; terrain: Mesh; lit: Mesh | null; glow: Mesh | null; crystals: Array<[number, number]> }
+  interface Chunk { key: string; terrain: Mesh; lit: Mesh | null; glow: Mesh | null; crystals: Array<[number, number]>; solids: Array<{ x: number; z: number; r: number; top: number }> }
   const chunks = new Map<string, Chunk>();
   const keyOf = (cx: number, cz: number) => `${cx},${cz}`;
 
@@ -1331,8 +1369,272 @@ export function buildSimulacrum(body: HTMLElement) {
       const k = Math.max(0, Math.min(1, (m - 0.28) * 2.6));
       c = [dry[0] + (lush[0] - dry[0]) * k, dry[1] + (lush[1] - dry[1]) * k, dry[2] + (lush[2] - dry[2]) * k];
     }
+    /* the worn ways: dirt where the paths run (dry banks only —
+       paths do not paint the snowfields or the shore) */
+    if (h >= 0.7 && h < 10 && slope <= 0.55) {
+      const pd = pathDist(x, z);
+      if (pd < 2.3) {
+        const pk = Math.max(0, 1 - pd / 2.3) * 0.62;
+        const dirt: [number, number, number] = [0.48, 0.38, 0.24];
+        c = [c[0] + (dirt[0] - c[0]) * pk, c[1] + (dirt[1] - c[1]) * pk, c[2] + (dirt[2] - c[2]) * pk];
+      }
+    }
     return [c[0] * spk, c[1] * spk, c[2] * spk];
   };
+
+  /* ================================================================
+     THE MODEL KIT (v8) — true shapes, not placeholders.
+     Every model is a CLOSED solid built from triangles whose
+     normals are computed from the geometry itself (no painted-on
+     normals, no one-sided clips, no hollow shells). A flower is
+     stem + petal ring + heart; a tree is trunk, branches, and
+     clustered canopy volumes. The world is composed the way a
+     hand-built game world is: landmarks first, zones with their
+     own flora, paths worn through them — never uniform scatter.
+     ================================================================ */
+  type Col3 = [number, number, number];
+  const tri = (a: number[], p: number[], q: number[], r: number[], col: Col3) => {
+    const ux = q[0] - p[0], uy = q[1] - p[1], uz = q[2] - p[2];
+    const vx = r[0] - p[0], vy = r[1] - p[1], vz = r[2] - p[2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const il = 1 / (Math.hypot(nx, ny, nz) || 1); nx *= il; ny *= il; nz *= il;
+    a.push(...p, ...col, nx, ny, nz, ...q, ...col, nx, ny, nz, ...r, ...col, nx, ny, nz);
+  };
+  /* tapered prism, closed top and bottom; lean shifts the top ring */
+  const prism = (a: number[], x: number, y: number, z: number, rb: number, rt: number, h: number, sides: number, col: Col3, leanX = 0, leanZ = 0, twist = 0) => {
+    const ring = (rad: number, yy: number, ox: number, oz: number): number[][] => {
+      const pts: number[][] = [];
+      for (let k = 0; k < sides; k++) {
+        const t = ((k / sides) * Math.PI * 2) + twist;
+        pts.push([x + ox + Math.cos(t) * rad, yy, z + oz + Math.sin(t) * rad]);
+      }
+      return pts;
+    };
+    const bot = ring(rb, y, 0, 0), top = ring(rt, y + h, leanX, leanZ);
+    for (let k = 0; k < sides; k++) {
+      const k2 = (k + 1) % sides;
+      tri(a, bot[k], top[k], top[k2], col);
+      tri(a, bot[k], top[k2], bot[k2], col);
+      tri(a, [x, y, z], bot[k], bot[k2], col);
+      tri(a, [x + leanX, y + h, z + leanZ], top[k2], top[k], col);
+    }
+  };
+  /* octahedron — the faceted volume: rocks, shards, canopy, hearts */
+  const octa = (a: number[], x: number, y: number, z: number, rx: number, ry: number, rz: number, col: Col3, twist = 0) => {
+    const T: number[] = [x, y + ry, z], B: number[] = [x, y - ry, z];
+    const E: number[][] = [];
+    for (let k = 0; k < 4; k++) {
+      const t = (k / 4) * Math.PI * 2 + twist;
+      E.push([x + Math.cos(t) * rx, y, z + Math.sin(t) * rz]);
+    }
+    for (let k = 0; k < 4; k++) {
+      const k2 = (k + 1) % 4;
+      tri(a, E[k], T, E[k2], col);
+      tri(a, E[k2], B, E[k], col);
+    }
+  };
+  /* closed box, yaw-rotated — stones, lintels, ribs, books of stone */
+  const boxS = (a: number[], x: number, y: number, z: number, sx: number, sy: number, sz: number, col: Col3, rotY = 0) => {
+    const c = Math.cos(rotY), sn = Math.sin(rotY);
+    const corner = (dx: number, dy: number, dz: number): number[] => [x + dx * c - dz * sn, y + dy, z + dx * sn + dz * c];
+    const v = [
+      corner(-sx / 2, 0, -sz / 2), corner(sx / 2, 0, -sz / 2), corner(sx / 2, 0, sz / 2), corner(-sx / 2, 0, sz / 2),
+      corner(-sx / 2, sy, -sz / 2), corner(sx / 2, sy, -sz / 2), corner(sx / 2, sy, sz / 2), corner(-sx / 2, sy, sz / 2),
+    ];
+    const F = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [3, 2, 6, 7], [4, 5, 1, 0]];
+    for (const f of F) { tri(a, v[f[0]], v[f[1]], v[f[2]], col); tri(a, v[f[0]], v[f[2]], v[f[3]], col); }
+  };
+  const vary = (col: Col3, amt: number, rnd: () => number): Col3 => {
+    const f = 1 + (rnd() - 0.5) * 2 * amt;
+    return [Math.min(1, col[0] * f), Math.min(1, col[1] * f), Math.min(1, col[2] * f)];
+  };
+
+  /* ---- the flora, built as things ---- */
+  const BARK: Col3 = [0.32, 0.22, 0.14];
+  const treePine = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const g = vary([0.16, 0.36, 0.20], 0.25, rnd);
+    prism(a, x, y - 0.2, z, 0.30 * s, 0.17 * s, 3.4 * s, 6, vary(BARK, 0.2, rnd));
+    prism(a, x, y + 2.0 * s, z, 2.35 * s, 0.02, 2.8 * s, 7, g, 0, 0, rnd() * 0.4);
+    prism(a, x, y + 3.8 * s, z, 1.75 * s, 0.02, 2.4 * s, 7, vary(g, 0.15, rnd), 0, 0, rnd() * 0.4);
+    prism(a, x, y + 5.4 * s, z, 1.1 * s, 0.02, 2.0 * s, 7, vary(g, 0.15, rnd), 0, 0, rnd() * 0.4);
+  };
+  const treeSpire = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const g = vary([0.13, 0.30, 0.24], 0.22, rnd);
+    prism(a, x, y - 0.2, z, 0.15 * s, 0.08 * s, 5.2 * s, 5, vary(BARK, 0.2, rnd));
+    prism(a, x, y + 3.4 * s, z, 0.95 * s, 0.02, 7.6 * s, 6, g, 0, 0, rnd() * 0.3);
+  };
+  const treeBroad = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const g = vary([0.24, 0.44, 0.18], 0.28, rnd);
+    prism(a, x, y - 0.2, z, 0.42 * s, 0.24 * s, 3.1 * s, 7, vary(BARK, 0.2, rnd), (rnd() - 0.5) * 0.5 * s, (rnd() - 0.5) * 0.5 * s);
+    const cxp = x + (rnd() - 0.5) * 0.4 * s, czp = z + (rnd() - 0.5) * 0.4 * s;
+    const blobs = 4 + Math.floor(rnd() * 3);
+    for (let b = 0; b < blobs; b++) {
+      const ba = (b / blobs) * Math.PI * 2 + rnd() * 0.8, bd = (b === 0 ? 0 : (0.9 + rnd() * 1.1) * s);
+      octa(a, cxp + Math.cos(ba) * bd, y + (3.6 + rnd() * 1.3) * s, czp + Math.sin(ba) * bd,
+        (1.3 + rnd() * 0.9) * s, (1.0 + rnd() * 0.6) * s, (1.3 + rnd() * 0.9) * s, vary(g, 0.2, rnd), rnd() * 0.8);
+    }
+  };
+  const treeDead = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const d = vary([0.16, 0.14, 0.12], 0.2, rnd);
+    prism(a, x, y - 0.2, z, 0.30 * s, 0.10 * s, 4.4 * s, 6, d, (rnd() - 0.5) * 0.8 * s, (rnd() - 0.5) * 0.8 * s);
+    for (let b = 0; b < 3; b++) {
+      const ba = rnd() * Math.PI * 2, bl = (1.2 + rnd() * 1.2) * s, by = y + (2.2 + rnd() * 1.6) * s;
+      prism(a, x + Math.cos(ba) * bl * 0.4, by, z + Math.sin(ba) * bl * 0.4, 0.09 * s, 0.02, bl, 4, d, Math.cos(ba) * bl * 0.8, Math.sin(ba) * bl * 0.8);
+    }
+  };
+  const treeGiant = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const g = vary([0.20, 0.40, 0.20], 0.2, rnd);
+    prism(a, x, y - 0.4, z, 1.45 * s, 0.75 * s, 15 * s, 8, vary([0.30, 0.20, 0.13], 0.15, rnd), (rnd() - 0.5) * 1.2 * s, (rnd() - 0.5) * 1.2 * s);
+    for (let b = 0; b < 7; b++) {
+      const ba = (b / 7) * Math.PI * 2 + rnd() * 0.7, bd = (b === 0 ? 0 : (2.2 + rnd() * 3.4) * s);
+      octa(a, x + Math.cos(ba) * bd, y + (14.5 + rnd() * 5.5) * s, z + Math.sin(ba) * bd,
+        (3.4 + rnd() * 2.2) * s, (2.4 + rnd() * 1.4) * s, (3.4 + rnd() * 2.2) * s, vary(g, 0.18, rnd), rnd() * 0.8);
+    }
+  };
+  /* a flower, honestly: stem, heart, and a ring of solid petals */
+  const flowerGeo = (lit: number[], glow: number[], x: number, y: number, z: number, s: number, petal: Col3, rnd: () => number) => {
+    prism(lit, x, y - 0.03, z, 0.035 * s, 0.025 * s, 0.52 * s, 5, [0.18, 0.38, 0.14], (rnd() - 0.5) * 0.1 * s, (rnd() - 0.5) * 0.1 * s);
+    const hx = x + (rnd() - 0.5) * 0.05 * s, hz = z + (rnd() - 0.5) * 0.05 * s, hy = y + 0.52 * s;
+    const pc = vary(petal, 0.16, rnd);
+    const petals = 5 + Math.floor(rnd() * 3);
+    for (let pI = 0; pI < petals; pI++) {
+      const pa = (pI / petals) * Math.PI * 2 + rnd() * 0.3;
+      octa(lit, hx + Math.cos(pa) * 0.15 * s, hy + 0.015 * s, hz + Math.sin(pa) * 0.15 * s, 0.11 * s, 0.028 * s, 0.075 * s, pc, -pa + Math.PI / 2);
+    }
+    octa(glow, hx, hy + 0.03 * s, hz, 0.075 * s, 0.05 * s, 0.075 * s, [0.98, 0.78, 0.30]);
+  };
+  const grassTuft = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const g1: Col3 = [0.20, 0.42, 0.16], g2: Col3 = [0.38, 0.55, 0.22];
+    const blades = 5 + Math.floor(rnd() * 3);
+    for (let b = 0; b < blades; b++) {
+      const ba = rnd() * Math.PI * 2, bd = rnd() * 0.16 * s;
+      prism(a, x + Math.cos(ba) * bd, y - 0.02, z + Math.sin(ba) * bd, 0.045 * s, 0.004, (0.45 + rnd() * 0.5) * s, 3,
+        vary(rnd() < 0.5 ? g1 : g2, 0.2, rnd), Math.cos(ba) * (0.10 + rnd() * 0.16) * s, Math.sin(ba) * (0.10 + rnd() * 0.16) * s);
+    }
+  };
+  const rockGeo = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const g = vary([0.42, 0.41, 0.44], 0.16, rnd);
+    octa(a, x, y + 0.30 * s, z, (0.85 + rnd() * 0.5) * s, (0.5 + rnd() * 0.35) * s, (0.8 + rnd() * 0.5) * s, g, rnd() * 1.2);
+    if (rnd() < 0.55) octa(a, x + (rnd() - 0.5) * 1.3 * s, y + 0.18 * s, z + (rnd() - 0.5) * 1.3 * s, 0.5 * s, 0.32 * s, 0.48 * s, vary(g, 0.15, rnd), rnd() * 1.2);
+  };
+  const shardGeo = (glow: number[], x: number, y: number, z: number, s: number, colA: Col3, colB: Col3, rnd: () => number) => {
+    const n = 2 + Math.floor(rnd() * 3);
+    for (let i = 0; i < n; i++) {
+      const ox = (rnd() - 0.5) * 0.9 * s, oz = (rnd() - 0.5) * 0.9 * s, hh = (1.4 + rnd() * 1.9) * s;
+      octa(glow, x + ox, y + hh * 0.32, z + oz, 0.30 * s, hh * 0.5, 0.30 * s, vary(rnd() < 0.6 ? colA : colB, 0.14, rnd), rnd() * 0.9);
+    }
+  };
+  const shroomGeo = (lit: number[], glow: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    prism(lit, x, y - 0.03, z, 0.10 * s, 0.14 * s, 0.55 * s, 6, [0.78, 0.72, 0.62]);
+    prism(glow, x, y + 0.5 * s, z, 0.62 * s, 0.05, 0.34 * s, 7, vary([0.55, 0.38, 0.95], 0.2, rnd));
+  };
+
+  /* ---- the great paths: worn ways across the world, seeded once.
+     Palette consults them; scatter keeps off them; grass crowds
+     their edges. A world you can wayfind in, like the old games. */
+  interface PathSeg { x1: number; z1: number; x2: number; z2: number }
+  let pathSegs: PathSeg[] = [];
+  const buildPaths = () => {
+    pathSegs = [];
+    const rnd = mulberry32(seed ^ 0x9a77);
+    for (let pth = 0; pth < 3; pth++) {
+      let px = (rnd() - 0.5) * 500, pz = (rnd() - 0.5) * 500;
+      let ang = rnd() * Math.PI * 2;
+      for (let st = 0; st < 26; st++) {
+        const nx = px + Math.cos(ang) * 34, nz = pz + Math.sin(ang) * 34;
+        pathSegs.push({ x1: px, z1: pz, x2: nx, z2: nz });
+        px = nx; pz = nz; ang += (rnd() - 0.5) * 0.55;
+      }
+    }
+  };
+  buildPaths();
+  const pathDist = (x: number, z: number): number => {
+    let best = 1e9;
+    for (const sg of pathSegs) {
+      const dx = sg.x2 - sg.x1, dz = sg.z2 - sg.z1;
+      const L2 = dx * dx + dz * dz || 1;
+      let t = ((x - sg.x1) * dx + (z - sg.z1) * dz) / L2;
+      t = Math.max(0, Math.min(1, t));
+      const ex = sg.x1 + dx * t - x, ez = sg.z1 + dz * t - z;
+      const d = ex * ex + ez * ez;
+      if (d < best) best = d;
+    }
+    return Math.sqrt(best);
+  };
+
+  /* ---- the wonders: colossal landmarks on the horizon, placed
+     once per world — the things you navigate by and walk to ---- */
+  let wonderMesh: (Mesh | null) = null;
+  let wonderGlow: (Mesh | null) = null;
+  let worldSolids: Array<{ x: number; z: number; r: number; top: number }> = [];
+  interface POI { name: string; x: number; z: number; r: number }
+  let pois: POI[] = [];
+  const buildWonders = () => {
+    if (wonderMesh) { gl.deleteBuffer(wonderMesh.buf); wonderMesh = null; }
+    if (wonderGlow) { gl.deleteBuffer(wonderGlow.buf); wonderGlow = null; }
+    worldSolids = []; pois = [];
+    const lit: number[] = [], glow: number[] = [];
+    const rnd = mulberry32(seed ^ 0x77de);
+    const findLand = (ang: number, dist: number): [number, number] => {
+      for (let dd = dist; dd < dist + 260; dd += 24) {
+        const x = Math.cos(ang) * dd, z = Math.sin(ang) * dd;
+        if (height(x, z) > 2.2) return [x, z];
+      }
+      return [Math.cos(ang) * dist, Math.sin(ang) * dist];
+    };
+    /* the titan arch */
+    {
+      const [x, z] = findLand(rnd() * 6.28, 330 + rnd() * 160);
+      const y = height(x, z), rot = rnd() * 3.14, st: Col3 = [0.46, 0.44, 0.42];
+      const c = Math.cos(rot), sn = Math.sin(rot);
+      const lx = x - c * 16, lz = z - sn * 16, rx2 = x + c * 16, rz2 = z + sn * 16;
+      boxS(lit, lx, height(lx, lz) - 2, lz, 9, 58, 9, st, rot);
+      boxS(lit, rx2, height(rx2, rz2) - 2, rz2, 9, 58, 9, vary(st, 0.1, rnd), rot);
+      boxS(lit, x, y + 52, z, 44, 10, 11, st, rot);
+      worldSolids.push({ x: lx, z: lz, r: 6.4, top: y + 58 }, { x: rx2, z: rz2, r: 6.4, top: y + 58 });
+      pois.push({ name: "the titan arch", x, z, r: 60 });
+    }
+    /* the standing ring, giant-scale */
+    {
+      const [x, z] = findLand(rnd() * 6.28, 300 + rnd() * 220);
+      const y = height(x, z), st: Col3 = [0.40, 0.39, 0.40];
+      for (let k = 0; k < 9; k++) {
+        const a = (k / 9) * Math.PI * 2, sx = x + Math.cos(a) * 30, sz = z + Math.sin(a) * 30;
+        if (k === 4) { boxS(lit, sx, height(sx, sz) - 0.4, sz, 4.4, 3.2, 6, st, a); continue; }
+        const hh = 17 + rnd() * 9;
+        boxS(lit, sx, height(sx, sz) - 1.5, sz, 4.6, hh, 6.2, vary(st, 0.12, rnd), a + 1.57);
+        worldSolids.push({ x: sx, z: sz, r: 3.8, top: y + hh });
+      }
+      pois.push({ name: "the standing ring", x, z, r: 55 });
+    }
+    /* the world spike — a crystal the size of a tower */
+    {
+      const [x, z] = findLand(rnd() * 6.28, 380 + rnd() * 200);
+      const y = height(x, z);
+      octa(glow, x, y + 17, z, 6.5, 21, 6.5, [0.55, 0.38, 1.0], rnd() * 0.8);
+      octa(glow, x + 7, y + 8, z + 3, 3.2, 10, 3.2, [0.42, 0.72, 1.0], rnd() * 0.8);
+      rockGeo(lit, x + 4, y, z - 4, 2.6, rnd);
+      worldSolids.push({ x, z, r: 5.2, top: y + 38 });
+      pois.push({ name: "the world spike", x, z, r: 50 });
+    }
+    /* the ribcage of something old */
+    {
+      const [x, z] = findLand(rnd() * 6.28, 300 + rnd() * 180);
+      const rot = rnd() * 3.14, bone: Col3 = [0.82, 0.78, 0.68];
+      const c = Math.cos(rot), sn = Math.sin(rot);
+      for (let k = 0; k < 5; k++) {
+        const off = (k - 2) * 9, bx = x + c * off, bz = z + sn * off;
+        const by = height(bx, bz);
+        boxS(lit, bx - sn * 7, by - 0.5, bz + c * 7, 1.1, 13 - Math.abs(k - 2) * 1.6, 1.1, bone, rot);
+        boxS(lit, bx + sn * 7, by - 0.5, bz - c * 7, 1.1, 13 - Math.abs(k - 2) * 1.6, 1.1, vary(bone, 0.1, rnd), rot);
+        boxS(lit, bx, by + 11.4 - Math.abs(k - 2) * 1.6, bz, 1.0, 1.0, 15.5, bone, rot);
+      }
+      pois.push({ name: "the ribcage", x, z, r: 48 });
+    }
+    if (lit.length) wonderMesh = makeMesh(new Float32Array(lit));
+    if (glow.length) wonderGlow = makeMesh(new Float32Array(glow));
+  };
+  buildWonders();
 
   const buildChunk = (cx: number, cz: number): Chunk => {
     const x0 = cx * CHUNK, z0 = cz * CHUNK;
@@ -1346,9 +1648,6 @@ export function buildSimulacrum(body: HTMLElement) {
       let nx = -hx / (2 * e), nz = -hz / (2 * e), ny = 1;
       const il = 1 / Math.hypot(nx, ny, nz); nx *= il; ny *= il; nz *= il;
       const col = palette(x, z, h, 1 - ny);
-      /* baked ambient occlusion + macro mottling: hollows darken,
-         crests catch a little more light, and the land stops
-         wearing one flat colour */
       const avgN = (height(x - 3.2, z) + height(x + 3.2, z) + height(x, z - 3.2) + height(x, z + 3.2)) / 4;
       const ao = Math.max(0.66, Math.min(1.12, 1 - (avgN - h) * 0.075));
       const mott = 0.90 + 0.20 * (moisture(x * 0.14, z * 0.14) * 0.5 + 0.5);
@@ -1363,86 +1662,89 @@ export function buildSimulacrum(body: HTMLElement) {
     const rnd = mulberry32(seed ^ (cx * 7919) ^ (cz * 104729));
     const lit: number[] = [], glow: number[] = [];
     const crystals: Array<[number, number]> = [];
-    const box = (arr: number[], cxp: number, cyp: number, czp: number, sx: number, sy: number, sz: number, col: [number, number, number]) => {
-      const x1 = cxp - sx / 2, x2 = cxp + sx / 2, y1 = cyp, y2 = cyp + sy, z1 = czp - sz / 2, z2 = czp + sz / 2;
-      const F: Array<[number[], number[]]> = [
-        [[x1, y1, z2, x2, y1, z2, x2, y2, z2], [0, 0, 1]], [[x1, y1, z1, x2, y2, z1, x2, y1, z1], [0, 0, -1]],
-        [[x2, y1, z2, x2, y1, z1, x2, y2, z1], [1, 0, 0]], [[x1, y1, z1, x1, y1, z2, x1, y2, z2], [-1, 0, 0]],
-        [[x1, y2, z2, x2, y2, z2, x2, y2, z1], [0, 1, 0]],
-      ];
-      for (const [tri, n] of F) for (let k = 0; k < 9; k += 3) arr.push(tri[k], tri[k + 1], tri[k + 2], ...col, ...n);
-    };
-    const cone = (arr: number[], cxp: number, cyp: number, czp: number, r: number, hgt: number, col: [number, number, number], sides = 6) => {
-      for (let k = 0; k < sides; k++) {
-        const a1 = (k / sides) * Math.PI * 2, a2 = ((k + 1) / sides) * Math.PI * 2;
-        arr.push(cxp + Math.cos(a1) * r, cyp, czp + Math.sin(a1) * r, ...col, 0, 0.6, 0);
-        arr.push(cxp + Math.cos(a2) * r, cyp, czp + Math.sin(a2) * r, ...col, 0, 0.6, 0);
-        arr.push(cxp, cyp + hgt, czp, ...col, 0, 1, 0);
-      }
-    };
+    const solids: Array<{ x: number; z: number; r: number; top: number }> = [];
     const slopeAt = (x: number, z: number) => {
       const e = 1.4;
       return 1 - 1 / Math.hypot((height(x + e, z) - height(x - e, z)) / (2 * e), 1, (height(x, z + e) - height(x, z - e)) / (2 * e));
     };
-    for (let t = 0; t < 30; t++) {
+    /* the Dreamer's hand in the making: what it has learned of
+       the walker bends what grows here — loved worlds grow
+       wonders; shadowed worlds grow dead wood and stone */
+    const lean = leanOf(rec);
+    const wonderBias = 1 + lean * 0.55;
+    const gloomBias = 1 - lean * 0.5;
+    /* how forested is this place? a field, not a coin per chunk */
+    const dens = 0.30 + 0.85 * Math.max(0, moisture(x0 + CHUNK / 2, z0 + CHUNK / 2));
+    const treeTries = Math.round(30 * dens);
+    for (let t = 0; t < treeTries; t++) {
       const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
       const h = height(x, z);
-      if (h < 0.9) continue;
-      const sl = slopeAt(x, z);
+      if (h < 0.9 || slopeAt(x, z) > 0.36) continue;
+      if (pathDist(x, z) < 2.6) continue;
       const roll = rnd();
-      const moist = moisture(x, z);
-      if (sl < 0.34 && roll < 0.52) {
-        const s = 0.8 + rnd() * 0.9;
-        box(lit, x, h - 0.1, z, 0.32 * s, 1.6 * s, 0.32 * s, [0.36, 0.25, 0.16]);
-        if (moist > 0.52 && rnd() < 0.4) {
-          const g: [number, number, number] = [0.20 + rnd() * 0.12, 0.42 + rnd() * 0.16, 0.16];
-          cone(lit, x, h + 1.2 * s, z, 1.9 * s, 1.5 * s, g, 7);
-          cone(lit, x, h + 2.0 * s, z, 1.3 * s, 1.2 * s, g, 7);
-        } else {
-          const g: [number, number, number] = [0.13 + rnd() * 0.1, 0.34 + rnd() * 0.2, 0.18];
-          cone(lit, x, h + 1.3 * s, z, 1.5 * s, 2.6 * s, g);
-          cone(lit, x, h + 2.6 * s, z, 1.05 * s, 2.0 * s, g);
-        }
-      } else if (roll < 0.80) {
-        const s = 0.5 + rnd() * 1.3;
-        box(lit, x, h - 0.2, z, s, s * 0.8, s, [0.42, 0.40, 0.45]);
-      } else if (roll < 0.93) {
-        const s = 0.7 + rnd() * 0.8;
-        cone(glow, x, h - 0.1, z, 0.55 * s, 2.6 * s, [0.62, 0.36, 1.0]);
-        cone(glow, x + 0.7 * s, h - 0.1, z + 0.3 * s, 0.34 * s, 1.5 * s, [0.45, 0.75, 1.0]);
-        crystals.push([x, z]);
-      } else if (sl < 0.3) {
-        /* the artifact: a black monolith, rare and unexplained */
-        box(lit, x, h - 0.3, z, 1.3, 6 + rnd() * 5, 1.3, [0.015, 0.015, 0.02]);
+      if (roll < 0.40) { const s = 0.85 + rnd() * 1.5; treePine(lit, x, h, z, s, rnd); solids.push({ x, z, r: 0.34 * s, top: h + 8 * s }); }
+      else if (roll < 0.66) { const s = 0.9 + rnd() * 1.1; treeBroad(lit, x, h, z, s, rnd); solids.push({ x, z, r: 0.46 * s, top: h + 6.4 * s }); }
+      else if (roll < 0.80) { const s = 0.8 + rnd() * 1.0; treeSpire(lit, x, h, z, s, rnd); solids.push({ x, z, r: 0.2 * s, top: h + 11.6 * s }); }
+      else if (roll < 0.80 + 0.09 * gloomBias) { const s = 0.9 + rnd() * 1.2; treeDead(lit, x, h, z, s, rnd); solids.push({ x, z, r: 0.34 * s, top: h + 4.6 * s }); }
+    }
+    /* a giant, rarely — the tree you navigate by */
+    if (rnd() < 0.085 * wonderBias) {
+      const x = x0 + 8 + rnd() * (CHUNK - 16), z = z0 + 8 + rnd() * (CHUNK - 16);
+      const h = height(x, z);
+      if (h > 1 && slopeAt(x, z) < 0.3 && pathDist(x, z) > 4) {
+        const s = 1.0 + rnd() * 0.5;
+        treeGiant(lit, x, h, z, s, rnd);
+        solids.push({ x, z, r: 1.6 * s, top: h + 23 * s });
+        pois.push({ name: "the giant", x, z, r: 40 });
       }
     }
-    /* ruins — rare, seeded, unexplained: pillars, a fallen lintel,
-       rubble. One site per lucky chunk. */
-    if (rnd() < 0.17) {
+    for (let t = 0; t < 12; t++) {
+      const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
+      const h = height(x, z);
+      if (h < 0.4) continue;
+      const roll = rnd();
+      if (roll < 0.34) { const s = 0.6 + rnd() * 1.5; rockGeo(lit, x, h - 0.15, z, s, rnd); solids.push({ x, z, r: 0.95 * s, top: h + 0.9 * s }); }
+      else if (roll < 0.34 + 0.13 * wonderBias) { const s = 0.7 + rnd() * 0.9; shardGeo(glow, x, h - 0.1, z, s, [0.62, 0.36, 1.0], [0.45, 0.75, 1.0], rnd); crystals.push([x, z]); solids.push({ x, z, r: 0.55 * s, top: h + 3.2 * s }); }
+      else if (roll < 0.55 && moisture(x, z) > 0.52) { const s = 0.8 + rnd() * 1.1; shroomGeo(lit, glow, x, h, z, s, rnd); }
+      else if (roll < 0.565 * gloomBias) { boxS(lit, x, h - 0.3, z, 1.3, 6 + rnd() * 5, 1.3, [0.015, 0.015, 0.02], rnd() * 3.14); solids.push({ x, z, r: 1.0, top: h + 10 }); }
+    }
+    /* ruins — rarer than before, and built of closed stone */
+    if (rnd() < 0.13) {
       const rx = x0 + 10 + rnd() * (CHUNK - 20), rz = z0 + 10 + rnd() * (CHUNK - 20);
       const rh = height(rx, rz);
-      if (rh > 1 && slopeAt(rx, rz) < 0.35) {
-        const stone: [number, number, number] = [0.48, 0.46, 0.44];
-        const h1 = 3.4 + rnd() * 2.6, h2 = 2.2 + rnd() * 2.4, gap = 3.6 + rnd() * 1.6;
-        box(lit, rx, rh - 0.3, rz, 1.1, h1, 1.1, stone);
-        box(lit, rx + gap, rh - 0.3, rz, 0.95, h2, 0.95, stone);
-        if (rnd() < 0.6) box(lit, rx + gap / 2, rh + Math.min(h1, h2) - 0.5, rz, gap + 1.6, 0.8, 1.3, stone);
-        box(lit, rx + gap * 0.4, rh - 0.25, rz + 1.8, gap * 0.8, 0.7, 1.1, stone);
-        for (let rb = 0; rb < 4; rb++) box(lit, rx + (rnd() - 0.5) * 7, rh - 0.2, rz + (rnd() - 0.5) * 7, 0.5 + rnd() * 0.6, 0.4 + rnd() * 0.5, 0.5 + rnd() * 0.6, stone);
+      if (rh > 1 && slopeAt(rx, rz) < 0.35 && pathDist(rx, rz) > 3) {
+        const stone: Col3 = [0.48, 0.46, 0.44];
+        const h1 = 3.4 + rnd() * 2.6, h2 = 2.2 + rnd() * 2.4, gap = 3.6 + rnd() * 1.6, rot = rnd() * 3.14;
+        prism(lit, rx, rh - 0.3, rz, 0.62, 0.5, h1, 6, stone);
+        prism(lit, rx + gap, rh - 0.3, rz, 0.55, 0.44, h2, 6, vary(stone, 0.1, rnd));
+        if (rnd() < 0.6) boxS(lit, rx + gap / 2, rh + Math.min(h1, h2) - 0.5, rz, gap + 1.6, 0.8, 1.3, stone, rot);
+        boxS(lit, rx + gap * 0.4, rh - 0.25, rz + 1.8, gap * 0.8, 0.7, 1.1, vary(stone, 0.12, rnd), rot * 0.5);
+        for (let rb = 0; rb < 4; rb++) rockGeo(lit, rx + (rnd() - 0.5) * 7, rh - 0.2, rz + (rnd() - 0.5) * 7, 0.4 + rnd() * 0.4, rnd);
+        solids.push({ x: rx, z: rz, r: 0.85, top: rh + h1 }, { x: rx + gap, z: rz, r: 0.8, top: rh + h2 });
+        pois.push({ name: "the ruins", x: rx, z: rz, r: 26 });
       }
     }
-    /* grass + flowers */
-    for (let t = 0; t < 14; t++) {
+    /* ground cover, baked into the land like everything else —
+       static, seeded, always the same grass in the same place */
+    const grassN = Math.round(52 * detailMul);
+    for (let t = 0; t < grassN; t++) {
       const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
       const h = height(x, z);
-      if (h < 0.8 || h > 10 || slopeAt(x, z) > 0.3) continue;
-      if (rnd() < 0.62) {
-        for (let b = 0; b < 3; b++) cone(lit, x + (rnd() - 0.5) * 0.5, h - 0.03, z + (rnd() - 0.5) * 0.5, 0.16, 0.55 + rnd() * 0.3, [0.25, 0.5, 0.2], 4);
-      } else {
-        const petals: Array<[number, number, number]> = [[0.95, 0.45, 0.65], [0.98, 0.85, 0.35], [0.7, 0.55, 1.0], [0.95, 0.95, 0.95]];
-        cone(glow, x, h + 0.18, z, 0.14, 0.3, petals[Math.floor(rnd() * petals.length)], 5);
-        cone(lit, x, h - 0.02, z, 0.05, 0.24, [0.2, 0.4, 0.16], 4);
-      }
+      if (h < 0.7 || h > 12 || slopeAt(x, z) > 0.32) continue;
+      grassTuft(lit, x, h, z, 0.8 + rnd() * 0.9, rnd);
+    }
+    for (let t = 0; t < Math.round(11 * wonderBias); t++) {
+      const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
+      const h = height(x, z);
+      if (h < 0.8 || h > 11 || slopeAt(x, z) > 0.3) continue;
+      const petals: Col3[] = [[0.95, 0.45, 0.65], [0.98, 0.85, 0.35], [0.72, 0.55, 1.0], [0.95, 0.95, 0.95], [0.98, 0.55, 0.30]];
+      flowerGeo(lit, glow, x, h, z, 0.8 + rnd() * 0.7, petals[Math.floor(rnd() * petals.length)], rnd);
+    }
+    for (let t = 0; t < 8; t++) {
+      const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
+      const h = height(x, z);
+      if (h < 0.2) continue;
+      octa(lit, x, h + 0.05, z, 0.14 + rnd() * 0.2, 0.08 + rnd() * 0.08, 0.13 + rnd() * 0.18, vary([0.44, 0.43, 0.45], 0.2, rnd), rnd());
     }
     return {
       key: keyOf(cx, cz),
@@ -1450,6 +1752,7 @@ export function buildSimulacrum(body: HTMLElement) {
       lit: lit.length ? makeMesh(new Float32Array(lit)) : null,
       glow: glow.length ? makeMesh(new Float32Array(glow)) : null,
       crystals,
+      solids,
     };
   };
 
@@ -1463,22 +1766,16 @@ export function buildSimulacrum(body: HTMLElement) {
     if (!blooms.length) return;
     const v: number[] = [];
     const cols: Array<[number, number, number]> = [[0.95, 0.5, 0.7], [0.98, 0.86, 0.4], [0.66, 0.5, 1.0], [0.5, 0.85, 1.0]];
-    const put = (x: number, y: number, z: number, col: [number, number, number], r: number, h: number) => {
-      for (let k = 0; k < 5; k++) {
-        const a1 = (k / 5) * Math.PI * 2, a2 = ((k + 1) / 5) * Math.PI * 2;
-        v.push(x + Math.cos(a1) * r, y, z + Math.sin(a1) * r, ...col, 0, 0.6, 0);
-        v.push(x + Math.cos(a2) * r, y, z + Math.sin(a2) * r, ...col, 0, 0.6, 0);
-        v.push(x, y + h, z, ...col, 0, 1, 0);
-      }
-    };
     const brnd = mulberry32(seed ^ 0xb100 & 0xffffff);
     for (const b of blooms) {
-      for (let i = 0; i < 5; i++) {
-        const bx = b.x + (brnd() - 0.5) * 4.4, bz = b.z + (brnd() - 0.5) * 4.4;
+      for (let i = 0; i < 6; i++) {
+        const bx = b.x + (brnd() - 0.5) * 4.6, bz = b.z + (brnd() - 0.5) * 4.6;
         const by = height(bx, bz);
         if (by < 0.2) continue;
-        if (b.kind === 3 && i === 0) put(bx, by - 0.1, bz, cols[3], 0.3, 1.5);
-        else put(bx, by + 0.14, bz, cols[b.kind], 0.13, 0.3);
+        /* what you plant is what you see: a true flower, stem,
+           petal ring and heart — one kind still grows a shard */
+        if (b.kind === 3 && i === 0) shardGeo(v, bx, by - 0.1, bz, 0.9, cols[3], cols[0], brnd);
+        else flowerGeo(v, v, bx, by, bz, 1.5 + brnd() * 0.9, cols[b.kind], brnd);
       }
     }
     if (v.length) bloomMesh = makeMesh(new Float32Array(v));
@@ -1487,58 +1784,7 @@ export function buildSimulacrum(body: HTMLElement) {
   const rebuildAllBlooms = () => { const keep = blooms; blooms = [...keep, ...guestBlooms]; rebuildBlooms(); blooms = keep; };
   rebuildBlooms();
 
-  /* sky dome */
 
-  /* the near field: grass tufts and pebbles that only exist
-     within a short walk of the walker, rebuilt on a snapped grid
-     so the ground has something to say when you walk up to it */
-  let nearMesh: Mesh | null = null;
-  let nearCell: [number, number] = [1e9, 1e9];
-  const buildNear = (wx: number, wz: number) => {
-    const cx = Math.round(wx / 6), cz = Math.round(wz / 6);
-    if (nearCell[0] === cx && nearCell[1] === cz && nearMesh) return;
-    nearCell = [cx, cz];
-    if (nearMesh) { gl.deleteBuffer(nearMesh.buf); nearMesh = null; }
-    const ox = cx * 6, oz = cz * 6;
-    const rnd = mulberry32((seed ^ (cx * 341873) ^ (cz * 711367)) & 0xffffff);
-    const v: number[] = [];
-    const blade = (x: number, z: number, h: number) => {
-      const y = height(x, z);
-      const lean = (rnd() - 0.5) * 0.3;
-      const g1: [number, number, number] = [0.13, 0.26, 0.10];
-      const g2: [number, number, number] = [0.36, 0.52, 0.20];
-      for (let b = 0; b < 3; b++) {
-        const a = rnd() * Math.PI * 2, bx = x + Math.cos(a) * 0.09, bz = z + Math.sin(a) * 0.09;
-        v.push(bx - 0.05, y, bz, ...g1, 0, 1, 0, bx + 0.05, y, bz, ...g1, 0, 1, 0, bx + lean, y + h, bz + lean * 0.6, ...g2, 0, 1, 0);
-      }
-    };
-    for (let i = 0, n = Math.round(300 * nearMul); i < n; i++) {
-      const x = ox + (rnd() - 0.5) * 76, z = oz + (rnd() - 0.5) * 76;
-      const h = height(x, z);
-      if (h < 0.35) continue;
-      const sl = Math.abs(height(x + 1.2, z) - h) + Math.abs(height(x, z + 1.2) - h);
-      if (sl > 1.4) continue;
-      blade(x, z, 0.4 + rnd() * 0.5);
-    }
-    for (let i = 0, n = Math.round(70 * nearMul); i < n; i++) {
-      const x = ox + (rnd() - 0.5) * 76, z = oz + (rnd() - 0.5) * 76;
-      const y = height(x, z);
-      if (y < -0.2) continue;
-      const r = 0.10 + rnd() * 0.22;
-      const g = 0.32 + rnd() * 0.2;
-      const col: [number, number, number] = [g, g * 0.98, g * 0.94];
-      const top: [number, number, number] = [x, y + r * 1.4, z];
-      const bot: [number, number, number] = [x, y - r * 0.5, z];
-      for (let k = 0; k < 5; k++) {
-        const a1 = (k / 5) * Math.PI * 2 + rnd() * 0.2, a2 = ((k + 1) / 5) * Math.PI * 2;
-        const p1: [number, number, number] = [x + Math.cos(a1) * r, y + r * 0.3, z + Math.sin(a1) * r];
-        const p2: [number, number, number] = [x + Math.cos(a2) * r, y + r * 0.3, z + Math.sin(a2) * r];
-        v.push(...p1, ...col, 0, 0.6, 0, ...p2, ...col, 0, 0.6, 0, ...top, ...col, 0, 1, 0);
-        v.push(...p2, ...col, 0, 0.6, 0, ...p1, ...col, 0, 0.6, 0, ...bot, ...col, 0, -1, 0);
-      }
-    }
-    if (v.length) nearMesh = makeMesh(new Float32Array(v));
-  };
   const skyMesh = (() => {
     const v: number[] = [];
     const seg = 20;
@@ -1597,6 +1843,7 @@ export function buildSimulacrum(body: HTMLElement) {
   let rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
   let meteorPts = makePoints(170, [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
   let snowPts = makePoints(520, [70, 42, 70], [0.94, 0.96, 1.0], [1.3, 2.6], seed ^ 0x5107 & 0xffffff);
+  let firePts = makePoints(150, [48, 9, 48], [0.78, 1.0, 0.42], [1.7, 2.9], seed ^ 0xf17e & 0xffffff);
   const bindPoints = (pts: { buf: WebGLBuffer }) => {
     gl.bindBuffer(gl.ARRAY_BUFFER, pts.buf);
     const aPos = gl.getAttribLocation(ptsPr, "aPos");
@@ -1621,20 +1868,28 @@ export function buildSimulacrum(body: HTMLElement) {
      wander, startle and flee, re-homing near the walker */
   const critBuf = gl.createBuffer()!;
   const critRnd = mulberry32(seed ^ 0xc217 & 0xffffff);
-  interface Critter { hx: number; hz: number; x: number; z: number; hdg: number; state: number; t: number; tx: number; tz: number; col: [number, number, number]; s: number }
+  interface Critter { hx: number; hz: number; x: number; z: number; hdg: number; state: number; t: number; tx: number; tz: number; col: [number, number, number]; s: number; kind: number }
   const critterCols: Array<[number, number, number]> = [[0.45, 0.32, 0.20], [0.72, 0.66, 0.58], [0.30, 0.26, 0.24], [0.55, 0.40, 0.26]];
   const critters: Critter[] = Array.from({ length: 6 }, (_, i) => ({
     hx: 8 + (critRnd() - 0.5) * 130, hz: 8 + (critRnd() - 0.5) * 130,
     x: 0, z: 0, hdg: critRnd() * 6.28, state: 0, t: critRnd() * 4, tx: 0, tz: 0,
-    col: critterCols[i % critterCols.length], s: 0.8 + critRnd() * 0.5,
+    col: critterCols[i % critterCols.length], s: 0.8 + critRnd() * 0.5, kind: 0,
   }));
+  /* the herd: four big grazers who keep to one another's country */
+  const grazerCols: Array<[number, number, number]> = [[0.52, 0.38, 0.24], [0.62, 0.50, 0.36], [0.38, 0.30, 0.22]];
+  const herdX = 30 + (critRnd() - 0.5) * 90, herdZ = -24 + (critRnd() - 0.5) * 90;
+  for (let gi = 0; gi < 4; gi++) critters.push({
+    hx: herdX + (critRnd() - 0.5) * 18, hz: herdZ + (critRnd() - 0.5) * 18,
+    x: 0, z: 0, hdg: critRnd() * 6.28, state: 0, t: critRnd() * 4, tx: 0, tz: 0,
+    col: grazerCols[gi % grazerCols.length], s: 1.5 + critRnd() * 0.6, kind: 1,
+  });
   for (const c of critters) { c.x = c.hx; c.z = c.hz; c.tx = c.hx; c.tz = c.hz; }
   const stepCritters = (dt: number) => {
     for (const c of critters) {
       if (Math.hypot(c.hx - px, c.hz - pz) > 150) { c.hx = px + (critRnd() - 0.5) * 120; c.hz = pz + (critRnd() - 0.5) * 120; c.x = c.hx; c.z = c.hz; }
       c.t -= dt;
       const dWalker = Math.hypot(c.x - px, c.z - pz);
-      if (dWalker < 9 - judgmentNow * 3.5 && c.state !== 2) { c.state = 2; c.t = 1.6 + critRnd(); witness("flee"); }
+      if (dWalker < (c.kind === 1 ? 14 : 9) - judgmentNow * 3.5 && c.state !== 2) { c.state = 2; c.t = 1.6 + critRnd(); witness("flee"); }
       if (c.t <= 0) {
         if (c.state === 2 || critRnd() < 0.45) { c.state = 0; c.t = 2 + critRnd() * 4; }
         else { c.state = 1; c.tx = c.hx + (critRnd() - 0.5) * 46; c.tz = c.hz + (critRnd() - 0.5) * 46; c.t = 6 + critRnd() * 5; }
@@ -1645,7 +1900,7 @@ export function buildSimulacrum(body: HTMLElement) {
         while (dh > Math.PI) dh -= Math.PI * 2;
         while (dh < -Math.PI) dh += Math.PI * 2;
         c.hdg += dh * Math.min(1, dt * 4);
-        const sp = c.state === 2 ? 5.2 : 1.25;
+        const sp = c.state === 2 ? (c.kind === 1 ? 6.4 : 5.2) : (c.kind === 1 ? 0.95 : 1.25);
         const nx = c.x + Math.sin(c.hdg) * sp * dt, nz = c.z + Math.cos(c.hdg) * sp * dt;
         if (height(nx, nz) > 0.4) { c.x = nx; c.z = nz; }
         else c.hdg += dt * 2.2;
@@ -1655,7 +1910,39 @@ export function buildSimulacrum(body: HTMLElement) {
   const critterVerts = (): Float32Array => {
     const v: number[] = [];
     const push = (x: number, y: number, z: number, col: [number, number, number]) => v.push(x, y, z, ...col, 0, 1, 0);
+    /* a closed box aligned to a heading — the grazers' anatomy */
+    const boxAt = (cxp: number, cyp: number, czp: number, fx: number, fz: number, L: number, W: number, H: number, col: [number, number, number]) => {
+      const rxv = fz, rzv = -fx;
+      const cn = (a: number, b: number, dy: number): [number, number, number] => [cxp + fx * a + rxv * b, cyp + dy, czp + fz * a + rzv * b];
+      const Q = (q: Array<[number, number, number]>) => { push(...q[0], col); push(...q[1], col); push(...q[2], col); push(...q[0], col); push(...q[2], col); push(...q[3], col); };
+      Q([cn(-L, -W, H), cn(L, -W, H), cn(L, W, H), cn(-L, W, H)]);
+      Q([cn(-L, -W, -H), cn(-L, W, -H), cn(L, W, -H), cn(L, -W, -H)]);
+      Q([cn(L, -W, H), cn(L, -W, -H), cn(L, W, -H), cn(L, W, H)]);
+      Q([cn(-L, W, H), cn(-L, W, -H), cn(-L, -W, -H), cn(-L, -W, H)]);
+      Q([cn(-L, -W, H), cn(-L, -W, -H), cn(L, -W, -H), cn(L, -W, H)]);
+      Q([cn(-L, W, H), cn(L, W, H), cn(L, W, -H), cn(-L, W, -H)]);
+    };
     for (const c of critters) {
+      if (c.kind === 1) {
+        const gy = height(c.x, c.z);
+        if (gy < 0.3) continue;
+        const s = c.s;
+        const fx = Math.sin(c.hdg), fz = Math.cos(c.hdg);
+        const stride = c.state > 0 ? Math.sin(performance.now() * 0.009 + c.hx) : 0;
+        const bobG = c.state > 0 ? Math.abs(Math.sin(performance.now() * 0.009 + c.hx)) * 0.05 * s : 0;
+        const bodyCy = gy + 1.0 * s + bobG;
+        boxAt(c.x, bodyCy, c.z, fx, fz, 0.52 * s, 0.24 * s, 0.30 * s, c.col);
+        for (const [la, lb] of [[0.38, 0.16], [0.38, -0.16], [-0.38, 0.16], [-0.38, -0.16]] as Array<[number, number]>) {
+          const swing = ((la > 0) === (lb > 0) ? stride : -stride) * 0.10 * s * (c.state > 0 ? 1 : 0.15);
+          boxAt(c.x + fx * la * s + fz * lb * s + fx * swing, gy + 0.36 * s, c.z + fz * la * s - fx * lb * s + fz * swing, fx, fz, 0.045 * s, 0.045 * s, 0.36 * s, c.col);
+        }
+        const dipG = c.state === 0 ? -0.34 * s : 0;
+        const neckX = c.x + fx * 0.55 * s, neckZ = c.z + fz * 0.55 * s;
+        boxAt(neckX, bodyCy + 0.30 * s + dipG * 0.5, neckZ, fx, fz, 0.20 * s, 0.11 * s, 0.30 * s, c.col);
+        boxAt(c.x + fx * 0.78 * s, bodyCy + 0.52 * s + dipG, c.z + fz * 0.78 * s, fx, fz, 0.17 * s, 0.10 * s, 0.13 * s, c.col);
+        boxAt(c.x - fx * 0.58 * s, bodyCy + 0.18 * s, c.z - fz * 0.58 * s, fx, fz, 0.05 * s, 0.04 * s, 0.22 * s, c.col);
+        continue;
+      }
       const y = height(c.x, c.z);
       if (y < 0.3) continue;
       const bob = c.state > 0 ? Math.abs(Math.sin(performance.now() * 0.012 + c.hx)) * 0.09 : 0;
@@ -1742,63 +2029,53 @@ export function buildSimulacrum(body: HTMLElement) {
      label, any ledger line. She favours strange worlds and kind
      accounts; where the account is cruel, she simply does not
      come. Nobody is told who she is. */
-  const vesper = { on: false, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, nextAt: 45 + Math.random() * 60, absent: false, retargetAt: 0, tendAt: 0, hueSeed: Math.random() * 10 };
-  let signs: Array<[number, number]> = [];
-  try { signs = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<[number, number]>; } catch { signs = []; }
+  const vesper = { on: false, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, nextAt: 45 + Math.random() * 60, absent: false, retargetAt: 0, tendAt: 0, hueSeed: Math.random() * 10, watch: 0 };
+  interface Sign { x: number; z: number; k: number }
+  let signs: Sign[] = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<unknown>;
+    signs = raw.map((e) => Array.isArray(e) ? { x: e[0] as number, z: e[1] as number, k: 0 } : e as Sign);
+  } catch { signs = []; }
   let signMesh: Mesh | null = null;
   const rebuildSigns = () => {
     if (signMesh) { gl.deleteBuffer(signMesh.buf); signMesh = null; }
     if (!signs.length) return;
     const v: number[] = [];
     const col: [number, number, number] = [0.80, 0.83, 0.88];
-    for (const [sx, sz] of signs) {
+    for (const sg of signs) {
+      const sy = height(sg.x, sg.z);
+      if (sy < 0.2) continue;
+      if (sg.k === 1) {
+        /* a single black feather, standing where she stood */
+        octa(v, sg.x, sy + 0.42, sg.z, 0.05, 0.46, 0.13, [0.05, 0.04, 0.09]);
+        continue;
+      }
       for (let k = 0; k < 8; k++) {
         const a = (k / 8) * Math.PI * 2;
-        const ox = sx + Math.cos(a) * 1.15, oz = sz + Math.sin(a) * 1.15;
+        const ox = sg.x + Math.cos(a) * 1.15, oz = sg.z + Math.sin(a) * 1.15;
         const oy = height(ox, oz);
         if (oy < 0.2) continue;
-        v.push(ox - 0.14, oy, oz, ...col, 0, 0.6, 0, ox + 0.14, oy, oz, ...col, 0, 0.6, 0, ox, oy + 0.34, oz, ...col, 0, 1, 0);
+        octa(v, ox, oy + 0.13, oz, 0.15, 0.17, 0.15, col, a);
       }
     }
     if (v.length) signMesh = makeMesh(new Float32Array(v));
   };
   rebuildSigns();
   const leaveSign = (x: number, z: number) => {
-    if (signs.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 14)) return;
-    signs.push([Math.round(x * 10) / 10, Math.round(z * 10) / 10]);
+    if (signs.some((sg) => Math.hypot(sg.x - x, sg.z - z) < 14)) return;
+    signs.push({ x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, k: Math.random() < 0.3 ? 1 : 0 });
     if (signs.length > 28) signs = signs.slice(-28);
     try { localStorage.setItem(skey(`simulacrum-signs-${seed}`), JSON.stringify(signs)); } catch { /* private mode */ }
     rebuildSigns();
   };
   const buildFigure = (coat: [number, number, number], hem: [number, number, number], face: [number, number, number]): Mesh => {
+    /* a true shape, closed and honestly lit: a shroud of three
+       tapered volumes and a faceted head — no painted normals */
     const v: number[] = [];
-    const ring = (y: number, r: number): Array<[number, number, number]> => {
-      const pts: Array<[number, number, number]> = [];
-      for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2; pts.push([Math.cos(a) * r, y, Math.sin(a) * r]); }
-      return pts;
-    };
-    const band = (r1: Array<[number, number, number]>, r2: Array<[number, number, number]>, col: [number, number, number]) => {
-      for (let k = 0; k < 7; k++) {
-        const a = r1[k], b = r1[(k + 1) % 7], c = r2[(k + 1) % 7], d = r2[k];
-        v.push(...a, ...col, 0, 0.5, 0, ...b, ...col, 0, 0.5, 0, ...c, ...col, 0, 0.5, 0, ...a, ...col, 0, 0.5, 0, ...c, ...col, 0, 0.5, 0, ...d, ...col, 0, 0.5, 0);
-      }
-    };
-    const rHem = ring(0, 0.55), rWaist = ring(1.15, 0.33), rNeck = ring(1.86, 0.15);
-    band(rHem, rWaist, coat);
-    band(rWaist, rNeck, hem);
-    for (let k = 0; k < 7; k++) {
-      const a = rNeck[k], b = rNeck[(k + 1) % 7];
-      v.push(...a, ...coat, 0, 0.5, 0, ...b, ...coat, 0, 0.5, 0, 0, 2.14, 0, ...coat, 0, 1, 0);
-    }
-    /* the head: a small pale octahedron, slightly bowed */
-    const hy = 2.02, hr = 0.155;
-    for (let k = 0; k < 6; k++) {
-      const a1 = (k / 6) * Math.PI * 2, a2 = ((k + 1) / 6) * Math.PI * 2;
-      const p1: [number, number, number] = [Math.cos(a1) * hr, hy, Math.sin(a1) * hr];
-      const p2: [number, number, number] = [Math.cos(a2) * hr, hy, Math.sin(a2) * hr];
-      v.push(...p1, ...face, 0, 0.6, 0, ...p2, ...face, 0, 0.6, 0, 0, hy + 0.21, 0, ...face, 0, 1, 0);
-      v.push(...p2, ...face, 0, 0.6, 0, ...p1, ...face, 0, 0.6, 0, 0, hy - 0.19, 0, ...face, 0, -1, 0);
-    }
+    prism(v, 0, 0, 0, 0.55, 0.33, 1.15, 7, coat);
+    prism(v, 0, 1.15, 0, 0.33, 0.15, 0.71, 7, hem);
+    prism(v, 0, 1.86, 0, 0.15, 0.02, 0.28, 7, coat);
+    octa(v, 0, 2.02, 0, 0.155, 0.20, 0.155, face);
     return makeMesh(new Float32Array(v));
   };
   const vesperMesh = buildFigure([0.09, 0.10, 0.15], [0.13, 0.14, 0.20], [0.80, 0.82, 0.86]);
@@ -1808,6 +2085,21 @@ export function buildSimulacrum(body: HTMLElement) {
     const night = skyColors(dayT, 0).night;
     if (night < 0.12) vesper.absent = false;
     if (!vesper.on) {
+      /* the bell calls her to the far hill, even by day */
+      if (anKind === "bell" && anAmt > 0.3 && night > 0.04 && !vesper.absent && judgmentNow >= -0.45 && Math.random() < 0.5) {
+        let bx = 0, bz = 0, bh = -1;
+        for (let i = 0; i < 7; i++) {
+          const a = Math.random() * Math.PI * 2, d = 105 + Math.random() * 40;
+          const x = px + Math.sin(a) * d, z = pz + Math.cos(a) * d, h = height(x, z);
+          if (h > bh) { bh = h; bx = x; bz = z; }
+        }
+        if (bh > 1.2) {
+          vesper.x = bx; vesper.z = bz; vesper.tx = bx; vesper.tz = bz;
+          vesper.yaw = Math.atan2(px - bx, pz - bz);
+          vesper.on = true; vesper.watch = nowS + 16;
+          return;
+        }
+      }
       if (nowS < vesper.nextAt || night < 0.30 || vesper.absent) return;
       if (judgmentNow < -0.45) { vesper.absent = true; return; }
       if (Math.random() > 0.25 + strangeNow * 0.75) { vesper.nextAt = nowS + 20 + Math.random() * 30; return; }
@@ -1817,11 +2109,11 @@ export function buildSimulacrum(body: HTMLElement) {
         const x = px + Math.sin(a) * d, z = pz + Math.cos(a) * d, h = height(x, z);
         if (h > bh) { bh = h; bx = x; bz = z; }
       }
-      if (bh < 1.0) { vesper.nextAt = nowS + 30; return; }
+      if (bh < 0.35 || (bh < 1.0 && Math.random() < 0.5)) { vesper.nextAt = nowS + 30; return; }
       vesper.x = bx; vesper.z = bz; vesper.tx = bx; vesper.tz = bz;
       vesper.yaw = Math.atan2(px - bx, pz - bz);
       vesper.on = true; vesper.retargetAt = nowS + 10;
-      if (Math.random() < 0.35) vesperSay("the other one is walking tonight");
+      if (Math.random() < 0.35) vesperSay(["the other one is walking tonight", "she is out. do not follow", "the high places are hers tonight"][Math.floor(Math.random() * 3)]);
       return;
     }
     /* dawn takes her */
@@ -1832,6 +2124,12 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     const dx = px - vesper.x, dz = pz - vesper.z;
     const d = Math.hypot(dx, dz);
+    /* while she watches, she does not walk — she only turns */
+    if (nowS < vesper.watch) {
+      vesper.yaw = Math.atan2(dx, dz);
+      if (d < 9) { vesper.watch = 0; }
+      else return;
+    }
     if (d < 15) {
       tow.burst(vesper.x, height(vesper.x, vesper.z) + 1.4, vesper.z, { n: 26, col: [0.72, 0.6, 1.0], spd: 2.2, up: 1.6, grav: -0.8, drag: 1.2, life: 1.5, size: 2.6 });
       leaveSign(vesper.x, vesper.z);
@@ -1979,7 +2277,22 @@ export function buildSimulacrum(body: HTMLElement) {
     rich: { res: 4, radius: 2, shadow: 2, density: 3 },
     ultra: { res: 5, radius: 2, shadow: 3, density: 3 },
   };
-  const RES_LADDER: Array<[number, number]> = [[768, 480], [896, 560], [1024, 640], [1280, 800], [1536, 960], [1920, 1200]];
+  /* resolution is a SCALE of the stage's true size, never an absolute
+     number: the world must fill its window exactly, on any browser,
+     at any window shape, maximised or not */
+  const RES_SCALE = [0.5, 0.65, 0.8, 1.0, 1.2, 1.45];
+  let lastFitW = 0, lastFitH = 0;
+  const fitCanvas = () => {
+    const cw = stage.clientWidth, ch = stage.clientHeight;
+    if (!cw || !ch) return;
+    lastFitW = cw; lastFitH = ch;
+    wrap.classList.toggle("sim-narrow", cw < 680);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const s = RES_SCALE[iris.res] * dpr;
+    const w = Math.max(320, Math.min(2560, Math.round(cw * s)));
+    const h = Math.max(200, Math.min(1600, Math.round(ch * s)));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  };
   const RADIUS_LADDER = [2, 3, 4];
   const SHADOW_LADDER = [0, 1024, 2048, 4096];
   const DENSITY_LADDER = [0, 0.5, 1, 1.6];
@@ -2020,16 +2333,19 @@ export function buildSimulacrum(body: HTMLElement) {
       density: cap(a.density, ceil.density, 3),
     };
   };
-  let nearMul = DENSITY_LADDER[iris.density];
+  let detailMul = DENSITY_LADDER[iris.density];
   const irisApply = (axis: keyof IrisAxes) => {
     const c = irisClamp(iris);
     iris.res = c.res; iris.radius = c.radius; iris.shadow = c.shadow; iris.density = c.density;
-    if (axis === "res") { canvas.width = RES_LADDER[iris.res][0]; canvas.height = RES_LADDER[iris.res][1]; }
+    if (axis === "res") fitCanvas();
     if (axis === "radius") viewRadius = RADIUS_LADDER[iris.radius];
     if (axis === "shadow" && SHADOW_LADDER[iris.shadow] > 0 && SHADOW_LADDER[iris.shadow] !== shadowSize) buildShadowTarget(SHADOW_LADDER[iris.shadow]);
     if (axis === "density") {
-      nearMul = DENSITY_LADDER[iris.density];
-      nearCell = [1e9, 1e9];
+      detailMul = DENSITY_LADDER[iris.density];
+      /* density now lives in the baked ground cover — clear the
+         chunks so the land re-grows at the new richness */
+      for (const ch of chunks.values()) { gl.deleteBuffer(ch.terrain.buf); if (ch.lit) gl.deleteBuffer(ch.lit.buf); if (ch.glow) gl.deleteBuffer(ch.glow.buf); }
+      chunks.clear();
       const pm = POINT_LADDER[iris.density];
       gl.deleteBuffer(motes.buf); gl.deleteBuffer(rainPts.buf); gl.deleteBuffer(meteorPts.buf);
       motes = makePoints(Math.round(220 * pm), [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
@@ -2245,6 +2561,25 @@ export function buildSimulacrum(body: HTMLElement) {
     witness("storm");
     giftNote("storm", "it did not make this weather. you did.");
   };
+  /* places found — kept per world, whispered once */
+  let foundSet = new Set<string>();
+  try { foundSet = new Set(JSON.parse(localStorage.getItem(skey(`simulacrum-found-${seed}`)) || "[]") as string[]); } catch { foundSet = new Set(); }
+  const checkDiscoveries = () => {
+    for (const poi of pois) {
+      if (foundSet.has(poi.name)) continue;
+      const dx = px - poi.x, dz = pz - poi.z;
+      if (dx * dx + dz * dz < poi.r * poi.r) {
+        foundSet.add(poi.name);
+        try { localStorage.setItem(skey(`simulacrum-found-${seed}`), JSON.stringify([...foundSet])); } catch { /* the land remembers even if storage cannot */ }
+        whisper.textContent = `you found ${poi.name}`;
+        whisper.style.opacity = "1";
+        whisperTimer = 5.2;
+        audio.chime(3);
+        witness("kind");
+      }
+    }
+  };
+
   const castBloom = () => {
     if (!ready("bloom", 2)) return;
     const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
@@ -2276,8 +2611,6 @@ export function buildSimulacrum(body: HTMLElement) {
   const powerDefs: Array<[string, string, () => void]> = [
     ["the opening", "Tab", () => toggleOpening()],
     ["starlight", "1", toggleStarlight],
-    ["raise land", "R", () => castShape(1)],
-    ["lower land", "G", () => castShape(-1)],
     ["blink", "Q", castBlink],
     ["stormcall", "X", castStorm],
     ["bloom", "B", castBloom],
@@ -2287,6 +2620,17 @@ export function buildSimulacrum(body: HTMLElement) {
     b.addEventListener("click", () => { if (!audio.live) audio.start(); audio.kick(); touched = true; titleScr.classList.add("taken"); fn(); });
     powers.append(b);
   }
+  let chromeTimer = 6;
+  const chromeWake = () => { wrap.classList.add("chrome-on"); chromeTimer = 4; };
+  wrap.addEventListener("pointermove", chromeWake);
+  wrap.addEventListener("pointerdown", chromeWake);
+  wrap.addEventListener("touchstart", chromeWake, { passive: true });
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void wrap.requestFullscreen?.();
+  };
+  fsBtn.addEventListener("click", toggleFullscreen);
+  canvas.addEventListener("dblclick", toggleFullscreen);
   sndBtn.addEventListener("click", () => {
     if (!audio.live) audio.start();
     muted = !muted;
@@ -2304,8 +2648,10 @@ export function buildSimulacrum(body: HTMLElement) {
     detailNoise = new Noise(seed ^ 0xd37a);
     for (const ch of chunks.values()) { gl.deleteBuffer(ch.terrain.buf); if (ch.lit) gl.deleteBuffer(ch.lit.buf); if (ch.glow) gl.deleteBuffer(ch.glow.buf); }
     chunks.clear();
-    waterCell = [1e9, 1e9]; nearCell = [1e9, 1e9];
-    if (nearMesh) { gl.deleteBuffer(nearMesh.buf); nearMesh = null; }
+    waterCell = [1e9, 1e9];
+    buildPaths();
+    buildWonders();
+    try { foundSet = new Set(JSON.parse(localStorage.getItem(skey(`simulacrum-found-${seed}`)) || "[]") as string[]); } catch { foundSet = new Set(); }
     audio.dispose();
     audio = new SimAudio(seed);
     if (touched) { audio.start(); audio.ui("world"); }
@@ -2320,7 +2666,10 @@ export function buildSimulacrum(body: HTMLElement) {
     try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
     guestBlooms = [];
     rebuildBlooms();
-    try { signs = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<[number, number]>; } catch { signs = []; }
+    try {
+      const raw = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<unknown>;
+      signs = raw.map((e) => Array.isArray(e) ? { x: e[0] as number, z: e[1] as number, k: 0 } : e as Sign);
+    } catch { signs = []; }
     rebuildSigns();
     tow = new Undertow(height);
     seedBodies();
@@ -2586,7 +2935,7 @@ export function buildSimulacrum(body: HTMLElement) {
       await xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
       xrSession.requestReferenceSpace("local-floor").then((space) => { xrRef = space; });
       xrSession.addEventListener("end", () => { xrSession = null; });
-    } catch { hint.textContent = "VR refused here — the flat world still walks."; }
+    } catch { whisper.textContent = "VR refused here — the flat world still walks."; whisper.style.opacity = "1"; whisperTimer = 4; }
   });
 
   /* the turning year state itself is declared above seasonMoods —
@@ -2749,7 +3098,7 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.drawArrays(gl.TRIANGLES, 0, ch.terrain.n);
       if (ch.lit) { bindLit(ch.lit, m4.ident()); gl.drawArrays(gl.TRIANGLES, 0, ch.lit.n); }
     }
-    if (nearMesh) { bindLit(nearMesh, m4.ident()); gl.drawArrays(gl.TRIANGLES, 0, nearMesh.n); }
+    if (wonderMesh) { bindLit(wonderMesh, m4.ident()); gl.drawArrays(gl.TRIANGLES, 0, wonderMesh.n); }
     /* birds */
     {
       const bv: number[] = [];
@@ -2770,6 +3119,23 @@ export function buildSimulacrum(body: HTMLElement) {
         const NOSE: [number, number, number] = [tx * s * 0.9, 0, tz * s * 0.9];
         P(...TAIL); P(...W1); P(...NOSE);
         P(...TAIL); P(...NOSE); P(...W2);
+      }
+      /* butterflies keep to the planted flowers */
+      for (let bi = 0; bi < blooms.length && bi < 26; bi++) {
+        const b = blooms[bi];
+        const dxB = b.x - px, dzB = b.z - pz;
+        if (dxB * dxB + dzB * dzB > 3600) continue;
+        const aB = t * (0.5 + (bi % 5) * 0.07) + bi * 2.39;
+        const bxB = b.x + Math.cos(aB) * 1.3, bzB = b.z + Math.sin(aB) * 1.1;
+        const byB = height(b.x, b.z) + 1.0 + Math.sin(t * 1.3 + bi) * 0.3;
+        const flapB = Math.sin(t * 11 + bi * 1.7) * 0.9;
+        const colB: [number, number, number] = ([[0.95, 0.55, 0.75], [1.0, 0.85, 0.4], [0.7, 0.6, 1.0], [0.55, 0.85, 1.0]] as Array<[number, number, number]>)[b.kind % 4];
+        const txB = -Math.sin(aB), tzB = Math.cos(aB);
+        const P2 = (ox: number, oy: number, oz: number) => bv.push(bxB + ox, byB + oy, bzB + oz, ...colB, 0, 1, 0);
+        const W1B: [number, number, number] = [txB * 0.06 + (-tzB) * 0.34, flapB * 0.22, tzB * 0.06 + txB * 0.34];
+        const W2B: [number, number, number] = [txB * 0.06 - (-tzB) * 0.34, flapB * 0.22, tzB * 0.06 - txB * 0.34];
+        P2(0, 0, 0); P2(...W1B); P2(txB * 0.3, 0, tzB * 0.3);
+        P2(0, 0, 0); P2(txB * 0.3, 0, tzB * 0.3); P2(...W2B);
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, birdBuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bv), gl.DYNAMIC_DRAW);
@@ -2909,6 +3275,7 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
     gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 0.9 + 0.1 * Math.sin(nowS * 2.2));
     for (const ch of chunks.values()) if (ch.glow) { bindUnlit(ch.glow); gl.drawArrays(gl.TRIANGLES, 0, ch.glow.n); }
+    if (wonderGlow) { bindUnlit(wonderGlow); gl.drawArrays(gl.TRIANGLES, 0, wonderGlow.n); }
     /* blooms the world kept */
     if (bloomMesh) {
       gl.useProgram(unlitPr);
@@ -2984,6 +3351,13 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), 0.22 + sc.night * 0.6);
     bindPoints(motes);
     gl.drawArrays(gl.POINTS, 0, motes.n);
+    if (sc.night > 0.22) {
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), -0.35);
+      gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [48, 9, 48]);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), sc.night * (0.5 + 0.3 * Math.sin(nowS * 0.7)));
+      bindPoints(firePts);
+      gl.drawArrays(gl.POINTS, 0, firePts.n);
+    }
     if (showerAmt > 0.02) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 52);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [90, 40, 90]);
@@ -3034,6 +3408,10 @@ export function buildSimulacrum(body: HTMLElement) {
     const now = performance.now();
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
+    /* the window is the world's frame: if it changed shape since the
+       last frame — dragged, maximised, fullscreened, another browser
+       entirely — the canvas re-fits before anything is drawn */
+    if (stage.clientWidth !== lastFitW || stage.clientHeight !== lastFitH) fitCanvas();
     /* the world's clock is the walker's own: the sun here rises
        and sets with the sun outside the user's window. Only the
        Strangeness may bend it, and only briefly. */
@@ -3070,6 +3448,7 @@ export function buildSimulacrum(body: HTMLElement) {
       if (anKind !== lastAnKind) {
         if (anKind === "stutter") { timeSkew = -20 / 1440; flash = Math.max(flash, 0.55); }
         if (anKind === "bell") { audio.bell(); birdsFlee = 1; }
+        if (anKind === "murmur") audio.murmur();
         if (anKind === "glass") glassT = now / 1000;
         if (anKind === "stone") spawnStone();
         if (anKind === "star") { skyAn.az = Math.random() * 6.28; skyAn.el = 0.35 + Math.random() * 0.5; skyAn.sp = 0.008 + Math.random() * 0.01; }
@@ -3083,6 +3462,7 @@ export function buildSimulacrum(body: HTMLElement) {
       }
     }
     whisperTimer = Math.max(0, whisperTimer - dt);
+    if (chromeTimer > 0) { chromeTimer -= dt; if (chromeTimer <= 0) wrap.classList.remove("chrome-on"); }
     if (whisperTimer === 0) whisper.style.opacity = "0";
     mistAmt += ((weather === "mist" ? 1 : 0) - mistAmt) * Math.min(1, dt * 0.25);
     rainAmt += ((weather === "rain" ? 1 : 0) - rainAmt) * Math.min(1, dt * 0.25);
@@ -3125,6 +3505,24 @@ export function buildSimulacrum(body: HTMLElement) {
     vx += (txv - vx) * Math.min(1, dt * accel);
     vz += (tzv - vz) * Math.min(1, dt * accel);
     px += vx * dt; pz += vz * dt;
+    /* solid ground truth: trunks, stone, crystal and wonder
+       push back — you walk around the world, not through it */
+    {
+      const feet = py - 1.7;
+      const pushOut = (sx: number, sz: number, sr: number, stop: number) => {
+        if (feet > stop - 0.25) return;
+        const dx = px - sx, dz = pz - sz, rr = sr + 0.55, d2 = dx * dx + dz * dz;
+        if (d2 < rr * rr && d2 > 1e-6) { const d = Math.sqrt(d2); px = sx + (dx / d) * rr; pz = sz + (dz / d) * rr; }
+        else if (d2 <= 1e-6) { px = sx + rr; }
+      };
+      const ccx = Math.floor(px / CHUNK), ccz = Math.floor(pz / CHUNK);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+        const ch = chunks.get(keyOf(ccx + i, ccz + j));
+        if (ch) for (const so of ch.solids) pushOut(so.x, so.z, so.r, so.top);
+      }
+      for (const so of worldSolids) pushOut(so.x, so.z, so.r, so.top);
+    }
+    checkDiscoveries();
     hSpeedNow = Math.hypot(vx, vz);
     const hSpeed = hSpeedNow;
     if (flying) {
@@ -3213,7 +3611,6 @@ export function buildSimulacrum(body: HTMLElement) {
       }
     }
     buildWater(px, pz);
-    buildNear(px, pz);
     stepCritters(dt);
     /* HUD + EMCON, ~4×/s and 1×/s */
     if ((frames++ & 15) === 0) {
@@ -3250,7 +3647,8 @@ export function buildSimulacrum(body: HTMLElement) {
     step();
     if (!(xrSession && xrRef)) {
       const asp = canvas.width / canvas.height;
-      const proj = m4.persp(1.25, asp, 0.1, 1200);
+      const stretchF = anKind === "stretch" ? 1 + Math.sin(performance.now() / 1000 * 0.55) * 0.055 * anAmt : 1;
+      const proj = m4.persp(1.25 * stretchF, asp, 0.1, 1200);
       const bobY = Math.sin(bobPhase * 2) * 0.055 * bobAmp - landDip * 0.3;
       const roll = Math.sin(bobPhase) * 0.006 * bobAmp;
       const view = m4.mul(m4.rotZ(roll), m4.mul(m4.rotX(-pitch), m4.mul(m4.rotY(-yaw), m4.trans(-px, -(py + bobY), -pz))));
