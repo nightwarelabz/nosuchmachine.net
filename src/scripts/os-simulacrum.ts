@@ -125,8 +125,14 @@ export const LIT_FS = `
 precision mediump float;
 varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY; varying vec3 vWP;
 uniform vec3 uSun; uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform vec3 uTint;
-uniform vec3 uCamPos; uniform vec3 uRim;
-uniform sampler2D uShadowMap; uniform mat4 uShadowVP; uniform float uShadowAmt;
+uniform vec3 uCamPos; uniform vec3 uRim; uniform float uTime;
+uniform sampler2D uShadowMap; uniform mat4 uShadowVP; uniform float uShadowAmt; uniform float uShadowTexel;
+float dhash(vec2 q) { return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
+float dnoise(vec2 q) {
+  vec2 i = floor(q), f = fract(q);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(dhash(i), dhash(i + vec2(1, 0)), u.x), mix(dhash(i + vec2(0, 1)), dhash(i + vec2(1, 1)), u.x), u.y);
+}
 vec3 grade(vec3 c, float amt) {
   vec3 a = c * (c * 2.51 + 0.03) / (c * (c * 2.43 + 0.59) + 0.14);
   return mix(c, clamp(a, 0.0, 1.0), amt);
@@ -151,7 +157,7 @@ void main() {
       if (abs(ndc.x) < 0.995 && abs(ndc.y) < 0.995 && ndc.z < 1.0) {
         vec2 uv = ndc.xy * 0.5 + 0.5;
         float cur = ndc.z * 0.5 + 0.5 - 0.0028;
-        float texel = 1.0 / 2048.0;
+        float texel = uShadowTexel;
         float occ = 0.0;
         occ += cur > unpackDepth(texture2D(uShadowMap, uv + vec2(-texel, -texel))) ? 1.0 : 0.0;
         occ += cur > unpackDepth(texture2D(uShadowMap, uv + vec2(texel, -texel))) ? 1.0 : 0.0;
@@ -172,6 +178,19 @@ void main() {
   /* strata in the steep places */
   float steep = 1.0 - smoothstep(0.55, 0.8, n.y);
   c *= 1.0 + steep * 0.10 * sin(vWY * 2.7);
+  /* micro-detail: the ground only resolves when you walk up to
+     it — grain, speckle, and a rare dew glint, all distance-faded
+     so the far field never shimmers */
+  float dNear = 1.0 - smoothstep(16.0, 60.0, vDist);
+  if (dNear > 0.01) {
+    vec2 dp = vWP.xz;
+    float grain = dnoise(dp * 2.4) * 0.6 + dnoise(dp * 8.5) * 0.4;
+    c *= 1.0 + (grain - 0.5) * 0.38 * dNear;
+    float speck = dnoise(dp * 21.0 + 40.0);
+    c *= 1.0 + (speck - 0.5) * 0.22 * dNear;
+    float dew = step(0.965, dnoise(dp * 15.0 + 90.0)) * (0.5 + 0.5 * sin(uTime * 1.7 + dp.x * 2.0 + dp.y * 1.3));
+    c += vec3(0.55, 0.62, 0.60) * dew * dNear * 0.35;
+  }
   c = grade(c, 0.55);
   /* height fog: the low places fill first */
   float f = smoothstep(uFogNear, uFogFar, vDist);
@@ -594,7 +613,7 @@ export interface Perception {
   inWater: boolean; flying: boolean; chimes: number; explored: number; dayT: number;
 }
 export interface Intents {
-  weather: Weather; aurora: number; attend: number; sparse: number; shower: boolean;
+  weather: Weather; aurora: number; attend: number; sparse: number; shower: boolean; strange: number;
   /** the strangeness: a kind, and its 0..1 envelope */
   anomaly: string; anomalyAmt: number;
   /** its current moral reading of the walker, -1..1 */
@@ -640,7 +659,7 @@ export class Dreamer {
     this.humor = Math.max(-1.2, Math.min(1.2, this.humor + (table[kind] ?? 0)));
   }
   get judgment(): number { return Math.max(-1, Math.min(1, this.lean * 0.55 + this.humor * 0.65)); }
-  intents: Intents = { weather: "clear", aurora: 1, attend: 0, sparse: 0, shower: false, anomaly: "", anomalyAmt: 0, judgment: 0 };
+  intents: Intents = { weather: "clear", aurora: 1, attend: 0, sparse: 0, shower: false, anomaly: "", anomalyAmt: 0, judgment: 0, strange: 0.3 };
 
   constructor(seed: number, rapport = 0, lean = 0) {
     this.lean = Math.max(-1, Math.min(1, lean));
@@ -762,7 +781,7 @@ export class Dreamer {
       anAmt = Math.max(0, Math.min(1, into / 2.2, left / 3));
       if (left <= 0) this.anomalyKind = "";
     }
-    this.intents = { weather: this.weather, aurora: this.aurora, attend: this.attend, sparse, shower: this.shower, anomaly: this.anomalyKind, anomalyAmt: anAmt, judgment: this.judgment };
+    this.intents = { weather: this.weather, aurora: this.aurora, attend: this.attend, sparse, shower: this.shower, anomaly: this.anomalyKind, anomalyAmt: anAmt, judgment: this.judgment, strange: this.strangeness };
   }
 }
 
@@ -928,6 +947,107 @@ declare const XRWebGLLayer: new (s: XRSessionLike, gl: WebGLRenderingContext) =>
 
 type Weather = "clear" | "mist" | "rain";
 
+
+/* ————— a whisper of a network protocol —————
+   The smallest honest MQTT client: CONNECT with a last will,
+   SUBSCRIBE, PUBLISH QoS 0, PINGREQ. Enough for presence on a
+   public broker, and nothing more. If it cannot connect, the
+   world simply stays solo. */
+export class MqttMini {
+  connected = false;
+  onMessage: (topic: string, payload: string) => void = () => { /* set by the world */ };
+  onReady: () => void = () => { /* set by the world */ };
+  onDown: () => void = () => { /* set by the world */ };
+  private ws: WebSocket | null = null;
+  private rx: number[] = [];
+  private ping: number | null = null;
+  private dead = false;
+  constructor(private urls: string[], private clientId: string, private willTopic: string, private willPayload: string) {}
+  private encStr(s: string): number[] {
+    const u = new TextEncoder().encode(s);
+    return [Math.floor(u.length / 256), u.length % 256, ...u];
+  }
+  private packet(head: number, body: number[]): Uint8Array<ArrayBuffer> {
+    const out: number[] = [head];
+    let n = body.length;
+    do { let b = n % 128; n = Math.floor(n / 128); if (n > 0) b |= 0x80; out.push(b); } while (n > 0);
+    return new Uint8Array([...out, ...body]) as Uint8Array<ArrayBuffer>;
+  }
+  connect() {
+    if (this.ws || this.dead) return;
+    const url = this.urls[0];
+    let ws: WebSocket;
+    try { ws = new WebSocket(url, ["mqtt"]); } catch { this.failover(); return; }
+    this.ws = ws;
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => {
+      const body = [
+        ...this.encStr("MQTT"), 4, 0x02 | 0x04 | 0x20, 0, 60,
+        ...this.encStr(this.clientId), ...this.encStr(this.willTopic), ...this.encStr(this.willPayload),
+      ];
+      ws.send(this.packet(0x10, body));
+    };
+    ws.onmessage = (ev) => {
+      const bytes = new Uint8Array(ev.data as ArrayBuffer);
+      for (const b of bytes) this.rx.push(b);
+      this.drain();
+    };
+    ws.onclose = () => { this.cleanup(); this.onDown(); };
+    ws.onerror = () => { try { ws.close(); } catch { /* already gone */ } };
+  }
+  private failover() {
+    this.urls.shift();
+    this.ws = null;
+    if (this.urls.length && !this.dead) this.connect();
+    else this.onDown();
+  }
+  private cleanup() {
+    this.connected = false;
+    this.ws = null;
+    if (this.ping !== null) { window.clearInterval(this.ping); this.ping = null; }
+  }
+  private drain() {
+    for (;;) {
+      if (this.rx.length < 2) return;
+      let mult = 1, len = 0, i = 1, b = 0;
+      do { if (i >= this.rx.length) return; b = this.rx[i++]; len += (b & 0x7f) * mult; mult *= 128; } while (b & 0x80);
+      if (this.rx.length < i + len) return;
+      const head = this.rx[0];
+      const body = this.rx.slice(i, i + len);
+      this.rx = this.rx.slice(i + len);
+      const type = head >> 4;
+      if (type === 2) {
+        this.connected = true;
+        this.ping = window.setInterval(() => { if (this.ws && this.connected) try { this.ws.send(this.packet(0xc0, [])); } catch { /* silent */ } }, 25000);
+        this.onReady();
+      } else if (type === 3) {
+        let tlen = body[0] * 256 + body[1];
+        const topic = new TextDecoder().decode(new Uint8Array(body.slice(2, 2 + tlen)));
+        let off = 2 + tlen;
+        if (((head >> 1) & 0x3) > 0) off += 2;
+        const payload = new TextDecoder().decode(new Uint8Array(body.slice(off)));
+        this.onMessage(topic, payload);
+      }
+    }
+  }
+  subscribe(topic: string) {
+    if (!this.ws || !this.connected) return;
+    this.ws.send(this.packet(0x82, [0, 7, ...this.encStr(topic), 0]));
+  }
+  publish(topic: string, payload: string, retain = false) {
+    if (!this.ws || !this.connected) return;
+    const body = [...this.encStr(topic), ...new TextEncoder().encode(payload)];
+    try { this.ws.send(this.packet(0x30 | (retain ? 1 : 0), body)); } catch { /* gone mid-send */ }
+  }
+  close() {
+    this.dead = true;
+    if (this.ws) {
+      try { this.ws.send(this.packet(0xe0, [])); } catch { /* already gone */ }
+      try { this.ws.close(); } catch { /* already gone */ }
+    }
+    this.cleanup();
+  }
+}
 export function buildSimulacrum(body: HTMLElement) {
   const wrap = el("div", "os-sim");
   const canvas = document.createElement("canvas");
@@ -956,16 +1076,16 @@ export function buildSimulacrum(body: HTMLElement) {
   stage.append(canvas, shade, uw, whisper, opening, titleScr);
   const hud = el("div", "os-sim-hud");
   const seedLabel = el("span", "os-note", "");
-  const newBtn = el("button", "os-btn", "new world");
   const flyBtn = el("button", "os-btn", "walk");
-  const wxBtn = el("button", "os-btn", "weather");
-  const hourBtn = el("button", "os-btn", "skip hour");
   const sndBtn = el("button", "os-btn", "sound: on");
+  const irisBtn = el("button", "os-btn", "iris: auto");
+  const commonsBtn = el("button", "os-btn", "commons");
+  commonsBtn.setAttribute("aria-pressed", "false");
   const photoBtn = el("button", "os-btn", "photo");
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
-  hud.append(seedLabel, newBtn, flyBtn, wxBtn, hourBtn, sndBtn, photoBtn, xrBtn, posLabel);
-  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · the gifts are on the bar · matter here obeys UNDERTOW");
+  hud.append(seedLabel, flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, xrBtn, posLabel);
+  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · the gifts are on the bar · matter here obeys UNDERTOW · the iris judges your machine");
   wrap.append(stage, hud, powers, hint);
   body.appendChild(wrap);
 
@@ -990,25 +1110,34 @@ export function buildSimulacrum(body: HTMLElement) {
   const waterPr = program(WATER_VS, WATER_FS);
   const shadowPr = program(SHADOW_VS, SHADOW_FS);
   /* one shadow map for the sun, RGBA-packed depth (no extensions
-     needed); if the framebuffer cannot be completed the world
-     simply goes without shadows */
-  const SHADOW_SIZE = 2048;
-  const shadowTex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, shadowTex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, SHADOW_SIZE, SHADOW_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  const shadowFBO = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, shadowTex, 0);
-  const shadowRB = gl.createRenderbuffer();
-  gl.bindRenderbuffer(gl.RENDERBUFFER, shadowRB);
-  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, SHADOW_SIZE, SHADOW_SIZE);
-  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, shadowRB);
-  const shadowOK = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+     needed); rebuildable at any size because the Iris asks for
+     different sizes on different machines */
+  let shadowSize = 2048;
+  let shadowTex: WebGLTexture | null = null;
+  let shadowFBO: WebGLFramebuffer | null = null;
+  let shadowRB: WebGLRenderbuffer | null = null;
+  let shadowOK = false;
+  const buildShadowTarget = (n: number) => {
+    if (shadowTex) { gl.deleteTexture(shadowTex); gl.deleteFramebuffer(shadowFBO); gl.deleteRenderbuffer(shadowRB); }
+    shadowSize = n;
+    shadowTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, n, n, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    shadowFBO = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, shadowTex, 0);
+    shadowRB = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, shadowRB);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, n, n);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, shadowRB);
+    shadowOK = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  };
+  buildShadowTarget(2048);
   let lightVP: M4 = m4.ident();
   let shadowAmt = 0;
   let lastBodiesN = 0;
@@ -1041,7 +1170,11 @@ export function buildSimulacrum(body: HTMLElement) {
   };
 
   /* ---- world state ---- */
-  let seed = Number(localStorage.getItem(skey("simulacrum-seed")) || "0") || 20261024;
+  let seed = Number(localStorage.getItem(skey("simulacrum-seed")) || "0");
+  if (!seed) {
+    seed = 10000000 + Math.floor(Math.random() * 89999999);
+    try { localStorage.setItem(skey("simulacrum-seed"), String(seed)); } catch { seed = 20261024; }
+  }
   let noise = new Noise(seed);
   let moistNoise = new Noise(seed ^ 0x5eed);
   let detailNoise = new Noise(seed ^ 0xd37a);
@@ -1102,7 +1235,7 @@ export function buildSimulacrum(body: HTMLElement) {
   };
   const refreshLabel = () => {
     const lean = leanOf(rec);
-    seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}${lean > 0.45 ? " · it trusts you" : lean < -0.45 ? " · it is wary of you" : ""}`;
+    seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}${lean > 0.45 ? " · it trusts you" : lean < -0.45 ? " · it is wary of you" : ""}${inCommons ? " · the commons" : ""}${peers.size ? ` · ${peers.size} other${peers.size === 1 ? "" : "s"} walking` : ""}`;
     setTitle();
   };
   let rec = dreamRecord(seed);
@@ -1313,6 +1446,57 @@ export function buildSimulacrum(body: HTMLElement) {
   rebuildBlooms();
 
   /* sky dome */
+
+  /* the near field: grass tufts and pebbles that only exist
+     within a short walk of the walker, rebuilt on a snapped grid
+     so the ground has something to say when you walk up to it */
+  let nearMesh: Mesh | null = null;
+  let nearCell: [number, number] = [1e9, 1e9];
+  const buildNear = (wx: number, wz: number) => {
+    const cx = Math.round(wx / 6), cz = Math.round(wz / 6);
+    if (nearCell[0] === cx && nearCell[1] === cz && nearMesh) return;
+    nearCell = [cx, cz];
+    if (nearMesh) { gl.deleteBuffer(nearMesh.buf); nearMesh = null; }
+    const ox = cx * 6, oz = cz * 6;
+    const rnd = mulberry32((seed ^ (cx * 341873) ^ (cz * 711367)) & 0xffffff);
+    const v: number[] = [];
+    const blade = (x: number, z: number, h: number) => {
+      const y = height(x, z);
+      const lean = (rnd() - 0.5) * 0.3;
+      const g1: [number, number, number] = [0.13, 0.26, 0.10];
+      const g2: [number, number, number] = [0.36, 0.52, 0.20];
+      for (let b = 0; b < 3; b++) {
+        const a = rnd() * Math.PI * 2, bx = x + Math.cos(a) * 0.09, bz = z + Math.sin(a) * 0.09;
+        v.push(bx - 0.05, y, bz, ...g1, 0, 1, 0, bx + 0.05, y, bz, ...g1, 0, 1, 0, bx + lean, y + h, bz + lean * 0.6, ...g2, 0, 1, 0);
+      }
+    };
+    for (let i = 0, n = Math.round(300 * nearMul); i < n; i++) {
+      const x = ox + (rnd() - 0.5) * 76, z = oz + (rnd() - 0.5) * 76;
+      const h = height(x, z);
+      if (h < 0.35) continue;
+      const sl = Math.abs(height(x + 1.2, z) - h) + Math.abs(height(x, z + 1.2) - h);
+      if (sl > 1.4) continue;
+      blade(x, z, 0.4 + rnd() * 0.5);
+    }
+    for (let i = 0, n = Math.round(70 * nearMul); i < n; i++) {
+      const x = ox + (rnd() - 0.5) * 76, z = oz + (rnd() - 0.5) * 76;
+      const y = height(x, z);
+      if (y < -0.2) continue;
+      const r = 0.10 + rnd() * 0.22;
+      const g = 0.32 + rnd() * 0.2;
+      const col: [number, number, number] = [g, g * 0.98, g * 0.94];
+      const top: [number, number, number] = [x, y + r * 1.4, z];
+      const bot: [number, number, number] = [x, y - r * 0.5, z];
+      for (let k = 0; k < 5; k++) {
+        const a1 = (k / 5) * Math.PI * 2 + rnd() * 0.2, a2 = ((k + 1) / 5) * Math.PI * 2;
+        const p1: [number, number, number] = [x + Math.cos(a1) * r, y + r * 0.3, z + Math.sin(a1) * r];
+        const p2: [number, number, number] = [x + Math.cos(a2) * r, y + r * 0.3, z + Math.sin(a2) * r];
+        v.push(...p1, ...col, 0, 0.6, 0, ...p2, ...col, 0, 0.6, 0, ...top, ...col, 0, 1, 0);
+        v.push(...p2, ...col, 0, 0.6, 0, ...p1, ...col, 0, 0.6, 0, ...bot, ...col, 0, -1, 0);
+      }
+    }
+    if (v.length) nearMesh = makeMesh(new Float32Array(v));
+  };
   const skyMesh = (() => {
     const v: number[] = [];
     const seg = 20;
@@ -1503,8 +1687,162 @@ export function buildSimulacrum(body: HTMLElement) {
   };
 
   /* UNDERTOW, instanced: ten loose things the world lets you move */
-  const tow = new Undertow(height);
-  {
+
+  /* ————— the other one —————
+     There is a second presence in the world, and the world does
+     not explain her. She walks the high ground at night in a long
+     dark shroud, with a thin ring of soft light above her head
+     whose colour drifts like weather. She keeps her distance.
+     She tends the land the walker scars. Where she has stood, a
+     small ring of pale stones sometimes remains. The Dreamer
+     mentions her only sideways, and she is not in any hint, any
+     label, any ledger line. She favours strange worlds and kind
+     accounts; where the account is cruel, she simply does not
+     come. Nobody is told who she is. */
+  const vesper = { on: false, x: 0, z: 0, yaw: 0, tx: 0, tz: 0, nextAt: 45 + Math.random() * 60, absent: false, retargetAt: 0, tendAt: 0, hueSeed: Math.random() * 10 };
+  let signs: Array<[number, number]> = [];
+  try { signs = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<[number, number]>; } catch { signs = []; }
+  let signMesh: Mesh | null = null;
+  const rebuildSigns = () => {
+    if (signMesh) { gl.deleteBuffer(signMesh.buf); signMesh = null; }
+    if (!signs.length) return;
+    const v: number[] = [];
+    const col: [number, number, number] = [0.80, 0.83, 0.88];
+    for (const [sx, sz] of signs) {
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const ox = sx + Math.cos(a) * 1.15, oz = sz + Math.sin(a) * 1.15;
+        const oy = height(ox, oz);
+        if (oy < 0.2) continue;
+        v.push(ox - 0.14, oy, oz, ...col, 0, 0.6, 0, ox + 0.14, oy, oz, ...col, 0, 0.6, 0, ox, oy + 0.34, oz, ...col, 0, 1, 0);
+      }
+    }
+    if (v.length) signMesh = makeMesh(new Float32Array(v));
+  };
+  rebuildSigns();
+  const leaveSign = (x: number, z: number) => {
+    if (signs.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 14)) return;
+    signs.push([Math.round(x * 10) / 10, Math.round(z * 10) / 10]);
+    if (signs.length > 28) signs = signs.slice(-28);
+    try { localStorage.setItem(skey(`simulacrum-signs-${seed}`), JSON.stringify(signs)); } catch { /* private mode */ }
+    rebuildSigns();
+  };
+  const buildFigure = (coat: [number, number, number], hem: [number, number, number], face: [number, number, number]): Mesh => {
+    const v: number[] = [];
+    const ring = (y: number, r: number): Array<[number, number, number]> => {
+      const pts: Array<[number, number, number]> = [];
+      for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2; pts.push([Math.cos(a) * r, y, Math.sin(a) * r]); }
+      return pts;
+    };
+    const band = (r1: Array<[number, number, number]>, r2: Array<[number, number, number]>, col: [number, number, number]) => {
+      for (let k = 0; k < 7; k++) {
+        const a = r1[k], b = r1[(k + 1) % 7], c = r2[(k + 1) % 7], d = r2[k];
+        v.push(...a, ...col, 0, 0.5, 0, ...b, ...col, 0, 0.5, 0, ...c, ...col, 0, 0.5, 0, ...a, ...col, 0, 0.5, 0, ...c, ...col, 0, 0.5, 0, ...d, ...col, 0, 0.5, 0);
+      }
+    };
+    const rHem = ring(0, 0.55), rWaist = ring(1.15, 0.33), rNeck = ring(1.86, 0.15);
+    band(rHem, rWaist, coat);
+    band(rWaist, rNeck, hem);
+    for (let k = 0; k < 7; k++) {
+      const a = rNeck[k], b = rNeck[(k + 1) % 7];
+      v.push(...a, ...coat, 0, 0.5, 0, ...b, ...coat, 0, 0.5, 0, 0, 2.14, 0, ...coat, 0, 1, 0);
+    }
+    /* the head: a small pale octahedron, slightly bowed */
+    const hy = 2.02, hr = 0.155;
+    for (let k = 0; k < 6; k++) {
+      const a1 = (k / 6) * Math.PI * 2, a2 = ((k + 1) / 6) * Math.PI * 2;
+      const p1: [number, number, number] = [Math.cos(a1) * hr, hy, Math.sin(a1) * hr];
+      const p2: [number, number, number] = [Math.cos(a2) * hr, hy, Math.sin(a2) * hr];
+      v.push(...p1, ...face, 0, 0.6, 0, ...p2, ...face, 0, 0.6, 0, 0, hy + 0.21, 0, ...face, 0, 1, 0);
+      v.push(...p2, ...face, 0, 0.6, 0, ...p1, ...face, 0, 0.6, 0, 0, hy - 0.19, 0, ...face, 0, -1, 0);
+    }
+    return makeMesh(new Float32Array(v));
+  };
+  const vesperMesh = buildFigure([0.09, 0.10, 0.15], [0.13, 0.14, 0.20], [0.80, 0.82, 0.86]);
+  const haloBuf = gl.createBuffer()!;
+  const vesperSay = (line: string) => { whisper.textContent = line; whisper.style.opacity = "1"; whisperTimer = 7; };
+  const vesperStep = (dt: number, nowS: number) => {
+    const night = skyColors(dayT, 0).night;
+    if (night < 0.12) vesper.absent = false;
+    if (!vesper.on) {
+      if (nowS < vesper.nextAt || night < 0.30 || vesper.absent) return;
+      if (judgmentNow < -0.45) { vesper.absent = true; return; }
+      if (Math.random() > 0.25 + strangeNow * 0.75) { vesper.nextAt = nowS + 20 + Math.random() * 30; return; }
+      let bx = 0, bz = 0, bh = -1;
+      for (let i = 0; i < 7; i++) {
+        const a = Math.random() * Math.PI * 2, d = 55 + Math.random() * 45;
+        const x = px + Math.sin(a) * d, z = pz + Math.cos(a) * d, h = height(x, z);
+        if (h > bh) { bh = h; bx = x; bz = z; }
+      }
+      if (bh < 1.0) { vesper.nextAt = nowS + 30; return; }
+      vesper.x = bx; vesper.z = bz; vesper.tx = bx; vesper.tz = bz;
+      vesper.yaw = Math.atan2(px - bx, pz - bz);
+      vesper.on = true; vesper.retargetAt = nowS + 10;
+      if (Math.random() < 0.35) vesperSay("the other one is walking tonight");
+      return;
+    }
+    /* dawn takes her */
+    if (night < 0.15) {
+      vesper.on = false; vesper.nextAt = nowS + 150 + Math.random() * 200;
+      if (Math.random() < 0.5) leaveSign(vesper.x, vesper.z);
+      return;
+    }
+    const dx = px - vesper.x, dz = pz - vesper.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 15) {
+      tow.burst(vesper.x, height(vesper.x, vesper.z) + 1.4, vesper.z, { n: 26, col: [0.72, 0.6, 1.0], spd: 2.2, up: 1.6, grav: -0.8, drag: 1.2, life: 1.5, size: 2.6 });
+      leaveSign(vesper.x, vesper.z);
+      vesper.on = false; vesper.nextAt = nowS + 260 + Math.random() * 200;
+      if (Math.random() < 0.4) vesperSay("she does not like to be followed");
+      return;
+    }
+    /* her path: keep the distance she prefers */
+    if (d < 34 || nowS > vesper.retargetAt) {
+      vesper.retargetAt = nowS + 12 + Math.random() * 10;
+      const away = Math.atan2(vesper.x - px, vesper.z - pz) + (Math.random() - 0.5) * 1.2;
+      const dd = d < 34 ? 68 + Math.random() * 20 : 55 + Math.random() * 45;
+      vesper.tx = px + Math.sin(away) * dd; vesper.tz = pz + Math.cos(away) * dd;
+    }
+    const mx = vesper.tx - vesper.x, mz = vesper.tz - vesper.z;
+    const md = Math.hypot(mx, mz);
+    if (md > 1.2) {
+      const sp = d < 22 ? 6.4 : d < 34 ? 4.1 : 1.15;
+      const nx = vesper.x + (mx / md) * Math.min(md, sp * dt);
+      const nz = vesper.z + (mz / md) * Math.min(md, sp * dt);
+      if (height(nx, nz) > 0.25) {
+        vesper.yaw = Math.atan2(mx, mz);
+        vesper.x = nx; vesper.z = nz;
+      }
+    }
+    /* she tends what the walker has scarred, a little at a time */
+    if (nowS > vesper.tendAt) {
+      vesper.tendAt = nowS + 2.5;
+      let bestK = "", bestV = 0;
+      for (const [k, v] of edits) {
+        if (Math.abs(v) < 0.3) continue;
+        const [gx, gz] = k.split(",").map(Number);
+        if (Math.hypot(gx * 2 - vesper.x, gz * 2 - vesper.z) < 26 && Math.abs(v) > Math.abs(bestV)) { bestK = k; bestV = v; }
+      }
+      if (bestK) {
+        const next = bestV - Math.sign(bestV) * 0.06;
+        if (Math.abs(next) < 0.05) edits.delete(bestK); else edits.set(bestK, next);
+        persistEdits();
+        const [gx, gz] = bestK.split(",").map(Number);
+        for (const [k, ch] of chunks) {
+          const [cx, cz] = k.split(",").map(Number);
+          if (Math.abs((cx + 0.5) * CHUNK - gx * 2) < CHUNK + 4 && Math.abs((cz + 0.5) * CHUNK - gz * 2) < CHUNK + 4) {
+            gl.deleteBuffer(ch.terrain.buf);
+            if (ch.lit) gl.deleteBuffer(ch.lit.buf);
+            if (ch.glow) gl.deleteBuffer(ch.glow.buf);
+            chunks.delete(k);
+          }
+        }
+      }
+    }
+  };
+
+  let tow = new Undertow(height);
+  const seedBodies = () => {
     const kinds: Array<[number, number, number]> = [
       [0, 0.42, 0.55], [1, 0.34, 1.6], [2, 0.5, 1.05], [0, 0.38, 0.55], [1, 0.3, 1.6],
       [2, 0.55, 1.05], [0, 0.46, 0.55], [1, 0.36, 1.6], [0, 0.4, 0.55], [2, 0.48, 1.05],
@@ -1515,7 +1853,8 @@ export function buildSimulacrum(body: HTMLElement) {
       const bx = 8 + Math.sin(a) * rr, bz = 8 + Math.cos(a) * rr;
       tow.bodies.push({ x: bx, y: Math.max(height(bx, bz), 0) + r + 0.1, z: bz, vx: 0, vy: 0, vz: 0, r, kind, buoy, asleep: true, wet: false, calm: 0 });
     });
-  }
+  };
+  seedBodies();
   const partBuf = gl.createBuffer()!;
   /* the far ranges: a silhouette ring on the horizon, a function of
      world position so it holds still while the walker moves */
@@ -1566,22 +1905,163 @@ export function buildSimulacrum(body: HTMLElement) {
   };
 
   /* ---- walker + weather state ---- */
-  let viewRadius = RADIUS, tier = 0, emaMs = 16, tierCool = 0;
+  let viewRadius = RADIUS;
+  /* ————— THE IRIS —————
+     The world's eye, and its judgement of the machine it runs
+     on. Four axes — resolution, view radius, shadow size, field
+     density — each on its own ladder. In auto it probes the
+     machine at first light, then keeps account of frame time:
+     sustained pressure degrades one axis at a time (resolution
+     first, density last), sustained headroom raises them again
+     (radius first — seeing further is worth most). The user may
+     pin a level instead; a pin is honoured, but the Iris keeps
+     a safety hand on resolution alone, and gives it back when
+     the machine breathes again. Nothing oscillates: every axis
+     cools down after it moves, and up-steps demand far more
+     evidence than down-steps. */
+  const IRIS_MODES = ["auto", "low", "balanced", "rich", "ultra"] as const;
+  type IrisMode = typeof IRIS_MODES[number];
+  type IrisAxes = { res: number; radius: number; shadow: number; density: number };
+  const IRIS_CEIL: Record<IrisMode, IrisAxes> = {
+    auto: { res: 5, radius: 2, shadow: 3, density: 3 },
+    low: { res: 1, radius: 0, shadow: 1, density: 1 },
+    balanced: { res: 2, radius: 1, shadow: 2, density: 2 },
+    rich: { res: 4, radius: 2, shadow: 2, density: 3 },
+    ultra: { res: 5, radius: 2, shadow: 3, density: 3 },
+  };
+  const IRIS_PIN: Record<IrisMode, IrisAxes | null> = {
+    auto: null,
+    low: { res: 1, radius: 0, shadow: 1, density: 0 },
+    balanced: { res: 2, radius: 1, shadow: 2, density: 2 },
+    rich: { res: 4, radius: 2, shadow: 2, density: 3 },
+    ultra: { res: 5, radius: 2, shadow: 3, density: 3 },
+  };
+  const RES_LADDER: Array<[number, number]> = [[768, 480], [896, 560], [1024, 640], [1280, 800], [1536, 960], [1920, 1200]];
+  const RADIUS_LADDER = [2, 3, 4];
+  const SHADOW_LADDER = [0, 1024, 2048, 4096];
+  const DENSITY_LADDER = [0, 0.5, 1, 1.6];
+  const POINT_LADDER = [0.55, 0.8, 1, 1.35];
+  const irisMobile = window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 820;
+  const irisProbe = (): IrisAxes => {
+    let score = 0;
+    if (!irisMobile) score += 2;
+    if ((navigator.hardwareConcurrency || 4) >= 8) score += 1;
+    const dm = (navigator as unknown as { deviceMemory?: number }).deviceMemory;
+    if (dm && dm >= 8) score += 1;
+    if (window.screen.width >= 1920) score += 1;
+    try {
+      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      if (dbg) {
+        const r = String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "");
+        if (/apple m\d|nvidia|geforce|radeon rx|rtx/i.test(r)) score += 1;
+        if (/swiftshader|llvmpipe|software|basic render/i.test(r)) score -= 2;
+      }
+    } catch { /* a masked renderer is no evidence either way */ }
+    if (score <= 1) return { res: 1, radius: 0, shadow: 1, density: 1 };
+    if (score <= 3) return { res: 2, radius: 1, shadow: 2, density: 2 };
+    return { res: 3, radius: 1, shadow: 2, density: 2 };
+  };
+  let irisMode: IrisMode = "auto";
+  try {
+    const m = localStorage.getItem(skey("simulacrum-iris")) || "auto";
+    if ((IRIS_MODES as readonly string[]).includes(m)) irisMode = m as IrisMode;
+  } catch { /* private mode */ }
+  const iris: IrisAxes = IRIS_PIN[irisMode] ? { ...IRIS_PIN[irisMode]! } : irisProbe();
+  const irisClamp = (a: IrisAxes): IrisAxes => {
+    const ceil = IRIS_CEIL[irisMode];
+    const cap = (v: number, c: number, hard: number) => Math.max(0, Math.min(v, c, hard));
+    return {
+      res: cap(a.res, ceil.res, irisMobile ? 3 : 5),
+      radius: cap(a.radius, ceil.radius, 2),
+      shadow: cap(a.shadow, ceil.shadow, irisMobile ? 2 : 3),
+      density: cap(a.density, ceil.density, 3),
+    };
+  };
+  let nearMul = DENSITY_LADDER[iris.density];
+  const irisApply = (axis: keyof IrisAxes) => {
+    const c = irisClamp(iris);
+    iris.res = c.res; iris.radius = c.radius; iris.shadow = c.shadow; iris.density = c.density;
+    if (axis === "res") { canvas.width = RES_LADDER[iris.res][0]; canvas.height = RES_LADDER[iris.res][1]; }
+    if (axis === "radius") viewRadius = RADIUS_LADDER[iris.radius];
+    if (axis === "shadow" && SHADOW_LADDER[iris.shadow] > 0 && SHADOW_LADDER[iris.shadow] !== shadowSize) buildShadowTarget(SHADOW_LADDER[iris.shadow]);
+    if (axis === "density") {
+      nearMul = DENSITY_LADDER[iris.density];
+      nearCell = [1e9, 1e9];
+      const pm = POINT_LADDER[iris.density];
+      gl.deleteBuffer(motes.buf); gl.deleteBuffer(rainPts.buf); gl.deleteBuffer(meteorPts.buf);
+      motes = makePoints(Math.round(220 * pm), [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
+      rainPts = makePoints(Math.round(420 * pm), [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
+      meteorPts = makePoints(Math.round(170 * pm), [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
+    }
+  };
+  const irisApplyAll = () => { (["res", "radius", "shadow", "density"] as Array<keyof IrisAxes>).forEach(irisApply); };
+  irisApplyAll();
+  let emaMs = 16, irisOver = 0, irisUnder = 0, irisCoolUntil = 0;
+  const irisCool: Record<keyof IrisAxes, number> = { res: 0, radius: 0, shadow: 0, density: 0 };
+  const irisTick = (dtMs: number, nowS: number) => {
+    emaMs = emaMs * 0.95 + Math.min(100, dtMs) * 0.05;
+    const dt = dtMs / 1000;
+    if (emaMs > 24) { irisOver += dt; irisUnder = 0; }
+    else if (emaMs < 12.5) { irisUnder += dt; irisOver = 0; }
+    else { irisOver = 0; irisUnder = 0; }
+    const pin = IRIS_PIN[irisMode];
+    if (irisOver > 1.1 && nowS > irisCoolUntil) {
+      /* degrade: resolution first, density last; a pinned level
+         only ever lends its resolution to safety */
+      const order: Array<keyof IrisAxes> = pin ? ["res"] : ["res", "shadow", "radius", "density"];
+      for (const axis of order) {
+        const floor = pin ? (axis === "res" ? 0 : pin[axis]) : 0;
+        if (iris[axis] > floor && nowS > irisCool[axis]) {
+          iris[axis]--;
+          irisApply(axis);
+          irisCool[axis] = nowS + 4;
+          irisCoolUntil = nowS + 2.5;
+          irisOver = 0;
+          break;
+        }
+      }
+    } else if (irisUnder > 5 && nowS > irisCoolUntil) {
+      /* restore/raise: seeing further is worth most */
+      const target = pin ?? IRIS_CEIL[irisMode];
+      const order: Array<keyof IrisAxes> = ["radius", "shadow", "res", "density"];
+      for (const axis of order) {
+        if (iris[axis] < target[axis] && nowS > irisCool[axis]) {
+          iris[axis]++;
+          irisApply(axis);
+          irisCool[axis] = nowS + 4;
+          irisCoolUntil = nowS + 2.5;
+          irisUnder = 0;
+          break;
+        }
+      }
+    }
+  };
+  const irisSetMode = (m: IrisMode) => {
+    irisMode = m;
+    try { localStorage.setItem(skey("simulacrum-iris"), m); } catch { /* private mode */ }
+    const pin = IRIS_PIN[m];
+    if (pin) { iris.res = pin.res; iris.radius = pin.radius; iris.shadow = pin.shadow; iris.density = pin.density; }
+    irisApplyAll();
+    irisOver = 0; irisUnder = 0;
+  };
+
   let px = 8, pz = 8, py = height(8, 8) + 26;
   let yaw = 0.7, pitch = -0.16, flying = false, vy = 0;
   let coyoteT = 0, jumpBufT = 0, prevSpace = false;
   let vx = 0, vz = 0, bobPhase = 0, bobAmp = 0, landDip = 0, wasGrounded = true, wasInWater = false;
   let keys = new Set<string>();
   /* the gifts */
-  let starlightOn = false, stormUntil = 0, timeslipUntil = 0, openingOpen = false;
+  let starlightOn = false, stormUntil = 0, openingOpen = false;
   /* strangeness state, mirrored from the Dreamer's intents */
-  let anKind = "", anAmt = 0, lastAnKind = "", birdsFlee = 0, glassT = 0, judgmentNow = 0;
+  let anKind = "", anAmt = 0, lastAnKind = "", birdsFlee = 0, glassT = 0, judgmentNow = 0, strangeNow = 0.3;
   let stoneMesh: Mesh | null = null;
   const skyAn = { az: 0, el: 0.5, sp: 0.01, x0: 0, z0: 0 };
   const cool = new Map<string, number>();
   const saidGift = new Set<string>();
   let locked = false, touched = false, muted = false;
-  let dayT = 0.32;
+  const now0 = new Date();
+  let dayT = (now0.getHours() + now0.getMinutes() / 60 + now0.getSeconds() / 3600) / 24;
+  let timeSkew = 0;
   let weather: Weather = "clear";
   let mistAmt = 0, rainAmt = 0, flash = 0;
   let idleFor = 0, explored = 0, chimeCount = 0, thinkClock = 0, hSpeedNow = 0;
@@ -1617,7 +2097,6 @@ export function buildSimulacrum(body: HTMLElement) {
     audio.kick();
     if (locked || touched) keys.add(e.code);
     if ((locked || touched) && e.code === "KeyF") { flying = !flying; flyBtn.textContent = flying ? "fly" : "walk"; audio.ui("toggle"); if (!flying) py = Math.max(py, height(px, pz) + 1.7); }
-    if ((locked || touched) && e.code === "KeyT") castTimeslip();
     if ((locked || touched) && e.code === "KeyR") castShape(1);
     if ((locked || touched) && e.code === "KeyG") castShape(-1);
     if ((locked || touched) && e.code === "KeyQ") castBlink();
@@ -1630,13 +2109,14 @@ export function buildSimulacrum(body: HTMLElement) {
   document.addEventListener("keydown", kd);
   document.addEventListener("keyup", ku);
   flyBtn.addEventListener("click", () => { flying = !flying; flyBtn.textContent = flying ? "fly" : "walk"; audio.ui("toggle"); if (!flying) py = Math.max(py, height(px, pz) + 1.7); });
-  wxBtn.addEventListener("click", () => {
-    const next: Weather = weather === "clear" ? "mist" : weather === "mist" ? "rain" : "clear";
-    dreamer.forceWeather(next);
-    dreamer.insist(90, performance.now() / 1000);
+  irisBtn.textContent = `iris: ${irisMode}`;
+  irisBtn.addEventListener("click", () => {
+    const next = IRIS_MODES[(IRIS_MODES.indexOf(irisMode) + 1) % IRIS_MODES.length];
+    irisSetMode(next);
+    irisBtn.textContent = `iris: ${irisMode}`;
     audio.ui("toggle");
   });
-  hourBtn.addEventListener("click", () => { dayT = (dayT + 1 / 24) % 1; audio.ui("toggle"); });
+  commonsBtn.addEventListener("click", () => { if (netPhase === "off") enterCommons(); else leaveCommons(); audio.ui("toggle"); });
   photoBtn.addEventListener("click", () => {
     wrap.classList.add("os-sim-photo");
     window.setTimeout(() => {
@@ -1716,12 +2196,6 @@ export function buildSimulacrum(body: HTMLElement) {
     witness("storm");
     giftNote("storm", "it did not make this weather. you did.");
   };
-  const castTimeslip = () => {
-    if (!ready("time", 8)) return;
-    timeslipUntil = performance.now() / 1000 + 6;
-    audio.cast("time");
-    giftNote("time", "the hours run like water for you");
-  };
   const castBloom = () => {
     if (!ready("bloom", 2)) return;
     const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
@@ -1756,7 +2230,6 @@ export function buildSimulacrum(body: HTMLElement) {
     ["lower land", "G", () => castShape(-1)],
     ["blink", "Q", castBlink],
     ["stormcall", "X", castStorm],
-    ["timeslip", "T", castTimeslip],
     ["bloom", "B", castBloom],
   ];
   for (const [label, keyHint, fn] of powerDefs) {
@@ -1770,20 +2243,28 @@ export function buildSimulacrum(body: HTMLElement) {
     audio.setMuted(muted);
     sndBtn.textContent = muted ? "sound: off" : "sound: on";
   });
-  newBtn.addEventListener("click", () => {
-    seed = Math.floor(Math.random() * 89999999) + 10000000;
-    localStorage.setItem(skey("simulacrum-seed"), String(seed));
+
+
+  /* stepping between worlds is the machine's business, not a
+     lever on the bar: the walker's own world, and the commons */
+  const HOME_SEED = seed;
+  const COMMONS_SEED = 20261024;
+  let inCommons = false;
+  const swapWorld = (ns: number) => {
+    seed = ns;
     noise = new Noise(seed);
     moistNoise = new Noise(seed ^ 0x5eed);
     detailNoise = new Noise(seed ^ 0xd37a);
     for (const ch of chunks.values()) { gl.deleteBuffer(ch.terrain.buf); if (ch.lit) gl.deleteBuffer(ch.lit.buf); if (ch.glow) gl.deleteBuffer(ch.glow.buf); }
     chunks.clear();
-    waterCell = [1e9, 1e9];
+    waterCell = [1e9, 1e9]; nearCell = [1e9, 1e9];
+    if (nearMesh) { gl.deleteBuffer(nearMesh.buf); nearMesh = null; }
     audio.dispose();
     audio = new SimAudio(seed);
     if (touched) { audio.start(); audio.ui("world"); }
     motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
     rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
+    meteorPts = makePoints(170, [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
     edits = new Map();
     try {
       const raw = JSON.parse(localStorage.getItem(skey(`simulacrum-edits-${seed}`)) || "{}") as Record<string, number>;
@@ -1791,6 +2272,10 @@ export function buildSimulacrum(body: HTMLElement) {
     } catch { edits = new Map(); }
     try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
     rebuildBlooms();
+    try { signs = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<[number, number]>; } catch { signs = []; }
+    rebuildSigns();
+    tow = new Undertow(height);
+    seedBodies();
     wName = worldName(seed);
     rec = dreamRecord(seed);
     rec.visits++;
@@ -1800,10 +2285,173 @@ export function buildSimulacrum(body: HTMLElement) {
     greeted = false;
     titleScr.classList.remove("taken");
     if (stoneMesh) { gl.deleteBuffer(stoneMesh.buf); stoneMesh = null; }
+    vesper.on = false;
+    vesper.nextAt = performance.now() / 1000 + 50;
+    anKind = ""; lastAnKind = "";
+    px = 8; pz = 8; py = height(8, 8) + (touched ? 1.7 : 26);
     refreshLabel();
-    spawn();
-  });
+  };
 
+  /* ————— the commons —————
+     Toggle it on, and the system matches you with whoever else
+     has toggled on: you step into one shared world (the first
+     world, Ekthora's seed) and walk it together. Presence only —
+     figures in seed-coloured shrouds, names the forge gives,
+     arrivals and departures spoken as whispers. No accounts, no
+     text, nothing typed by anyone reaches anyone. The matching
+     is the machine's: a shard is chosen by sky-band (walkers
+     whose real sun is near yours) and by who is already there.
+     If the wire cannot be reached, the world stays solo and
+     says nothing about it. */
+  interface Peer { id: string; name: string; hue: number; x: number; z: number; y: number; yaw: number; fly: boolean; cx: number; cz: number; cy: number; cyaw: number; lastSeen: number; greeted: boolean; mesh: Mesh | null }
+  const peers = new Map<string, Peer>();
+  const myId = "w" + Math.random().toString(36).slice(2, 10);
+  const myName = worldName(HOME_SEED);
+  const myHue = (HOME_SEED % 360) / 360;
+  const hueRgb = (h: number): [number, number, number] => [0.5 + 0.5 * Math.sin(h * 6.283 + 0.4), 0.5 + 0.5 * Math.sin(h * 6.283 + 2.5), 0.5 + 0.5 * Math.sin(h * 6.283 + 4.6)];
+  const band = Math.round(-(new Date().getTimezoneOffset()) / 180);
+  const hereBase = `sim/v1/c/b${band}`;
+  let mqtt: MqttMini | null = null;
+  let netPhase: "off" | "survey" | "on" = "off";
+  let surveyAt = 0, shard = 0, sendClock = 0, hereClock = 0;
+  const survey = new Map<number, Set<string>>();
+  const stateTopic = () => `${hereBase}/s${shard}`;
+  const hereTopic = () => `${hereBase}/s${shard}/here/${myId}`;
+  const peerSay = (line: string) => { whisper.textContent = line; whisper.style.opacity = "1"; whisperTimer = 7; };
+  const dropPeer = (id: string, silent: boolean) => {
+    const pr = peers.get(id);
+    if (!pr) return;
+    if (pr.mesh) gl.deleteBuffer(pr.mesh.buf);
+    peers.delete(id);
+    if (!silent && pr.greeted) peerSay(`${pr.name} has gone from the world`);
+    refreshLabel();
+  };
+  const netMessage = (topic: string, payload: string) => {
+    const hereM = topic.match(/\/s(\d+)\/here\/(\w+)$/);
+    if (hereM) {
+      const sh = Number(hereM[1]), id = hereM[2];
+      if (id === myId) return;
+      if (!payload) {
+        if (netPhase === "on" && sh === shard) dropPeer(id, false);
+        survey.get(sh)?.delete(id);
+        return;
+      }
+      let info: { name?: string; hue?: number; ts?: number };
+      try { info = JSON.parse(payload) as { name?: string; hue?: number; ts?: number }; } catch { return; }
+      if (netPhase === "survey") {
+        if (info.ts && Date.now() - info.ts > 45000) return;
+        if (!survey.has(sh)) survey.set(sh, new Set());
+        survey.get(sh)!.add(id);
+        return;
+      }
+      if (netPhase !== "on" || sh !== shard) return;
+      const name = String(info.name || "a walker").replace(/[^A-Za-z ]/g, "").slice(0, 20) || "a walker";
+      const hue = Math.max(0, Math.min(1, Number(info.hue) || 0));
+      const ex = peers.get(id);
+      if (ex) { ex.name = name; ex.hue = hue; ex.lastSeen = performance.now() / 1000; return; }
+      peers.set(id, { id, name, hue, x: 8, z: 8, y: 30, yaw: 0, fly: false, cx: 8, cz: 8, cy: 30, cyaw: 0, lastSeen: performance.now() / 1000, greeted: false, mesh: null });
+      return;
+    }
+    if (topic === stateTopic() && netPhase === "on") {
+      let st: { t?: string; id?: string; x?: number; z?: number; y?: number; yaw?: number; fly?: boolean };
+      try { st = JSON.parse(payload) as typeof st; } catch { return; }
+      if (!st.id || st.id === myId) return;
+      if (st.t === "gone") { dropPeer(st.id, false); return; }
+      if (st.t !== "s") return;
+      const pr = peers.get(st.id);
+      if (!pr) return;
+      const nx = Math.max(-2000, Math.min(2000, Number(st.x) || 0));
+      const nz = Math.max(-2000, Math.min(2000, Number(st.z) || 0));
+      if (!pr.greeted) { pr.cx = nx; pr.cz = nz; pr.greeted = true; peerSay(`${pr.name} has come into the world`); refreshLabel(); }
+      pr.x = nx; pr.z = nz; pr.y = Math.max(-20, Math.min(400, Number(st.y) || 0)); pr.yaw = Number(st.yaw) || 0; pr.fly = !!st.fly;
+      pr.lastSeen = performance.now() / 1000;
+    }
+  };
+  const enterCommons = () => {
+    if (netPhase !== "off") return;
+    try { localStorage.setItem(skey("simulacrum-commons"), "1"); } catch { /* private mode */ }
+    inCommons = true;
+    commonsBtn.setAttribute("aria-pressed", "true");
+    if (seed !== COMMONS_SEED) swapWorld(COMMONS_SEED); else refreshLabel();
+    netPhase = "survey";
+    survey.clear();
+    surveyAt = performance.now() / 1000 + 1.4;
+    openWire();
+    peerSay("you step into the commons");
+  };
+  /* the will clears our roster entry if we vanish mid-step; the
+     wire is reopened once the shard is known, so the will names
+     the right roster topic */
+  const openWire = () => {
+    mqtt = new MqttMini(["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"], myId, hereTopic(), "");
+    mqtt.onMessage = netMessage;
+    mqtt.onReady = () => {
+      mqtt!.subscribe(`${hereBase}/+/here/+`);
+      if (netPhase === "on") {
+        mqtt!.subscribe(stateTopic());
+        mqtt!.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
+      }
+    };
+    mqtt.onDown = () => { /* the world stays solo-shaped until the wire returns or is closed */ };
+    mqtt.connect();
+  };
+  const leaveCommons = () => {
+    if (netPhase === "off") return;
+    try { localStorage.setItem(skey("simulacrum-commons"), "0"); } catch { /* private mode */ }
+    if (mqtt) {
+      mqtt.publish(hereTopic(), "", true);
+      mqtt.publish(stateTopic(), JSON.stringify({ t: "gone", id: myId }));
+      const m = mqtt; mqtt = null;
+      window.setTimeout(() => m.close(), 250);
+    }
+    for (const id of [...peers.keys()]) dropPeer(id, true);
+    netPhase = "off";
+    inCommons = false;
+    commonsBtn.setAttribute("aria-pressed", "false");
+    if (seed !== HOME_SEED) swapWorld(HOME_SEED); else refreshLabel();
+    peerSay("you are home again");
+  };
+  const netTick = (dt: number, nowS: number) => {
+    if (netPhase === "survey" && nowS >= surveyAt) {
+      /* the matching: the fullest shard that still has room,
+         else the emptiest — the machine chooses your company */
+      let best = 0, bestN = -1;
+      for (let sN = 0; sN < 3; sN++) {
+        const n = survey.get(sN)?.size ?? 0;
+        if (n < 6 && n > bestN) { bestN = n; best = sN; }
+      }
+      if (bestN < 0) { best = 0; let min = 1e9; for (let sN = 0; sN < 3; sN++) { const n = survey.get(sN)?.size ?? 0; if (n < min) { min = n; best = sN; } } }
+      shard = best;
+      netPhase = "on";
+      if (mqtt && shard !== 0) { mqtt.close(); openWire(); }
+      else if (mqtt) {
+        mqtt.subscribe(stateTopic());
+        mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
+      }
+      refreshLabel();
+    }
+    if (netPhase === "on" && mqtt && mqtt.connected) {
+      sendClock += dt;
+      if (sendClock > 0.25) {
+        sendClock = 0;
+        mqtt.publish(stateTopic(), JSON.stringify({ t: "s", id: myId, x: Math.round(px * 10) / 10, z: Math.round(pz * 10) / 10, y: Math.round(py * 10) / 10, yaw: Math.round(yaw * 100) / 100, fly: flying }));
+      }
+      hereClock += dt;
+      if (hereClock > 20) { hereClock = 0; mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true); }
+    }
+    for (const pr of peers.values()) {
+      const k = Math.min(1, dt * 5);
+      pr.cx += (pr.x - pr.cx) * k;
+      pr.cz += (pr.z - pr.cz) * k;
+      const gy = pr.fly ? pr.y - 1.7 : height(pr.cx, pr.cz);
+      pr.cy += (gy - pr.cy) * Math.min(1, dt * 6);
+      let dy = pr.yaw - pr.cyaw;
+      while (dy > Math.PI) dy -= Math.PI * 2;
+      while (dy < -Math.PI) dy += Math.PI * 2;
+      pr.cyaw += dy * k;
+      if (nowS - pr.lastSeen > 14) dropPeer(pr.id, true);
+    }
+  };
   let lastTouch: { x: number; y: number } | null = null;
   canvas.addEventListener("touchstart", (e) => { touched = true; if (!audio.live) audio.start(); lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
   canvas.addEventListener("touchmove", (e) => {
@@ -1932,7 +2580,7 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     /* the sun's shadow pass: casters only, packed depth */
     shadowAmt = 0;
-    if (shadowOK && tier < 2 && sun[1] > -0.08) {
+    if (shadowOK && SHADOW_LADDER[iris.shadow] > 0 && sun[1] > -0.08) {
       const tx = Math.round(eye[0] / 4) * 4, tz = Math.round(eye[2] / 4) * 4;
       const lEye: [number, number, number] = [tx + sun[0] * 360, sun[1] * 360, tz + sun[2] * 360];
       const lView = m4.lookAt(lEye, [tx, 0, tz], Math.abs(sun[1]) > 0.92 ? [0, 0, 1] : [0, 1, 0]);
@@ -1941,7 +2589,7 @@ export function buildSimulacrum(body: HTMLElement) {
       const prevFB = gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
       const prevVP = gl.getParameter(gl.VIEWPORT) as Int32Array;
       gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
-      gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+      gl.viewport(0, 0, shadowSize, shadowSize);
       gl.clearColor(1, 1, 1, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(shadowPr);
@@ -1967,9 +2615,11 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.useProgram(litPr);
     gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
     gl.uniform3fv(gl.getUniformLocation(litPr, "uCamPos"), eye);
+    gl.uniform1f(gl.getUniformLocation(litPr, "uTime"), nowS);
     gl.uniform3fv(gl.getUniformLocation(litPr, "uRim"), [sc.hor[0] * 0.16, sc.hor[1] * 0.16, sc.hor[2] * 0.16]);
     gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uShadowVP"), false, lightVP);
     gl.uniform1f(gl.getUniformLocation(litPr, "uShadowAmt"), shadowAmt);
+    gl.uniform1f(gl.getUniformLocation(litPr, "uShadowTexel"), 1 / shadowSize);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, shadowTex);
     gl.uniform1i(gl.getUniformLocation(litPr, "uShadowMap"), 0);
@@ -1985,6 +2635,7 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.drawArrays(gl.TRIANGLES, 0, ch.terrain.n);
       if (ch.lit) { bindLit(ch.lit, m4.ident()); gl.drawArrays(gl.TRIANGLES, 0, ch.lit.n); }
     }
+    if (nearMesh) { bindLit(nearMesh, m4.ident()); gl.drawArrays(gl.TRIANGLES, 0, nearMesh.n); }
     /* birds */
     {
       const bv: number[] = [];
@@ -2065,6 +2716,62 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 1);
       bindUnlit(stoneMesh);
       gl.drawArrays(gl.TRIANGLES, 0, stoneMesh.n);
+    }
+    /* the other one, when she is walking */
+    if (vesper.on) {
+      const gy = height(vesper.x, vesper.z);
+      gl.useProgram(litPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
+      bindLit(vesperMesh, m4.mul(m4.trans(vesper.x, gy - 0.08, vesper.z), m4.rotY(vesper.yaw)));
+      gl.drawArrays(gl.TRIANGLES, 0, vesperMesh.n);
+      /* her halo: a thin ring of soft light, its colour drifting
+         like weather — warmer when the account is kind, colder
+         when it is not */
+      const hv: number[] = [];
+      const warm = Math.max(0, judgmentNow), cold = Math.max(0, -judgmentNow);
+      const ph = nowS * 0.11 + vesper.hueSeed;
+      let hr = 0.55 + 0.45 * Math.sin(ph), hg = 0.55 + 0.45 * Math.sin(ph + 2.1), hb = 0.55 + 0.45 * Math.sin(ph + 4.2);
+      hr = hr * (1 - cold * 0.4) + 1.0 * warm * 0.35; hg = hg * (1 - warm * 0.15) + 0.8 * warm * 0.3; hb = hb * (1 - warm * 0.5) + 1.0 * cold * 0.35;
+      const hy2 = gy + 2.52 + Math.sin(nowS * 0.8) * 0.03;
+      for (let k = 0; k < 14; k++) {
+        const a1 = (k / 14) * Math.PI * 2, a2 = ((k + 1) / 14) * Math.PI * 2;
+        const x1 = vesper.x + Math.cos(a1) * 0.34, z1 = vesper.z + Math.sin(a1) * 0.34;
+        const x2 = vesper.x + Math.cos(a2) * 0.34, z2 = vesper.z + Math.sin(a2) * 0.34;
+        hv.push(x1, hy2, z1, hr, hg, hb, x2, hy2, z2, hr, hg, hb, x2, hy2 + 0.045, z2, hr, hg, hb);
+        hv.push(x1, hy2, z1, hr, hg, hb, x2, hy2 + 0.045, z2, hr, hg, hb, x1, hy2 + 0.045, z1, hr, hg, hb);
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, haloBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(hv), gl.DYNAMIC_DRAW);
+      gl.useProgram(unlitPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 0.9);
+      const hPos = gl.getAttribLocation(unlitPr, "aPos");
+      const hCol = gl.getAttribLocation(unlitPr, "aCol");
+      gl.enableVertexAttribArray(hPos); gl.enableVertexAttribArray(hCol);
+      gl.vertexAttribPointer(hPos, 3, gl.FLOAT, false, 36, 0);
+      gl.vertexAttribPointer(hCol, 3, gl.FLOAT, false, 36, 12);
+      gl.drawArrays(gl.TRIANGLES, 0, hv.length / 9);
+    }
+    /* her signs, drawn with the blooms */
+    if (signMesh) {
+      gl.useProgram(unlitPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 0.9);
+      bindUnlit(signMesh);
+      gl.drawArrays(gl.TRIANGLES, 0, signMesh.n);
+    }
+    /* the other walkers, when the commons has matched you */
+    for (const pr of peers.values()) {
+      if (!pr.greeted) continue;
+      if (Math.hypot(pr.cx - px, pr.cz - pz) > 420) continue;
+      if (!pr.mesh) {
+        const rgb = hueRgb(pr.hue);
+        pr.mesh = buildFigure([rgb[0] * 0.30 + 0.04, rgb[1] * 0.30 + 0.04, rgb[2] * 0.30 + 0.04], [rgb[0] * 0.45 + 0.07, rgb[1] * 0.45 + 0.07, rgb[2] * 0.45 + 0.07], [0.78, 0.79, 0.83]);
+      }
+      gl.useProgram(litPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
+      bindLit(pr.mesh, m4.mul(m4.trans(pr.cx, pr.cy - 0.08, pr.cz), m4.rotY(pr.cyaw)));
+      gl.drawArrays(gl.TRIANGLES, 0, pr.mesh.n);
     }
     /* the strangeness, drawn */
     {
@@ -2204,7 +2911,15 @@ export function buildSimulacrum(body: HTMLElement) {
     const now = performance.now();
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    dayT = (dayT + dt / 300 * (performance.now() / 1000 < timeslipUntil ? 42 : 1)) % 1;
+    /* the world's clock is the walker's own: the sun here rises
+       and sets with the sun outside the user's window. Only the
+       Strangeness may bend it, and only briefly. */
+    {
+      const lt = new Date();
+      timeSkew *= Math.pow(0.5, dt / 22);
+      if (Math.abs(timeSkew) < 0.00002) timeSkew = 0;
+      dayT = ((lt.getHours() + lt.getMinutes() / 60 + lt.getSeconds() / 3600) / 24 + timeSkew + 1) % 1;
+    }
     if (performance.now() / 1000 < stormUntil && Math.random() < dt / 2.4) { flash = 1; audio.thunder(); }
     /* the sub-consciousness thinks a few times a second, and the
        world follows its intents — weather included */
@@ -2222,13 +2937,14 @@ export function buildSimulacrum(body: HTMLElement) {
       showerAmt += ((ints.shower ? 1 : 0) - showerAmt) * 0.3;
       audio.setMood(ints.sparse);
       judgmentNow = ints.judgment;
+      strangeNow = ints.strange;
       if (lastAnKind === "hush" && ints.anomaly !== "hush" && idleFor > 10) witness("hushKept");
       if (idleFor > 25) witness("rest");
       anKind = ints.anomaly; anAmt = ints.anomalyAmt;
       audio.setHush(anKind === "hush" ? anAmt : 0);
       audio.setEcho(anKind === "echo" && anAmt > 0.4);
       if (anKind !== lastAnKind) {
-        if (anKind === "stutter") { dayT = (dayT + 1 - 20 / 1440) % 1; flash = Math.max(flash, 0.55); }
+        if (anKind === "stutter") { timeSkew = -20 / 1440; flash = Math.max(flash, 0.55); }
         if (anKind === "bell") { audio.bell(); birdsFlee = 1; }
         if (anKind === "glass") glassT = now / 1000;
         if (anKind === "stone") spawnStone();
@@ -2321,6 +3037,8 @@ export function buildSimulacrum(body: HTMLElement) {
       audio.splash(py < -1);
       tow.burst(px, 0.25, pz, { n: 16, col: [0.75, 0.88, 1.0], spd: 2.6, up: 3.4, grav: -11, life: 0.8, size: 2.4 });
     }
+    vesperStep(dt, now / 1000);
+    netTick(dt, now / 1000);
     tow.step(dt, now / 1000, { x: px, z: pz, vx, vz }, (bx, bz, big) => {
       audio.splash(big);
       tow.burst(bx, 0.25, bz, { n: big ? 16 : 9, col: [0.75, 0.88, 1.0], spd: 2.0, up: 2.8, grav: -11, life: 0.7, size: 2.2 });
@@ -2371,6 +3089,7 @@ export function buildSimulacrum(body: HTMLElement) {
       }
     }
     buildWater(px, pz);
+    buildNear(px, pz);
     stepCritters(dt);
     /* HUD + EMCON, ~4×/s and 1×/s */
     if ((frames++ & 15) === 0) {
@@ -2393,22 +3112,13 @@ export function buildSimulacrum(body: HTMLElement) {
   let frameLast = performance.now();
   const frame = () => {
     const fNow = performance.now();
-    emaMs = emaMs * 0.95 + Math.min(100, fNow - frameLast) * 0.05;
+    irisTick(Math.max(0.01, fNow - frameLast), fNow / 1000);
     frameLast = fNow;
-    if (tierCool > 0) tierCool--;
-    else if (emaMs > 26 && tier < 2) {
-      tier++; tierCool = 600;
-      canvas.width = [1024, 832, 672][tier]; canvas.height = [640, 520, 420][tier];
-      viewRadius = tier === 2 ? 2 : RADIUS;
-    } else if (emaMs < 11.5 && tier > 0) {
-      tier--; tierCool = 900;
-      canvas.width = [1024, 832, 672][tier]; canvas.height = [640, 520, 420][tier];
-      viewRadius = tier === 2 ? 2 : RADIUS;
-    }
     if (!body.isConnected) {
       document.removeEventListener("keydown", kd);
       document.removeEventListener("keyup", ku);
       document.removeEventListener("visibilitychange", visKick);
+      if (mqtt) { try { mqtt.close(); } catch { /* already gone */ } mqtt = null; }
       audio.dispose();
       return;
     }
@@ -2421,7 +3131,8 @@ export function buildSimulacrum(body: HTMLElement) {
       const view = m4.mul(m4.rotZ(roll), m4.mul(m4.rotX(-pitch), m4.mul(m4.rotY(-yaw), m4.trans(-px, -(py + bobY), -pz))));
       render(proj, view, [px, py + bobY, pz]);
     }
-    requestAnimationFrame(frame);
+    try { if (localStorage.getItem(skey("simulacrum-commons")) === "1") enterCommons(); } catch { /* private mode */ }
+  requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 
