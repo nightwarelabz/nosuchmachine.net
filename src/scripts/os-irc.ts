@@ -44,6 +44,15 @@ const NETWORKS = [
 ];
 const HOUSE_CHANNEL = "#nosuchmachine";
 const MAX_LINES = 300;
+const CLAIM_PATH = "/home/operator/relay-claim.txt";
+/* The house names — mirrored from the bridge, which is the authority.
+   This copy only drives the connect card's courtesy checks; the bridge
+   refuses an unclaimed house name no matter what any client asks. */
+const HOUSE_NAMES = ["nightwarelabz", "nosuchmachine", "chasebryan", "chase", "nightjar"];
+function isHouseName(nick: string): boolean {
+  const base = nick.toLowerCase().replace(/[_`^|\-]/g, "");
+  return HOUSE_NAMES.some((h) => base === h || (base.startsWith(h) && /^\d+$/.test(base.slice(h.length))));
+}
 
 export function buildRelayApp(body: HTMLElement, os: any) {
   const el = (tag: string, cls = "", text = "") => {
@@ -60,7 +69,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const intro = el("p", "os-note",
     "The house wire: a real IRC client in this tab, bridged by the site's edge to a public network over TLS. " +
     "No account and nothing stored — pick a nick and step in. The house channel is #nosuchmachine on Libera.Chat; " +
-    "on IRC, whoever arrives first opens the room.");
+    "on IRC, whoever arrives first opens the room. The house names — nightwarelabz, nosuchmachine, chasebryan " +
+    "and kin — are claimed: the bridge opens them only with the house claim code, so nobody on this wire wears " +
+    "the operator's name but the operator.");
   const netSel = document.createElement("select");
   netSel.className = "os-bottle-select";
   for (const n of NETWORKS) {
@@ -81,8 +92,18 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const tlsIn = document.createElement("input");
   tlsIn.type = "checkbox"; tlsIn.checked = true;
   tlsWrap.append(tlsIn, document.createTextNode(" TLS (port 6697)"));
+  const claimIn = document.createElement("input");
+  claimIn.className = "os-bottle-input";
+  claimIn.type = "password";
+  claimIn.placeholder = "claim code — house names only";
+  claimIn.autocomplete = "off";
+  try {
+    const saved = os.read(CLAIM_PATH);
+    if (saved) claimIn.value = saved.split("\n").map((l: string) => l.trim()).filter((l: string) => l && !l.startsWith("#")).pop() || "";
+  } catch { /* no saved code — the field just stays empty */ }
+  const cardMsg = el("p", "os-note", "");
   const joinBtn = el("button", "os-btn", "enter the wire ▸");
-  card.append(intro, netSel, nickIn, chanIn, tlsWrap, joinBtn);
+  card.append(intro, netSel, nickIn, chanIn, claimIn, tlsWrap, joinBtn, cardMsg);
   wrap.appendChild(card);
 
   /* ————— session view ————— */
@@ -219,6 +240,12 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     const host = netSel.value;
     const port = tlsIn.checked ? 6697 : 6667;
     myNick = (nickIn.value.trim() || "guest").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || "guest";
+    const claim = claimIn.value.trim();
+    if (isHouseName(myNick) && !claim) {
+      card.hidden = false; view.hidden = true;
+      cardMsg.textContent = `— "${myNick}" is a claimed house name. It opens only with the house claim code — enter it above, or pick any other nick.`;
+      return;
+    }
     buffers.clear(); users.clear(); current = "server";
     card.hidden = true; view.hidden = false;
     push("server", `— reaching ${host}:${port} through the house bridge…`);
@@ -229,6 +256,12 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     let pending = "";
     ws.addEventListener("open", () => {
       push("server", "— bridge open; registering…");
+      if (claim) {
+        send(`PASS nsm-claim:${claim}`);
+        if (isHouseName(myNick)) {
+          try { os.write(CLAIM_PATH, `# relay claim code — secret. kept in this browser's blacksite filesystem only.\n${claim}\n`); } catch { /* the code still rides this session */ }
+        }
+      }
       send(`NICK ${myNick}`);
       send(`USER ${myNick} 0 * :BLACKSITE Relay guest`);
     });
