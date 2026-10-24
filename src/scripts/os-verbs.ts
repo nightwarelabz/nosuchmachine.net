@@ -256,6 +256,21 @@ function registerHouse() {
     void v;
     return "   ☾  BLACKSITE OS — web edition\n   host nosuchmachine.net · emcon " + ctx.os.emcon + " · theme " + ctx.os.theme + "\n   the bench, under a crescent moon.";
   });
+  verb("aegis", "LIVE", "aegis [status|snapshot|restore|lift [--adopt]] — the room's immune system: snapshots, containment, the mirage", async (ctx) => {
+    const st = ctx.os.aegisStatus();
+    const sub = (ctx.args[0] || "status").toLowerCase();
+    if (sub === "snapshot") { ctx.os.snapshotNow("manual"); return "aegis: snapshot kept. the room can now be returned to exactly this moment."; }
+    if (sub === "restore") return ctx.os.aegisRestore() ? "aegis: restored. whatever the attack wrote is gone; the room stands as the snapshot left it." : "aegis: no snapshot exists to restore from.";
+    if (sub === "lift") { const adopt = ctx.args.includes("--adopt"); const n = ctx.os.aegisLift(adopt); return `aegis: containment lifted — the mirage's ${n} ${n === 1 ? "entry" : "entries"} ${adopt ? "adopted into the real room" : "discarded"}.`; }
+    const lines = [
+      st.contained ? "AEGIS: CONTAINED — the real filesystem is frozen; writes land in the mirage and read back as success to whoever is writing them." : "AEGIS: standing watch. the room snapshots itself at boot, every five minutes, and at the first whisper of noise.",
+      `snapshots: ${st.snaps.length ? st.snaps.map((x) => `${new Date(x.at).toLocaleTimeString()} (${x.why})`).join(" · ") : "none yet"}`,
+      `mirage: ${st.mirage} ${st.mirage === 1 ? "entry" : "entries"} held`,
+    ];
+    if (st.trips.length) lines.push("trips:", ...st.trips.map((t) => `  ${t.at} — ${t.reason}`));
+    lines.push("what trips it: a ransom note's shape, ten mutations in ten seconds, existing files turning to high-entropy noise, a hand on the decoy files in ~/documents. what it cannot do: reach outside this tab. nothing on the attacker's own machine is touched — the backfire is that the attack spends itself on a mirage, the room restores, and the attempt stays in the journal.");
+    return lines.join("\n");
+  });
   verb("wallpaper", "LIVE", "wallpaper [mare|stars|plasma|mandelbrot|none] — nightmare, or art the room generates", async (ctx) => {
     const kind = ctx.args[0] || "stars";
     if (!["mare", "stars", "plasma", "mandelbrot", "none"].includes(kind)) return "wallpapers: mare, stars, plasma, mandelbrot, none.";

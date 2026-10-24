@@ -85,6 +85,10 @@ caps, one GET per hop, self-identifying User-Agent, no concurrency cannon,
 no exploitation primitives. Operators are told, on the page itself, to test
 only systems they own or are authorized to test.
 
+## AEGIS — the OS immune system (2026-10-24)
+
+BLACKSITE OS defends its own room. The shell snapshots the whole VFS (boot, five-minute cadence, on demand, and at the first high-entropy overwrite of an existing file — the *entropy-watch* snapshot lands before that write does). A circuit breaker watches the mutation funnels (`write`/`writeBytes`/`remove`): a ransom-note signature in name or content, ten mutations in ten seconds, four existing files turning to near-random noise inside a minute, or a delete of the decoy canary files in `~/documents` trips **containment**. Under containment the real filesystem freezes and every further write lands in the **mirage**, an in-memory overlay the writer reads back as complete success — a ransomware run encrypts a mirage, exhausts itself, and its ransom note is replaced in place by the house's counter-note. The operator restores from a snapshot (`aegis restore`, or the System panel) and loses nothing past the last snapshot; `aegis lift [--adopt]` judges the mirage by hand. Containment and the snapshot ring persist across reloads; the mirage is per-session. Honest scope: AEGIS governs the in-tab room only — it cannot reach an attacker's machine, and claims nothing beyond the room.
+
 ## Hardening (2026-10-24 pass)
 
 - Every guarded endpoint's DNS-over-HTTPS lookup carries a 5 s timeout —

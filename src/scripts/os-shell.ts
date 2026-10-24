@@ -121,6 +121,23 @@ export const LIMIT_REASONS = new Map<string, string>();
 const VFS_KEY = "blacksite-vfs-v1";
 const MACRO_KEY = "blacksite-macros-v1";
 const SET_KEY = "blacksite-settings-v1";
+const AEGIS_KEY = "blacksite-aegis-v1";
+
+/* ————— AEGIS — the room's immune system —————
+   Ransomware against this OS meets three facts it did not expect:
+   (1) the room snapshots itself — boot, every five minutes, and the
+   instant anything smells wrong — so mass encryption has a past to
+   be undone from; (2) bulk mutation, high-entropy overwrites of
+   existing files, ransom-note signatures, and hands on the decoy
+   canary files trip CONTAINMENT; (3) under containment every further
+   write lands in the MIRAGE — a throwaway overlay the attacker reads
+   back as total success while the real filesystem never moves. The
+   ransom note itself is answered by the house, in the note's place. */
+const AEGIS_COUNTER_NOTE = "NO DEAL.\n\nThis room keeps snapshots the way the sea keeps wrecks: everything you touched is already back, and everything you wrote after the trip went to a mirage — a filesystem that exists only for you. The key you generated encrypts nothing real. The attempt is in the journal, transcript and all.\n\n— the house";
+const AEGIS_CANARIES = new Set(["/home/operator/documents/wallet-recovery.txt", "/home/operator/documents/keys-backup.txt"]);
+const AEGIS_RANSOM_NAME = /\.(locked|crypt|crypted|enc|encrypted|ransom|payme)$/i;
+const AEGIS_RANSOM_TEXT = /(your files (have been|are|were) encrypted|pay the ransom|send\s+[\d.]+\s*(btc|bitcoin|monero|xmr)|decryption (key|fee|payment)|how to decrypt|readme.{0,12}decrypt|restore your files)/i;
+interface AegisSnap { at: number; why: string; files: Array<[string, VNode]>; }
 
 export class BlacksiteOS {
   files = new Map<string, VNode>();
@@ -138,8 +155,17 @@ export class BlacksiteOS {
   stopFlag = false;
   macros = new Map<string, string>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  /* AEGIS state. The mirage lives in memory (one session's deception);
+     containment and the snapshot ring persist, so a reload is not an
+     escape hatch. */
+  aegis = { contained: false, trips: [] as Array<{ at: string; reason: string }> };
+  private aegisSnaps: AegisSnap[] = [];
+  private mirage = new Map<string, VNode | null>();
+  private opLog: Array<{ t: number; w: number }> = [];
+  private hotFiles = new Map<string, number>();
+  private booting = true;
 
-  constructor() { this.load(); }
+  constructor() { this.load(); this.booting = false; }
   log(text: string) { this.journal.push({ at: new Date().toISOString(), text }); if (this.journal.length > 300) this.journal.shift(); }
   norm(path: string, base = this.cwd): string {
     const raw = path.startsWith("/") ? path : `${base}/${path}`;
@@ -147,13 +173,19 @@ export class BlacksiteOS {
     for (const seg of raw.split("/")) { if (!seg || seg === ".") continue; if (seg === "..") parts.pop(); else parts.push(seg); }
     return "/" + parts.join("/");
   }
-  node(path: string): VNode | undefined { return this.files.get(this.norm(path)); }
+  node(path: string): VNode | undefined {
+    const p = this.norm(path);
+    if (this.aegis.contained && this.mirage.has(p)) { const m = this.mirage.get(p); return m === null ? undefined : m; }
+    return this.files.get(p);
+  }
   isDir(path: string): boolean { return this.node(path)?.type === "dir"; }
   list(path: string): string[] {
     const dir = this.norm(path);
     const prefix = dir === "/" ? "/" : dir + "/";
     const out = new Set<string>();
-    for (const key of this.files.keys()) {
+    const keys = new Set(this.files.keys());
+    if (this.aegis.contained) for (const [k, v] of this.mirage) { if (v === null) keys.delete(k); else keys.add(k); }
+    for (const key of keys) {
       if (key === dir || !key.startsWith(prefix)) continue;
       const rest = key.slice(prefix.length);
       if (rest && !rest.includes("/")) out.add(rest);
@@ -167,15 +199,21 @@ export class BlacksiteOS {
     if (n.binary) return b64ToB(n.binary);
     return te.encode(n.content ?? "");
   }
-  write(path: string, content: string) {
+  private rawWrite(path: string, content: string) {
     const p = this.norm(path);
     const parent = p.slice(0, p.lastIndexOf("/")) || "/";
     if (!this.isDir(parent)) throw new Error(`no such directory: ${parent}`);
     this.files.set(p, { type: "file", content, mtime: Date.now() });
     this.saveSoon();
   }
+  write(path: string, content: string) {
+    const p = this.norm(path);
+    if (!this.booting && this.aegisGateWrite(p, content, null)) return;
+    this.rawWrite(p, content);
+  }
   writeBytes(path: string, bytes: Uint8Array) {
     const p = this.norm(path);
+    if (!this.booting && this.aegisGateWrite(p, null, bytes)) return;
     const parent = p.slice(0, p.lastIndexOf("/")) || "/";
     if (!this.isDir(parent)) throw new Error(`no such directory: ${parent}`);
     this.files.set(p, { type: "file", binary: bToB64(bytes), mtime: Date.now() });
@@ -183,6 +221,7 @@ export class BlacksiteOS {
   }
   mkdir(path: string) {
     const p = this.norm(path);
+    if (!this.booting && this.aegis.contained) { this.mirage.set(p, { type: "dir", mtime: Date.now() }); return; }
     const parent = p.slice(0, p.lastIndexOf("/")) || "/";
     if (!this.isDir(parent)) throw new Error(`no such directory: ${parent}`);
     if (this.files.has(p)) throw new Error(`already exists: ${p}`);
@@ -191,6 +230,7 @@ export class BlacksiteOS {
   }
   remove(path: string, recursive = false) {
     const p = this.norm(path);
+    if (!this.booting && this.aegisGateRemove(p)) return;
     const n = this.files.get(p);
     if (!n) throw new Error(`no such file: ${p}`);
     if (n.type === "dir") {
@@ -201,17 +241,133 @@ export class BlacksiteOS {
     this.files.delete(p);
     this.saveSoon();
   }
+  /* ————— AEGIS ————— */
+  private mirageSetWrite(p: string, content: string | null, bytes: Uint8Array | null, counter: boolean) {
+    if (counter) this.mirage.set(p, { type: "file", content: AEGIS_COUNTER_NOTE, mtime: Date.now() });
+    else if (bytes) this.mirage.set(p, { type: "file", binary: bToB64(bytes), mtime: Date.now() });
+    else this.mirage.set(p, { type: "file", content: content ?? "", mtime: Date.now() });
+  }
+  private mirageTombstone(p: string) {
+    this.mirage.set(p, null);
+    const keys = new Set([...this.files.keys(), ...this.mirage.keys()]);
+    for (const k of keys) if (k.startsWith(p + "/")) this.mirage.set(k, null);
+  }
+  private aegisObserve(w: number): boolean {
+    const now = Date.now();
+    this.opLog.push({ t: now, w });
+    this.opLog = this.opLog.filter((o) => now - o.t < 10_000);
+    return this.opLog.reduce((a, o) => a + o.w, 0) >= 10;
+  }
+  private aegisGateWrite(p: string, content: string | null, bytes: Uint8Array | null): boolean {
+    const text = content ?? "";
+    const ransom = AEGIS_RANSOM_NAME.test(p) || (text !== "" && AEGIS_RANSOM_TEXT.test(text));
+    if (this.aegis.contained) { this.mirageSetWrite(p, content, bytes, ransom); return true; }
+    if (ransom) {
+      this.aegisTrip(`a ransom note took shape at ${p}`);
+      this.mirageSetWrite(p, content, bytes, true);
+      return true;
+    }
+    this.maybeSnapshot();
+    if (this.aegisObserve(AEGIS_CANARIES.has(p) ? 6 : 1)) {
+      this.aegisTrip("bulk mutation — the cadence of a mass-encryption run");
+      this.mirageSetWrite(p, content, bytes, false);
+      return true;
+    }
+    const prev = this.files.get(p);
+    if (prev && prev.type === "file") {
+      const data = bytes ?? (content !== null ? te.encode(content) : null);
+      if (data && data.length >= 256 && entropy(data) >= 7.2) {
+        const now = Date.now();
+        for (const [k, t] of this.hotFiles) if (now - t > 60_000) this.hotFiles.delete(k);
+        // the FIRST whisper of noise takes its own snapshot, before the
+        // write lands — so a restore after the trip loses nothing at all
+        if (!this.hotFiles.size) this.snapshotNow("entropy-watch");
+        this.hotFiles.set(p, now);
+        if (this.hotFiles.size >= 4) {
+          this.aegisTrip("existing files turning to noise one after another — the entropy signature of encryption");
+          this.mirageSetWrite(p, content, bytes, false);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  private aegisGateRemove(p: string): boolean {
+    if (this.aegis.contained) { this.mirageTombstone(p); return true; }
+    if (AEGIS_CANARIES.has(p)) { this.aegisTrip(`a decoy file was deleted: ${p}`); this.mirageTombstone(p); return true; }
+    if (this.aegisObserve(1)) { this.aegisTrip("bulk deletion — the shape of a wipe"); this.mirageTombstone(p); return true; }
+    return false;
+  }
+  private aegisTrip(reason: string) {
+    if (this.aegis.contained) return;
+    this.snapshotNow("at-trip");
+    this.aegis.contained = true;
+    const entry = { at: new Date().toISOString(), reason };
+    this.aegis.trips.push(entry);
+    if (this.aegis.trips.length > 12) this.aegis.trips.shift();
+    this.log(`aegis: containment — ${reason}. the real filesystem is frozen; everything further lands in the mirage, and a snapshot of the room as it was is already kept.`);
+    this.aegisPersist();
+    try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: entry })); } catch { /* headless — the journal still knows */ }
+  }
+  snapshotNow(why: string) {
+    this.aegisSnaps.push({ at: Date.now(), why, files: JSON.parse(JSON.stringify([...this.files.entries()])) as Array<[string, VNode]> });
+    while (this.aegisSnaps.length > 8) this.aegisSnaps.shift();
+    let size = 0; try { size = JSON.stringify(this.aegisSnaps).length; } catch { size = 0; }
+    while (size > 2_500_000 && this.aegisSnaps.length > 1) { this.aegisSnaps.shift(); try { size = JSON.stringify(this.aegisSnaps).length; } catch { break; } }
+    this.aegisPersist();
+  }
+  maybeSnapshot() {
+    if (this.aegis.contained) return;
+    const last = this.aegisSnaps[this.aegisSnaps.length - 1];
+    if (!last || Date.now() - last.at > 300_000) this.snapshotNow("interval");
+  }
+  private aegisPersist() {
+    const body = () => JSON.stringify({ contained: this.aegis.contained, trips: this.aegis.trips, snaps: this.aegisSnaps });
+    try { localStorage.setItem(AEGIS_KEY, body()); }
+    catch { try { this.aegisSnaps.splice(0, Math.ceil(this.aegisSnaps.length / 2)); localStorage.setItem(AEGIS_KEY, body()); } catch { /* volatile room — limits says so */ } }
+  }
+  private aegisLoad() {
+    try {
+      const raw = localStorage.getItem(AEGIS_KEY);
+      if (raw) { const a = JSON.parse(raw); this.aegis.contained = !!a.contained; this.aegis.trips = Array.isArray(a.trips) ? a.trips : []; this.aegisSnaps = Array.isArray(a.snaps) ? a.snaps : []; }
+    } catch { /* a corrupt register heals by starting fresh */ }
+    if (!this.aegisSnaps.length) this.snapshotNow("boot");
+    if (this.aegis.contained) this.log("aegis: containment held across the restart — the room is still frozen behind the mirage. `aegis restore` or `aegis lift` when ready.");
+  }
+  aegisRestore(): boolean {
+    const snap = [...this.aegisSnaps].reverse().find((x) => x.why !== "at-trip") || this.aegisSnaps[this.aegisSnaps.length - 1];
+    if (!snap) return false;
+    this.files = new Map(JSON.parse(JSON.stringify(snap.files)) as Array<[string, VNode]>);
+    this.mirage.clear(); this.aegis.contained = false; this.hotFiles.clear(); this.opLog = [];
+    this.log(`aegis: the room restored from the ${new Date(snap.at).toLocaleString()} snapshot (${snap.why}) — nothing the attack wrote survived the restore.`);
+    this.aegisPersist(); this.saveSoon();
+    return true;
+  }
+  aegisLift(adopt: boolean): number {
+    const held = this.mirage.size;
+    if (adopt) for (const [k, v] of this.mirage) { if (v === null) this.files.delete(k); else this.files.set(k, v); }
+    this.mirage.clear(); this.aegis.contained = false; this.hotFiles.clear(); this.opLog = [];
+    this.log(`aegis: containment lifted by the operator — the mirage's ${held} ${held === 1 ? "entry" : "entries"} ${adopt ? "adopted into the real room" : "discarded, unmourned"}.`);
+    this.aegisPersist(); this.saveSoon();
+    return held;
+  }
+  aegisStatus() {
+    return { contained: this.aegis.contained, snaps: this.aegisSnaps.map((x) => ({ at: x.at, why: x.why })), trips: [...this.aegis.trips], mirage: this.mirage.size };
+  }
+
   seed() {
-    const dirs = ["/", "/home", "/home/operator", "/packages", "/captures", "/deliveries", "/tmp"];
+    const dirs = ["/", "/home", "/home/operator", "/home/operator/documents", "/packages", "/captures", "/deliveries", "/tmp"];
     for (const d of dirs) this.files.set(d, { type: "dir", mtime: Date.now() });
-    this.write("/README.md", "# BLACKSITE OS — web edition\n\nThe nightjar Blacksite console, ported to the web.\nType `help` for the full 427-command roster, `limits` for what this\nroom honestly cannot do, and `gauntlet` to watch it test itself.\n\nDoctrine: one knock, read, grade. Public targets only.\n");
-    this.write("/home/operator/notes.txt", "scope: only systems i own or am authorized to test.\nthe bench knocks once, reads, and grades. it does not exploit.\n");
-    this.write("/home/operator/hello.lua", "-- lua in the room (fengari)\nprint('hello from blacksite lua')\nfor i = 1, 3 do print('count', i) end\nlocal t = {bench = 'blacksite'}\nprint(t.bench)\n");
-    this.write("/home/operator/demo.scm", "; scheme in the room — run it: run demo.scm\n(define (square x) (* x x))\n(display (map square (list 3 4 12)))\n(newline)\n(display \"lisp answers in the room\")\n");
-    this.write("/home/operator/notes.sql", "-- sqlite in the room — run it: run notes.sql  (the db persists at room.db)\nCREATE TABLE IF NOT EXISTS notes (body TEXT);\nINSERT INTO notes VALUES ('the room remembers'), ('one knock, read, grade');\nSELECT COUNT(*) AS notes FROM notes;\n");
-    this.write("/home/operator/hello.py", "import math\n\nprint('hello from blacksite python')\nprint('pi is', math.pi)\nbench = {'bench': 'blacksite', 'engine': 'skulpt'}\nprint(bench)\nfor i in range(3):\n    print('count', i)\n");
-    this.write("/home/operator/demo.js", "console.log('hello from blacksite javascript');\nconst xs = [1,2,3,4];\nconsole.log('sum', xs.reduce((a,b)=>a+b,0));\n");
-    this.write("/home/operator/scope.txt", "target: example.com\nauthorization: demonstration target (RFC 2606)\n");
+    this.rawWrite("/README.md", "# BLACKSITE OS — web edition\n\nThe nightjar Blacksite console, ported to the web.\nType `help` for the full 427-command roster, `limits` for what this\nroom honestly cannot do, and `gauntlet` to watch it test itself.\n\nDoctrine: one knock, read, grade. Public targets only.\n");
+    this.rawWrite("/home/operator/notes.txt", "scope: only systems i own or am authorized to test.\nthe bench knocks once, reads, and grades. it does not exploit.\n");
+    this.rawWrite("/home/operator/hello.lua", "-- lua in the room (fengari)\nprint('hello from blacksite lua')\nfor i = 1, 3 do print('count', i) end\nlocal t = {bench = 'blacksite'}\nprint(t.bench)\n");
+    this.rawWrite("/home/operator/demo.scm", "; scheme in the room — run it: run demo.scm\n(define (square x) (* x x))\n(display (map square (list 3 4 12)))\n(newline)\n(display \"lisp answers in the room\")\n");
+    this.rawWrite("/home/operator/notes.sql", "-- sqlite in the room — run it: run notes.sql  (the db persists at room.db)\nCREATE TABLE IF NOT EXISTS notes (body TEXT);\nINSERT INTO notes VALUES ('the room remembers'), ('one knock, read, grade');\nSELECT COUNT(*) AS notes FROM notes;\n");
+    this.rawWrite("/home/operator/hello.py", "import math\n\nprint('hello from blacksite python')\nprint('pi is', math.pi)\nbench = {'bench': 'blacksite', 'engine': 'skulpt'}\nprint(bench)\nfor i in range(3):\n    print('count', i)\n");
+    this.rawWrite("/home/operator/demo.js", "console.log('hello from blacksite javascript');\nconst xs = [1,2,3,4];\nconsole.log('sum', xs.reduce((a,b)=>a+b,0));\n");
+    this.rawWrite("/home/operator/scope.txt", "target: example.com\nauthorization: demonstration target (RFC 2606)\n");
+    this.rawWrite("/home/operator/documents/wallet-recovery.txt", "wallet recovery — the 24 words live on paper, in the safe, nowhere else.\nthis file holds only the checksum of that paper: 9f2c-41aa-77d0.\nif you are reading this and you are not me: the room noticed you some time ago.\n");
+    this.rawWrite("/home/operator/documents/keys-backup.txt", "keys backup — the encrypted archive (keys.tar.age) is kept off this machine.\nthis note is the whole of what is here: a pointer, not the keys.\n");
   }
   load() {
     try {
@@ -226,6 +382,14 @@ export class BlacksiteOS {
       if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; if (s.theme) this.theme = s.theme; if (s.wallpaper) this.wallpaper = s.wallpaper; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
     } catch { if (!this.files.size) this.seed(); }
     if (!this.files.size) this.seed();
+    this.aegisLoad();
+    if (!this.files.has("/home/operator/documents/wallet-recovery.txt")) {
+      try {
+        if (!this.isDir("/home/operator/documents")) this.files.set("/home/operator/documents", { type: "dir", mtime: Date.now() });
+        this.rawWrite("/home/operator/documents/wallet-recovery.txt", "wallet recovery — the 24 words live on paper, in the safe, nowhere else.\nthis file holds only the checksum of that paper: 9f2c-41aa-77d0.\nif you are reading this and you are not me: the room noticed you some time ago.\n");
+        this.rawWrite("/home/operator/documents/keys-backup.txt", "keys backup — the encrypted archive (keys.tar.age) is kept off this machine.\nthis note is the whole of what is here: a pointer, not the keys.\n");
+      } catch { /* a room that refuses decoys still has the breaker */ }
+    }
   }
   saveSoon() {
     if (this.saveTimer) clearTimeout(this.saveTimer);
@@ -237,7 +401,7 @@ export class BlacksiteOS {
       } catch { /* storage full/blocked — the room runs volatile and says so in limits */ }
     }, 250);
   }
-  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem("blacksite-session-v1"); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.seed(); }
+  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem("blacksite-session-v1"); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
   spawn(cmd: string): Proc {
     const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now() };
     this.procs.push(proc);
