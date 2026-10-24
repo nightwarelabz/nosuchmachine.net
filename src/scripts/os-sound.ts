@@ -36,12 +36,17 @@ let master: GainNode | null = null;
 let armed = false;
 
 export function armAudio() {
-  if (armed) return;
+  // EVERY gesture re-arms, never just the first: Safari can hand back
+  // a context born suspended even inside a handler, and a resume
+  // attempted outside a gesture is refused — so the gesture itself
+  // must keep asking until the context is actually running. The old
+  // arm-once shape wedged the room silent for the whole session.
   armed = true;
-  ensure();
+  const c = ensure();
+  if (c && c.state !== "running") void c.resume();
 }
 function ensure(): AudioContext | null {
-  if (ctx) { if (ctx.state === "suspended") void ctx.resume(); return ctx; }
+  if (ctx) { if (ctx.state !== "running") void ctx.resume(); return ctx; }
   try {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     if (!AC) return null;
