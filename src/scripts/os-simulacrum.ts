@@ -89,6 +89,17 @@ export const m4 = {
     const c = Math.cos(a), s = Math.sin(a);
     return new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]);
   },
+  ortho(l: number, r: number, b: number, t: number, n: number, f: number): M4 {
+    return new Float32Array([2 / (r - l), 0, 0, 0, 0, 2 / (t - b), 0, 0, 0, 0, -2 / (f - n), 0, -(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1]);
+  },
+  lookAt(eye: [number, number, number], ctr: [number, number, number], up: [number, number, number]): M4 {
+    let zx = eye[0] - ctr[0], zy = eye[1] - ctr[1], zz = eye[2] - ctr[2];
+    const zl = Math.hypot(zx, zy, zz) || 1; zx /= zl; zy /= zl; zz /= zl;
+    let xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx;
+    const xl = Math.hypot(xx, xy, xz) || 1; xx /= xl; xy /= xl; xz /= xl;
+    const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+    return new Float32Array([xx, yx, zx, 0, xy, yy, zy, 0, xz, yz, zz, 0, -(xx * eye[0] + xy * eye[1] + xz * eye[2]), -(yx * eye[0] + yy * eye[1] + yz * eye[2]), -(zx * eye[0] + zy * eye[1] + zz * eye[2]), 1]);
+  },
   rotZ(a: number): M4 {
     const c = Math.cos(a), s = Math.sin(a);
     return new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
@@ -100,24 +111,60 @@ export const m4 = {
 export const LIT_VS = `
 attribute vec3 aPos; attribute vec3 aCol; attribute vec3 aNor;
 uniform mat4 uMVP; uniform mat4 uModel; uniform vec2 uCam;
-varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY;
+varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY; varying vec3 vWP;
 void main() {
   vCol = aCol;
   vNor = mat3(uModel) * aNor;
   vec4 wp = uModel * vec4(aPos, 1.0);
+  vWP = wp.xyz;
   vWY = wp.y;
   gl_Position = uMVP * vec4(aPos, 1.0);
   vDist = distance(wp.xz, uCam);
 }`;
 export const LIT_FS = `
 precision mediump float;
-varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY;
+varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY; varying vec3 vWP;
 uniform vec3 uSun; uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform vec3 uTint;
+uniform vec3 uCamPos; uniform vec3 uRim;
+uniform sampler2D uShadowMap; uniform mat4 uShadowVP; uniform float uShadowAmt;
+vec3 grade(vec3 c, float amt) {
+  vec3 a = c * (c * 2.51 + 0.03) / (c * (c * 2.43 + 0.59) + 0.14);
+  return mix(c, clamp(a, 0.0, 1.0), amt);
+}
+float unpackDepth(vec4 v) {
+  const vec4 shift = vec4(1.0, 1.0 / 256.0, 1.0 / 65536.0, 1.0 / 16777216.0);
+  return dot(v, shift);
+}
 void main() {
   vec3 n = normalize(vNor);
-  float li = max(0.18, dot(n, normalize(uSun)));
+  vec3 sunN = normalize(uSun);
+  /* wrap diffuse: light bends a little way around forms */
+  float dif = clamp((dot(n, sunN) + 0.55) / 1.55, 0.0, 1.0);
+  float li = 0.16 + 0.84 * dif * dif;
   float hemi = 0.72 + 0.28 * n.y;
   vec3 c = vCol * li * hemi * uTint;
+  /* the sun's shadow, sampled soft */
+  if (uShadowAmt > 0.003) {
+    vec4 sc4 = uShadowVP * vec4(vWP + n * 1.4, 1.0);
+    if (sc4.w > 0.0) {
+      vec3 ndc = sc4.xyz / sc4.w;
+      if (abs(ndc.x) < 0.995 && abs(ndc.y) < 0.995 && ndc.z < 1.0) {
+        vec2 uv = ndc.xy * 0.5 + 0.5;
+        float cur = ndc.z * 0.5 + 0.5 - 0.0028;
+        float texel = 1.0 / 2048.0;
+        float occ = 0.0;
+        occ += cur > unpackDepth(texture2D(uShadowMap, uv + vec2(-texel, -texel))) ? 1.0 : 0.0;
+        occ += cur > unpackDepth(texture2D(uShadowMap, uv + vec2(texel, -texel))) ? 1.0 : 0.0;
+        occ += cur > unpackDepth(texture2D(uShadowMap, uv + vec2(-texel, texel))) ? 1.0 : 0.0;
+        occ += cur > unpackDepth(texture2D(uShadowMap, uv + vec2(texel, texel))) ? 1.0 : 0.0;
+        c *= 1.0 - (occ / 4.0) * uShadowAmt * clamp(li * 1.4, 0.0, 1.0);
+      }
+    }
+  }
+  /* rim: the sky catches the edges of things */
+  vec3 vdir = normalize(uCamPos - vWP);
+  float rim = pow(1.0 - max(dot(n, vdir), 0.0), 3.0);
+  c += uRim * rim * 0.5;
   /* the waterline keeps its memory: wet land darkens and deepens */
   float wet = smoothstep(1.1, 0.15, vWY);
   c *= 1.0 - wet * 0.22;
@@ -125,9 +172,13 @@ void main() {
   /* strata in the steep places */
   float steep = 1.0 - smoothstep(0.55, 0.8, n.y);
   c *= 1.0 + steep * 0.10 * sin(vWY * 2.7);
+  c = grade(c, 0.55);
+  /* height fog: the low places fill first */
   float f = smoothstep(uFogNear, uFogFar, vDist);
+  f = clamp(f * mix(1.5, 0.72, smoothstep(-3.0, 30.0, vWY)), 0.0, 1.0);
   gl_FragColor = vec4(mix(c, uFog, f), 1.0);
-}`;
+}
+`;
 export const UNLIT_VS = `
 attribute vec3 aPos; attribute vec3 aCol;
 uniform mat4 uMVP; uniform vec3 uOrigin; uniform vec2 uCam;
@@ -223,8 +274,25 @@ void main() {
     float shafts = 0.5 + 0.5 * sin(az * 16.0 + fbm2(d.xz * 2.0) * 7.0);
     c += uSunCol * shafts * toward * lowSun * smoothstep(0.0, 0.16, d.y) * (1.0 - uNight) * 0.16;
   }
+  /* the grade, and a breath of dither so gradients never band */
+  c = mix(c, clamp(c * (c * 2.51 + 0.03) / (c * (c * 2.43 + 0.59) + 0.14), 0.0, 1.0), 0.38);
+  c += (hash21(gl_FragCoord.xy * 0.713) - 0.5) / 255.0;
   gl_FragColor = vec4(c, 1.0);
 }`;
+export const SHADOW_VS = `
+attribute vec3 aPos;
+uniform mat4 uMVP; uniform mat4 uModel;
+void main() { gl_Position = uMVP * uModel * vec4(aPos, 1.0); }`;
+export const SHADOW_FS = `
+precision mediump float;
+vec4 packDepth(float d) {
+  const vec4 shift = vec4(1.0, 256.0, 65536.0, 16777216.0);
+  const vec4 mask = vec4(0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0);
+  vec4 r = fract(d * shift);
+  r -= r.xxyz * mask;
+  return r;
+}
+void main() { gl_FragColor = packDepth(gl_FragCoord.z); }`;
 export const WATER_VS = `
 attribute vec3 aPos; attribute vec3 aCol; attribute vec3 aAux;
 uniform mat4 uMVP; uniform vec2 uCam;
@@ -244,7 +312,8 @@ void main() {
   vec2 p = vWorld.xz;
   float w1 = sin(p.x * 0.55 + uTime * 1.1) + sin(p.y * 0.42 - uTime * 0.8);
   float w2 = sin((p.x + p.y) * 0.21 + uTime * 0.5);
-  vec3 n = normalize(vec3(w1 * 0.06 + w2 * 0.03, 1.0, w1 * 0.04 - w2 * 0.05));
+  float w3 = sin(p.x * 2.35 - uTime * 2.3) * sin(p.y * 1.95 + uTime * 1.8);
+  vec3 n = normalize(vec3(w1 * 0.06 + w2 * 0.03 + w3 * 0.045, 1.0, w1 * 0.04 - w2 * 0.05 + w3 * 0.035));
   vec3 view = normalize(uCamPos - vWorld);
   float fres = pow(1.0 - max(view.y, 0.0), 2.0);
   vec3 c = mix(vCol, uHor, fres * 0.55);
@@ -252,8 +321,9 @@ void main() {
   float foam = smoothstep(0.85, 0.12, vDepth) * (0.5 + 0.30 * sin(uTime * 1.35 + p.x * 1.6 + p.y * 1.25)) * step(0.03, vDepth);
   c = mix(c, vec3(0.90, 0.96, 1.0), clamp(foam, 0.0, 0.6));
   vec3 hv = normalize(normalize(uSun) + view);
-  float spec = pow(max(dot(n, hv), 0.0), 140.0) * 1.4 * uDay;
-  c += uSunCol * spec;
+  float spec = pow(max(dot(n, hv), 0.0), 260.0) * 2.3 + pow(max(dot(n, hv), 0.0), 36.0) * 0.16;
+  c += uSunCol * spec * uDay;
+  c = mix(c, c * (c * 2.51 + 0.03) / (c * (c * 2.43 + 0.59) + 0.14), 0.45);
   float f = smoothstep(uFogNear, uFogFar, vDist);
   gl_FragColor = vec4(mix(c, uFog, f), vAlpha);
 }`;
@@ -918,6 +988,30 @@ export function buildSimulacrum(body: HTMLElement) {
   const unlitPr = program(UNLIT_VS, UNLIT_FS);
   const skyPr = program(SKY_VS, SKY_FS);
   const waterPr = program(WATER_VS, WATER_FS);
+  const shadowPr = program(SHADOW_VS, SHADOW_FS);
+  /* one shadow map for the sun, RGBA-packed depth (no extensions
+     needed); if the framebuffer cannot be completed the world
+     simply goes without shadows */
+  const SHADOW_SIZE = 2048;
+  const shadowTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, SHADOW_SIZE, SHADOW_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const shadowFBO = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, shadowTex, 0);
+  const shadowRB = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, shadowRB);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, SHADOW_SIZE, SHADOW_SIZE);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, shadowRB);
+  const shadowOK = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  let lightVP: M4 = m4.ident();
+  let shadowAmt = 0;
+  let lastBodiesN = 0;
   const ptsPr = program(PTS_VS, PTS_FS);
 
   const makeMesh = (verts: Float32Array, dynamic = false): Mesh => {
@@ -1079,7 +1173,14 @@ export function buildSimulacrum(body: HTMLElement) {
       let nx = -hx / (2 * e), nz = -hz / (2 * e), ny = 1;
       const il = 1 / Math.hypot(nx, ny, nz); nx *= il; ny *= il; nz *= il;
       const col = palette(x, z, h, 1 - ny);
-      return [x, h, z, ...col, nx, ny, nz];
+      /* baked ambient occlusion + macro mottling: hollows darken,
+         crests catch a little more light, and the land stops
+         wearing one flat colour */
+      const avgN = (height(x - 3.2, z) + height(x + 3.2, z) + height(x, z - 3.2) + height(x, z + 3.2)) / 4;
+      const ao = Math.max(0.66, Math.min(1.12, 1 - (avgN - h) * 0.075));
+      const mott = 0.90 + 0.20 * (moisture(x * 0.14, z * 0.14) * 0.5 + 0.5);
+      const shade = ao * mott;
+      return [x, h, z, col[0] * shade, col[1] * shade, col[2] * shade, nx, ny, nz];
     };
     for (let i = 0; i < seg; i++) for (let j = 0; j < seg; j++) {
       const x = x0 + i * STEP, z = z0 + j * STEP;
@@ -1829,9 +1930,49 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
       gl.drawArrays(gl.TRIANGLES, 0, 110 * 6);
     }
+    /* the sun's shadow pass: casters only, packed depth */
+    shadowAmt = 0;
+    if (shadowOK && tier < 2 && sun[1] > -0.08) {
+      const tx = Math.round(eye[0] / 4) * 4, tz = Math.round(eye[2] / 4) * 4;
+      const lEye: [number, number, number] = [tx + sun[0] * 360, sun[1] * 360, tz + sun[2] * 360];
+      const lView = m4.lookAt(lEye, [tx, 0, tz], Math.abs(sun[1]) > 0.92 ? [0, 0, 1] : [0, 1, 0]);
+      lightVP = m4.mul(m4.ortho(-165, 165, -165, 165, 40, 720), lView);
+      shadowAmt = 0.62 * Math.max(0, Math.min(1, (sun[1] + 0.08) * 3.2));
+      const prevFB = gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
+      const prevVP = gl.getParameter(gl.VIEWPORT) as Int32Array;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+      gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+      gl.clearColor(1, 1, 1, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(shadowPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(shadowPr, "uMVP"), false, lightVP);
+      const sPos = gl.getAttribLocation(shadowPr, "aPos");
+      gl.enableVertexAttribArray(sPos);
+      const cast = (buf: WebGLBuffer, n: number, model: M4) => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.vertexAttribPointer(sPos, 3, gl.FLOAT, false, 36, 0);
+        gl.uniformMatrix4fv(gl.getUniformLocation(shadowPr, "uModel"), false, model);
+        gl.drawArrays(gl.TRIANGLES, 0, n);
+      };
+      for (const ch of chunks.values()) {
+        cast(ch.terrain.buf, ch.terrain.n, m4.ident());
+        if (ch.lit) cast(ch.lit.buf, ch.lit.n, m4.ident());
+      }
+      if (stoneMesh) cast(stoneMesh.buf, stoneMesh.n, m4.ident());
+      if (lastBodiesN > 0) cast(critBuf, lastBodiesN, m4.ident());
+      gl.bindFramebuffer(gl.FRAMEBUFFER, prevFB);
+      gl.viewport(prevVP[0], prevVP[1], prevVP[2], prevVP[3]);
+    }
     /* world */
     gl.useProgram(litPr);
     gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
+    gl.uniform3fv(gl.getUniformLocation(litPr, "uCamPos"), eye);
+    gl.uniform3fv(gl.getUniformLocation(litPr, "uRim"), [sc.hor[0] * 0.16, sc.hor[1] * 0.16, sc.hor[2] * 0.16]);
+    gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uShadowVP"), false, lightVP);
+    gl.uniform1f(gl.getUniformLocation(litPr, "uShadowAmt"), shadowAmt);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+    gl.uniform1i(gl.getUniformLocation(litPr, "uShadowMap"), 0);
     gl.uniform3fv(gl.getUniformLocation(litPr, "uSun"), sun);
     gl.uniform2fv(gl.getUniformLocation(litPr, "uCam"), [eye[0], eye[2]]);
     gl.uniform3fv(gl.getUniformLocation(litPr, "uFog"), sc.fog);
@@ -1902,6 +2043,7 @@ export function buildSimulacrum(body: HTMLElement) {
     /* UNDERTOW's loose matter */
     {
       const bvv = bodiesVerts(nowS);
+      lastBodiesN = bvv.length / 9;
       if (bvv.length) {
         gl.bindBuffer(gl.ARRAY_BUFFER, critBuf);
         gl.bufferData(gl.ARRAY_BUFFER, bvv, gl.DYNAMIC_DRAW);
