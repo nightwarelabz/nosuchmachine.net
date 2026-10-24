@@ -583,16 +583,61 @@ export class SimAudio {
     src.connect(f); f.connect(g); g.connect(this.ambBus);
     src.start(t0);
   }
-  footstep(surface: string) {
+  private stepBuf: AudioBuffer | null = null;
+  private footAlt = false;
+  /** one shaped layer of a footfall: a shared noise buffer, one
+      filter, an envelope that lands and lets go — no two steps are
+      alike because the source offset, rate and gain all wander */
+  private stepLayer(t0: number, out: AudioNode, dur: number, peak: number, freq: number, type: BiquadFilterType, q = 1, sweepTo = 0, rate = 1) {
     if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const c = this.ctx;
+    if (!this.stepBuf) {
+      this.stepBuf = c.createBuffer(1, c.sampleRate, c.sampleRate);
+      const d = this.stepBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = c.createBufferSource(); src.buffer = this.stepBuf; src.playbackRate.value = rate;
+    const f = c.createBiquadFilter(); f.type = type; f.Q.value = q;
+    f.frequency.setValueAtTime(Math.max(30, freq), t0);
+    if (sweepTo) f.frequency.exponentialRampToValueAtTime(Math.max(30, sweepTo), t0 + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(out);
+    src.start(t0, this.rnd() * 0.6); src.stop(t0 + dur + 0.05);
+  }
+  /** the ground, heard: each surface has its own small instrument —
+      snow crunches and creaks, rock ticks over a heel-thock, the
+      worn ways thud, shores hiss, the shallows slosh and drip.
+      Feet alternate; a jog lands harder than a walk. */
+  footstep(surface: string, run = false, depth = 0) {
+    if (!this.ctx || !this.ambBus) return;
+    const c = this.ctx, t = c.currentTime;
+    this.footAlt = !this.footAlt;
+    const alt = this.footAlt ? 1 : -1;
+    const jit = 0.92 + this.rnd() * 0.16;
+    const vol = (run ? 1.22 : 1) * (0.93 + this.rnd() * 0.14);
     const once = (t0: number, mul: number) => {
-      if (surface === "water") this.noiseBurst(t0, 0.16, 0.16 * mul, 900, "bandpass", 0.8);
-      else if (surface === "rock" || surface === "snow") this.noiseBurst(t0, 0.07, 0.11 * mul, (surface === "rock" ? 2100 : 700) * (mul < 1 ? 0.8 : 1), "bandpass", 1.2);
-      else this.noiseBurst(t0, 0.09, 0.08 * mul, 480 * (mul < 1 ? 0.8 : 1), "lowpass");
+      let out: AudioNode = this.ambBus!;
+      if (typeof c.createStereoPanner === "function") {
+        const p = c.createStereoPanner(); p.pan.value = alt * 0.16; p.connect(this.ambBus!); out = p;
+      }
+      const L = (dur: number, peak: number, freq: number, type: BiquadFilterType, q = 1, sweepTo = 0, delay = 0) =>
+        this.stepLayer(t0 + delay, out, dur, peak * vol * mul, freq * jit, type, q, sweepTo ? sweepTo * jit : 0, jit);
+      if (surface === "snow") { L(0.17, 0.20, 640, "lowpass", 0.7, 400); L(0.06, 0.045, 1750, "bandpass", 3.5, 0, 0.018); }
+      else if (surface === "rock") { L(0.05, 0.23, 2350, "bandpass", 1.4); L(0.07, 0.13, 300, "lowpass", 0.7); }
+      else if (surface === "dirt") { L(0.10, 0.18, 430, "lowpass", 0.7); L(0.045, 0.05, 1150, "bandpass", 1, 0, 0.008); }
+      else if (surface === "sand") { L(0.10, 0.115, 3100, "bandpass", 0.55); L(0.06, 0.06, 480, "lowpass", 0.7); }
+      else if (surface === "water") {
+        const d = Math.max(0, Math.min(1, depth));
+        L(0.20, 0.20 + d * 0.06, 820 - d * 180, "bandpass", 0.65, 980 - d * 200);
+        L(0.08, 0.06, 2000, "bandpass", 1, 0, 0.07);
+      }
+      else { L(0.12, 0.135, 880, "bandpass", 0.75, 1060); L(0.06, 0.065, 300, "lowpass", 0.7); }
     };
     once(t, 1);
-    if (this.echoOn) once(t + 0.42, 0.55);
+    if (this.echoOn) once(t + 0.42, 0.5);
   }
   splash(big = false) { if (this.ctx) this.noiseBurst(this.ctx.currentTime, big ? 0.5 : 0.3, 0.16, 1100, "bandpass", 0.6); }
   thud(v: number) { if (this.ctx && this.ambBus) { this.tone(this.ambBus, 68, this.ctx.currentTime, 0.22, Math.min(0.3, 0.08 + v * 0.02), "sine", 40); this.noiseBurst(this.ctx.currentTime, 0.1, 0.06, 300, "lowpass"); } }
@@ -1132,7 +1177,9 @@ export function buildSimulacrum(body: HTMLElement) {
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
   hud.append(seedLabel, flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, fsBtn, xrBtn, posLabel);
-  stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, powers);
+  const chrome = el("div", "os-sim-chrome");
+  chrome.append(hud, powers);
+  stage.append(canvas, shade, uw, whisper, opening, titleScr, chrome);
   wrap.append(stage);
   wrap.classList.add("chrome-on");
   body.appendChild(wrap);
@@ -2407,7 +2454,7 @@ export function buildSimulacrum(body: HTMLElement) {
   let px = 8, pz = 8, py = height(8, 8) + 26;
   let yaw = 0.7, pitch = -0.16, flying = false, vy = 0;
   let coyoteT = 0, jumpBufT = 0, prevSpace = false;
-  let vx = 0, vz = 0, bobPhase = 0, bobAmp = 0, landDip = 0, wasGrounded = true, wasInWater = false;
+  let vx = 0, vz = 0, bobPhase = 0, bobAmp = 0, landDip = 0, wasGrounded = true, wasInWater = false, strideAcc = 0;
   let keys = new Set<string>();
   /* the gifts */
   let starlightOn = false, stormUntil = 0, openingOpen = false;
@@ -2972,8 +3019,18 @@ export function buildSimulacrum(body: HTMLElement) {
   };
   const surfaceAt = (x: number, z: number): string => {
     const h = height(x, z);
-    if (h < 0.4) return "water";
+    if (h < 0.45) return "water";
+    /* snow where the world wears it: the high fields always, and
+       wherever the turning year has brought the winter down — the
+       same bargain the ground shader strikes, struck for the ear */
     if (h > 14.5) return "snow";
+    if (seasonNow.cold > 0.34 && h > 0.9) return "snow";
+    if (pathDist(x, z) < 1.7) return "dirt";
+    const se = 1.4;
+    const sgx = (height(x + se, z) - height(x - se, z)) / (2 * se);
+    const sgz = (height(x, z + se) - height(x, z - se)) / (2 * se);
+    if (1 - 1 / Math.hypot(sgx, 1, sgz) > 0.42) return "rock";
+    if (h < 0.95 || moisture(x, z) < 0.24) return "sand";
     return "grass";
   };
 
@@ -3463,6 +3520,9 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     whisperTimer = Math.max(0, whisperTimer - dt);
     if (chromeTimer > 0) { chromeTimer -= dt; if (chromeTimer <= 0) wrap.classList.remove("chrome-on"); }
+    /* inside the world there is no furniture — the panel belongs
+       to the threshold and to the pause, never to the walk itself */
+    wrap.classList.toggle("sim-in", touched && document.pointerLockElement === canvas);
     if (whisperTimer === 0) whisper.style.opacity = "0";
     mistAmt += ((weather === "mist" ? 1 : 0) - mistAmt) * Math.min(1, dt * 0.25);
     rainAmt += ((weather === "rain" ? 1 : 0) - rainAmt) * Math.min(1, dt * 0.25);
@@ -3497,11 +3557,13 @@ export function buildSimulacrum(body: HTMLElement) {
     prevSpace = spaceNow;
     jumpBufT = Math.max(0, jumpBufT - dt);
     coyoteT = wasGrounded ? 0.12 : Math.max(0, coyoteT - dt);
-    const baseSpeed = flying ? (sprint ? 30 : 13) : inWater ? 4.2 : sprint ? 15 : 8.5;
+    /* a small person in a gigantic world: the pace is a walk, not a
+       vehicle — sprint is a jog, flight a glide, the water a wade */
+    const baseSpeed = flying ? (sprint ? 14 : 7) : inWater ? 2.1 : sprint ? 5.6 : 3.0;
     const il = Math.hypot(ix, iz);
     const txv = il > 0 ? (ix / il) * baseSpeed : 0;
     const tzv = il > 0 ? (iz / il) * baseSpeed : 0;
-    const accel = flying || inWater ? 3.2 : 7;
+    const accel = flying || inWater ? 2.8 : 4.2;
     vx += (txv - vx) * Math.min(1, dt * accel);
     vz += (tzv - vz) * Math.min(1, dt * accel);
     px += vx * dt; pz += vz * dt;
@@ -3568,13 +3630,20 @@ export function buildSimulacrum(body: HTMLElement) {
     wasInWater = inWater;
     if (touched && hSpeedNow < 0.5 && !keys.size) idleFor += dt; else idleFor = 0;
     explored += hSpeedNow * dt;
-    /* head-bob + footsteps */
+    /* head-bob + footsteps: strides are counted in distance
+       travelled, so the feet land when they should at any pace —
+       and they land in the shallows too, where the ground is near */
     landDip = Math.max(0, landDip - dt * 1.8);
-    if (wasGrounded && hSpeed > 1.2) {
-      const prev = bobPhase;
-      bobPhase += dt * hSpeed * 1.35;
+    const wading = inWater && groundH > -1.15;
+    if ((wasGrounded || wading) && hSpeed > 0.6) {
+      const stride = wading ? 1.0 : sprint ? 1.55 : 1.25;
+      strideAcc += hSpeed * dt;
+      bobPhase += (hSpeed * dt * Math.PI) / stride;
       bobAmp = Math.min(1, bobAmp + dt * 5);
-      if (Math.floor(prev / Math.PI) !== Math.floor(bobPhase / Math.PI)) audio.footstep(surfaceAt(px, pz));
+      if (strideAcc >= stride) {
+        strideAcc -= stride;
+        audio.footstep(surfaceAt(px, pz), sprint, wading ? Math.min(1, -groundH / 1.15) : 0);
+      }
     } else bobAmp = Math.max(0, bobAmp - dt * 5);
     /* audio ambience */
     if (audio.live) {
