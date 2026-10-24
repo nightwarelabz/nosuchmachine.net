@@ -67,6 +67,23 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   wrap.append(hero, bar, frame);
   body.appendChild(wrap);
 
+  // Two doors into the pane. Browsers with credentialless frames
+  // (Chromium) frame the web directly — full fidelity. Browsers
+  // without (Safari supports neither credentialless frames nor COEP
+  // credentialless, so this page's isolation wall blacks out every
+  // framed site) go through the house lens instead: /lens fetches
+  // the page from this origin and rewrites it to stay framed.
+  // House pages frame directly on every browser — same-origin loads
+  // owe no COEP slip, which is also what makes the recursion work.
+  const HAS_CREDLESS = "credentialless" in HTMLIFrameElement.prototype;
+  const paneUrl = (url: string): string => {
+    let u: URL;
+    try { u = new URL(url); } catch { return url; }
+    if (u.origin === window.location.origin) return url;
+    if (HAS_CREDLESS) return url;
+    return `/lens?u=${encodeURIComponent(url)}`;
+  };
+
   const navigate = (raw: string) => {
     let url = raw.trim();
     if (!url) return;
@@ -74,15 +91,13 @@ export function buildOrc(body: HTMLElement, arg?: string) {
       url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
     }
     addr.value = url;
-    frame.src = url;
+    frame.src = paneUrl(url);
   };
   go.addEventListener("click", () => navigate(addr.value));
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
-  // The starter pane is example.org on purpose: it is one of the few
-  // well-known pages that permits framing, so the room opens alive.
-  // (nosuchmachine.net itself sends frame-ancestors 'none' — the bench
-  // cannot be framed even by its own house, which is the correct
-  // posture for the site and exactly why orc-the-browser exists.)
+  // The starter pane is example.org on purpose: it permits framing
+  // everywhere (and through the lens where framing is walled), so the
+  // room opens alive on every browser.
   navigate(arg || "https://example.org");
   setTimeout(() => addr.focus(), 80);
 }
