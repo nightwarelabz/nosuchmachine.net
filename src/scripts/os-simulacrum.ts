@@ -100,23 +100,31 @@ export const m4 = {
 export const LIT_VS = `
 attribute vec3 aPos; attribute vec3 aCol; attribute vec3 aNor;
 uniform mat4 uMVP; uniform mat4 uModel; uniform vec2 uCam;
-varying vec3 vCol; varying vec3 vNor; varying float vDist;
+varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY;
 void main() {
   vCol = aCol;
   vNor = mat3(uModel) * aNor;
   vec4 wp = uModel * vec4(aPos, 1.0);
+  vWY = wp.y;
   gl_Position = uMVP * vec4(aPos, 1.0);
   vDist = distance(wp.xz, uCam);
 }`;
 export const LIT_FS = `
 precision mediump float;
-varying vec3 vCol; varying vec3 vNor; varying float vDist;
+varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY;
 uniform vec3 uSun; uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform vec3 uTint;
 void main() {
   vec3 n = normalize(vNor);
   float li = max(0.18, dot(n, normalize(uSun)));
   float hemi = 0.72 + 0.28 * n.y;
   vec3 c = vCol * li * hemi * uTint;
+  /* the waterline keeps its memory: wet land darkens and deepens */
+  float wet = smoothstep(1.1, 0.15, vWY);
+  c *= 1.0 - wet * 0.22;
+  c = mix(c, c * vec3(0.85, 1.02, 1.05), wet * 0.5);
+  /* strata in the steep places */
+  float steep = 1.0 - smoothstep(0.55, 0.8, n.y);
+  c *= 1.0 + steep * 0.10 * sin(vWY * 2.7);
   float f = smoothstep(uFogNear, uFogFar, vDist);
   gl_FragColor = vec4(mix(c, uFog, f), 1.0);
 }`;
@@ -147,6 +155,7 @@ precision mediump float;
 varying vec3 vDir;
 uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uNight;
 uniform float uTime; uniform float uCover; uniform float uGloom; uniform float uFlash; uniform vec3 uMoonDir; uniform float uAurora;
+uniform float uSecond;
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -164,18 +173,32 @@ void main() {
   vec3 c = mix(uHor, uZen, pow(max(h, 0.0), 0.62));
   float s = max(dot(d, normalize(uSunDir)), 0.0);
   c += uSunCol * (pow(s, 600.0) * 1.6 + pow(s, 18.0) * 0.28);
+  if (uSecond > 0.01) {
+    vec3 sd2v = normalize(uSunDir);
+    vec3 s2v = normalize(vec3(-sd2v.x, abs(sd2v.y) * 0.9 + 0.10, -sd2v.z));
+    float s2 = max(dot(d, s2v), 0.0);
+    c += vec3(0.85, 0.88, 0.95) * (pow(s2, 700.0) * 1.9 + pow(s2, 18.0) * 0.10) * uSecond;
+  }
   float md = max(dot(d, normalize(uMoonDir)), 0.0);
-  c += vec3(0.82, 0.88, 1.0) * (pow(md, 900.0) * 1.35 + pow(md, 60.0) * 0.05) * uNight;
+  c += vec3(0.82, 0.88, 1.0) * (pow(md, 900.0) * 1.35 + pow(md, 60.0) * 0.05 + pow(md, 8.0) * 0.045) * uNight;
   if (uNight > 0.02 && d.y > 0.0) {
     vec2 sp = floor(d.xz / max(0.035, d.y) * 14.0);
     float st = step(0.9975, hash21(sp)) * uNight;
-    c += vec3(st) * (0.55 + 0.45 * sin(uNight * 40.0 + hash21(sp + 7.0) * 20.0));
+    vec3 starCol = mix(vec3(0.72, 0.84, 1.0), vec3(1.0, 0.88, 0.72), hash21(sp + 3.0));
+    c += starCol * st * (0.55 + 0.45 * sin(uNight * 40.0 + hash21(sp + 7.0) * 20.0));
+  }
+  if (uNight > 0.05 && d.y > -0.05) {
+    /* the galactic band: a faint nebula river across the night */
+    float gb = exp(-pow((d.y - 0.30) * 2.0, 2.0));
+    float neb = fbm2(vec2(atan(d.z, d.x) * 2.6 + 4.0, d.y * 7.0));
+    vec3 nebCol = mix(vec3(0.16, 0.08, 0.30), vec3(0.05, 0.25, 0.30), neb);
+    c += nebCol * gb * smoothstep(0.45, 0.85, neb) * uNight * 0.5;
   }
   if (uNight > 0.25 && d.y > 0.03) {
     float band = exp(-pow((d.y - 0.40) * 3.1, 2.0));
     float curt = fbm2(vec2(d.x * 4.0 + uTime * 0.045, d.z * 2.0 - uTime * 0.02));
     float rays = 0.5 + 0.5 * sin(d.x * 22.0 + curt * 14.0 + uTime * 0.5);
-    vec3 aur = mix(vec3(0.10, 0.95, 0.45), vec3(0.45, 0.25, 0.95), clamp(d.y * 1.6 - 0.15, 0.0, 1.0));
+    vec3 aur = mix(vec3(0.10, 0.95, 0.45), vec3(0.45, 0.25, 0.95), clamp(d.y * 1.6 - 0.15 + 0.30 * sin(uTime * 0.05 + curt * 2.0), 0.0, 1.0));
     c += aur * band * (0.25 + 0.75 * curt) * rays * (uNight - 0.2) * 0.55 * uAurora;
   }
   if (d.y > 0.015) {
@@ -186,23 +209,35 @@ void main() {
     vec3 cloudCol = mix(vec3(0.34, 0.38, 0.46), vec3(1.03, 1.0, 0.97), clamp(0.35 + sunAmt + (1.0 - uGloom) * 0.3, 0.0, 1.0));
     cloudCol *= (1.0 - uGloom * 0.45);
     c = mix(c, cloudCol, cov * 0.88);
+    c += vec3(0.45, 0.48, 0.58) * uFlash * cov * 0.85;
   }
   c += vec3(0.55, 0.62, 0.85) * uFlash * (0.25 + 0.75 * (1.0 - max(h, 0.0)));
+  /* god-rays: at a low sun the light comes in shafts */
+  {
+    vec3 sd0 = normalize(uSunDir);
+    float lowSun = pow(clamp(1.0 - abs(sd0.y + 0.06), 0.0, 1.0), 6.0);
+    vec2 dxz = normalize(d.xz + vec2(1e-5));
+    vec2 sxz = normalize(sd0.xz + vec2(1e-5));
+    float toward = pow(max(dot(dxz, sxz), 0.0), 3.0);
+    float az = atan(d.z, d.x);
+    float shafts = 0.5 + 0.5 * sin(az * 16.0 + fbm2(d.xz * 2.0) * 7.0);
+    c += uSunCol * shafts * toward * lowSun * smoothstep(0.0, 0.16, d.y) * (1.0 - uNight) * 0.16;
+  }
   gl_FragColor = vec4(c, 1.0);
 }`;
 export const WATER_VS = `
 attribute vec3 aPos; attribute vec3 aCol; attribute vec3 aAux;
 uniform mat4 uMVP; uniform vec2 uCam;
-varying vec3 vCol; varying float vAlpha; varying vec3 vWorld; varying float vDist;
+varying vec3 vCol; varying float vAlpha; varying vec3 vWorld; varying float vDist; varying float vDepth;
 void main() {
-  vCol = aCol; vAlpha = aAux.x;
+  vCol = aCol; vAlpha = aAux.x; vDepth = aAux.y;
   vWorld = aPos;
   gl_Position = uMVP * vec4(aPos, 1.0);
   vDist = distance(aPos.xz, uCam);
 }`;
 export const WATER_FS = `
 precision mediump float;
-varying vec3 vCol; varying float vAlpha; varying vec3 vWorld; varying float vDist;
+varying vec3 vCol; varying float vAlpha; varying vec3 vWorld; varying float vDist; varying float vDepth;
 uniform vec3 uSun; uniform vec3 uSunCol; uniform vec3 uCamPos; uniform float uTime; uniform vec3 uHor;
 uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uDay;
 void main() {
@@ -213,6 +248,9 @@ void main() {
   vec3 view = normalize(uCamPos - vWorld);
   float fres = pow(1.0 - max(view.y, 0.0), 2.0);
   vec3 c = mix(vCol, uHor, fres * 0.55);
+  /* foam where the water is thin over the land */
+  float foam = smoothstep(0.85, 0.12, vDepth) * (0.5 + 0.30 * sin(uTime * 1.35 + p.x * 1.6 + p.y * 1.25)) * step(0.03, vDepth);
+  c = mix(c, vec3(0.90, 0.96, 1.0), clamp(foam, 0.0, 0.6));
   vec3 hv = normalize(normalize(uSun) + view);
   float spec = pow(max(dot(n, hv), 0.0), 140.0) * 1.4 * uDay;
   c += uSunCol * spec;
@@ -324,8 +362,20 @@ export class SimAudio {
   private applyGain(t = 0.2) {
     if (!this.ctx || !this.master) return;
     const prefs = soundPrefs();
-    const target = this.muted || prefs.enabled === false ? 0 : this.gate * prefs.volume;
+    const target = (this.muted || prefs.enabled === false ? 0 : this.gate * prefs.volume) * (1 - this.hush * 0.94);
     this.master.gain.setTargetAtTime(target, this.ctx.currentTime, t);
+  }
+  private hush = 0;
+  setHush(v: number) { if (v !== this.hush) { this.hush = v; this.applyGain(0.5); } }
+  private echoOn = false;
+  setEcho(on: boolean) { this.echoOn = on; }
+  bell() {
+    if (!this.ctx || !this.ambBus) return;
+    const t = this.ctx.currentTime;
+    this.tone(this.ambBus, 98, t, 5.5, 0.20, "sine");
+    this.tone(this.ambBus, 147.2, t, 4.2, 0.055, "sine");
+    this.tone(this.ambBus, 196.5, t, 3.4, 0.04, "sine");
+    this.tone(this.ambBus, 295, t, 2.2, 0.016, "sine");
   }
   kick() { if (this.ctx && this.ctx.state !== "running") void this.ctx.resume(); }
   setGate(g: number) { if (g !== this.gate) { this.gate = g; this.applyGain(0.4); } }
@@ -402,9 +452,13 @@ export class SimAudio {
   footstep(surface: string) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    if (surface === "water") this.noiseBurst(t, 0.16, 0.16, 900, "bandpass", 0.8);
-    else if (surface === "rock" || surface === "snow") this.noiseBurst(t, 0.07, 0.11, surface === "rock" ? 2100 : 700, "bandpass", 1.2);
-    else this.noiseBurst(t, 0.09, 0.08, 480, "lowpass");
+    const once = (t0: number, mul: number) => {
+      if (surface === "water") this.noiseBurst(t0, 0.16, 0.16 * mul, 900, "bandpass", 0.8);
+      else if (surface === "rock" || surface === "snow") this.noiseBurst(t0, 0.07, 0.11 * mul, (surface === "rock" ? 2100 : 700) * (mul < 1 ? 0.8 : 1), "bandpass", 1.2);
+      else this.noiseBurst(t0, 0.09, 0.08 * mul, 480 * (mul < 1 ? 0.8 : 1), "lowpass");
+    };
+    once(t, 1);
+    if (this.echoOn) once(t + 0.42, 0.55);
   }
   splash(big = false) { if (this.ctx) this.noiseBurst(this.ctx.currentTime, big ? 0.5 : 0.3, 0.16, 1100, "bandpass", 0.6); }
   thud(v: number) { if (this.ctx && this.ambBus) { this.tone(this.ambBus, 68, this.ctx.currentTime, 0.22, Math.min(0.3, 0.08 + v * 0.02), "sine", 40); this.noiseBurst(this.ctx.currentTime, 0.1, 0.06, 300, "lowpass"); } }
@@ -470,6 +524,10 @@ export interface Perception {
 }
 export interface Intents {
   weather: Weather; aurora: number; attend: number; sparse: number; shower: boolean;
+  /** the strangeness: a kind, and its 0..1 envelope */
+  anomaly: string; anomalyAmt: number;
+  /** its current moral reading of the walker, -1..1 */
+  judgment: number;
 }
 
 export class Dreamer {
@@ -485,16 +543,45 @@ export class Dreamer {
   private attend = 0;
   private shower = false;
   private showerCool = 120;
+  private strangeness = 0.3;
+  private anomalyKind = "";
+  private anomalyFrom = 0;
+  private anomalyUntil = 0;
+  private anomalyDur = 10;
+  private nextAnomalyAt = 100;
+  private stoneShown = false;
+  private idleWhisperAt = 0;
   private whisperQ: string[] = [];
   private rapport = 0;
-  intents: Intents = { weather: "clear", aurora: 1, attend: 0, sparse: 0, shower: false };
+  private lean = 0;
+  private humor = 0;
+  private band = 0;
+  private bandAt = -1e9;
+  setLean(v: number) { this.lean = Math.max(-1, Math.min(1, v)); }
+  /** a witnessed act moves its momentary humor; the ledger itself
+      is kept by the world (and persists) — this is the weather of
+      its opinion, the ledger is the climate */
+  act(kind: string) {
+    const table: Record<string, number> = {
+      bloom: 0.30, rest: 0.10, crystal: 0.10, hushKept: 0.22, shapeUp: 0.05,
+      shapeDown: -0.30, storm: -0.24, shapeBurst: -0.20, flee: -0.08,
+    };
+    this.humor = Math.max(-1.2, Math.min(1.2, this.humor + (table[kind] ?? 0)));
+  }
+  get judgment(): number { return Math.max(-1, Math.min(1, this.lean * 0.55 + this.humor * 0.65)); }
+  intents: Intents = { weather: "clear", aurora: 1, attend: 0, sparse: 0, shower: false, anomaly: "", anomalyAmt: 0, judgment: 0 };
 
-  constructor(seed: number, rapport = 0) {
+  constructor(seed: number, rapport = 0, lean = 0) {
+    this.lean = Math.max(-1, Math.min(1, lean));
     this.rnd = mulberry32(seed ^ 0xd12e & 0xffffff);
     this.rapport = rapport;
-    const a = this.rnd(), b = this.rnd(), c = this.rnd();
+    const a = this.rnd(), b = this.rnd(), c = this.rnd(), d = this.rnd();
     const tot = a + b + c;
     this.serenity = a / tot; this.tempest = b / tot; this.play = c / tot;
+    /* every world is strange in its own measure: most are nearly
+       mundane, a few are deeply haunted — rolled once, from the seed */
+    this.strangeness = Math.pow(d, 1.6);
+    this.nextAnomalyAt = 80 + this.rnd() * 120;
   }
   note(...lines: string[]) { this.say(...lines); }
   greet(remembered: boolean, name: string) {
@@ -512,7 +599,7 @@ export class Dreamer {
     /* weather — its oldest prerogative */
     if (now > this.insistUntil && this.holdFor <= 0) {
       const r = this.rnd();
-      const rainLine = 0.16 + this.tempest * 0.30 - this.serenity * 0.08 - this.rapport * 0.05;
+      const rainLine = 0.16 + this.tempest * 0.30 - this.serenity * 0.08 - this.rapport * 0.05 - this.judgment * 0.055;
       const mistLine = rainLine + 0.22 + this.serenity * 0.10;
       const next: Weather = r < rainLine ? "rain" : r < mistLine ? "mist" : "clear";
       if (next !== this.weather) {
@@ -523,12 +610,15 @@ export class Dreamer {
       }
       this.holdFor = 45 + this.rnd() * 65;
     }
-    /* the idle walker is interesting */
-    if (p.idleFor > 22 && this.idleActs < 3) {
-      this.idleActs++;
+    /* the idle walker is interesting — and it keeps remarking on
+       the stillness while the stillness lasts */
+    if (p.idleFor > 22) {
       this.attend = 1;
-      if (this.idleActs === 1) this.say("it watches you rest", "stillness is noticed", "it wonders at the pause");
-    } else if (p.idleFor < 2) { this.idleActs = 0; this.attend = Math.max(0, this.attend - dt * 0.2); }
+      if (now >= this.idleWhisperAt) {
+        this.idleWhisperAt = now + 24 + this.rnd() * 14;
+        this.say("it watches you rest", "stillness is noticed", "it wonders at the pause", "the birds have come to look at you", "it keeps the weather off you, for now");
+      }
+    } else if (p.idleFor < 2) { this.attend = Math.max(0, this.attend - dt * 0.2); }
     else this.attend = Math.max(0, this.attend - dt * 0.05);
     /* new country is noticed */
     if (p.biome !== this.lastBiome) {
@@ -539,7 +629,7 @@ export class Dreamer {
     if (p.inWater && !this.saidSwim) { this.saidSwim = true; this.say("it learns that you swim"); }
     /* night work: aurora lean + sparser music + the odd shower */
     const night = p.night;
-    const auroraTarget = night > 0.5 ? 0.7 + this.serenity * 1.5 + this.play * 0.4 + this.rapport * 0.6 : 1;
+    const auroraTarget = night > 0.5 ? 0.7 + this.serenity * 1.5 + this.play * 0.4 + this.rapport * 0.6 + this.judgment * 0.3 : 1;
     this.aurora += (auroraTarget - this.aurora) * Math.min(1, dt * 0.1);
     if (night > 0.6 && this.showerCool <= 0 && this.rnd() < dt * 0.01 * (0.5 + this.play)) {
       this.shower = true; this.showerCool = 150 + this.rnd() * 200;
@@ -547,7 +637,61 @@ export class Dreamer {
       window.setTimeout(() => { this.shower = false; }, 9000);
     }
     const sparse = Math.max(0, Math.min(1, night * 0.7 + (p.idleFor > 15 ? 0.3 : 0) - p.speed * 0.02));
-    this.intents = { weather: this.weather, aurora: this.aurora, attend: this.attend, sparse, shower: this.shower };
+    /* ---- the strangeness ----
+       Rare, seeded, never announced. The Dreamer keeps the schedule:
+       a mundane world may go many minutes untouched; a haunted one
+       breathes wrong every little while. Night and trust both
+       hasten it. */
+    if (!this.anomalyKind && now >= this.nextAnomalyAt) {
+      const j = this.judgment;
+      const darkBoost = 1 + Math.max(0, -j) * 1.1, kindBoost = 1 + Math.max(0, j) * 0.8;
+      const pool: Array<[string, number, number]> = [
+        ["hush", 14, 3 * (1 + Math.abs(j) * 0.5)], ["stutter", 2.5, 2 * darkBoost], ["echo", 22, 2.5], ["chroma", 30, 2.5],
+        ["glass", 20, 2 * kindBoost], ["rainup", 16, 2], ["bell", 3, 2.5 * (1 + Math.abs(j) * 0.4)],
+        ["star", 30, night > 0.4 ? 3.5 * darkBoost : 0], ["procession", 40, night > 0.25 ? 3 * (1 + Math.abs(j) * 0.4) : 0],
+        ["secondsun", 26, night < 0.45 ? 2.5 : 0], ["stone", 24, this.stoneShown ? 0 : 2 * darkBoost],
+      ];
+      let tot = 0;
+      for (const [, , w] of pool) tot += w;
+      let roll = this.rnd() * tot, kind = "hush", dur = 10;
+      for (const [k, d2, w] of pool) { roll -= w; if (roll <= 0) { kind = k; dur = d2; break; } }
+      this.anomalyKind = kind;
+      this.anomalyFrom = now;
+      this.anomalyDur = dur;
+      this.anomalyUntil = now + dur;
+      if (kind === "stone") this.stoneShown = true;
+      const gap = (330 - this.strangeness * 235) * (night > 0.5 ? 0.62 : 1) * (1 - this.rapport * 0.25) + this.rnd() * 200;
+      this.nextAnomalyAt = now + dur + gap;
+      if (this.rnd() < 0.55) {
+        if (kind === "hush") this.say("it is listening", "hold still. it is listening");
+        if (kind === "star") this.say("one of them moved", "that one is not fixed");
+        if (kind === "procession") this.say("something crosses the far hill", "lights, where no road is");
+        if (kind === "stutter") this.say("the day caught on something");
+        if (kind === "rainup") this.say("the rain has forgotten how to fall");
+        if (kind === "secondsun") this.say("there are two. there should not be two");
+        if (kind === "echo") this.say("your steps come back wrong");
+        if (kind === "chroma") this.say("the light is the wrong colour here");
+        if (kind === "bell") this.say("a bell, from no tower");
+        if (kind === "glass") this.say("the sea has gone to glass");
+      }
+    }
+    /* the account, and the crossing of it */
+    this.humor *= Math.pow(0.5, dt / 240);
+    const jNow = this.judgment;
+    const bandNow = jNow > 0.45 ? 1 : jNow < -0.45 ? -1 : 0;
+    if (bandNow !== this.band && bandNow !== 0 && now - this.bandAt > 900) {
+      this.bandAt = now;
+      if (bandNow > 0) this.say("it has weighed your hands, and found them gentle", "it trusts your hands");
+      else this.say("it has weighed your hands.", "the account is kept");
+    }
+    this.band = bandNow;
+    let anAmt = 0;
+    if (this.anomalyKind) {
+      const into = now - this.anomalyFrom, left = this.anomalyUntil - now;
+      anAmt = Math.max(0, Math.min(1, into / 2.2, left / 3));
+      if (left <= 0) this.anomalyKind = "";
+    }
+    this.intents = { weather: this.weather, aurora: this.aurora, attend: this.attend, sparse, shower: this.shower, anomaly: this.anomalyKind, anomalyAmt: anAmt, judgment: this.judgment };
   }
 }
 
@@ -561,6 +705,134 @@ export function worldName(seed: number): string {
   const pick = (a: string[]) => a[Math.floor(rnd() * a.length)];
   const raw = pick(on) + pick(mid) + (rnd() < 0.45 ? pick(on) + pick(en) : pick(en));
   return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/* ---------------- UNDERTOW ----------------
+ * The physics of the simulacrum, named once and kept honestly:
+ * a fixed-substep integrator for loose matter — gravity, slope
+ * slide, buoyancy against the swell, drag, walker impulses, sleep —
+ * and a small particle pool for splashes, petals, dust and the
+ * blink's violet hush. Nothing floats that should sink; nothing
+ * sinks that should float. */
+export interface TowBody {
+  x: number; y: number; z: number; vx: number; vy: number; vz: number;
+  r: number; kind: number; buoy: number; asleep: boolean; wet: boolean; calm: number;
+}
+interface TowPart {
+  x: number; y: number; z: number; vx: number; vy: number; vz: number;
+  life: number; max: number; grav: number; drag: number;
+  r: number; g: number; b: number; size: number;
+}
+export class Undertow {
+  bodies: TowBody[] = [];
+  private parts: TowPart[] = [];
+  private acc = 0;
+  constructor(private ground: (x: number, z: number) => number) {}
+  swell(x: number, z: number, t: number): number {
+    return Math.sin(x * 0.11 + t * 1.1) * 0.10 + Math.sin(z * 0.09 - t * 0.8) * 0.08;
+  }
+  windAt(x: number, z: number, t: number): [number, number] {
+    return [
+      (Math.sin(x * 0.013 + t * 0.11) + Math.sin(z * 0.019 - t * 0.07)) * 1.35,
+      (Math.cos(z * 0.011 - t * 0.09) + Math.sin(x * 0.017 + t * 0.05)) * 1.35,
+    ];
+  }
+  burst(x: number, y: number, z: number, o: { n?: number; col: [number, number, number]; spd?: number; up?: number; grav?: number; drag?: number; life?: number; size?: number; inward?: boolean }) {
+    const n = o.n ?? 14;
+    for (let i = 0; i < n; i++) {
+      if (this.parts.length > 480) this.parts.shift();
+      const a = Math.random() * Math.PI * 2, rr = (o.spd ?? 2.2) * (0.3 + Math.random() * 0.7);
+      const dir = o.inward ? -1 : 1;
+      this.parts.push({
+        x: x + Math.cos(a) * 0.3 * dir, y: y + Math.random() * 0.3, z: z + Math.sin(a) * 0.3 * dir,
+        vx: Math.cos(a) * rr * dir, vy: (o.up ?? 2.4) * (0.4 + Math.random() * 0.8), vz: Math.sin(a) * rr * dir,
+        life: 0, max: (o.life ?? 1.1) * (0.6 + Math.random() * 0.7), grav: o.grav ?? -9, drag: o.drag ?? 0.6,
+        r: o.col[0], g: o.col[1], b: o.col[2], size: o.size ?? 2.2,
+      });
+    }
+  }
+  step(dt: number, t: number, walker: { x: number; z: number; vx: number; vz: number }, onSplash: (x: number, z: number, big: boolean) => void) {
+    this.acc = Math.min(0.06, this.acc + dt);
+    const H = 1 / 120;
+    while (this.acc >= H) {
+      this.acc -= H;
+      this.integrate(H, t, walker, onSplash);
+    }
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      const q = this.parts[i];
+      q.life += dt;
+      if (q.life >= q.max) { this.parts.splice(i, 1); continue; }
+      q.vy += q.grav * dt;
+      const dr = 1 / (1 + q.drag * dt);
+      q.vx *= dr; q.vy *= dr; q.vz *= dr;
+      q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt;
+      const gy = this.ground(q.x, q.z) + 0.06;
+      if (q.y < gy) { q.y = gy; q.vy = 0; q.vx *= 0.9; q.vz *= 0.9; }
+      if (q.y < 0.02 && this.ground(q.x, q.z) < -0.3) q.y = Math.max(q.y, this.swell(q.x, q.z, t));
+    }
+  }
+  private integrate(h: number, t: number, walker: { x: number; z: number; vx: number; vz: number }, onSplash: (x: number, z: number, big: boolean) => void) {
+    for (const b of this.bodies) {
+      const dw = Math.hypot(b.x - walker.x, b.z - walker.z);
+      if (b.asleep) {
+        if (dw < b.r + 1.1 && Math.hypot(walker.vx, walker.vz) > 1.5) b.asleep = false;
+        else continue;
+      }
+      b.vy -= 22 * h;
+      const surfY = this.swell(b.x, b.z, t);
+      const inWater = this.ground(b.x, b.z) < -0.25 && b.y - b.r < surfY + 0.05;
+      if (inWater) {
+        const sub = Math.max(0, Math.min(1.4, (surfY - (b.y - b.r)) / (2 * b.r + 0.001)));
+        b.vy += 22 * sub * b.buoy * h;
+        const dr = 1 / (1 + 2.4 * h);
+        b.vx *= dr; b.vz *= dr; b.vy *= 1 / (1 + 1.6 * h);
+        const [wx, wz] = this.windAt(b.x, b.z, t);
+        b.vx += wx * 0.12 * h; b.vz += wz * 0.12 * h;
+        if (!b.wet && b.vy < -2.5) onSplash(b.x, b.z, b.r > 0.45);
+        b.wet = true;
+      } else b.wet = false;
+      b.x += b.vx * h; b.y += b.vy * h; b.z += b.vz * h;
+      const gy = this.ground(b.x, b.z) + b.r * 0.82;
+      if (b.y < gy) {
+        b.y = gy;
+        if (b.vy < 0) b.vy = -b.vy * 0.22;
+        const fr = 1 / (1 + 5 * h);
+        b.vx *= fr; b.vz *= fr;
+        const gx = (this.ground(b.x + 0.7, b.z) - this.ground(b.x - 0.7, b.z)) / 1.4;
+        const gz = (this.ground(b.x, b.z + 0.7) - this.ground(b.x, b.z - 0.7)) / 1.4;
+        if (gx * gx + gz * gz > 0.30) { b.vx -= gx * 7 * h; b.vz -= gz * 7 * h; }
+      }
+      if (dw < b.r + 0.95) {
+        const dx = b.x - walker.x, dz = b.z - walker.z;
+        const d = Math.max(0.2, Math.hypot(dx, dz));
+        b.vx += (dx / d) * 2.4 * h * 8 + walker.vx * 0.35 * h * 8;
+        b.vz += (dz / d) * 2.4 * h * 8 + walker.vz * 0.35 * h * 8;
+        b.asleep = false; b.calm = 0;
+      }
+      const sp2 = b.vx * b.vx + b.vy * b.vy + b.vz * b.vz;
+      if (sp2 < 0.003) { b.calm += h; if (b.calm > 0.8) { b.asleep = true; b.vx = b.vy = b.vz = 0; } }
+      else b.calm = 0;
+      if (dw > 150) {
+        const a = Math.random() * Math.PI * 2, rr = 26 + Math.random() * 42;
+        b.x = walker.x + Math.sin(a) * rr; b.z = walker.z + Math.cos(a) * rr;
+        b.y = Math.max(this.ground(b.x, b.z), 0) + 1.2;
+        b.vx = b.vy = b.vz = 0; b.asleep = true;
+      }
+    }
+  }
+  fillPoints(out: Float32Array): number {
+    let n = 0;
+    for (const q of this.parts) {
+      const fade = 1 - q.life / q.max;
+      const o = n * 7;
+      out[o] = q.x; out[o + 1] = q.y; out[o + 2] = q.z;
+      out[o + 3] = q.r; out[o + 4] = q.g; out[o + 5] = q.b;
+      out[o + 6] = q.size * (0.5 + fade * 0.5);
+      n++;
+    }
+    return n;
+  }
+  get partCount(): number { return this.parts.length; }
 }
 
 /* ---------------- the world ---------------- */
@@ -616,7 +888,7 @@ export function buildSimulacrum(body: HTMLElement) {
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
   hud.append(seedLabel, newBtn, flyBtn, wxBtn, hourBtn, sndBtn, photoBtn, xrBtn, posLabel);
-  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · T skips an hour · the world sings its own seed");
+  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · the gifts are on the bar · matter here obeys UNDERTOW");
   wrap.append(stage, hud, powers, hint);
   body.appendChild(wrap);
 
@@ -705,18 +977,58 @@ export function buildSimulacrum(body: HTMLElement) {
   const moisture = (x: number, z: number) => moistNoise.fbm(x * 0.008 + 99, z * 0.008 + 3, 3);
   let wName = worldName(seed);
   /* the world's memory of the walker, kept per world */
-  const dreamRecord = (sd: number): { visits: number; rapport: number } => {
-    try { const r = JSON.parse(localStorage.getItem(skey(`simulacrum-dream-${sd}`)) || "null"); if (r && typeof r.visits === "number") return r; } catch { /* fresh */ }
-    return { visits: 0, rapport: 0 };
+  interface DreamRecord { visits: number; rapport: number; light: number; shadow: number; ts: number }
+  const dreamRecord = (sd: number): DreamRecord => {
+    let r: DreamRecord = { visits: 0, rapport: 0, light: 0, shadow: 0, ts: Date.now() };
+    try {
+      const raw = JSON.parse(localStorage.getItem(skey(`simulacrum-dream-${sd}`)) || "null");
+      if (raw && typeof raw.visits === "number") r = { light: 0, shadow: 0, ts: Date.now(), ...raw };
+    } catch { /* fresh */ }
+    /* the account fades, slowly — a three-day half-life */
+    const days = Math.max(0, (Date.now() - (r.ts || Date.now())) / 86400000);
+    const fade = Math.pow(0.5, days / 3);
+    r.light *= fade; r.shadow *= fade;
+    return r;
+  };
+  const leanOf = (r: DreamRecord) => (r.light - r.shadow) / (6 + r.light + r.shadow);
+  const persistRec = () => { rec.ts = Date.now(); try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ } };
+  const refreshLabel = () => {
+    const lean = leanOf(rec);
+    seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}${lean > 0.45 ? " · it trusts you" : lean < -0.45 ? " · it is wary of you" : ""}`;
   };
   let rec = dreamRecord(seed);
   rec.visits++;
   rec.rapport = Math.min(1, rec.rapport + 0.05);
-  try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ }
-  seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}`;
+  persistRec();
+  refreshLabel();
   let audio = new SimAudio(seed);
-  let dreamer = new Dreamer(seed, rec.rapport);
+  let dreamer = new Dreamer(seed, rec.rapport, leanOf(rec));
   let greeted = false;
+  /* the witness: every act of consequence passes through here —
+     the Dreamer's humor moves at once; the ledger moves for good */
+  const witnessLog: number[] = [];
+  const throttle = new Map<string, number>();
+  const witness = (kind: string) => {
+    dreamer.act(kind);
+    const nowMs = Date.now();
+    const slow: Record<string, number> = { rest: 60000, crystal: 90000, flee: 30000 };
+    if (slow[kind]) {
+      if ((throttle.get(kind) ?? 0) > nowMs) return;
+      throttle.set(kind, nowMs + slow[kind]);
+    }
+    if (kind === "bloom") rec.light += 1.0;
+    else if (kind === "rest") rec.light += 0.5;
+    else if (kind === "crystal") rec.light += 0.4;
+    else if (kind === "hushKept") rec.light += 0.8;
+    else if (kind === "shapeUp") rec.light += 0.15;
+    else if (kind === "shapeDown") rec.shadow += 0.9;
+    else if (kind === "storm") rec.shadow += 0.7;
+    else if (kind === "flee") rec.shadow += 0.25;
+    else if (kind === "shapeBurst") rec.shadow += 0.5;
+    persistRec();
+    dreamer.setLean(leanOf(rec));
+    refreshLabel();
+  };
 
   interface Chunk { key: string; terrain: Mesh; lit: Mesh | null; glow: Mesh | null; crystals: Array<[number, number]> }
   const chunks = new Map<string, Chunk>();
@@ -915,7 +1227,7 @@ export function buildSimulacrum(body: HTMLElement) {
       const k = Math.min(1, depth / 8);
       const col: [number, number, number] = [0.22 - k * 0.17, 0.48 - k * 0.3, 0.55 - k * 0.2];
       const alpha = height(x, z) > 0.15 ? 0 : Math.min(0.88, 0.30 + depth * 0.14);
-      return [x, 0, z, ...col, alpha, 0, 0, 0, 0];
+      return [x, 0, z, ...col, alpha, depth, 0, 0, 0];
     };
     for (let i = 0; i < WSEG; i++) for (let j = 0; j < WSEG; j++) {
       const a = gv(i, j), b = gv(i + 1, j), c = gv(i, j + 1), d = gv(i + 1, j + 1);
@@ -979,7 +1291,7 @@ export function buildSimulacrum(body: HTMLElement) {
       if (Math.hypot(c.hx - px, c.hz - pz) > 150) { c.hx = px + (critRnd() - 0.5) * 120; c.hz = pz + (critRnd() - 0.5) * 120; c.x = c.hx; c.z = c.hz; }
       c.t -= dt;
       const dWalker = Math.hypot(c.x - px, c.z - pz);
-      if (dWalker < 9 && c.state !== 2) { c.state = 2; c.t = 1.6 + critRnd(); }
+      if (dWalker < 9 - judgmentNow * 3.5 && c.state !== 2) { c.state = 2; c.t = 1.6 + critRnd(); witness("flee"); }
       if (c.t <= 0) {
         if (c.state === 2 || critRnd() < 0.45) { c.state = 0; c.t = 2 + critRnd() * 4; }
         else { c.state = 1; c.tx = c.hx + (critRnd() - 0.5) * 46; c.tz = c.hz + (critRnd() - 0.5) * 46; c.t = 6 + critRnd() * 5; }
@@ -1024,13 +1336,132 @@ export function buildSimulacrum(body: HTMLElement) {
     return new Float32Array(v);
   };
 
+  const spawnStone = () => {
+    if (stoneMesh) { gl.deleteBuffer(stoneMesh.buf); stoneMesh = null; }
+    const a = Math.random() * Math.PI * 2;
+    for (const dist of [68, 44, 28]) {
+      const sx = px + Math.sin(a) * dist, sz = pz + Math.cos(a) * dist;
+      const sy = height(sx, sz);
+      if (sy < 1.2) continue;
+      const v: number[] = [];
+      const hh = 7.5 + Math.random() * 2, cy = sy - 0.6;
+      const col: [number, number, number] = [0.02, 0.02, 0.03];
+      const quad = (a: [number, number, number], b: [number, number, number], c: [number, number, number], d: [number, number, number], n: [number, number, number]) => {
+        v.push(...a, ...col, ...n, ...b, ...col, ...n, ...c, ...col, ...n, ...a, ...col, ...n, ...c, ...col, ...n, ...d, ...col, ...n);
+      };
+      const x0 = sx - 0.85, x1 = sx + 0.85, z0 = sz - 0.85, z1 = sz + 0.85, y0 = cy, y1 = cy + hh;
+      quad([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], [0, 1, 0]);
+      quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1]);
+      quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [0, 0, -1]);
+      quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [1, 0, 0]);
+      quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0]);
+      stoneMesh = makeMesh(new Float32Array(v));
+      return;
+    }
+  };
+  const anomalyVerts = (t: number): Float32Array => {
+    const v: number[] = [];
+    const octa = (cx: number, cy: number, cz: number, r: number, col: [number, number, number]) => {
+      const T: [number, number, number] = [cx, cy + r, cz], B: [number, number, number] = [cx, cy - r, cz];
+      const ring: Array<[number, number, number]> = [[cx + r, cy, cz], [cx, cy, cz + r], [cx - r, cy, cz], [cx, cy, cz - r]];
+      for (let k = 0; k < 4; k++) {
+        const A = ring[k], C = ring[(k + 1) % 4];
+        v.push(...T, ...col, 0, 1, 0, ...A, ...col, 0, 1, 0, ...C, ...col, 0, 1, 0);
+        v.push(...B, ...col, 0, 1, 0, ...C, ...col, 0, 1, 0, ...A, ...col, 0, 1, 0);
+      }
+    };
+    if (anKind === "star" && anAmt > 0.02) {
+      const drift = (performance.now() / 1000) * skyAn.sp;
+      const az = skyAn.az + drift;
+      octa(px + Math.sin(az) * 330, 150 + Math.sin(skyAn.el) * 60, pz + Math.cos(az) * 330, 2.6, [1.0, 0.98, 0.9]);
+    }
+    if (anKind === "procession" && anAmt > 0.02) {
+      const head = (performance.now() / 1000) * 1.15 % 320;
+      for (let i = 0; i < 6; i++) {
+        const d = head - i * 7 - 150;
+        const wx = skyAn.x0 + Math.sin(skyAn.az) * d, wz = skyAn.z0 + Math.cos(skyAn.az) * d;
+        octa(wx, height(wx, wz) + 5.5, wz, 0.85, [1.0, 0.8, 0.45]);
+      }
+    }
+    return new Float32Array(v);
+  };
+
+  /* UNDERTOW, instanced: ten loose things the world lets you move */
+  const tow = new Undertow(height);
+  {
+    const kinds: Array<[number, number, number]> = [
+      [0, 0.42, 0.55], [1, 0.34, 1.6], [2, 0.5, 1.05], [0, 0.38, 0.55], [1, 0.3, 1.6],
+      [2, 0.55, 1.05], [0, 0.46, 0.55], [1, 0.36, 1.6], [0, 0.4, 0.55], [2, 0.48, 1.05],
+    ];
+    kinds.forEach(([kind, r, buoy], i) => {
+      const a = (i / kinds.length) * Math.PI * 2 + 0.4;
+      const rr = 14 + (i % 5) * 9;
+      const bx = 8 + Math.sin(a) * rr, bz = 8 + Math.cos(a) * rr;
+      tow.bodies.push({ x: bx, y: Math.max(height(bx, bz), 0) + r + 0.1, z: bz, vx: 0, vy: 0, vz: 0, r, kind, buoy, asleep: true, wet: false, calm: 0 });
+    });
+  }
+  const partBuf = gl.createBuffer()!;
+  /* the far ranges: a silhouette ring on the horizon, a function of
+     world position so it holds still while the walker moves */
+  const ringBuf = gl.createBuffer()!;
+  let ringCell: [number, number] = [1e9, 1e9];
+  const farNoise = new Noise(777);
+  const ringVerts = (): Float32Array => {
+    const gx = Math.round(px / 160), gz = Math.round(pz / 160);
+    if (ringCell[0] === gx && ringCell[1] === gz) return new Float32Array(0);
+    ringCell = [gx, gz];
+    const v: number[] = [];
+    const SEG = 110, RR = 830;
+    const prof = (a: number): number => {
+      const wx = px + Math.sin(a) * RR, wz = pz + Math.cos(a) * RR;
+      const n = farNoise.fbm(wx * 0.0016 + 40, wz * 0.0016 + 9, 3);
+      return 26 + n * 150;
+    };
+    const col: [number, number, number] = [0.10, 0.13, 0.20];
+    for (let i = 0; i < SEG; i++) {
+      const a0 = (i / SEG) * Math.PI * 2, a1 = ((i + 1) / SEG) * Math.PI * 2;
+      const x0 = px + Math.sin(a0) * RR, z0 = pz + Math.cos(a0) * RR;
+      const x1 = px + Math.sin(a1) * RR, z1 = pz + Math.cos(a1) * RR;
+      const h0 = prof(a0), h1 = prof(a1);
+      v.push(x0, -6, z0, ...col, 0, 1, 0, x1, -6, z1, ...col, 0, 1, 0, x1, h1, z1, ...col, 0, 1, 0);
+      v.push(x0, -6, z0, ...col, 0, 1, 0, x1, h1, z1, ...col, 0, 1, 0, x0, h0, z0, ...col, 0, 1, 0);
+    }
+    return new Float32Array(v);
+  };
+  const partData = new Float32Array(512 * 7);
+  const bodiesVerts = (t: number): Float32Array => {
+    const v: number[] = [];
+    const cols: Array<[number, number, number]> = [[0.36, 0.34, 0.33], [0.95, 0.85, 0.55], [0.42, 0.30, 0.18]];
+    for (const b of tow.bodies) {
+      const col = cols[b.kind];
+      const sy = b.kind === 1 ? b.y + tow.swell(b.x, b.z, t) * 0.4 : b.y;
+      const stretch = b.kind === 2 ? 2.3 : 1;
+      const T: [number, number, number] = [b.x, sy + b.r, b.z], B: [number, number, number] = [b.x, sy - b.r * 0.8, b.z];
+      const ring: Array<[number, number, number]> = [
+        [b.x + b.r * stretch, sy, b.z], [b.x, sy, b.z + b.r], [b.x - b.r * stretch, sy, b.z], [b.x, sy, b.z - b.r],
+      ];
+      for (let k = 0; k < 4; k++) {
+        const A = ring[k], C = ring[(k + 1) % 4];
+        v.push(...T, ...col, 0, 1, 0, ...A, ...col, 0, 1, 0, ...C, ...col, 0, 1, 0);
+        v.push(...B, ...col, 0, 1, 0, ...C, ...col, 0, 1, 0, ...A, ...col, 0, 1, 0);
+      }
+    }
+    return new Float32Array(v);
+  };
+
   /* ---- walker + weather state ---- */
+  let viewRadius = RADIUS, tier = 0, emaMs = 16, tierCool = 0;
   let px = 8, pz = 8, py = height(8, 8) + 26;
   let yaw = 0.7, pitch = -0.16, flying = false, vy = 0;
+  let coyoteT = 0, jumpBufT = 0, prevSpace = false;
   let vx = 0, vz = 0, bobPhase = 0, bobAmp = 0, landDip = 0, wasGrounded = true, wasInWater = false;
   let keys = new Set<string>();
   /* the gifts */
   let starlightOn = false, stormUntil = 0, timeslipUntil = 0, openingOpen = false;
+  /* strangeness state, mirrored from the Dreamer's intents */
+  let anKind = "", anAmt = 0, lastAnKind = "", birdsFlee = 0, glassT = 0, judgmentNow = 0;
+  let stoneMesh: Mesh | null = null;
+  const skyAn = { az: 0, el: 0.5, sp: 0.01, x0: 0, z0: 0 };
   const cool = new Map<string, number>();
   const saidGift = new Set<string>();
   let locked = false, touched = false, muted = false;
@@ -1119,6 +1550,11 @@ export function buildSimulacrum(body: HTMLElement) {
       }
     if (edits.size > 4200) { const first = edits.keys().next().value as string; edits.delete(first); }
     persistEdits();
+    tow.burst(tx, height(tx, tz) + 0.4, tz, { n: 20, col: [0.5, 0.42, 0.32], spd: 3.2, up: 3.6, grav: -12, life: 1.0, size: 2.6 });
+    witness(dir < 0 ? "shapeDown" : "shapeUp");
+    witnessLog.push(Date.now());
+    while (witnessLog.length && witnessLog[0] < Date.now() - 25000) witnessLog.shift();
+    if (witnessLog.length === 6) witness("shapeBurst");
     for (const [k, ch] of chunks) {
       const [cx, cz] = k.split(",").map(Number);
       if (Math.abs((cx + 0.5) * CHUNK - tx) < CHUNK + R * 2 && Math.abs((cz + 0.5) * CHUNK - tz) < CHUNK + R * 2) {
@@ -1140,6 +1576,7 @@ export function buildSimulacrum(body: HTMLElement) {
     pz += -Math.cos(yaw) * d;
     if (flying) py += Math.sin(pitch) * d * 0.6;
     else py = Math.max(py, height(px, pz) + 1.7);
+    tow.burst(px, py - 1.2, pz, { n: 16, col: [0.72, 0.55, 1.0], spd: 3.0, up: 0.8, grav: -1.2, drag: 1.4, life: 0.9, size: 2.4, inward: true });
     audio.cast("blink");
     giftNote("blink", "you fold the world. it felt that.");
   };
@@ -1149,6 +1586,7 @@ export function buildSimulacrum(body: HTMLElement) {
     dreamer.forceWeather("rain");
     dreamer.insist(35, performance.now() / 1000);
     audio.cast("storm");
+    witness("storm");
     giftNote("storm", "it did not make this weather. you did.");
   };
   const castTimeslip = () => {
@@ -1161,11 +1599,13 @@ export function buildSimulacrum(body: HTMLElement) {
     if (!ready("bloom", 2)) return;
     const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
     if (height(bx, bz) < 0.2) return;
+    tow.burst(bx, height(bx, bz) + 0.5, bz, { n: 18, col: [0.98, 0.62, 0.78], spd: 1.7, up: 2.8, grav: -2.2, drag: 1.1, life: 1.6, size: 2.3 });
     blooms.push({ x: bx, z: bz, kind: Math.floor(Math.random() * 4) });
     if (blooms.length > 220) blooms = blooms.slice(-220);
     try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* private mode */ }
     rebuildBlooms();
     audio.cast("bloom");
+    witness("bloom");
     giftNote("bloom", "it will keep those flowers");
   };
   const toggleStarlight = () => {
@@ -1228,10 +1668,11 @@ export function buildSimulacrum(body: HTMLElement) {
     rec = dreamRecord(seed);
     rec.visits++;
     rec.rapport = Math.min(1, rec.rapport + 0.05);
-    try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ }
-    dreamer = new Dreamer(seed, rec.rapport);
+    persistRec();
+    dreamer = new Dreamer(seed, rec.rapport, leanOf(rec));
     greeted = false;
-    seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}`;
+    if (stoneMesh) { gl.deleteBuffer(stoneMesh.buf); stoneMesh = null; }
+    refreshLabel();
     spawn();
   });
 
@@ -1330,6 +1771,7 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniform1f(gl.getUniformLocation(skyPr, "uGloom"), gloom);
     gl.uniform1f(gl.getUniformLocation(skyPr, "uFlash"), flash);
     gl.uniform1f(gl.getUniformLocation(skyPr, "uAurora"), auroraAmt);
+    gl.uniform1f(gl.getUniformLocation(skyPr, "uSecond"), anKind === "secondsun" ? anAmt : 0);
     {
       gl.bindBuffer(gl.ARRAY_BUFFER, skyMesh.buf);
       const a = gl.getAttribLocation(skyPr, "aPos");
@@ -1339,6 +1781,27 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     gl.depthMask(true); gl.enable(gl.DEPTH_TEST);
     const vp = m4.mul(proj, view);
+    /* the far ranges, with their own long fog so they read as
+       silhouettes against the horizon rather than washing out */
+    {
+      const rv = ringVerts();
+      if (rv.length) { gl.bindBuffer(gl.ARRAY_BUFFER, ringBuf); gl.bufferData(gl.ARRAY_BUFFER, rv, gl.DYNAMIC_DRAW); }
+      gl.useProgram(unlitPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 0.88);
+      gl.uniform3fv(gl.getUniformLocation(unlitPr, "uFog"), sc.fog);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uFogNear"), 500);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uFogFar"), 1500);
+      gl.uniform2fv(gl.getUniformLocation(unlitPr, "uCam"), [eye[0], eye[2]]);
+      gl.uniform3fv(gl.getUniformLocation(unlitPr, "uOrigin"), [0, 0, 0]);
+      gl.bindBuffer(gl.ARRAY_BUFFER, ringBuf);
+      const aPos = gl.getAttribLocation(unlitPr, "aPos");
+      const aCol = gl.getAttribLocation(unlitPr, "aCol");
+      gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol);
+      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
+      gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
+      gl.drawArrays(gl.TRIANGLES, 0, 110 * 6);
+    }
     /* world */
     gl.useProgram(litPr);
     gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
@@ -1359,7 +1822,8 @@ export function buildSimulacrum(body: HTMLElement) {
       const bv: number[] = [];
       const t = nowS;
       for (const b of birds) {
-        const cx = px + b.ox * (1 - attendAmt * 0.62), cz = pz + b.oz * (1 - attendAmt * 0.62);
+        const fleeR = 1 + birdsFlee * 0.85;
+        const cx = px + b.ox * (1 - attendAmt * 0.62) * fleeR, cz = pz + b.oz * (1 - attendAmt * 0.62) * fleeR;
         const a = b.ph + t * b.sp;
         const bx = cx + Math.cos(a) * b.r, bz = cz + Math.sin(a) * b.r;
         const by = height(cx, cz) + b.h + Math.sin(t * 0.9 + b.ph) * 1.6;
@@ -1406,6 +1870,48 @@ export function buildSimulacrum(body: HTMLElement) {
         gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
         gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
         gl.drawArrays(gl.TRIANGLES, 0, cv.length / 9);
+      }
+    }
+    /* UNDERTOW's loose matter */
+    {
+      const bvv = bodiesVerts(nowS);
+      if (bvv.length) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, critBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, bvv, gl.DYNAMIC_DRAW);
+        gl.useProgram(unlitPr);
+        gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+        gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 1);
+        const aPos = gl.getAttribLocation(unlitPr, "aPos");
+        const aCol = gl.getAttribLocation(unlitPr, "aCol");
+        gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
+        gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
+        gl.drawArrays(gl.TRIANGLES, 0, bvv.length / 9);
+      }
+    }
+    /* the standing stone, when the world has raised one */
+    if (stoneMesh) {
+      gl.useProgram(unlitPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 1);
+      bindUnlit(stoneMesh);
+      gl.drawArrays(gl.TRIANGLES, 0, stoneMesh.n);
+    }
+    /* the strangeness, drawn */
+    {
+      const av = anomalyVerts(nowS);
+      if (av.length) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, critBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, av, gl.DYNAMIC_DRAW);
+        gl.useProgram(unlitPr);
+        gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+        gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), Math.min(1, anAmt + 0.25));
+        const aPos = gl.getAttribLocation(unlitPr, "aPos");
+        const aCol = gl.getAttribLocation(unlitPr, "aCol");
+        gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
+        gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
+        gl.drawArrays(gl.TRIANGLES, 0, av.length / 9);
       }
     }
     /* glow scatter */
@@ -1462,7 +1968,7 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform3fv(gl.getUniformLocation(waterPr, "uFog"), sc.fog);
       gl.uniform1f(gl.getUniformLocation(waterPr, "uFogNear"), fogNear);
       gl.uniform1f(gl.getUniformLocation(waterPr, "uFogFar"), fogFar);
-      gl.uniform1f(gl.getUniformLocation(waterPr, "uTime"), nowS);
+      gl.uniform1f(gl.getUniformLocation(waterPr, "uTime"), anKind === "glass" ? glassT : nowS);
       gl.uniform1f(gl.getUniformLocation(waterPr, "uDay"), Math.max(0.12, Math.min(1, sun[1] * 2.2 + 0.4)));
       gl.bindBuffer(gl.ARRAY_BUFFER, waterMesh.buf);
       const aPos = gl.getAttribLocation(waterPr, "aPos");
@@ -1494,12 +2000,29 @@ export function buildSimulacrum(body: HTMLElement) {
       bindPoints(meteorPts);
       gl.drawArrays(gl.POINTS, 0, meteorPts.n);
     }
-    if (rainAmt > 0.02) {
-      gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 26);
+    const rainDraw = anKind === "rainup" ? Math.max(rainAmt, anAmt * 0.8) : rainAmt;
+    if (rainDraw > 0.02) {
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), anKind === "rainup" ? -24 : 26);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [70, 44, 70]);
-      gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), rainAmt * 0.55);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), rainDraw * 0.55);
       bindPoints(rainPts);
       gl.drawArrays(gl.POINTS, 0, rainPts.n);
+    }
+    if (tow.partCount > 0) {
+      const n = tow.fillPoints(partData);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 0);
+      gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [600, 300, 600]);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), 0.9);
+      gl.bindBuffer(gl.ARRAY_BUFFER, partBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, partData.subarray(0, n * 7), gl.DYNAMIC_DRAW);
+      const aPos = gl.getAttribLocation(ptsPr, "aPos");
+      const aCol = gl.getAttribLocation(ptsPr, "aCol");
+      const aSize = gl.getAttribLocation(ptsPr, "aSize");
+      gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol); gl.enableVertexAttribArray(aSize);
+      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 28, 0);
+      gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 28, 12);
+      gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, 28, 24);
+      gl.drawArrays(gl.POINTS, 0, n);
     }
     gl.depthMask(true);
     gl.disable(gl.BLEND);
@@ -1529,6 +2052,21 @@ export function buildSimulacrum(body: HTMLElement) {
       attendAmt += (ints.attend - attendAmt) * 0.4;
       showerAmt += ((ints.shower ? 1 : 0) - showerAmt) * 0.3;
       audio.setMood(ints.sparse);
+      judgmentNow = ints.judgment;
+      if (lastAnKind === "hush" && ints.anomaly !== "hush" && idleFor > 10) witness("hushKept");
+      if (idleFor > 25) witness("rest");
+      anKind = ints.anomaly; anAmt = ints.anomalyAmt;
+      audio.setHush(anKind === "hush" ? anAmt : 0);
+      audio.setEcho(anKind === "echo" && anAmt > 0.4);
+      if (anKind !== lastAnKind) {
+        if (anKind === "stutter") { dayT = (dayT + 1 - 20 / 1440) % 1; flash = Math.max(flash, 0.55); }
+        if (anKind === "bell") { audio.bell(); birdsFlee = 1; }
+        if (anKind === "glass") glassT = now / 1000;
+        if (anKind === "stone") spawnStone();
+        if (anKind === "star") { skyAn.az = Math.random() * 6.28; skyAn.el = 0.35 + Math.random() * 0.5; skyAn.sp = 0.008 + Math.random() * 0.01; }
+        if (anKind === "procession") { skyAn.az = Math.random() * 6.28; skyAn.x0 = px - Math.sin(skyAn.az) * 150; skyAn.z0 = pz - Math.cos(skyAn.az) * 150; }
+        lastAnKind = anKind;
+      }
       for (const w of dreamer.drainWhispers()) {
         whisper.textContent = w;
         whisper.style.opacity = "1";
@@ -1546,7 +2084,8 @@ export function buildSimulacrum(body: HTMLElement) {
     const inWater = !flying && groundH < -0.4 && py < 0.6;
     const underwater = inWater && py < -0.25;
     const tFogN = underwater ? 1.5 : 55 - mistAmt * 39 - rainAmt * 25;
-    const tFogF = underwater ? 24 : 300 - mistAmt * 205 - rainAmt * 130;
+    const tFogF = underwater ? 24 : (300 - mistAmt * 205 - rainAmt * 130) * (anKind === "glass" ? 1 + anAmt * 0.85 : 1);
+    birdsFlee = Math.max(0, birdsFlee - dt * 0.18);
     fogNear += (tFogN - fogNear) * Math.min(1, dt * 1.5);
     fogFar += (tFogF - fogFar) * Math.min(1, dt * 1.5);
     uw.style.opacity = underwater ? "1" : "0";
@@ -1564,6 +2103,11 @@ export function buildSimulacrum(body: HTMLElement) {
     if (keys.has("KeyA") || keys.has("ArrowLeft")) { ix -= right[0]; iz -= right[1]; }
     if (keys.has("KeyD") || keys.has("ArrowRight")) { ix += right[0]; iz += right[1]; }
     const sprint = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const spaceNow = keys.has("Space");
+    if (spaceNow && !prevSpace && !flying && !inWater) jumpBufT = 0.15;
+    prevSpace = spaceNow;
+    jumpBufT = Math.max(0, jumpBufT - dt);
+    coyoteT = wasGrounded ? 0.12 : Math.max(0, coyoteT - dt);
     const baseSpeed = flying ? (sprint ? 30 : 13) : inWater ? 4.2 : sprint ? 15 : 8.5;
     const il = Math.hypot(ix, iz);
     const txv = il > 0 ? (ix / il) * baseSpeed : 0;
@@ -1581,8 +2125,8 @@ export function buildSimulacrum(body: HTMLElement) {
       py = Math.max(height(px, pz) + 1.2, py);
       wasGrounded = false;
     } else if (inWater) {
-      /* swimming: buoyancy to just under the surface */
-      const target = Math.min(-0.45, Math.max(groundH + 1.0, py));
+      /* swimming: buoyancy to just under the surface, riding the swell */
+      const target = Math.min(-0.45, Math.max(groundH + 1.0, py)) + tow.swell(px, pz, now / 1000) * 0.4;
       vy = 0;
       py += (target - py) * Math.min(1, dt * 3);
       if (keys.has("Space")) py = Math.min(0.1, py + 3.2 * dt);
@@ -1590,16 +2134,28 @@ export function buildSimulacrum(body: HTMLElement) {
       wasGrounded = false;
     } else {
       const ground = groundH + 1.7;
+      if (wasGrounded) {
+        const gx = (height(px + 0.7, pz) - height(px - 0.7, pz)) / 1.4;
+        const gz = (height(px, pz + 0.7) - height(px, pz - 0.7)) / 1.4;
+        if (gx * gx + gz * gz > 0.90) { vx -= gx * 11 * dt; vz -= gz * 11 * dt; }
+      }
       vy -= 22 * dt;
       py += vy * dt;
       if (py <= ground) {
-        if (!wasGrounded && vy < -9) { audio.thud(-vy); landDip = Math.min(0.5, -vy * 0.02); }
+        if (!wasGrounded && vy < -9) { audio.thud(-vy); landDip = Math.min(0.5, -vy * 0.02); tow.burst(px, groundH + 0.2, pz, { n: 10, col: [0.62, 0.55, 0.44], spd: 1.8, up: 1.1, grav: -3.5, drag: 1.6, life: 0.8, size: 2.0 }); }
         py = ground; vy = 0; wasGrounded = true;
       } else wasGrounded = false;
-      if (keys.has("Space") && wasGrounded) vy = 8.4;
+      if (jumpBufT > 0 && (wasGrounded || coyoteT > 0)) { vy = 8.4; jumpBufT = 0; coyoteT = 0; wasGrounded = false; }
     }
     /* water entry/exit */
-    if (inWater && !wasInWater) audio.splash(py < -1);
+    if (inWater && !wasInWater) {
+      audio.splash(py < -1);
+      tow.burst(px, 0.25, pz, { n: 16, col: [0.75, 0.88, 1.0], spd: 2.6, up: 3.4, grav: -11, life: 0.8, size: 2.4 });
+    }
+    tow.step(dt, now / 1000, { x: px, z: pz, vx, vz }, (bx, bz, big) => {
+      audio.splash(big);
+      tow.burst(bx, 0.25, bz, { n: big ? 16 : 9, col: [0.75, 0.88, 1.0], spd: 2.0, up: 2.8, grav: -11, life: 0.7, size: 2.2 });
+    });
     wasInWater = inWater;
     if (touched && hSpeedNow < 0.5 && !keys.size) idleFor += dt; else idleFor = 0;
     explored += hSpeedNow * dt;
@@ -1614,7 +2170,7 @@ export function buildSimulacrum(body: HTMLElement) {
     /* audio ambience */
     if (audio.live) {
       audio.tick(dayT);
-      audio.setWeather(rainAmt, py - groundH, now / 1000);
+      audio.setWeather(anKind === "rainup" ? Math.max(rainAmt, anAmt * 0.75) : rainAmt, py - groundH, now / 1000);
       audio.setUnderwater(underwater);
       /* crystal chimes */
       const ccx = Math.floor(px / CHUNK), ccz = Math.floor(pz / CHUNK);
@@ -1624,7 +2180,7 @@ export function buildSimulacrum(body: HTMLElement) {
         ch.crystals.forEach(([cxp, czp], idx) => {
           const d2 = (cxp - px) * (cxp - px) + (czp - pz) * (czp - pz);
           const k = `${ch.key}:${idx}`;
-          if (d2 < 42 && now - (lastChime.get(k) ?? 0) > 9000) { lastChime.set(k, now); chimeCount++; audio.chime(Math.floor(cxp * 7 + czp * 13)); }
+          if (d2 < 42 && now - (lastChime.get(k) ?? 0) > 9000) { lastChime.set(k, now); chimeCount++; audio.chime(Math.floor(cxp * 7 + czp * 13)); witness("crystal"); }
         });
       }
       if (Math.random() < dt * 0.05 && sunDir(dayT)[1] > 0.1) audio.chirp();
@@ -1632,13 +2188,13 @@ export function buildSimulacrum(body: HTMLElement) {
     /* chunks */
     const ccx = Math.floor(px / CHUNK), ccz = Math.floor(pz / CHUNK);
     let built = 0;
-    for (let i = -RADIUS; i <= RADIUS && built < 2; i++) for (let j = -RADIUS; j <= RADIUS && built < 2; j++) {
+    for (let i = -viewRadius; i <= viewRadius && built < 2; i++) for (let j = -viewRadius; j <= viewRadius && built < 2; j++) {
       const k = keyOf(ccx + i, ccz + j);
       if (!chunks.has(k)) { chunks.set(k, buildChunk(ccx + i, ccz + j)); built++; }
     }
     for (const [k, ch] of chunks) {
       const [cx, cz] = k.split(",").map(Number);
-      if (Math.abs(cx - ccx) > RADIUS + 1 || Math.abs(cz - ccz) > RADIUS + 1) {
+      if (Math.abs(cx - ccx) > viewRadius + 1 || Math.abs(cz - ccz) > viewRadius + 1) {
         gl.deleteBuffer(ch.terrain.buf);
         if (ch.lit) gl.deleteBuffer(ch.lit.buf);
         if (ch.glow) gl.deleteBuffer(ch.glow.buf);
@@ -1665,7 +2221,21 @@ export function buildSimulacrum(body: HTMLElement) {
     }
   };
 
+  let frameLast = performance.now();
   const frame = () => {
+    const fNow = performance.now();
+    emaMs = emaMs * 0.95 + Math.min(100, fNow - frameLast) * 0.05;
+    frameLast = fNow;
+    if (tierCool > 0) tierCool--;
+    else if (emaMs > 26 && tier < 2) {
+      tier++; tierCool = 600;
+      canvas.width = [1024, 832, 672][tier]; canvas.height = [640, 520, 420][tier];
+      viewRadius = tier === 2 ? 2 : RADIUS;
+    } else if (emaMs < 11.5 && tier > 0) {
+      tier--; tierCool = 900;
+      canvas.width = [1024, 832, 672][tier]; canvas.height = [640, 520, 420][tier];
+      viewRadius = tier === 2 ? 2 : RADIUS;
+    }
     if (!body.isConnected) {
       document.removeEventListener("keydown", kd);
       document.removeEventListener("keyup", ku);
