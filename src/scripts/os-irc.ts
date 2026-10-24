@@ -1,5 +1,5 @@
-import { sfx } from "./os-sound";
 // @ts-nocheck
+import { sfx } from "./os-sound";
 /* Relay — the house wire. A real IRC client in the tab: it speaks the IRC
    protocol itself (registration, PING/PONG, channels, private messages,
    NAMES) over a WebSocket to the site's own bridge, which pipes it to a
