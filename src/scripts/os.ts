@@ -106,6 +106,23 @@ function restoreSession() {
   saveSession();
 }
 
+/* New windows open onto the CENTER of the desk — never clipped at an
+   edge, never hiding behind the bar — with a small cascade so a stack
+   of fresh windows does not land in one exact pile. Placement is
+   clamped so a window that fits the desk fits it whole. A restored
+   session's saved geometry is applied after this and still wins. */
+function placeNewWindow(win: HTMLElement) {
+  const stage = desktop();
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  const w = win.offsetWidth, h = win.offsetHeight;
+  const step = (winCounter++ % 5) * 26;
+  const fit = (center: number, span: number, size: number) => {
+    const max = span - size - 8;
+    return max < 8 ? Math.max(0, center) : Math.min(Math.max(8, center + step), max);
+  };
+  win.style.left = `${fit(Math.round((sw - w) / 2), sw, w)}px`;
+  win.style.top = `${fit(Math.round((sh - h) / 2), sh, h)}px`;
+}
 export function openApp(app: string, arg?: string) {
   if (app === "bench" || app === "suite") { window.location.href = "/bench/"; return; }
   const meta = APPS[app];
@@ -116,9 +133,6 @@ export function openApp(app: string, arg?: string) {
   const win = el("section", "os-window");
   win.dataset.app = app;
   win.style.zIndex = String(++zTop);
-  const offset = (winCounter++ % 6) * 28;
-  win.style.left = `${60 + offset}px`;
-  win.style.top = `${36 + offset}px`;
   const head = el("header", "os-win-head");
   const title = el("span", "os-win-title", `${meta.icon}  ${meta.title}${app === "editor" && arg ? ` — ${arg}` : ""}`);
   const controls = el("span", "os-win-controls");
@@ -135,6 +149,7 @@ export function openApp(app: string, arg?: string) {
   const resize = el("div", "os-win-resize");
   win.appendChild(resize);
   desktop().appendChild(win);
+  placeNewWindow(win);
   windows.set(key, win);
   addTaskbarButton(key, meta.title, win);
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
