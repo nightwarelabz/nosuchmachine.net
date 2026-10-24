@@ -129,6 +129,7 @@ assert.ok(depthSrc.includes("blacksite-nest-"), "nests must namespace their stor
 assert.ok(astroJs.includes("the mirrors end here"), "the nest ceiling note must ship in the bundle");
 assert.ok(!orcSrc.includes('setAttribute("sandbox"'), "the orc frame must NOT be sandboxed: an opaque origin starves the framed page of its own subresources (the unstyled-nest corpse)");
 assert.ok(astroJs.includes("/lens?u="), "the orc room must route non-credentialless browsers through the lens");
+assert.ok(orcSrc.includes("frameCredless !== d.credless"), "the orc frame must be rebuilt when a navigation crosses the credentialless door - credentialless does not nest, so house and lens pages ride plain frames");
 assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
