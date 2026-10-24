@@ -117,6 +117,24 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false };
   };
 
+  // DIAGNOSTIC ONLY (diag branch — never merges): autopsy the pane
+  // after each navigation. The house frame is same-origin, so its
+  // document is fully readable from here.
+  const diag = el("pre", "os-note", "pane autopsy: (pending)");
+  diag.style.cssText = "white-space:pre-wrap;font-size:10px;max-height:9rem;overflow:auto";
+  wrap.appendChild(diag);
+  const autopsy = (when: string) => {
+    try {
+      const cw = frame.contentWindow;
+      let loc = "null-window", rs = "?", title = "?", bodyLen = -1, html = "";
+      if (cw) {
+        try { loc = cw.location.href; } catch (e) { loc = "x-origin"; }
+        try { rs = cw.document.readyState; title = cw.document.title; bodyLen = cw.document.body ? cw.document.body.innerHTML.length : -2; html = (cw.document.body ? cw.document.body.innerHTML.slice(0, 120) : ""); } catch { /* cross-origin */ }
+      }
+      diag.textContent = `pane autopsy (${when}): src=${frame.src} connected=${frame.isConnected} inWindow=${!!frame.closest(".os-window")} loc=${loc} ready=${rs} title=${title} bodyLen=${bodyLen} html=${html}`;
+    } catch (e) { diag.textContent = `pane autopsy (${when}): threw ${e}`; }
+  };
+
   const navigate = (raw: string) => {
     let url = raw.trim();
     if (!url) return;
@@ -127,6 +145,8 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     const d = door(url);
     if (frameCredless !== d.credless) mountFrame(d.credless);
     frame.src = d.src;
+    setTimeout(() => autopsy("t+2s"), 2000);
+    setTimeout(() => autopsy("t+7s"), 7000);
   };
   go.addEventListener("click", () => navigate(addr.value));
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
