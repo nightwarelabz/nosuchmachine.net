@@ -2469,9 +2469,11 @@ export function buildSimulacrum(body: HTMLElement) {
       window.setTimeout(() => { if (inCommons && netPhase !== "off" && mqtt === dead) openWire(); }, 5000);
     };
     mqtt.connect();
+    startPulse();
   };
   const leaveCommons = () => {
     if (netPhase === "off") return;
+    stopPulse();
     try { localStorage.setItem(skey("simulacrum-commons"), "0"); } catch { /* private mode */ }
     if (mqtt) {
       mqtt.publish(hereTopic(), "", true);
@@ -2491,12 +2493,14 @@ export function buildSimulacrum(body: HTMLElement) {
       mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
     }
   });
-  const netTick = (dt: number, nowS: number) => {
-    if (netPhase === "survey" && nowS >= surveyAt) {
-      /* the matching: the fullest shard that still has room,
-         else the emptiest — the machine chooses your company */
-      let best = 0, bestN = -1;
-      for (let sN = 0; sN < 3; sN++) {
+  const sendPresence = () => {
+    if (mqtt && mqtt.connected) mqtt.publish(stateTopic(), JSON.stringify({ t: "s", id: myId, x: Math.round(px * 10) / 10, z: Math.round(pz * 10) / 10, y: Math.round(py * 10) / 10, yaw: Math.round(yaw * 100) / 100, fly: flying }));
+  };
+  const finishSurvey = () => {
+    /* the matching: the fullest shard that still has room,
+       else the emptiest — the machine chooses your company */
+    let best = 0, bestN = -1;
+    for (let sN = 0; sN < 3; sN++) {
         const n = survey.get(sN)?.size ?? 0;
         if (n < 6 && n > bestN) { bestN = n; best = sN; }
       }
@@ -2509,13 +2513,32 @@ export function buildSimulacrum(body: HTMLElement) {
         mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
       }
       refreshLabel();
-    }
+  };
+  /* the pulse: presence must not ride the render loop — a
+     backgrounded or occluded window's frames stop entirely in
+     modern browsers, and its walker went silent with them. A
+     one-second timer keeps the survey finishing and the state
+     flowing (background timers hold ~1 Hz); the frame loop
+     still sends at 4 Hz while visible, for smoothness. */
+  let netPulse: number | null = null, pulseCount = 0;
+  const startPulse = () => {
+    if (netPulse !== null) return;
+    netPulse = window.setInterval(() => {
+      if (!mqtt || !mqtt.connected) return;
+      if (netPhase === "survey" && performance.now() / 1000 >= surveyAt) finishSurvey();
+      if (netPhase === "on") {
+        sendPresence();
+        pulseCount++;
+        if (pulseCount % 20 === 0) mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
+      }
+    }, 1000);
+  };
+  const stopPulse = () => { if (netPulse !== null) { window.clearInterval(netPulse); netPulse = null; } };
+  const netTick = (dt: number, nowS: number) => {
+    if (netPhase === "survey" && nowS >= surveyAt) finishSurvey();
     if (netPhase === "on" && mqtt && mqtt.connected) {
       sendClock += dt;
-      if (sendClock > 0.25) {
-        sendClock = 0;
-        mqtt.publish(stateTopic(), JSON.stringify({ t: "s", id: myId, x: Math.round(px * 10) / 10, z: Math.round(pz * 10) / 10, y: Math.round(py * 10) / 10, yaw: Math.round(yaw * 100) / 100, fly: flying }));
-      }
+      if (sendClock > 0.25) { sendClock = 0; sendPresence(); }
       hereClock += dt;
       if (hereClock > 20) { hereClock = 0; mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true); }
     }
@@ -3219,6 +3242,7 @@ export function buildSimulacrum(body: HTMLElement) {
       document.removeEventListener("keydown", kd);
       document.removeEventListener("keyup", ku);
       document.removeEventListener("visibilitychange", visKick);
+      stopPulse();
       if (mqtt) { try { mqtt.close(); } catch { /* already gone */ } mqtt = null; }
       audio.dispose();
       return;
