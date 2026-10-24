@@ -310,6 +310,16 @@ function startResize(e: PointerEvent, win: HTMLElement) {
 }
 
 /* ---------------- Terminal ---------------- */
+/* The terminal tints the house's own verdict marks when a line
+   arrives unclassed: a standing case reads green, a fallen one red —
+   presentation of a known format, like syntax highlighting. */
+function termCls(text: string, cls?: string): string | undefined {
+  if (cls) return cls;
+  const t = text.trimStart();
+  if (t.startsWith("✓")) return "ok";
+  if (t.startsWith("✗")) return "err";
+  return undefined;
+}
 function buildTerminal(body: HTMLElement) {
   body.classList.add("os-term-body");
   const transcript = el("div", "os-term-out");
@@ -333,7 +343,7 @@ function buildTerminal(body: HTMLElement) {
   const setPrompt = () => { prompt.textContent = `${os.env.USER}@blacksite:${os.cwd.replace(os.env.HOME, "~")}$ `; };
   setPrompt();
   const io: ShellIO = {
-    print: (text, cls) => {
+    print: (text, cls) => { cls = termCls(text, cls);
       const pre = el("pre", "os-term-text" + (cls ? ` ${cls}` : ""));
       pre.textContent = text;
       transcript.appendChild(pre);
@@ -863,7 +873,7 @@ function buildGauntlet(body: HTMLElement) {
   const runD = el("button", "os-btn", "RUN DIAGNOSE");
   row.append(runG, runD);
   body.append(row, outPane);
-  const io: ShellIO = { print: (t, cls) => { const p = el("pre", "os-term-text" + (cls ? ` ${cls}` : "")); p.textContent = t; outPane.appendChild(p); }, clear: () => (outPane.innerHTML = ""), openApp, setWallpaper, setTheme: applyTheme };
+  const io: ShellIO = { print: (t, cls) => { const c = termCls(t, cls); const p = el("pre", "os-term-text" + (c ? ` ${c}` : "")); p.textContent = t; outPane.appendChild(p); }, clear: () => (outPane.innerHTML = ""), openApp, setWallpaper, setTheme: applyTheme };
   runG.addEventListener("click", () => void execLine(os, "gauntlet", io));
   runD.addEventListener("click", () => void execLine(os, "diagnose", io));
 }
