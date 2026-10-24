@@ -61,19 +61,19 @@
     --note-bg: #241c16;
     --table-head: #2a261f;
     --focus: #ffb088;
-    /* Non-Shiki listings stay on the light code surface. Shiki blocks use the hook below. */
-    --code-bg: #ffffff;
-    --code-ink: #1b1914;
-    --code-inline-bg: #efeae0;
-    --code-caption-bg: #f3f0e8;
-    --code-muted: #5c564c;
-    --code-button: #e6e0d4;
+    /* github-dark-high-contrast, the same pair Shiki sets as --shiki-dark-bg / --shiki-dark. */
+    --code-bg: #0a0c10;
+    --code-ink: #f0f3f6;
+    --code-inline-bg: #272b33;
+    --code-caption-bg: #272b33;
+    --code-muted: #bdc4cc;
+    --code-button: #272b33;
   }
 
   /*
     Shiki dual themes (astro.config.mjs) follow prefers-color-scheme.
     book.css paints `.book-prose pre.astro-code` with `background-color` and
-    `color: var(--code-bg/ink) !important`, which would keep blocks white, so
+    `color: var(--code-bg/ink) !important`, which would flatten token colors, so
     the book selectors below are one step more specific. Beautifyer owns this file.
   */
   .astro-code,
@@ -85,6 +85,14 @@
     font-style: var(--shiki-dark-font-style) !important;
     font-weight: var(--shiki-dark-font-weight) !important;
     text-decoration: var(--shiki-dark-text-decoration) !important;
+  }
+
+  /* Inline code outside a listing. Book prose already sets this; home does not. */
+  :not(pre) > code {
+    padding: 0.08em 0.32em;
+    border-radius: var(--radius);
+    background: var(--code-inline-bg);
+    color: var(--code-ink);
   }
 }
 
