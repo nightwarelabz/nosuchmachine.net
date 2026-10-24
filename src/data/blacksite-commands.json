@@ -21,13 +21,13 @@
   "section": "the house",
   "cmd": "diagnose",
   "verb": "diagnose",
-  "desc": "put the whole house through its paces \u2014 engines, kernel, containment drills"
+  "desc": "put the whole house through its paces — engines, kernel, containment drills"
  },
  {
   "section": "the house",
   "cmd": "limits",
   "verb": "limits",
-  "desc": "what this room honestly cannot do \u2014 the true limits, named"
+  "desc": "what this room honestly cannot do — the true limits, named"
  },
  {
   "section": "the house",
@@ -45,7 +45,7 @@
   "section": "the house",
   "cmd": "kill <pid>",
   "verb": "kill",
-  "desc": "stop a program \u2014 the kernel reclaims it"
+  "desc": "stop a program — the kernel reclaims it"
  },
  {
   "section": "the house",
@@ -75,13 +75,13 @@
   "section": "the house",
   "cmd": "eazy [target]",
   "verb": "eazy",
-  "desc": "the full battery \u2014 doors, then the probe that belongs to each door, then a filed report; no target means this network, a name means an access point"
+  "desc": "the full battery — doors, then the probe that belongs to each door, then a filed report; no target means this network, a name means an access point"
  },
  {
   "section": "the house",
   "cmd": "magdump <target>",
   "verb": "magdump",
-  "desc": "the automated targeting program \u2014 one named target, the whole bench emptied at it in stages (doors, web, tls, names and mail, the wire's ledgers, the shield's singles), one graded board filed; the lock-on reel plays over its first probes"
+  "desc": "the automated targeting program — one named target, the whole bench emptied at it in stages (doors, web, tls, names and mail, the wire's ledgers, the shield's singles), one graded board filed; the lock-on reel plays over its first probes"
  },
  {
   "section": "the house",
@@ -123,7 +123,7 @@
   "section": "the house",
   "cmd": "freedoom",
   "verb": "freedoom",
-  "desc": "play freedoom \u2014 the big one"
+  "desc": "play freedoom — the big one"
  },
  {
   "section": "the house",
@@ -159,7 +159,7 @@
   "section": "the house",
   "cmd": "skelli <words>",
   "verb": "skelli",
-  "desc": "ask her \u2014 she answers in her room"
+  "desc": "ask her — she answers in her room"
  },
  {
   "section": "the house",
@@ -177,7 +177,7 @@
   "section": "the house",
   "cmd": "stop",
   "verb": "stop",
-  "desc": "stop whatever is running in this room \u2014 a sweep, a knock, a walk, a program"
+  "desc": "stop whatever is running in this room — a sweep, a knock, a walk, a program"
  },
  {
   "section": "the wire",
@@ -207,7 +207,7 @@
   "section": "the wire",
   "cmd": "host <name|ip>",
   "verb": "host",
-  "desc": "resolve \u2014 or reverse an address"
+  "desc": "resolve — or reverse an address"
  },
  {
   "section": "the wire",
@@ -249,7 +249,7 @@
   "section": "the wire",
   "cmd": "arp",
   "verb": "arp",
-  "desc": "the neighborhood board \u2014 our arp table"
+  "desc": "the neighborhood board — our arp table"
  },
  {
   "section": "the wire",
@@ -267,7 +267,7 @@
   "section": "pentest bench",
   "cmd": "discover [a.b.c]",
   "verb": "discover",
-  "desc": "who lives on the /24 \u2014 ICMP sweep"
+  "desc": "who lives on the /24 — ICMP sweep"
  },
  {
   "section": "pentest bench",
@@ -309,7 +309,7 @@
   "section": "pentest bench",
   "cmd": "router",
   "verb": "router",
-  "desc": "which neighbor is the router \u2014 crowned by the default route, ranked by signs"
+  "desc": "which neighbor is the router — crowned by the default route, ranked by signs"
  },
  {
   "section": "pentest bench",
@@ -321,13 +321,13 @@
   "section": "pentest bench",
   "cmd": "cred set <host>",
   "verb": "cred",
-  "desc": "keep a credential for your own gear \u2014 typed in secret, held in the Keychain"
+  "desc": "keep a credential for your own gear — typed in secret, held in the Keychain"
  },
  {
   "section": "pentest bench",
   "cmd": "cred set3 <host> <user> <md5|sha> [des|aes] [read|write]",
   "verb": "cred",
-  "desc": "keep an SNMPv3 user \u2014 its auth and privacy words, typed in secret; read and write are kept apart"
+  "desc": "keep an SNMPv3 user — its auth and privacy words, typed in secret; read and write are kept apart"
  },
  {
   "section": "pentest bench",
@@ -357,7 +357,7 @@
   "section": "pentest bench",
   "cmd": "snmp3walk <host> <user> [root]",
   "verb": "snmp3walk",
-  "desc": "walk the MIB as a kept SNMPv3 user \u2014 signed, and sealed when privacy is kept"
+  "desc": "walk the MIB as a kept SNMPv3 user — signed, and sealed when privacy is kept"
  },
  {
   "section": "pentest bench",
@@ -369,13 +369,19 @@
   "section": "pentest bench",
   "cmd": "ssh [-p port] [user@]host [command]",
   "verb": "ssh",
-  "desc": "open SSH to your own gear \u2014 no command opens a shell; her client, curve25519 + AES-GCM"
+  "desc": "open SSH to your own gear — no command opens a shell; her client, curve25519 + AES-GCM"
+ },
+ {
+  "section": "pentest bench",
+  "cmd": "relay",
+  "verb": "relay",
+  "desc": "the house wire — Relay, a real IRC client (house channel #nosuchmachine on Libera.Chat)"
  },
  {
   "section": "pentest bench",
   "cmd": "sshkey [make|forget]",
   "verb": "sshkey",
-  "desc": "the house SSH identity \u2014 an ed25519 key whose private half never leaves the Keychain"
+  "desc": "the house SSH identity — an ed25519 key whose private half never leaves the Keychain"
  },
  {
   "section": "pentest bench",
@@ -393,13 +399,13 @@
   "section": "pentest bench",
   "cmd": "cred setssh <host> <user>",
   "verb": "cred",
-  "desc": "keep an SSH word for a host \u2014 typed in secret, held in the Keychain"
+  "desc": "keep an SSH word for a host — typed in secret, held in the Keychain"
  },
  {
   "section": "pentest bench",
   "cmd": "cred setunifi <host> <user>",
   "verb": "cred",
-  "desc": "keep a UniFi controller login \u2014 typed in secret, held in the Keychain"
+  "desc": "keep a UniFi controller login — typed in secret, held in the Keychain"
  },
  {
   "section": "pentest bench",
@@ -411,25 +417,25 @@
   "section": "pentest bench",
   "cmd": "unifi <host> restart <device>",
   "verb": "unifi",
-  "desc": "restart one adopted device \u2014 asks first"
+  "desc": "restart one adopted device — asks first"
  },
  {
   "section": "pentest bench",
   "cmd": "unifi <host> block|unblock <client>",
   "verb": "unifi",
-  "desc": "bar a client from the network, or readmit it \u2014 asks first"
+  "desc": "bar a client from the network, or readmit it — asks first"
  },
  {
   "section": "pentest bench",
   "cmd": "upnp",
   "verb": "upnp",
-  "desc": "UPnP on this wire, read deep \u2014 every SSDP description document censused"
+  "desc": "UPnP on this wire, read deep — every SSDP description document censused"
  },
  {
   "section": "pentest bench",
   "cmd": "bonjour",
   "verb": "bonjour",
-  "desc": "the wire's own service index \u2014 DNS-SD enumeration, instances and papers censused"
+  "desc": "the wire's own service index — DNS-SD enumeration, instances and papers censused"
  },
  {
   "section": "pentest bench",
@@ -447,31 +453,31 @@
   "section": "pentest bench",
   "cmd": "robots <url>",
   "verb": "robots",
-  "desc": "the map the site posts of itself \u2014 disallowed paths and the sitemap"
+  "desc": "the map the site posts of itself — disallowed paths and the sitemap"
  },
  {
   "section": "pentest bench",
   "cmd": "vhost <host> [domain]",
   "verb": "vhost",
-  "desc": "who else lives at this address \u2014 virtual hosts by their answers"
+  "desc": "who else lives at this address — virtual hosts by their answers"
  },
  {
   "section": "pentest bench",
   "cmd": "axfr <domain> <server>",
   "verb": "axfr",
-  "desc": "ask a nameserver for its whole zone \u2014 handed over is critical"
+  "desc": "ask a nameserver for its whole zone — handed over is critical"
  },
  {
   "section": "pentest bench",
   "cmd": "tlsgrade <host>[:port]",
   "verb": "tlsgrade",
-  "desc": "which TLS versions still turn \u2014 anything under 1.2 is a finding"
+  "desc": "which TLS versions still turn — anything under 1.2 is a finding"
  },
  {
   "section": "pentest bench",
   "cmd": "reflect <host>",
   "verb": "reflect",
-  "desc": "the amplification audit \u2014 one packet at the old UDP doors, graded by the answer"
+  "desc": "the amplification audit — one packet at the old UDP doors, graded by the answer"
  },
  {
   "section": "pentest bench",
@@ -483,13 +489,13 @@
   "section": "pentest bench",
   "cmd": "dnsaudit <domain>",
   "verb": "dnsaudit",
-  "desc": "do the resolvers agree \u2014 your router against three public witnesses"
+  "desc": "do the resolvers agree — your router against three public witnesses"
  },
  {
   "section": "pentest bench",
   "cmd": "corsprobe <url>",
   "verb": "corsprobe",
-  "desc": "cross-origin policy \u2014 reflected origins, wildcards, credentials"
+  "desc": "cross-origin policy — reflected origins, wildcards, credentials"
  },
  {
   "section": "pentest bench",
@@ -507,7 +513,7 @@
   "section": "pentest bench",
   "cmd": "jwtcheck <token>",
   "verb": "jwtcheck",
-  "desc": "a JWT, decoded and graded \u2014 no wire"
+  "desc": "a JWT, decoded and graded — no wire"
  },
  {
   "section": "pentest bench",
@@ -519,13 +525,13 @@
   "section": "pentest bench",
   "cmd": "vncprobe <host>",
   "verb": "vncprobe",
-  "desc": "the framebuffer's security types \u2014 'None' is critical"
+  "desc": "the framebuffer's security types — 'None' is critical"
  },
  {
   "section": "pentest bench",
   "cmd": "rdpprobe <host>",
   "verb": "rdpprobe",
-  "desc": "which RDP dialect it will speak \u2014 legacy, TLS, or NLA"
+  "desc": "which RDP dialect it will speak — legacy, TLS, or NLA"
  },
  {
   "section": "pentest bench",
@@ -537,7 +543,7 @@
   "section": "pentest bench",
   "cmd": "smtpprobe <host>",
   "verb": "smtpprobe",
-  "desc": "the mail door's manners \u2014 VRFY, STARTTLS, relay posture"
+  "desc": "the mail door's manners — VRFY, STARTTLS, relay posture"
  },
  {
   "section": "pentest bench",
@@ -549,7 +555,7 @@
   "section": "pentest bench",
   "cmd": "redisprobe <host>",
   "verb": "redisprobe",
-  "desc": "one PING \u2014 PONG without a password is critical"
+  "desc": "one PING — PONG without a password is critical"
  },
  {
   "section": "pentest bench",
@@ -597,7 +603,7 @@
   "section": "pentest bench",
   "cmd": "faviconhash <url>",
   "verb": "faviconhash",
-  "desc": "the icon's MurmurHash3 \u2014 the badge hunters search by"
+  "desc": "the icon's MurmurHash3 — the badge hunters search by"
  },
  {
   "section": "pentest bench",
@@ -609,7 +615,7 @@
   "section": "pentest bench",
   "cmd": "hstsprobe <url>",
   "verb": "hstsprobe",
-  "desc": "the https-only promise \u2014 set, long, and honored"
+  "desc": "the https-only promise — set, long, and honored"
  },
  {
   "section": "pentest bench",
@@ -627,13 +633,13 @@
   "section": "pentest bench",
   "cmd": "ocspprobe <url>",
   "verb": "ocspprobe",
-  "desc": "where revocation lives \u2014 responder, stapling, must-staple"
+  "desc": "where revocation lives — responder, stapling, must-staple"
  },
  {
   "section": "pentest bench",
   "cmd": "redirectchain <url>",
   "verb": "redirectchain",
-  "desc": "the chain walked hop by hop \u2014 downgrades and circles"
+  "desc": "the chain walked hop by hop — downgrades and circles"
  },
  {
   "section": "pentest bench",
@@ -657,19 +663,19 @@
   "section": "pentest bench",
   "cmd": "graphqldeep <url>",
   "verb": "graphqldeep",
-  "desc": "the endpoint's manners \u2014 schema, suggestions, batching"
+  "desc": "the endpoint's manners — schema, suggestions, batching"
  },
  {
   "section": "pentest bench",
   "cmd": "jwtdeep <token>",
   "verb": "jwtdeep",
-  "desc": "a token read to the bottom \u2014 header edges and claims"
+  "desc": "a token read to the bottom — header edges and claims"
  },
  {
   "section": "pentest bench",
   "cmd": "compressprobe <url>",
   "verb": "compressprobe",
-  "desc": "gzip, deflate, brotli \u2014 does the house squeeze"
+  "desc": "gzip, deflate, brotli — does the house squeeze"
  },
  {
   "section": "pentest bench",
@@ -681,13 +687,13 @@
   "section": "pentest bench",
   "cmd": "robotsdeep <url>",
   "verb": "robotsdeep",
-  "desc": "robots.txt graded \u2014 and the doors its map advertises"
+  "desc": "robots.txt graded — and the doors its map advertises"
  },
  {
   "section": "pentest bench",
   "cmd": "apicensus <url>",
   "verb": "apicensus",
-  "desc": "one answer as an API citizen \u2014 limits, pages, challenges"
+  "desc": "one answer as an API citizen — limits, pages, challenges"
  },
  {
   "section": "pentest bench",
@@ -705,187 +711,187 @@
   "section": "pentest bench",
   "cmd": "corsdeep <url>",
   "verb": "corsdeep",
-  "desc": "cross-origin, deepened \u2014 null origins, subdomains, preflight"
+  "desc": "cross-origin, deepened — null origins, subdomains, preflight"
  },
  {
   "section": "pentest bench",
   "cmd": "smbprobe <host>",
   "verb": "smbprobe",
-  "desc": "one SMB2 negotiate \u2014 the dialect, and whether signing is truly required; no session, no name offered"
+  "desc": "one SMB2 negotiate — the dialect, and whether signing is truly required; no session, no name offered"
  },
  {
   "section": "pentest bench",
   "cmd": "nfsprobe <host>",
   "verb": "nfsprobe",
-  "desc": "the export list mountd publishes to strangers \u2014 what is shared, and with whom"
+  "desc": "the export list mountd publishes to strangers — what is shared, and with whom"
  },
  {
   "section": "pentest bench",
   "cmd": "rpcprobe <host>",
   "verb": "rpcprobe",
-  "desc": "the portmapper's whole directory \u2014 every registered program, version and door"
+  "desc": "the portmapper's whole directory — every registered program, version and door"
  },
  {
   "section": "pentest bench",
   "cmd": "mysqlprobe <host>",
   "verb": "mysqlprobe",
-  "desc": "the greeting read \u2014 version, capabilities, the password door it names; no answer is ever sent back"
+  "desc": "the greeting read — version, capabilities, the password door it names; no answer is ever sent back"
  },
  {
   "section": "pentest bench",
   "cmd": "pgprobe <host>",
   "verb": "pgprobe",
-  "desc": "will it seal the road \u2014 S, N or E to the SSL and GSS questions; no startup packet follows"
+  "desc": "will it seal the road — S, N or E to the SSL and GSS questions; no startup packet follows"
  },
  {
   "section": "pentest bench",
   "cmd": "mssqlprobe <host>",
   "verb": "mssqlprobe",
-  "desc": "the TDS prelogin \u2014 version, instance, and the encryption word; no login packet"
+  "desc": "the TDS prelogin — version, instance, and the encryption word; no login packet"
  },
  {
   "section": "pentest bench",
   "cmd": "mongoprobe <host>",
   "verb": "mongoprobe",
-  "desc": "the unauthenticated hello \u2014 wire versions and posture, by the protocol's own design"
+  "desc": "the unauthenticated hello — wire versions and posture, by the protocol's own design"
  },
  {
   "section": "pentest bench",
   "cmd": "elasticprobe <host>",
   "verb": "elasticprobe",
-  "desc": "the cluster's own introduction \u2014 name, node, version, handed to a stranger"
+  "desc": "the cluster's own introduction — name, node, version, handed to a stranger"
  },
  {
   "section": "pentest bench",
   "cmd": "couchprobe <host>",
   "verb": "couchprobe",
-  "desc": "the welcome mat \u2014 version and features, public by design"
+  "desc": "the welcome mat — version and features, public by design"
  },
  {
   "section": "pentest bench",
   "cmd": "kafkaprobe <host>",
   "verb": "kafkaprobe",
-  "desc": "the dialect table \u2014 every verb the broker speaks, which dates it"
+  "desc": "the dialect table — every verb the broker speaks, which dates it"
  },
  {
   "section": "pentest bench",
   "cmd": "zkprobe <host>",
   "verb": "zkprobe",
-  "desc": "four letters, read \u2014 stat and envi: version, mode, the tree it watches"
+  "desc": "four letters, read — stat and envi: version, mode, the tree it watches"
  },
  {
   "section": "pentest bench",
   "cmd": "memcacheprobe <host>",
   "verb": "memcacheprobe",
-  "desc": "version, then the whole stats ledger \u2014 classic memcached keeps no names at all"
+  "desc": "version, then the whole stats ledger — classic memcached keeps no names at all"
  },
  {
   "section": "pentest bench",
   "cmd": "solrprobe <host>",
   "verb": "solrprobe",
-  "desc": "the admin system document \u2014 Solr and Lucene versions, and the ensemble it names"
+  "desc": "the admin system document — Solr and Lucene versions, and the ensemble it names"
  },
  {
   "section": "pentest bench",
   "cmd": "jenkinsprobe <host>",
   "verb": "jenkinsprobe",
-  "desc": "the version in the letterhead \u2014 and whether the dashboard opens unnamed"
+  "desc": "the version in the letterhead — and whether the dashboard opens unnamed"
  },
  {
   "section": "pentest bench",
   "cmd": "gitlabprobe <host>",
   "verb": "gitlabprobe",
-  "desc": "the version door's challenge \u2014 a 401 keeps the forge's papers indoors"
+  "desc": "the version door's challenge — a 401 keeps the forge's papers indoors"
  },
  {
   "section": "pentest bench",
   "cmd": "registryprobe <host>",
   "verb": "registryprobe",
-  "desc": "the /v2/ threshold \u2014 a greeting, or the token challenge read and never answered"
+  "desc": "the /v2/ threshold — a greeting, or the token challenge read and never answered"
  },
  {
   "section": "pentest bench",
   "cmd": "k8sprobe <host>",
   "verb": "k8sprobe",
-  "desc": "the API server's version papers \u2014 and /api, when the first door answers unnamed"
+  "desc": "the API server's version papers — and /api, when the first door answers unnamed"
  },
  {
   "section": "pentest bench",
   "cmd": "etcdprobe <host>",
   "verb": "etcdprobe",
-  "desc": "the version door \u2014 server and cluster versions, published by design"
+  "desc": "the version door — server and cluster versions, published by design"
  },
  {
   "section": "pentest bench",
   "cmd": "consulprobe <host>",
   "verb": "consulprobe",
-  "desc": "who leads the raft, asked with no token \u2014 the agent API is a control plane"
+  "desc": "who leads the raft, asked with no token — the agent API is a control plane"
  },
  {
   "section": "pentest bench",
   "cmd": "vaultprobe <host>",
   "verb": "vaultprobe",
-  "desc": "the seal-status \u2014 sealed or unsealed, initialized, and the version beside it"
+  "desc": "the seal-status — sealed or unsealed, initialized, and the version beside it"
  },
  {
   "section": "pentest bench",
   "cmd": "rabbitprobe <host>",
   "verb": "rabbitprobe",
-  "desc": "the AMQP introduction \u2014 dialect and mechanisms before any name; the management door read the same way"
+  "desc": "the AMQP introduction — dialect and mechanisms before any name; the management door read the same way"
  },
  {
   "section": "pentest bench",
   "cmd": "printerprobe <host>",
   "verb": "printerprobe",
-  "desc": "the printer introduces itself \u2014 name, model, state, and where it sits"
+  "desc": "the printer introduces itself — name, model, state, and where it sits"
  },
  {
   "section": "pentest bench",
   "cmd": "rtspprobe <host>",
   "verb": "rtspprobe",
-  "desc": "the camera's OPTIONS \u2014 the published verbs and the Server letterhead"
+  "desc": "the camera's OPTIONS — the published verbs and the Server letterhead"
  },
  {
   "section": "pentest bench",
   "cmd": "sipprobe <host>",
   "verb": "sipprobe",
-  "desc": "one SIP OPTIONS \u2014 the Allow list and the PBX's letterhead; no call is placed"
+  "desc": "one SIP OPTIONS — the Allow list and the PBX's letterhead; no call is placed"
  },
  {
   "section": "pentest bench",
   "cmd": "starttlscensus <host>",
   "verb": "starttlscensus",
-  "desc": "the mail doors graded \u2014 STARTTLS offered, demanded, or missing; no name is ever given"
+  "desc": "the mail doors graded — STARTTLS offered, demanded, or missing; no name is ever given"
  },
  {
   "section": "pentest bench",
   "cmd": "dnsdeep <domain>",
   "verb": "dnsdeep",
-  "desc": "every record family of one name, read whole \u2014 A, AAAA, MX, NS, TXT, SOA, CAA"
+  "desc": "every record family of one name, read whole — A, AAAA, MX, NS, TXT, SOA, CAA"
  },
  {
   "section": "pentest bench",
   "cmd": "zonetransfer <domain> [server]",
   "verb": "zonetransfer",
-  "desc": "ask a nameserver for its whole zone, once \u2014 handed over is critical, refused is correct"
+  "desc": "ask a nameserver for its whole zone, once — handed over is critical, refused is correct"
  },
  {
   "section": "pentest bench",
   "cmd": "reverseprobe <ip>[/28]",
   "verb": "reverseprobe",
-  "desc": "the names behind the numbers \u2014 one address, or a small street read as a summary"
+  "desc": "the names behind the numbers — one address, or a small street read as a summary"
  },
  {
   "section": "pentest bench",
   "cmd": "dnscensus <domain>",
   "verb": "dnscensus",
-  "desc": "the same question to your router and three public witnesses \u2014 disagreement is the story"
+  "desc": "the same question to your router and three public witnesses — disagreement is the story"
  },
  {
   "section": "pentest bench",
   "cmd": "wildcardprobe <domain>",
   "verb": "wildcardprobe",
-  "desc": "ask for a name that cannot exist \u2014 if it answers, the zone answers everything"
+  "desc": "ask for a name that cannot exist — if it answers, the zone answers everything"
  },
  {
   "section": "pentest bench",
@@ -897,37 +903,37 @@
   "section": "pentest bench",
   "cmd": "ttlprobe <domain>",
   "verb": "ttlprobe",
-  "desc": "how long each family's answer may be remembered \u2014 the cache posture"
+  "desc": "how long each family's answer may be remembered — the cache posture"
  },
  {
   "section": "pentest bench",
   "cmd": "soacheck <domain>",
   "verb": "soacheck",
-  "desc": "the zone's own ledger \u2014 the serial's convention, the refresh rhythm, the negative lifetime"
+  "desc": "the zone's own ledger — the serial's convention, the refresh rhythm, the negative lifetime"
  },
  {
   "section": "pentest bench",
   "cmd": "nsecprobe <domain>",
   "verb": "nsecprobe",
-  "desc": "can the zone be walked \u2014 NSEC names the neighbours, NSEC3 hashes them first"
+  "desc": "can the zone be walked — NSEC names the neighbours, NSEC3 hashes them first"
  },
  {
   "section": "pentest bench",
   "cmd": "dnssecgrade <domain>",
   "verb": "dnssecgrade",
-  "desc": "the DNSSEC chain as far as the wire shows it \u2014 DS, keys, signatures, the resolver's AD word"
+  "desc": "the DNSSEC chain as far as the wire shows it — DS, keys, signatures, the resolver's AD word"
  },
  {
   "section": "pentest bench",
   "cmd": "mxprobe <domain>",
   "verb": "mxprobe",
-  "desc": "where the mail goes \u2014 the exchangers in their order, the null MX, both roads"
+  "desc": "where the mail goes — the exchangers in their order, the null MX, both roads"
  },
  {
   "section": "pentest bench",
   "cmd": "smtpdeep <host>",
   "verb": "smtpdeep",
-  "desc": "the mail door's greeting and EHLO census \u2014 no mail sent, no AUTH ever tried"
+  "desc": "the mail door's greeting and EHLO census — no mail sent, no AUTH ever tried"
  },
  {
   "section": "pentest bench",
@@ -939,55 +945,55 @@
   "section": "pentest bench",
   "cmd": "spfprobe <domain>",
   "verb": "spfprobe",
-  "desc": "who may sign letters with this name \u2014 the ten-lookup budget counted, the terminal word graded"
+  "desc": "who may sign letters with this name — the ten-lookup budget counted, the terminal word graded"
  },
  {
   "section": "pentest bench",
   "cmd": "dkimprobe <domain>",
   "verb": "dkimprobe",
-  "desc": "the signing keys under the twelve common selectors \u2014 their weights and revocations"
+  "desc": "the signing keys under the twelve common selectors — their weights and revocations"
  },
  {
   "section": "pentest bench",
   "cmd": "dmarcprobe <domain>",
   "verb": "dmarcprobe",
-  "desc": "what a forgery costs \u2014 the policy, the enforcement share, where the reports flow"
+  "desc": "what a forgery costs — the policy, the enforcement share, where the reports flow"
  },
  {
   "section": "pentest bench",
   "cmd": "mtasts <domain>",
   "verb": "mtasts",
-  "desc": "the mail road's published seal \u2014 the DNS half and the policy, read together"
+  "desc": "the mail road's published seal — the DNS half and the policy, read together"
  },
  {
   "section": "pentest bench",
   "cmd": "tlsrpt <domain>",
   "verb": "tlsrpt",
-  "desc": "where broken mail seals are reported \u2014 or that nobody anywhere is told"
+  "desc": "where broken mail seals are reported — or that nobody anywhere is told"
  },
  {
   "section": "pentest bench",
   "cmd": "bimi <domain>",
   "verb": "bimi",
-  "desc": "the face beside the letter \u2014 the brand mark, and whether it stands verified"
+  "desc": "the face beside the letter — the brand mark, and whether it stands verified"
  },
  {
   "section": "pentest bench",
   "cmd": "certtrans <domain>",
   "verb": "certtrans",
-  "desc": "every certificate the public logs remember for the name \u2014 issuers, coverage, the last minting"
+  "desc": "every certificate the public logs remember for the name — issuers, coverage, the last minting"
  },
  {
   "section": "pentest bench",
   "cmd": "subdomains <domain>",
   "verb": "subdomains",
-  "desc": "the subdomains the public certificate logs confess \u2014 no dictionary, no brute force"
+  "desc": "the subdomains the public certificate logs confess — no dictionary, no brute force"
  },
  {
   "section": "pentest bench",
   "cmd": "whoisdeep <domain>",
   "verb": "whoisdeep",
-  "desc": "the registry's ledger, parsed \u2014 keeper, birth, lapse, and the standing words"
+  "desc": "the registry's ledger, parsed — keeper, birth, lapse, and the standing words"
  },
  {
   "section": "pentest bench",
@@ -999,139 +1005,139 @@
   "section": "pentest bench",
   "cmd": "asnprobe <ip>",
   "verb": "asnprobe",
-  "desc": "whose road a number runs on \u2014 the autonomous system, the prefix, the registry"
+  "desc": "whose road a number runs on — the autonomous system, the prefix, the registry"
  },
  {
   "section": "pentest bench",
   "cmd": "danglingprobe <name>",
   "verb": "danglingprobe",
-  "desc": "a CNAME that points at a ghost \u2014 the takeover risk, graded and never touched"
+  "desc": "a CNAME that points at a ghost — the takeover risk, graded and never touched"
  },
  {
   "section": "pentest bench",
   "cmd": "modbusprobe <host>[:port]",
   "verb": "modbusprobe",
-  "desc": "the PLC's device identification, read aloud \u2014 the one Modbus read this bench allows"
+  "desc": "the PLC's device identification, read aloud — the one Modbus read this bench allows"
  },
  {
   "section": "pentest bench",
   "cmd": "s7probe <host>[:port]",
   "verb": "s7probe",
-  "desc": "the Siemens nameplate over RFC 1006 \u2014 module, component, firmware, protection level"
+  "desc": "the Siemens nameplate over RFC 1006 — module, component, firmware, protection level"
  },
  {
   "section": "pentest bench",
   "cmd": "iec61850probe <host>[:port]",
   "verb": "iec61850probe",
-  "desc": "the substation door over RFC 1006 \u2014 where an MMS nameplate would be read"
+  "desc": "the substation door over RFC 1006 — where an MMS nameplate would be read"
  },
  {
   "section": "pentest bench",
   "cmd": "enipprobe <host>[:port]",
   "verb": "enipprobe",
-  "desc": "List Identity \u2014 vendor, device type, product, revision, serial, in the clear"
+  "desc": "List Identity — vendor, device type, product, revision, serial, in the clear"
  },
  {
   "section": "pentest bench",
   "cmd": "pcccprobe <host>[:port]",
   "verb": "pcccprobe",
-  "desc": "the legacy Allen-Bradley door, knocked once \u2014 presence, graded plainly"
+  "desc": "the legacy Allen-Bradley door, knocked once — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "dnp3probe <host>[:port]",
   "verb": "dnp3probe",
-  "desc": "link status and the outstation's own attribute ledger \u2014 read only, never a control"
+  "desc": "link status and the outstation's own attribute ledger — read only, never a control"
  },
  {
   "section": "pentest bench",
   "cmd": "bacnetprobe <host>[:port]",
   "verb": "bacnetprobe",
-  "desc": "Who-Is, then the device object's own nameplate \u2014 vendor, model, firmware"
+  "desc": "Who-Is, then the device object's own nameplate — vendor, model, firmware"
  },
  {
   "section": "pentest bench",
   "cmd": "opcuaprobe <host>[:port]",
   "verb": "opcuaprobe",
-  "desc": "HEL and the endpoint menu \u2014 the security policies offered, graded; no session is opened"
+  "desc": "HEL and the endpoint menu — the security policies offered, graded; no session is opened"
  },
  {
   "section": "pentest bench",
   "cmd": "finsprobe <host>[:port]",
   "verb": "finsprobe",
-  "desc": "the Omron controller's data and status reads \u2014 model, version, run state; never a write"
+  "desc": "the Omron controller's data and status reads — model, version, run state; never a write"
  },
  {
   "section": "pentest bench",
   "cmd": "melsecprobe <host>[:port]",
   "verb": "melsecprobe",
-  "desc": "the SLMP type-name read \u2014 the Mitsubishi module names itself"
+  "desc": "the SLMP type-name read — the Mitsubishi module names itself"
  },
  {
   "section": "pentest bench",
   "cmd": "iec104probe <host>[:port]",
   "verb": "iec104probe",
-  "desc": "the telecontrol handshake \u2014 STARTDT and TESTFR only; nothing is interrogated or controlled"
+  "desc": "the telecontrol handshake — STARTDT and TESTFR only; nothing is interrogated or controlled"
  },
  {
   "section": "pentest bench",
   "cmd": "knxprobe <host>[:port]",
   "verb": "knxprobe",
-  "desc": "the building bus describes itself \u2014 device, families, the name it answers to"
+  "desc": "the building bus describes itself — device, families, the name it answers to"
  },
  {
   "section": "pentest bench",
   "cmd": "foxprobe <host>[:port]",
   "verb": "foxprobe",
-  "desc": "the Niagara hello, parsed \u2014 version and host disclosure graded"
+  "desc": "the Niagara hello, parsed — version and host disclosure graded"
  },
  {
   "section": "pentest bench",
   "cmd": "hartprobe <host>[:port]",
   "verb": "hartprobe",
-  "desc": "a HART-IP session and universal command 0 \u2014 maker, device, revision"
+  "desc": "a HART-IP session and universal command 0 — maker, device, revision"
  },
  {
   "section": "pentest bench",
   "cmd": "srtpprobe <host>[:port]",
   "verb": "srtpprobe",
-  "desc": "the GE door, knocked once \u2014 presence, graded plainly"
+  "desc": "the GE door, knocked once — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "adsprobe <host>[:port]",
   "verb": "adsprobe",
-  "desc": "the Beckhoff device info and state reads \u2014 name, version, run state"
+  "desc": "the Beckhoff device info and state reads — name, version, run state"
  },
  {
   "section": "pentest bench",
   "cmd": "dlmsprobe <host>[:port]",
   "verb": "dlmsprobe",
-  "desc": "the meter association posture \u2014 what an unauthenticated knock is offered is the grade"
+  "desc": "the meter association posture — what an unauthenticated knock is offered is the grade"
  },
  {
   "section": "pentest bench",
   "cmd": "moxaprobe <host>[:port]",
   "verb": "moxaprobe",
-  "desc": "the serial gateway's door, knocked once by UDP \u2014 presence, graded plainly"
+  "desc": "the serial gateway's door, knocked once by UDP — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "pmuprobe <host>[:port]",
   "verb": "pmuprobe",
-  "desc": "the PMU's own configuration frame \u2014 the only frame this bench ever asks it for"
+  "desc": "the PMU's own configuration frame — the only frame this bench ever asks it for"
  },
  {
   "section": "pentest bench",
   "cmd": "plcensus <host>",
   "verb": "plcensus",
-  "desc": "one light knock on every plant door \u2014 the board of what this host runs"
+  "desc": "one light knock on every plant door — the board of what this host runs"
  },
  {
   "section": "pentest bench",
   "cmd": "selprobe <host>[:port]",
   "verb": "selprobe",
-  "desc": "the SEL relay's ID report \u2014 the one page it shows the world"
+  "desc": "the SEL relay's ID report — the one page it shows the world"
  },
  {
   "section": "pentest bench",
@@ -1143,73 +1149,73 @@
   "section": "pentest bench",
   "cmd": "mtconnectprobe <host>[:port]",
   "verb": "mtconnectprobe",
-  "desc": "the machine-tool agent's published census \u2014 devices, makers, serials"
+  "desc": "the machine-tool agent's published census — devices, makers, serials"
  },
  {
   "section": "pentest bench",
   "cmd": "focasprobe <host>[:port]",
   "verb": "focasprobe",
-  "desc": "the Fanuc door, knocked once \u2014 presence, graded plainly"
+  "desc": "the Fanuc door, knocked once — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "codesysprobe <host>",
   "verb": "codesysprobe",
-  "desc": "the runtime's two doors, knocked once each \u2014 presence, graded plainly"
+  "desc": "the runtime's two doors, knocked once each — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "umasprobe <host>[:port]",
   "verb": "umasprobe",
-  "desc": "Schneider's UMAS nameplate subfunctions only \u2014 never reservation, never start or stop"
+  "desc": "Schneider's UMAS nameplate subfunctions only — never reservation, never start or stop"
  },
  {
   "section": "pentest bench",
   "cmd": "happrobe <host>[:port]",
   "verb": "happrobe",
-  "desc": "the DirectLOGIC door, knocked once by UDP \u2014 presence, graded plainly"
+  "desc": "the DirectLOGIC door, knocked once by UDP — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "pcomprobe <host>[:port]",
   "verb": "pcomprobe",
-  "desc": "the Unitronics door, knocked once \u2014 presence, graded plainly"
+  "desc": "the Unitronics door, knocked once — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "pcworxprobe <host>[:port]",
   "verb": "pcworxprobe",
-  "desc": "the Phoenix door, knocked once \u2014 presence, graded plainly"
+  "desc": "the Phoenix door, knocked once — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "lonprobe <host>[:port]",
   "verb": "lonprobe",
-  "desc": "the LonWorks/IP door, knocked once by UDP \u2014 presence, graded plainly"
+  "desc": "the LonWorks/IP door, knocked once by UDP — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "mbusprobe <host>[:port]",
   "verb": "mbusprobe",
-  "desc": "one meter woken at address 0 \u2014 its nameplate, and none of its readings"
+  "desc": "one meter woken at address 0 — its nameplate, and none of its readings"
  },
  {
   "section": "pentest bench",
   "cmd": "secsprobe <host>[:port]",
   "verb": "secsprobe",
-  "desc": "the HSMS are-you-there \u2014 Select, S1F1, S1F13; the equipment names itself"
+  "desc": "the HSMS are-you-there — Select, S1F1, S1F13; the equipment names itself"
  },
  {
   "section": "pentest bench",
   "cmd": "ffprobe <host>[:port]",
   "verb": "ffprobe",
-  "desc": "the Fieldbus HSE door, knocked once by UDP \u2014 presence, graded plainly"
+  "desc": "the Fieldbus HSE door, knocked once by UDP — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "ptpprobe <host>[:port]",
   "verb": "ptpprobe",
-  "desc": "one management GET \u2014 the clock describes itself; its time is never touched"
+  "desc": "one management GET — the clock describes itself; its time is never touched"
  },
  {
   "section": "pentest bench",
@@ -1221,181 +1227,181 @@
   "section": "pentest bench",
   "cmd": "sunspecprobe <host>[:port]",
   "verb": "sunspecprobe",
-  "desc": "the SunSpec nameplate block \u2014 the one bounded register read in the whole wave"
+  "desc": "the SunSpec nameplate block — the one bounded register read in the whole wave"
  },
  {
   "section": "pentest bench",
   "cmd": "lantronixprobe <host>[:port]",
   "verb": "lantronixprobe",
-  "desc": "the gateway's discovery answer \u2014 MAC, hardware type, firmware, in the clear"
+  "desc": "the gateway's discovery answer — MAC, hardware type, firmware, in the clear"
  },
  {
   "section": "pentest bench",
   "cmd": "c1222probe <host>[:port]",
   "verb": "c1222probe",
-  "desc": "the C12.22 meter door, knocked once \u2014 presence, graded plainly"
+  "desc": "the C12.22 meter door, knocked once — presence, graded plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "cspprobe <host>[:port]",
   "verb": "cspprobe",
-  "desc": "a libcsp spacecraft bus \u2014 CMP IDENT, uptime and a ping; the reboot service is never touched"
+  "desc": "a libcsp spacecraft bus — CMP IDENT, uptime and a ping; the reboot service is never touched"
  },
  {
   "section": "pentest bench",
   "cmd": "ccsdsprobe <host>[:port]",
   "verb": "ccsdsprobe",
-  "desc": "a CCSDS stream census \u2014 listen-only: APIDs, telemetry against telecommand, sequence gaps"
+  "desc": "a CCSDS stream census — listen-only: APIDs, telemetry against telecommand, sequence gaps"
  },
  {
   "section": "pentest bench",
   "cmd": "aprsprobe [host][:port]",
   "verb": "aprsprobe",
-  "desc": "the APRS-IS feed through the read-only login \u2014 heard, never spoken into"
+  "desc": "the APRS-IS feed through the read-only login — heard, never spoken into"
  },
  {
   "section": "pentest bench",
   "cmd": "kissprobe <host>[:port]",
   "verb": "kissprobe",
-  "desc": "a KISS TNC heard only \u2014 AX.25 frames counted, nothing transmitted, no parameter writes"
+  "desc": "a KISS TNC heard only — AX.25 frames counted, nothing transmitted, no parameter writes"
  },
  {
   "section": "pentest bench",
   "cmd": "agwprobe <host>[:port]",
   "verb": "agwprobe",
-  "desc": "an AGW packet engine \u2014 version, ports and the monitor feed; no transmit frame is ever built"
+  "desc": "an AGW packet engine — version, ports and the monitor feed; no transmit frame is ever built"
  },
  {
   "section": "pentest bench",
   "cmd": "rotprobe <host>[:port]",
   "verb": "rotprobe",
-  "desc": "a rotctld rotator's pointing and range \u2014 read only; set_pos is never sent"
+  "desc": "a rotctld rotator's pointing and range — read only; set_pos is never sent"
  },
  {
   "section": "pentest bench",
   "cmd": "rigprobe <host>[:port]",
   "verb": "rigprobe",
-  "desc": "a rigctld radio's tuning and mode \u2014 read only; nothing set, nothing keyed"
+  "desc": "a rigctld radio's tuning and mode — read only; nothing set, nothing keyed"
  },
  {
   "section": "pentest bench",
   "cmd": "gpsdprobe <host>[:port]",
   "verb": "gpsdprobe",
-  "desc": "gpsd's version and receivers \u2014 no ?WATCH, so no fix is ever streamed or printed"
+  "desc": "gpsd's version and receivers — no ?WATCH, so no fix is ever streamed or printed"
  },
  {
   "section": "pentest bench",
   "cmd": "nmeaprobe <host>[:port]",
   "verb": "nmeaprobe",
-  "desc": "an NMEA stream census \u2014 sentence shapes, checksums and the sky view; positions never printed"
+  "desc": "an NMEA stream census — sentence shapes, checksums and the sky view; positions never printed"
  },
  {
   "section": "pentest bench",
   "cmd": "ubxprobe <host>[:port]",
   "verb": "ubxprobe",
-  "desc": "a u-blox receiver's MON-VER nameplate \u2014 one poll; the CFG class is never sent"
+  "desc": "a u-blox receiver's MON-VER nameplate — one poll; the CFG class is never sent"
  },
  {
   "section": "pentest bench",
   "cmd": "ntripprobe <host>[:port]",
   "verb": "ntripprobe",
-  "desc": "an NTRIP caster's sourcetable \u2014 the mountpoint menu, read; no stream is joined"
+  "desc": "an NTRIP caster's sourcetable — the mountpoint menu, read; no stream is joined"
  },
  {
   "section": "pentest bench",
   "cmd": "comtechprobe <host>[:port]",
   "verb": "comtechprobe",
-  "desc": "a Comtech modem's firmware and serial, asked with query packets only \u2014 '=' is never sent"
+  "desc": "a Comtech modem's firmware and serial, asked with query packets only — '=' is never sent"
  },
  {
   "section": "pentest bench",
   "cmd": "bucprobe <host>[:port]",
   "verb": "bucprobe",
-  "desc": "a BUC amplifier's web nameplate \u2014 its binary M&C is never guessed at or spoken"
+  "desc": "a BUC amplifier's web nameplate — its binary M&C is never guessed at or spoken"
  },
  {
   "section": "pentest bench",
   "cmd": "iridiumprobe <host>[:port]",
   "verb": "iridiumprobe",
-  "desc": "an Iridium modem's AT identification \u2014 maker, model, firmware, IMEI; nothing originated"
+  "desc": "an Iridium modem's AT identification — maker, model, firmware, IMEI; nothing originated"
  },
  {
   "section": "pentest bench",
   "cmd": "starlinkprobe [host]",
   "verb": "starlinkprobe",
-  "desc": "the dish's local doors, censused \u2014 the gRPC API door named, its framing honestly not reproduced"
+  "desc": "the dish's local doors, censused — the gRPC API door named, its framing honestly not reproduced"
  },
  {
   "section": "pentest bench",
   "cmd": "satipprobe <host>[:port]",
   "verb": "satipprobe",
-  "desc": "a SAT>IP tuner census by RTSP \u2014 OPTIONS and DESCRIBE; SETUP and PLAY are never sent"
+  "desc": "a SAT>IP tuner census by RTSP — OPTIONS and DESCRIBE; SETUP and PLAY are never sent"
  },
  {
   "section": "pentest bench",
   "cmd": "yamcsprobe <host>[:port]",
   "verb": "yamcsprobe",
-  "desc": "a YAMCS server's mission instances, listed \u2014 operations data read, never operated"
+  "desc": "a YAMCS server's mission instances, listed — operations data read, never operated"
  },
  {
   "section": "pentest bench",
   "cmd": "satintel [norad|name]",
   "verb": "satintel",
-  "desc": "Celestrak's ledger \u2014 one satellite's identity and orbit, its element-set checksum verified"
+  "desc": "Celestrak's ledger — one satellite's identity and orbit, its element-set checksum verified"
  },
  {
   "section": "pentest bench",
   "cmd": "satnogsprobe [station]",
   "verb": "satnogsprobe",
-  "desc": "the SatNOGS network's ground stations \u2014 who listens to the sky, and whether they are up"
+  "desc": "the SatNOGS network's ground stations — who listens to the sky, and whether they are up"
  },
  {
   "section": "pentest bench",
   "cmd": "satcensus [host]",
   "verb": "satcensus",
-  "desc": "every satellite door at one address, knocked once each \u2014 and the RF limit stated plainly"
+  "desc": "every satellite door at one address, knocked once each — and the RF limit stated plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "signalprobe <host>",
   "verb": "signalprobe",
-  "desc": "an NTCIP signal controller's nameplate by SNMP GET \u2014 identification only; no phase or timing object exists in this verb"
+  "desc": "an NTCIP signal controller's nameplate by SNMP GET — identification only; no phase or timing object exists in this verb"
  },
  {
   "section": "pentest bench",
   "cmd": "ascprobe <host>",
   "verb": "ascprobe",
-  "desc": "an ASC-class controller's nameplate plus its 1202 sizing \u2014 counts, never states"
+  "desc": "an ASC-class controller's nameplate plus its 1202 sizing — counts, never states"
  },
  {
   "section": "pentest bench",
   "cmd": "dmsprobe <host>",
   "verb": "dmsprobe",
-  "desc": "a dynamic message sign's 1203 identification branch \u2014 the sign's makeup, never its message"
+  "desc": "a dynamic message sign's 1203 identification branch — the sign's makeup, never its message"
  },
  {
   "section": "pentest bench",
   "cmd": "rwisprobe <host>",
   "verb": "rwisprobe",
-  "desc": "a road-weather station's 1204 identification \u2014 its category and the site it names"
+  "desc": "a road-weather station's 1204 identification — its category and the site it names"
  },
  {
   "section": "pentest bench",
   "cmd": "rsuprobe <host>",
   "verb": "rsuprobe",
-  "desc": "a roadside unit's network nameplate \u2014 the 1218 radio side is never touched or transmitted to"
+  "desc": "a roadside unit's network nameplate — the 1218 radio side is never touched or transmitted to"
  },
  {
   "section": "pentest bench",
   "cmd": "spatprobe <url>",
   "verb": "spatprobe",
-  "desc": "a published SPaT feed read as published \u2014 intersections and phase states from the agency's own snapshot"
+  "desc": "a published SPaT feed read as published — intersections and phase states from the agency's own snapshot"
  },
  {
   "section": "pentest bench",
   "cmd": "flockcensus <place>",
   "verb": "flockcensus",
-  "desc": "the ALPR census from the public map (OpenStreetMap/DeFlock) \u2014 the map only; no camera, plate or hotlist is touched"
+  "desc": "the ALPR census from the public map (OpenStreetMap/DeFlock) — the map only; no camera, plate or hotlist is touched"
  },
  {
   "section": "pentest bench",
@@ -1407,199 +1413,199 @@
   "section": "pentest bench",
   "cmd": "onvifprobe <host>[:port]",
   "verb": "onvifprobe",
-  "desc": "an ONVIF camera's nameplate \u2014 maker, model, firmware, serial; the identification reads only"
+  "desc": "an ONVIF camera's nameplate — maker, model, firmware, serial; the identification reads only"
  },
  {
   "section": "pentest bench",
   "cmd": "camdeep <host>[:port]",
   "verb": "camdeep",
-  "desc": "the vendor nameplate doors \u2014 Axis VAPIX, Hikvision ISAPI, Dahua system info; unauthenticated disclosure graded"
+  "desc": "the vendor nameplate doors — Axis VAPIX, Hikvision ISAPI, Dahua system info; unauthenticated disclosure graded"
  },
  {
   "section": "pentest bench",
   "cmd": "ptzprobe <host>[:port]",
   "verb": "ptzprobe",
-  "desc": "an ONVIF PTZ node census \u2014 proves a steerable camera; a move command does not exist in this verb"
+  "desc": "an ONVIF PTZ node census — proves a steerable camera; a move command does not exist in this verb"
  },
  {
   "section": "pentest bench",
   "cmd": "ridprobe",
   "verb": "ridprobe",
-  "desc": "six seconds of listening for drone Remote ID (ASTM F3411) \u2014 IDs as broadcast; listen-only"
+  "desc": "six seconds of listening for drone Remote ID (ASTM F3411) — IDs as broadcast; listen-only"
  },
  {
   "section": "pentest bench",
   "cmd": "streetlightprobe <host>[:port]",
   "verb": "streetlightprobe",
-  "desc": "a streetlight gateway's web door \u2014 TALQ itself is authenticated and vendor-run, and the verb says so"
+  "desc": "a streetlight gateway's web door — TALQ itself is authenticated and vendor-run, and the verb says so"
  },
  {
   "section": "pentest bench",
   "cmd": "sirenprobe <host>",
   "verb": "sirenprobe",
-  "desc": "a warning siren controller's management doors and web nameplate \u2014 identification only; activation is never framed"
+  "desc": "a warning siren controller's management doors and web nameplate — identification only; activation is never framed"
  },
  {
   "section": "pentest bench",
   "cmd": "transitprobe <url>",
   "verb": "transitprobe",
-  "desc": "a published GTFS-realtime feed \u2014 the agency's vehicle census off the wire format"
+  "desc": "a published GTFS-realtime feed — the agency's vehicle census off the wire format"
  },
  {
   "section": "pentest bench",
   "cmd": "gaugeprobe <place>",
   "verb": "gaugeprobe",
-  "desc": "USGS stream and flood gauges around a place \u2014 the public water ledger, latest levels as published"
+  "desc": "USGS stream and flood gauges around a place — the public water ledger, latest levels as published"
  },
  {
   "section": "pentest bench",
   "cmd": "airprobe <place>",
   "verb": "airprobe",
-  "desc": "OpenAQ air stations around a place \u2014 the ledger now demands a key, and the verb reports exactly that"
+  "desc": "OpenAQ air stations around a place — the ledger now demands a key, and the verb reports exactly that"
  },
  {
   "section": "pentest bench",
   "cmd": "gbfsprobe <url>",
   "verb": "gbfsprobe",
-  "desc": "a bike-share system's published GBFS feeds \u2014 stations, bikes and docks as published"
+  "desc": "a bike-share system's published GBFS feeds — stations, bikes and docks as published"
  },
  {
   "section": "pentest bench",
   "cmd": "towerprobe <place>",
   "verb": "towerprobe",
-  "desc": "masts and towers around a place from the public map \u2014 the FCC registry named, the map read"
+  "desc": "masts and towers around a place from the public map — the FCC registry named, the map read"
  },
  {
   "section": "pentest bench",
   "cmd": "streetcensus [host]",
   "verb": "streetcensus",
-  "desc": "one light knock per street door at an address \u2014 and the limits (clouds, plates, RF) stated plainly"
+  "desc": "one light knock per street door at an address — and the limits (clouds, plates, RF) stated plainly"
  },
  {
   "section": "pentest bench",
   "cmd": "ssdpdeep",
   "verb": "ssdpdeep",
-  "desc": "the SSDP census, deepened \u2014 every device, its description document read whole, and the service ledger"
+  "desc": "the SSDP census, deepened — every device, its description document read whole, and the service ledger"
  },
  {
   "section": "pentest bench",
   "cmd": "mdnsdeep",
   "verb": "mdnsdeep",
-  "desc": "the DNS-SD enumeration census \u2014 every service type the wire announces, its instances and their papers"
+  "desc": "the DNS-SD enumeration census — every service type the wire announces, its instances and their papers"
  },
  {
   "section": "pentest bench",
   "cmd": "dhcpprobe",
   "verb": "dhcpprobe",
-  "desc": "one DHCP DISCOVER, read-only \u2014 who offers addresses here, and whether more than one authority answers"
+  "desc": "one DHCP DISCOVER, read-only — who offers addresses here, and whether more than one authority answers"
  },
  {
   "section": "pentest bench",
   "cmd": "wsdprobe",
   "verb": "wsdprobe",
-  "desc": "the WS-Discovery Probe census \u2014 the cameras and printers that introduce themselves"
+  "desc": "the WS-Discovery Probe census — the cameras and printers that introduce themselves"
  },
  {
   "section": "pentest bench",
   "cmd": "ntpprobe [server]",
   "verb": "ntpprobe",
-  "desc": "the time plane read \u2014 stratum, offset and root doubt for a server and your router"
+  "desc": "the time plane read — stratum, offset and root doubt for a server and your router"
  },
  {
   "section": "pentest bench",
   "cmd": "smallsvc <host>",
   "verb": "smallsvc",
-  "desc": "the retired small services of 1983 \u2014 echo, discard, daytime, qotd, chargen; a chargen that answers is a finding"
+  "desc": "the retired small services of 1983 — echo, discard, daytime, qotd, chargen; a chargen that answers is a finding"
  },
  {
   "section": "pentest bench",
   "cmd": "v6probe",
   "verb": "v6probe",
-  "desc": "the house's IPv6 posture \u2014 this console's own addresses and the resolver's two-stack answers"
+  "desc": "the house's IPv6 posture — this console's own addresses and the resolver's two-stack answers"
  },
  {
   "section": "pentest bench",
   "cmd": "bgprobe <AS|prefix>",
   "verb": "bgprobe",
-  "desc": "the BGP ledger \u2014 who originates a prefix, and the paths the collectors see"
+  "desc": "the BGP ledger — who originates a prefix, and the paths the collectors see"
  },
  {
   "section": "pentest bench",
   "cmd": "ripeprobe <host|AS>",
   "verb": "ripeprobe",
-  "desc": "RIPEstat's papers \u2014 the containing prefix, its holder and its blocklist posture"
+  "desc": "RIPEstat's papers — the containing prefix, its holder and its blocklist posture"
  },
  {
   "section": "pentest bench",
   "cmd": "torprobe <host>",
   "verb": "torprobe",
-  "desc": "Onionoo's ledger \u2014 whether an address is a published Tor relay, and its exit policy as published"
+  "desc": "Onionoo's ledger — whether an address is a published Tor relay, and its exit policy as published"
  },
  {
   "section": "pentest bench",
   "cmd": "rblprobe <host>",
   "verb": "rblprobe",
-  "desc": "the DNS blocklist census \u2014 five public ledgers, per-list verdicts, sanity-checked"
+  "desc": "the DNS blocklist census — five public ledgers, per-list verdicts, sanity-checked"
  },
  {
   "section": "pentest bench",
   "cmd": "geoprobe <host>",
   "verb": "geoprobe",
-  "desc": "geolocation by consensus \u2014 the keyless ledgers compared, agreement graded, inference labelled"
+  "desc": "geolocation by consensus — the keyless ledgers compared, agreement graded, inference labelled"
  },
  {
   "section": "pentest bench",
   "cmd": "cveprobe <product|CVE>",
   "verb": "cveprobe",
-  "desc": "NVD's ledger \u2014 a product's published CVE census by severity, or one CVE read whole"
+  "desc": "NVD's ledger — a product's published CVE census by severity, or one CVE read whole"
  },
  {
   "section": "pentest bench",
   "cmd": "kevprobe <CVE|product>",
   "verb": "kevprobe",
-  "desc": "CISA's KEV catalog \u2014 confirmed exploited in the wild; presence outranks any score"
+  "desc": "CISA's KEV catalog — confirmed exploited in the wild; presence outranks any score"
  },
  {
   "section": "pentest bench",
   "cmd": "ghprobe <user|org>",
   "verb": "ghprobe",
-  "desc": "a GitHub account's published footprint \u2014 repos, languages and stars, as the account itself published them"
+  "desc": "a GitHub account's published footprint — repos, languages and stars, as the account itself published them"
  },
  {
   "section": "pentest bench",
   "cmd": "gleifprobe <name|LEI>",
   "verb": "gleifprobe",
-  "desc": "the GLEIF legal-entity ledger \u2014 who a company is, legally, and its LEI"
+  "desc": "the GLEIF legal-entity ledger — who a company is, legally, and its LEI"
  },
  {
   "section": "pentest bench",
   "cmd": "urlscanprobe <domain|IP>",
   "verb": "urlscanprobe",
-  "desc": "urlscan's published scans touching a name \u2014 verdicts included, as its engines judged them"
+  "desc": "urlscan's published scans touching a name — verdicts included, as its engines judged them"
  },
  {
   "section": "pentest bench",
   "cmd": "passivedns <domain>",
   "verb": "passivedns",
-  "desc": "the names a domain has worn \u2014 the keyless passive-DNS ledgers, limits stated"
+  "desc": "the names a domain has worn — the keyless passive-DNS ledgers, limits stated"
  },
  {
   "section": "pentest bench",
   "cmd": "macprobe <mac>",
   "verb": "macprobe",
-  "desc": "the maker in a MAC address \u2014 the house OUI table and the address's own bits"
+  "desc": "the maker in a MAC address — the house OUI table and the address's own bits"
  },
  {
   "section": "pentest bench",
   "cmd": "wirecensus [host]",
   "verb": "wirecensus",
-  "desc": "the board \u2014 SSDP, mDNS, WS-Discovery, DHCP and one host's NetBIOS papers in one pass, limits stated"
+  "desc": "the board — SSDP, mDNS, WS-Discovery, DHCP and one host's NetBIOS papers in one pass, limits stated"
  },
  {
   "section": "pentest bench",
   "cmd": "keyprobe <file|string>",
   "verb": "keyprobe",
-  "desc": "what key is this \u2014 family, size, strength and its fingerprints; private keys are named, never decoded"
+  "desc": "what key is this — family, size, strength and its fingerprints; private keys are named, never decoded"
  },
  {
   "section": "pentest bench",
@@ -1611,31 +1617,31 @@
   "section": "pentest bench",
   "cmd": "entropyprobe <file>",
   "verb": "entropyprobe",
-  "desc": "the shape of a blob's bytes \u2014 entropy, chi-square, min-entropy and a runs pass, limits stated"
+  "desc": "the shape of a blob's bytes — entropy, chi-square, min-entropy and a runs pass, limits stated"
  },
  {
   "section": "pentest bench",
   "cmd": "b64deep <string>",
   "verb": "b64deep",
-  "desc": "peel an encoded onion \u2014 base64, base64url, base32, hex and base58, layer by labelled layer"
+  "desc": "peel an encoded onion — base64, base64url, base32, hex and base58, layer by labelled layer"
  },
  {
   "section": "pentest bench",
   "cmd": "x509probe <file>",
   "verb": "x509probe",
-  "desc": "a certificate or bundle read from paper \u2014 names, validity, key and usages, graded"
+  "desc": "a certificate or bundle read from paper — names, validity, key and usages, graded"
  },
  {
   "section": "pentest bench",
   "cmd": "pgpprobe <file>",
   "verb": "pgpprobe",
-  "desc": "walk an OpenPGP file packet by packet \u2014 keys, fingerprints, user IDs, signatures"
+  "desc": "walk an OpenPGP file packet by packet — keys, fingerprints, user IDs, signatures"
  },
  {
   "section": "pentest bench",
   "cmd": "sshkeydeep <host|file>",
   "verb": "sshkeydeep",
-  "desc": "a host's offered algorithms and presented SSH key, or every key in a file \u2014 read, never pinned"
+  "desc": "a host's offered algorithms and presented SSH key, or every key in a file — read, never pinned"
  },
  {
   "section": "pentest bench",
@@ -1647,91 +1653,91 @@
   "section": "pentest bench",
   "cmd": "cipherprobe <code|name>",
   "verb": "cipherprobe",
-  "desc": "a cipher suite from its IANA code or either common name \u2014 components and posture"
+  "desc": "a cipher suite from its IANA code or either common name — components and posture"
  },
  {
   "section": "pentest bench",
   "cmd": "randprobe [file] [bytes]",
   "verb": "randprobe",
-  "desc": "would-be random bytes under the yardstick \u2014 entropy, chi-square and a runs pass"
+  "desc": "would-be random bytes under the yardstick — entropy, chi-square and a runs pass"
  },
  {
   "section": "pentest bench",
   "cmd": "kdfprobe <alg> <word> <salt> <iters>",
   "verb": "kdfprobe",
-  "desc": "derive a key with PBKDF2 where you can watch it \u2014 the word is used in place and never printed"
+  "desc": "derive a key with PBKDF2 where you can watch it — the word is used in place and never printed"
  },
  {
   "section": "pentest bench",
-  "cmd": "aesprobe mode=\u2026 key=\u2026 data=\u2026",
+  "cmd": "aesprobe mode=… key=… data=…",
   "verb": "aesprobe",
-  "desc": "raw AES by hand \u2014 ECB, CBC and CTR with your own key and IV; no MAC rides with it"
+  "desc": "raw AES by hand — ECB, CBC and CTR with your own key and IV; no MAC rides with it"
  },
  {
   "section": "pentest bench",
   "cmd": "xorprobe <file> [keylen=n]",
   "verb": "xorprobe",
-  "desc": "repeating-key XOR read statistically \u2014 key length by coincidence, key bytes by letter shape; an estimate"
+  "desc": "repeating-key XOR read statistically — key length by coincidence, key bytes by letter shape; an estimate"
  },
  {
   "section": "pentest bench",
   "cmd": "rsaprobe <key|hex> [second]",
   "verb": "rsaprobe",
-  "desc": "an RSA modulus's cheap shapes \u2014 small factors, Fermat-close factors, a factor shared with a second modulus"
+  "desc": "an RSA modulus's cheap shapes — small factors, Fermat-close factors, a factor shared with a second modulus"
  },
  {
   "section": "pentest bench",
   "cmd": "eccprobe <file|point>",
   "verb": "eccprobe",
-  "desc": "an EC point proven on its curve, exactly \u2014 compressed points expanded by the root"
+  "desc": "an EC point proven on its curve, exactly — compressed points expanded by the root"
  },
  {
   "section": "pentest bench",
   "cmd": "enccensus <file>",
   "verb": "enccensus",
-  "desc": "whose papers are these \u2014 NJCF, OpenSSL-salted, age, LUKS, OpenPGP, ZIP and the archive magics"
+  "desc": "whose papers are these — NJCF, OpenSSL-salted, age, LUKS, OpenPGP, ZIP and the archive magics"
  },
  {
   "section": "pentest bench",
   "cmd": "sigprobe <key> <msg> <sig>",
   "verb": "sigprobe",
-  "desc": "verify a signature over a file \u2014 exactly VALID or NOT VALID"
+  "desc": "verify a signature over a file — exactly VALID or NOT VALID"
  },
  {
   "section": "pentest bench",
   "cmd": "totpprobe <seed>",
   "verb": "totpprobe",
-  "desc": "the current time-based code for your own seed, with its neighbours \u2014 the seed is never printed"
+  "desc": "the current time-based code for your own seed, with its neighbours — the seed is never printed"
  },
  {
   "section": "pentest bench",
   "cmd": "passprobe <word>",
   "verb": "passprobe",
-  "desc": "a passphrase graded on shape alone \u2014 classes, a charset estimate, the common lists; the word is never printed"
+  "desc": "a passphrase graded on shape alone — classes, a charset estimate, the common lists; the word is never printed"
  },
  {
   "section": "pentest bench",
   "cmd": "lockcensus <host>",
   "verb": "lockcensus",
-  "desc": "one host's locks on one board \u2014 TLS, the papers, and the SSH key with its pin state"
+  "desc": "one host's locks on one board — TLS, the papers, and the SSH key with its pin state"
  },
  {
   "section": "pentest bench",
   "cmd": "shieldcensus <host>",
   "verb": "shieldcensus",
-  "desc": "one host, the whole shield board \u2014 doors, the versions it presents, SSH and SMB grades, its papers, its clock, and the federal ledger"
+  "desc": "one host, the whole shield board — doors, the versions it presents, SSH and SMB grades, its papers, its clock, and the federal ledger"
  },
  {
   "section": "pentest bench",
   "cmd": "mgmtprobe <host>",
   "verb": "mgmtprobe",
-  "desc": "the management plane door by door \u2014 shells, panels, VNC, RDP, AMT, and the r-services"
+  "desc": "the management plane door by door — shells, panels, VNC, RDP, AMT, and the r-services"
  },
  {
   "section": "pentest bench",
   "cmd": "anonprobe <host>",
   "verb": "anonprobe",
-  "desc": "the four anonymous knocks, exactly once each \u2014 SNMP 'public', FTP anonymous, an unnamed MQTT guest, an LDAP bind with no name"
+  "desc": "the four anonymous knocks, exactly once each — SNMP 'public', FTP anonymous, an unnamed MQTT guest, an LDAP bind with no name"
  },
  {
   "section": "pentest bench",
@@ -1755,19 +1761,19 @@
   "section": "pentest bench",
   "cmd": "snmposture <host>",
   "verb": "snmposture",
-  "desc": "the NSA's six mitigations read as the owner of the gear \u2014 the house audit, owned, plus what the agent volunteers"
+  "desc": "the NSA's six mitigations read as the owner of the gear — the house audit, owned, plus what the agent volunteers"
  },
  {
   "section": "pentest bench",
   "cmd": "backupprobe <host>",
   "verb": "backupprobe",
-  "desc": "the doors your backups ride \u2014 AFP, SMB, rsync's module list, the Time Capsule's own door"
+  "desc": "the doors your backups ride — AFP, SMB, rsync's module list, the Time Capsule's own door"
  },
  {
   "section": "pentest bench",
   "cmd": "upnpgrade [gateway]",
   "verb": "upnpgrade",
-  "desc": "your gateway's UPnP forwarding ledger \u2014 every standing port mapping, read as its owner"
+  "desc": "your gateway's UPnP forwarding ledger — every standing port mapping, read as its owner"
  },
  {
   "section": "pentest bench",
@@ -1779,19 +1785,19 @@
   "section": "pentest bench",
   "cmd": "mailposture <domain>",
   "verb": "mailposture",
-  "desc": "a domain's mail defences rung by rung \u2014 SPF, DMARC, MTA-STS \u2014 graded at their weakest"
+  "desc": "a domain's mail defences rung by rung — SPF, DMARC, MTA-STS — graded at their weakest"
  },
  {
   "section": "pentest bench",
   "cmd": "patchprobe <host>",
   "verb": "patchprobe",
-  "desc": "the versions a host presents, against the bench's bounded end-of-life table \u2014 a claim graded, never a bill of health"
+  "desc": "the versions a host presents, against the bench's bounded end-of-life table — a claim graded, never a bill of health"
  },
  {
   "section": "pentest bench",
   "cmd": "kevcheck <host>",
   "verb": "kevcheck",
-  "desc": "the products a host presents, against the CISA KEV ledger \u2014 confirmed exploitation, not scores"
+  "desc": "the products a host presents, against the CISA KEV ledger — confirmed exploitation, not scores"
  },
  {
   "section": "pentest bench",
@@ -1803,13 +1809,13 @@
   "section": "pentest bench",
   "cmd": "guestprobe [gateway]",
   "verb": "guestprobe",
-  "desc": "the house as a guest meets it \u2014 the gateway's doors, its resolver, its announcers; inference, labelled"
+  "desc": "the house as a guest meets it — the gateway's doors, its resolver, its announcers; inference, labelled"
  },
  {
   "section": "pentest bench",
   "cmd": "timeprobe <host>",
   "verb": "timeprobe",
-  "desc": "a clock graded against true time \u2014 offset, stratum, and what the drift would cost"
+  "desc": "a clock graded against true time — offset, stratum, and what the drift would cost"
  },
  {
   "section": "pentest bench",
@@ -1833,7 +1839,7 @@
   "section": "pentest bench",
   "cmd": "dirposture <host[:port]>",
   "verb": "dirposture",
-  "desc": "open directory listings, followed only where the page itself holds the door open \u2014 nothing guessed"
+  "desc": "open directory listings, followed only where the page itself holds the door open — nothing guessed"
  },
  {
   "section": "pentest bench",
@@ -1851,7 +1857,7 @@
   "section": "pentest bench",
   "cmd": "nasposture <host>",
   "verb": "nasposture",
-  "desc": "a file box's whole face on one board \u2014 shares, NFS, AFP, WebDAV, and its consoles"
+  "desc": "a file box's whole face on one board — shares, NFS, AFP, WebDAV, and its consoles"
  },
  {
   "section": "pentest bench",
@@ -1863,199 +1869,199 @@
   "section": "pentest bench",
   "cmd": "watchprobe [save] <host>",
   "verb": "watchprobe",
-  "desc": "the shield board against the last baseline on file \u2014 what changed on your wire while you weren't looking"
+  "desc": "the shield board against the last baseline on file — what changed on your wire while you weren't looking"
  },
  {
   "section": "pentest bench",
   "cmd": "filecensus <file>",
   "verb": "filecensus",
-  "desc": "the identity board for a file you have never seen \u2014 what its bytes say, what its name claims, its digests and texture"
+  "desc": "the identity board for a file you have never seen — what its bytes say, what its name claims, its digests and texture"
  },
  {
   "section": "pentest bench",
   "cmd": "magicprobe <file>",
   "verb": "magicprobe",
-  "desc": "sixteen bytes and a verdict \u2014 what the head of the file says, and whether its name agrees"
+  "desc": "sixteen bytes and a verdict — what the head of the file says, and whether its name agrees"
  },
  {
   "section": "pentest bench",
   "cmd": "stringsdeep <file>",
   "verb": "stringsdeep",
-  "desc": "the strings census \u2014 runs counted and sampled, URL- and domain-shaped strings printed as strings"
+  "desc": "the strings census — runs counted and sampled, URL- and domain-shaped strings printed as strings"
  },
  {
   "section": "pentest bench",
   "cmd": "exifprobe <file>",
   "verb": "exifprobe",
-  "desc": "the papers a picture carries \u2014 camera, software, timestamps, and a GPS claim if it makes one"
+  "desc": "the papers a picture carries — camera, software, timestamps, and a GPS claim if it makes one"
  },
  {
   "section": "pentest bench",
   "cmd": "pdfprobe <file>",
   "verb": "pdfprobe",
-  "desc": "a document read as claims \u2014 objects, pages counted against the page tree's claim, scripts and carried files"
+  "desc": "a document read as claims — objects, pages counted against the page tree's claim, scripts and carried files"
  },
  {
   "section": "pentest bench",
   "cmd": "zipprobe <file>",
   "verb": "zipprobe",
-  "desc": "the archive ledger \u2014 entries, methods, seals and path escapes; listing only, never unpacked"
+  "desc": "the archive ledger — entries, methods, seals and path escapes; listing only, never unpacked"
  },
  {
   "section": "pentest bench",
   "cmd": "machoprobe <file>",
   "verb": "machoprobe",
-  "desc": "a Mach-O read \u2014 slices, libraries claimed, encryption papers, runpaths, build version"
+  "desc": "a Mach-O read — slices, libraries claimed, encryption papers, runpaths, build version"
  },
  {
   "section": "pentest bench",
   "cmd": "elfprobe <file>",
   "verb": "elfprobe",
-  "desc": "an ELF read \u2014 PIE, interpreter, stack and RELRO posture, the needed ledger"
+  "desc": "an ELF read — PIE, interpreter, stack and RELRO posture, the needed ledger"
  },
  {
   "section": "pentest bench",
   "cmd": "peprobe <file>",
   "verb": "peprobe",
-  "desc": "the Windows papers \u2014 hardening flags graded, sections, imports, bytes past the last section"
+  "desc": "the Windows papers — hardening flags graded, sections, imports, bytes past the last section"
  },
  {
   "section": "pentest bench",
   "cmd": "imgdeep <file>",
   "verb": "imgdeep",
-  "desc": "the image censuses \u2014 JPEG markers, PNG chunks and CRCs, GIF frames, the WebP ledger, bytes past the end"
+  "desc": "the image censuses — JPEG markers, PNG chunks and CRCs, GIF frames, the WebP ledger, bytes past the end"
  },
  {
   "section": "pentest bench",
   "cmd": "audiofile <file>",
   "verb": "audiofile",
-  "desc": "the songs' papers \u2014 WAV chunks, FLAC blocks, the MP3 tag and frame walk, Ogg tenants"
+  "desc": "the songs' papers — WAV chunks, FLAC blocks, the MP3 tag and frame walk, Ogg tenants"
  },
  {
   "section": "pentest bench",
   "cmd": "sqliteprobe <file>",
   "verb": "sqliteprobe",
-  "desc": "a database's ledger \u2014 pages, the freelist, schema objects; rows never dumped"
+  "desc": "a database's ledger — pages, the freelist, schema objects; rows never dumped"
  },
  {
   "section": "pentest bench",
   "cmd": "plistprobe <file>",
   "verb": "plistprobe",
-  "desc": "plists, entitlements and provisioning profiles \u2014 powers asked for, printed as asks"
+  "desc": "plists, entitlements and provisioning profiles — powers asked for, printed as asks"
  },
  {
   "section": "pentest bench",
   "cmd": "scriptprobe <file>",
   "verb": "scriptprobe",
-  "desc": "a script read as text and never run \u2014 dialect by shape, its strings, its reach-out call names counted"
+  "desc": "a script read as text and never run — dialect by shape, its strings, its reach-out call names counted"
  },
  {
   "section": "pentest bench",
   "cmd": "logprobe <file>",
   "verb": "logprobe",
-  "desc": "a log read as testimony \u2014 shape guess, the span the lines claim, error and status tallies"
+  "desc": "a log read as testimony — shape guess, the span the lines claim, error and status tallies"
  },
  {
   "section": "pentest bench",
   "cmd": "dataprobe <file>",
   "verb": "dataprobe",
-  "desc": "the shape of data \u2014 JSON key and kind censuses, delimited columns inferred; values not dumped"
+  "desc": "the shape of data — JSON key and kind censuses, delimited columns inferred; values not dumped"
  },
  {
   "section": "pentest bench",
   "cmd": "fontprobe <file>",
   "verb": "fontprobe",
-  "desc": "a font's papers \u2014 the table directory, the name it claims, glyph and em counts"
+  "desc": "a font's papers — the table directory, the name it claims, glyph and em counts"
  },
  {
   "section": "pentest bench",
   "cmd": "certfile <file>",
   "verb": "certfile",
-  "desc": "a bundle's ledger \u2014 every PEM block in the file's own order, the chain graded; deep reads stay with x509probe"
+  "desc": "a bundle's ledger — every PEM block in the file's own order, the chain graded; deep reads stay with x509probe"
  },
  {
   "section": "pentest bench",
   "cmd": "dupprobe <dir>",
   "verb": "dupprobe",
-  "desc": "a directory's duplicates by size and then SHA-256 \u2014 bytes paid for twice, priced"
+  "desc": "a directory's duplicates by size and then SHA-256 — bytes paid for twice, priced"
  },
  {
   "section": "pentest bench",
   "cmd": "fileboard <dir>",
   "verb": "fileboard",
-  "desc": "a directory read at once \u2014 kinds, totals, the largest tenants, and every mismatch in the room"
+  "desc": "a directory read at once — kinds, totals, the largest tenants, and every mismatch in the room"
  },
  {
   "section": "pentest bench",
   "cmd": "megatron [host]",
   "verb": "megatron",
-  "desc": "the robotics and machinery program \u2014 every Optimus has one: with a host, the whole battery on that unit (doors, fingerprint, papers, ROS posture, the puppet grade); bare, it hunts this wire for machine-shaped presence and boards every unit it claims; every board is filed"
+  "desc": "the robotics and machinery program — every Optimus has one: with a host, the whole battery on that unit (doors, fingerprint, papers, ROS posture, the puppet grade); bare, it hunts this wire for machine-shaped presence and boards every unit it claims; every board is filed"
  },
  {
   "section": "pentest bench",
   "cmd": "primeprobe <host>",
   "verb": "primeprobe",
-  "desc": "the Optimus-deep fingerprint read \u2014 every identity signal the wire offers, printed as graded claims with their evidence, never as proven names"
+  "desc": "the Optimus-deep fingerprint read — every identity signal the wire offers, printed as graded claims with their evidence, never as proven names"
  },
  {
   "section": "pentest bench",
   "cmd": "primecensus [prefix]",
   "verb": "primecensus",
-  "desc": "the hunt \u2014 a wire census graded for machine-shaped presence across every family; Musk-fleet claims are flagged as flagship prey"
+  "desc": "the hunt — a wire census graded for machine-shaped presence across every family; Musk-fleet claims are flagged as flagship prey"
  },
  {
   "section": "pentest bench",
   "cmd": "rosprobe <host>",
   "verb": "rosprobe",
-  "desc": "the ROS posture read \u2014 the master's registry by query, rosbridge's own census, and five seconds of the DDS discovery air; queries only, never a publish, never an invocation"
+  "desc": "the ROS posture read — the master's registry by query, rosbridge's own census, and five seconds of the DDS discovery air; queries only, never a publish, never an invocation"
  },
  {
   "section": "pentest bench",
   "cmd": "fleetprobe <host>",
   "verb": "fleetprobe",
-  "desc": "the fleet-link read \u2014 the TLS papers a unit presents on its doors, who it trusts, graded"
+  "desc": "the fleet-link read — the TLS papers a unit presents on its doors, who it trusts, graded"
  },
  {
   "section": "pentest bench",
   "cmd": "botdoors <host>",
   "verb": "botdoors",
-  "desc": "the doors census weighted to robots and machines \u2014 each answered door nameplated and graded"
+  "desc": "the doors census weighted to robots and machines — each answered door nameplated and graded"
  },
  {
   "section": "pentest bench",
   "cmd": "botble",
   "verb": "botble",
-  "desc": "eight seconds of the Bluetooth air graded for robot-shaped advertisers \u2014 continuity and tracker noise separated from the claims"
+  "desc": "eight seconds of the Bluetooth air graded for robot-shaped advertisers — continuity and tracker noise separated from the claims"
  },
  {
   "section": "pentest bench",
   "cmd": "puppetprobe <host>",
   "verb": "puppetprobe",
-  "desc": "could this unit plausibly be puppeteered by a stranger? \u2014 the control roads graded from read evidence only, the whole chain spelled out; the final step is never taken"
+  "desc": "could this unit plausibly be puppeteered by a stranger? — the control roads graded from read evidence only, the whole chain spelled out; the final step is never taken"
  },
  {
   "section": "pentest bench",
   "cmd": "cyberprobe <host>",
   "verb": "cyberprobe",
-  "desc": "the vehicle read \u2014 Cybertruck first, then the fleet: fingerprint claims, presented doors, fleet papers, and the remote-control plausibility section graded from claims"
+  "desc": "the vehicle read — Cybertruck first, then the fleet: fingerprint claims, presented doors, fleet papers, and the remote-control plausibility section graded from claims"
  },
  {
   "section": "pentest bench",
   "cmd": "boreprobe <host>",
   "verb": "boreprobe",
-  "desc": "the Boring Company read \u2014 the tunnel boring machines and tunnel plant, by the ICS bench: identification and posture only, no writes, no control function codes, ever"
+  "desc": "the Boring Company read — the tunnel boring machines and tunnel plant, by the ICS bench: identification and posture only, no writes, no control function codes, ever"
  },
  {
   "section": "pentest bench",
   "cmd": "voltprobe <host>",
   "verb": "voltprobe",
-  "desc": "the energy read \u2014 Powerwall and Megapack gateways, Supercharger cabinets: doors, nameplates, papers; never a setting, never a charge command"
+  "desc": "the energy read — Powerwall and Megapack gateways, Supercharger cabinets: doors, nameplates, papers; never a setting, never a charge command"
  },
  {
   "section": "pentest bench",
   "cmd": "botprobe <host>",
   "verb": "botprobe",
-  "desc": "the universal machine read \u2014 any robot or machine's identity claims, control-bearing doors and papers, graded; the plant nameplates ride the ICS bench"
+  "desc": "the universal machine read — any robot or machine's identity claims, control-bearing doors and papers, graded; the plant nameplates ride the ICS bench"
  },
  {
   "section": "pentest bench",
@@ -2076,157 +2082,157 @@
   "desc": "wake a sleeping machine"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "pwd \u00b7 cd <dir>",
+  "section": "files — the console's own tree",
+  "cmd": "pwd · cd <dir>",
   "verb": "pwd",
-  "desc": "where you stand \u00b7 move"
+  "desc": "where you stand · move"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "ls [-l] [path]",
   "verb": "ls",
   "desc": "list a directory"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "tree [path]",
   "verb": "tree",
   "desc": "the whole branch, drawn"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "cat <file>",
   "verb": "cat",
   "desc": "read a file (or a pipe)"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "echo [-n] <words>",
   "verb": "echo",
   "desc": "say it back"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "mkdir \u00b7 touch <name>",
+  "section": "files — the console's own tree",
+  "cmd": "mkdir · touch <name>",
   "verb": "mkdir",
-  "desc": "make a directory \u00b7 a file"
+  "desc": "make a directory · a file"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "cp \u00b7 mv <a> <b>",
+  "section": "files — the console's own tree",
+  "cmd": "cp · mv <a> <b>",
   "verb": "cp",
-  "desc": "copy \u00b7 move"
+  "desc": "copy · move"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "rm [-r] <path>",
   "verb": "rm",
   "desc": "remove"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "head \u00b7 tail [-n N]",
+  "section": "files — the console's own tree",
+  "cmd": "head · tail [-n N]",
   "verb": "head",
-  "desc": "the first \u00b7 last lines"
+  "desc": "the first · last lines"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "wc [file]",
   "verb": "wc",
   "desc": "lines, words, chars"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "grep [-i] <pat> [file]",
   "verb": "grep",
   "desc": "lines that match"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "find [path] [-name x]",
   "verb": "find",
   "desc": "every file below"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "stat <path>",
   "verb": "stat",
   "desc": "what a thing is"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "sort [-rnuf] \u00b7 uniq [-cdu]",
+  "section": "files — the console's own tree",
+  "cmd": "sort [-rnuf] · uniq [-cdu]",
   "verb": "sort",
-  "desc": "order the lines \u00b7 drop repeated neighbours"
+  "desc": "order the lines · drop repeated neighbours"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "cut -d X -f 1,3 \u00b7 tr A-Z a-z",
+  "section": "files — the console's own tree",
+  "cmd": "cut -d X -f 1,3 · tr A-Z a-z",
   "verb": "cut",
-  "desc": "take fields apart \u00b7 translate letters"
+  "desc": "take fields apart · translate letters"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "sed [-n] [-i] 's/a/b/g'",
   "verb": "sed",
-  "desc": "the stream editor \u2014 addresses, d, p, the honest subset"
+  "desc": "the stream editor — addresses, d, p, the honest subset"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "rev \u00b7 tac \u00b7 nl",
+  "section": "files — the console's own tree",
+  "cmd": "rev · tac · nl",
   "verb": "rev",
-  "desc": "letters backwards \u00b7 lines backwards \u00b7 lines numbered"
+  "desc": "letters backwards · lines backwards · lines numbered"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "diff <a> <b>",
   "verb": "diff",
   "desc": "what changed, hunk by hunk"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "tee [-a] <file>",
   "verb": "tee",
   "desc": "the stream, copied to a file as it passes"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "xargs [-n N] [-I {}] <cmd>",
   "verb": "xargs",
   "desc": "run a command on what arrives"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "file \u00b7 strings \u00b7 du [-h]",
+  "section": "files — the console's own tree",
+  "cmd": "file · strings · du [-h]",
   "verb": "file",
-  "desc": "what a thing is \u00b7 its readable runs \u00b7 its weight"
+  "desc": "what a thing is · its readable runs · its weight"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "xxd \u00b7 base64 \u00b7 md5sum \u00b7 sha256sum",
+  "section": "files — the console's own tree",
+  "cmd": "xxd · base64 · md5sum · sha256sum",
   "verb": "xxd",
-  "desc": "look at the bytes \u00b7 carry them safely \u00b7 their sums"
+  "desc": "look at the bytes · carry them safely · their sums"
  },
  {
-  "section": "files \u2014 the console's own tree",
-  "cmd": "printf <fmt> [args] \u00b7 seq [a [s]] b \u00b7 yes",
+  "section": "files — the console's own tree",
+  "cmd": "printf <fmt> [args] · seq [a [s]] b · yes",
   "verb": "printf",
-  "desc": "say it precisely \u00b7 count \u00b7 say it forever (a thousand times)"
+  "desc": "say it precisely · count · say it forever (a thousand times)"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "cal [month [year]]",
   "verb": "cal",
   "desc": "the month, drawn"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "figlet [-f slim] <words>",
   "verb": "figlet",
-  "desc": "big letters \u2014 banner is the wire tool of the same name"
+  "desc": "big letters — banner is the wire tool of the same name"
  },
  {
-  "section": "files \u2014 the console's own tree",
+  "section": "files — the console's own tree",
   "cmd": "sleep <n>",
   "verb": "sleep",
   "desc": "the room waits (300 seconds at most)"
@@ -2235,19 +2241,19 @@
   "section": "editors",
   "cmd": "vim [file]",
   "verb": "vim",
-  "desc": "the modal church \u2014 :help inside"
+  "desc": "the modal church — :help inside"
  },
  {
   "section": "editors",
   "cmd": "emacs [file]",
   "verb": "emacs",
-  "desc": "the chord church \u2014 M-x help inside"
+  "desc": "the chord church — M-x help inside"
  },
  {
   "section": "editors",
   "cmd": "nano [file]",
   "verb": "nano",
-  "desc": "the plain church \u2014 ^G lists its keys"
+  "desc": "the plain church — ^G lists its keys"
  },
  {
   "section": "editors",
@@ -2256,140 +2262,140 @@
   "desc": "whichever $EDITOR names"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "js <code>",
   "verb": "js",
   "desc": "JavaScript, compiled + run (node works too)"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "linuxbox <applet>",
   "verb": "linuxbox",
   "desc": "a real linux userspace in wasm: ls cat echo pwd wc head tail cp mv rm mkdir touch env uname grep sleep"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "run <file.wasm>",
   "verb": "run",
-  "desc": "compiled webassembly, run as a kernel process \u2014 its syscalls are mediated, its memory is its own"
+  "desc": "compiled webassembly, run as a kernel process — its syscalls are mediated, its memory is its own"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "run <file.js>",
   "verb": "run",
   "desc": "run a program from the files"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "run <file.sh> \u00b7 sh",
+  "section": "code — the engine room",
+  "cmd": "run <file.sh> · sh",
   "verb": "run",
   "desc": "run a shell script"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "python3 <file.py>",
   "verb": "python3",
-  "desc": "the house's small python \u2014 python3 alone lists its edges"
+  "desc": "the house's small python — python3 alone lists its edges"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "run <file.py>",
   "verb": "run",
   "desc": "run a python program"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "NAME=value \u00b7 export",
+  "section": "code — the engine room",
+  "cmd": "NAME=value · export",
   "verb": "NAME=value",
-  "desc": "shell variables \u2014 $NAME ${NAME} $?"
+  "desc": "shell variables — $NAME ${NAME} $?"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "a | b",
   "verb": "a",
   "desc": "pipe one command through another"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "cmd > file \u00b7 >>",
+  "section": "code — the engine room",
+  "cmd": "cmd > file · >>",
   "verb": "cmd",
-  "desc": "write \u00b7 append output to a file"
+  "desc": "write · append output to a file"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "$(cmd)",
   "verb": "$(cmd)",
   "desc": "run it, use what it said"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "a ; b \u00b7 a && b",
+  "section": "code — the engine room",
+  "cmd": "a ; b · a && b",
   "verb": "a",
-  "desc": "then \u00b7 then-if-it-worked"
+  "desc": "then · then-if-it-worked"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "cmd < file",
   "verb": "cmd",
   "desc": "a file becomes the input"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "cat <<EOF \u2026 EOF",
+  "section": "code — the engine room",
+  "cmd": "cat <<EOF … EOF",
   "verb": "cat",
-  "desc": "a here-doc \u2014 the lines between are the input; <<'EOF' keeps them literal"
+  "desc": "a here-doc — the lines between are the input; <<'EOF' keeps them literal"
  },
  {
-  "section": "code \u2014 the engine room",
+  "section": "code — the engine room",
   "cmd": "$((x + 1))",
   "verb": "$((x",
-  "desc": "arithmetic in place \u2014 names, the full operator ladder, ?: too"
+  "desc": "arithmetic in place — names, the full operator ladder, ?: too"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "name() { \u2026; }",
+  "section": "code — the engine room",
+  "cmd": "name() { …; }",
   "verb": "name()",
-  "desc": "a function \u2014 call it by name; $1\u2026$9, $#, $@ inside, local keeps its variables its own, return N leaves early"
+  "desc": "a function — call it by name; $1…$9, $#, $@ inside, local keeps its variables its own, return N leaves early"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "for x in a b *.txt; do \u2026; done",
+  "section": "code — the engine room",
+  "cmd": "for x in a b *.txt; do …; done",
   "verb": "for",
-  "desc": "the loop, spelled out \u2014 globs open here"
+  "desc": "the loop, spelled out — globs open here"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "while test \u2026; do \u2026; done",
+  "section": "code — the engine room",
+  "cmd": "while test …; do …; done",
   "verb": "while",
-  "desc": "until runs the other way \u2014 the condition is any command, judged by its status"
+  "desc": "until runs the other way — the condition is any command, judged by its status"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "if \u2026; then \u2026; elif \u2026; else \u2026; fi",
+  "section": "code — the engine room",
+  "cmd": "if …; then …; elif …; else …; fi",
   "verb": "if",
   "desc": "the fork in the road"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "case $x in a|b) \u2026;; *) \u2026;; esac",
+  "section": "code — the engine room",
+  "cmd": "case $x in a|b) …;; *) …;; esac",
   "verb": "case",
-  "desc": "pattern by pattern \u2014 * ? [set] speak glob"
+  "desc": "pattern by pattern — * ? [set] speak glob"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "test <expr> \u00b7 [ <expr> ]",
+  "section": "code — the engine room",
+  "cmd": "test <expr> · [ <expr> ]",
   "verb": "test",
   "desc": "the judge: -e -f -d -s -z -n, = !=, -eq -ne -lt -le -gt -ge, ! -a -o"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "require('./mod') \u2014 js",
+  "section": "code — the engine room",
+  "cmd": "require('./mod') — js",
   "verb": "require('./mod')",
-  "desc": "javascript modules from the files beside the script, or a package name from /packages \u2014 circular loads come back partial, like node's"
+  "desc": "javascript modules from the files beside the script, or a package name from /packages — circular loads come back partial, like node's"
  },
  {
-  "section": "code \u2014 the engine room",
-  "cmd": "setTimeout \u2014 js",
+  "section": "code — the engine room",
+  "cmd": "setTimeout — js",
   "verb": "setTimeout",
   "desc": "timers are the kernel's clock lent out: a run ends when its timers drain, its limit arrives, or the kernel speaks"
  },
@@ -2425,21 +2431,21 @@
  },
  {
   "section": "packages",
-  "cmd": "pkg install grok \u00b7 grok login \u00b7 grok <words>",
+  "cmd": "pkg install grok · grok login · grok <words>",
   "verb": "pkg",
-  "desc": "ask xAI's grok from here \u2014 the house's own client (not the Rust CLI): SuperGrok sign-in via X, then questions with file + shell tools"
+  "desc": "ask xAI's grok from here — the house's own client (not the Rust CLI): SuperGrok sign-in via X, then questions with file + shell tools"
  },
  {
   "section": "packages",
-  "cmd": "pkg install git \u00b7 git clone <url> \u00b7 git commit \u00b7 git push",
+  "cmd": "pkg install git · git clone <url> · git commit · git push",
   "verb": "pkg",
   "desc": "real git in the console (isomorphic-git over the house's files and wire): clone a repo here, edit it with the house editors, commit it, push it back"
  },
  {
   "section": "packages",
-  "cmd": "pkg install gh \u00b7 gh auth login <token> \u00b7 gh repo view",
+  "cmd": "pkg install gh · gh auth login <token> · gh repo view",
   "verb": "pkg",
-  "desc": "github from here \u2014 the house's own client over the REST api: sign-in, repos, issues, pull requests"
+  "desc": "github from here — the house's own client over the REST api: sign-in, repos, issues, pull requests"
  },
  {
   "section": "graphics",
@@ -2449,7 +2455,7 @@
  },
  {
   "section": "graphics",
-  "cmd": "gfx mandelbrot \u00b7 plasma \u00b7 stars",
+  "cmd": "gfx mandelbrot · plasma · stars",
   "verb": "gfx",
   "desc": "computed pictures, filed as PNG"
  },
@@ -2469,7 +2475,7 @@
   "section": "graphics",
   "cmd": "wallpaper [stars|plasma|mandelbrot]",
   "verb": "wallpaper",
-  "desc": "the room's own wallpaper \u2014 generated, changeable"
+  "desc": "the room's own wallpaper — generated, changeable"
  },
  {
   "section": "the room",
@@ -2481,13 +2487,13 @@
   "section": "the room",
   "cmd": "watch on|off|status",
   "verb": "watch",
-  "desc": "the standing passives \u2014 browse, MNDP ear, gateway heartbeat"
+  "desc": "the standing passives — browse, MNDP ear, gateway heartbeat"
  },
  {
   "section": "the room",
   "cmd": "sentinel",
   "verb": "sentinel",
-  "desc": "the Sentinel's alert ledger \u2014 what the signs judged"
+  "desc": "the Sentinel's alert ledger — what the signs judged"
  },
  {
   "section": "the room",
@@ -2511,7 +2517,7 @@
   "section": "the room",
   "cmd": "quarantine <ip> [via <gear>]",
   "verb": "quarantine",
-  "desc": "remove a device through your own credentialed gear \u2014 its port shut, read back"
+  "desc": "remove a device through your own credentialed gear — its port shut, read back"
  },
  {
   "section": "the room",
@@ -2535,13 +2541,13 @@
   "section": "the room",
   "cmd": "betafisch [file | tap]",
   "verb": "betafisch",
-  "desc": "betafisch \u2014 the packet dissector, its streams and statistics, and the house-wire tap"
+  "desc": "betafisch — the packet dissector, its streams and statistics, and the house-wire tap"
  },
  {
   "section": "the room",
   "cmd": "driftnet [file]",
   "verb": "driftnet",
-  "desc": "driftnet \u2014 the pictures in a capture, lifted off the wire and pinned to a wall"
+  "desc": "driftnet — the pictures in a capture, lifted off the wire and pinned to a wall"
  },
  {
   "section": "the room",

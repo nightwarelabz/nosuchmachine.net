@@ -168,6 +168,8 @@
 .bs-btnrow { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 /* ————— output ————— */
+.bs-copy-btn { display: inline-block; margin: 0 0 0.45rem; background: rgba(255,255,255,0.05); border: 1px solid var(--bs-line-soft); color: var(--bs-dim); border-radius: 999px; padding: 0.32rem 0.8rem; font: inherit; font-size: 0.72rem; cursor: pointer; min-height: 34px; }
+.bs-copy-btn:hover { color: #ffb02e; border-color: #ffb02e; }
 .bs-out {
   background: linear-gradient(180deg, #03050a, #04070c); border: 1px solid var(--bs-line-soft); border-radius: 10px;
   padding: 0.95rem; font-size: 0.79rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;

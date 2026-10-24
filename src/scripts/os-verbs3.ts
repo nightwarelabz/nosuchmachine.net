@@ -513,6 +513,11 @@ function registerEngines() {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "ssh", arg: ctx.args[0] } }));
     return "the SSH window opens on the desk — the fingerprint must be trusted there before any password moves, and the session's cryptography never leaves this tab.";
   });
+  verb("relay", "EDGE", "relay — open Relay, the house wire: a real IRC client in the room (Libera.Chat, OFTC, hackint; the house channel is #nosuchmachine)", async (ctx) => {
+    const refusal = ctx.os.gate("active"); if (refusal) return refusal;
+    document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "relay" } }));
+    return "Relay opens on the desk — pick a nick and step onto the wire. The house channel is #nosuchmachine on Libera.Chat.";
+  });
   verb("chip8", "LIVE", "chip8 [file.ch8] — open the CHIP-8 console (the demo ROM runs if you name none)", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "chip8", arg: ctx.args[0] || "" } }));
     return "the CHIP-8 console opens on the desk — 64×32, sixteen keys (your 1-4/Q-R/A-F/Z-V rows), four thousand bytes of 1977.";
@@ -631,7 +636,7 @@ function registerSelfTests() {
       ["path normalization", () => ctx.os.norm("/a/b/../c") === "/a/c"],
       ["mmh3('') is 0", () => mmh3(new Uint8Array(0)) === 0],
       ["subnet of the room", () => ctx.os.norm("..", "/home/operator") === "/home"],
-      ["426-command roster present", async () => { const { default: r } = await import("../data/blacksite-commands.json"); return (r as any[]).length === 426; }],
+      ["427-command roster present", async () => { const { default: r } = await import("../data/blacksite-commands.json"); return (r as any[]).length === 427; }],
       ["python engine answers", async () => { const Sk = await loadSkulpt(); return !!Sk; }],
       ["scheme engine evaluates", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runScheme("(define (fact n) (if (< n 2) 1 (* n (fact (- n 1))))) (display (fact 10))", { out: (t: string) => lines.push(t) }); return lines.join("") === "3628800"; }],
       ["brainfuck engine prints HI", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runBrainfuck("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.", "", { out: (t: string) => lines.push(t) }); return lines.join("").startsWith("Hello"); }],

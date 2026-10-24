@@ -1,0 +1,22 @@
+# nosuchmachine.net — BLACKSITE
+
+> nosuchmachine.net is a working penetration-testing bench and a web operating system, built by NIGHTWARE LABZ. It is a tool, not a brochure: everything on the site runs in the visitor's browser or at the site's guarded edge. Doctrine: one knock, read, grade. Public targets only — private, loopback, and reserved addresses are refused before contact.
+
+## The site
+
+- [BLACKSITE OS](https://nosuchmachine.net/): a windowed operating system in a browser tab — the nightjar Blacksite console ported to the web. Real shell, persistent virtual filesystem, 427 commands, eight programming engines (Python, JavaScript, Lua, SQLite, Scheme, Brainfuck, WebAssembly, CHIP-8), git and SSH clients, EMCON gating, themes and generated wallpapers.
+- [Bench suite](https://nosuchmachine.net/bench/): BLACKSITE WEB — DNS resolution across three resolvers, hand-rolled TLS inspection, HTTP security grading, TCP connect checks, RDAP/CT domain recon, email security grading (SPF/DMARC/DKIM/MTA-STS), subdomain census, a PQC migration scanner, JWT inspection and HS verification, an AES-GCM vault, a certificate decoder, codecs, subnet math, and a session report with JSON/Markdown export.
+- Relay: a real IRC client built into BLACKSITE OS (Libera.Chat, OFTC, hackint over TLS via the site's bridge). The community channel is #nosuchmachine on Libera.Chat.
+- [Orange Book](https://nosuchmachine.net/book/): the book of Orange, a programming language for specifying, implementing, and verifying cryptography — 24 chapters, free to read.
+- [Projects](https://nosuchmachine.net/projects/orange/): the NIGHTWARE LABZ catalog — nightjar (the native iOS/macOS network instrument this site ports), orange, snoot (a post-quantum crypto inventory scanner), Magic Box, and more.
+
+## Rules of the house
+
+- Network probes run only against public targets; the edge guard refuses private, loopback, link-local, and reserved space before any packet.
+- The bench reads and grades. It does not exploit, spray, brute-force, or flood.
+- Tools that cannot honestly run in a browser are named limits, never faked.
+
+## Source
+
+- Site source: https://github.com/nightwarelabz/nosuchmachine.net
+- nightjar (the native app): https://github.com/nightwarelabz/nightjar
