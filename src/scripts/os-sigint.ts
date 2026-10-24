@@ -179,7 +179,7 @@ interface Station {
   freqHist: number[];
 }
 
-const REG_KEY = "sigint-registry-v1";
+const REG_KEY = "sigint-registry-v2";
 
 /* ------------------------------------------------------------------ */
 
@@ -251,11 +251,20 @@ export function buildSigint(body: HTMLElement) {
   hist.width = 1024; hist.height = 226;
   const hx = hist.getContext("2d")!;
   hx.fillStyle = "#020604"; hx.fillRect(0, 0, hist.width, hist.height);
+  const histTmp = document.createElement("canvas");
+  histTmp.width = 1024; histTmp.height = 226;
+  const htx = histTmp.getContext("2d")!;
   let stations: Station[] = [];
   const candidates: Array<{ f: number; n: number }> = [];
   try {
     const saved = JSON.parse(localStorage.getItem(skey(REG_KEY)) || "[]") as Station[];
-    if (Array.isArray(saved)) stations = saved.map((s) => ({ ...s, trail: [], freqHist: [] }));
+    if (Array.isArray(saved)) {
+      /* restored rows are history, not live identifications: anything
+         older than 15 minutes is gone, and every grade is re-earned. */
+      const cutoff = Date.now() - 15 * 60 * 1000;
+      stations = saved.filter((s) => s.last > cutoff)
+        .map((s) => ({ ...s, trail: [], freqHist: [], guess: "carrier", grade: "possible" }));
+    }
   } catch { /* fresh registry */ }
 
   /* CW decoder state */
@@ -343,7 +352,10 @@ export function buildSigint(body: HTMLElement) {
             /* one waterfall row per spectrum frame, kept on a history
                canvas — the old per-frame translucent fade erased rows
                almost as fast as they were drawn. */
-            hx.drawImage(hist, 0, 1);
+            /* shift via a ping-pong canvas: drawing a canvas onto
+               itself with an offset does not accumulate reliably. */
+            htx.drawImage(hist, 0, 0);
+            hx.drawImage(histTmp, 0, 1);
             const img = hx.createImageData(hist.width, 1);
             const n = d.mag.length;
             for (let x = 0; x < hist.width; x++) {
@@ -532,7 +544,10 @@ export function buildSigint(body: HTMLElement) {
   };
 
   const renderRegistry = () => {
-    const rows = stations.filter((st) => Date.now() - st.last < 90000 || st.hits > 200).slice().sort((a, b) => a.freq - b.freq).map((st) => {
+    const rows = stations
+      .filter((st) => Date.now() - st.last < 90000)
+      .sort((a, b) => b.hits - a.hits).slice(0, 12)
+      .sort((a, b) => a.freq - b.freq).map((st) => {
       const tr = document.createElement("tr");
       const alive = Date.now() - st.last < 5000;
       tr.style.opacity = alive ? "1" : "0.45";
