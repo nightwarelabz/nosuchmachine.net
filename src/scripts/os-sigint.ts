@@ -181,7 +181,13 @@ interface Station {
   freq: number; first: number; last: number; hits: number;
   peakDb: number; widthHz: number; guess: string; grade: string;
   trail: number[]; /* presence bits, 1 per second, last 90 */
-  freqHist: number[];
+  freqHist: number[]; /* recent matched peak freqs, last 48 */
+  dbHist: number[]; /* peak dB per freqHist entry, index-aligned */
+  ring: number[]; /* frame presence bits, last ~90 spectrum frames */
+  wHist: number[]; /* recent matched peak widths, last 24 */
+  mergeW: number; /* occupied width of merged fragments (extHi-extLo) */
+  extLo?: number; extHi?: number; /* merged extent, absolute Hz */
+  lifeLo?: number; lifeHi?: number; /* lifetime matched-peak extremes */
 }
 
 const REG_KEY = "sigint-registry-v2";
@@ -288,7 +294,7 @@ export function buildSigint(body: HTMLElement) {
          older than 15 minutes is gone, and every grade is re-earned. */
       const cutoff = Date.now() - 15 * 60 * 1000;
       stations = saved.filter((s) => s.last > cutoff)
-        .map((s) => ({ ...s, trail: [], freqHist: [], guess: "carrier", grade: "possible" }));
+        .map((s) => ({ ...s, trail: [], freqHist: [], dbHist: [], ring: [], wHist: [], mergeW: 0, extLo: undefined, extHi: undefined, lifeLo: undefined, lifeHi: undefined, guess: "carrier", grade: "possible" }));
     }
   } catch { /* fresh registry */ }
 
@@ -595,12 +601,12 @@ export function buildSigint(body: HTMLElement) {
       fbuf.push(v); sampleIdx++;
       /* eye: fold at the symbol period, fade slowly */
       const x = (sampleIdx % SPS) / SPS * eye.width;
-      const y = eye.height / 2 - Math.max(-1, Math.min(1, v / 500)) * (eye.height / 2 - 2);
+      const y = eye.height / 2 - Math.max(-1, Math.min(1, v)) * (eye.height / 2 - 2);
       ex.fillStyle = "rgba(120,255,170,0.75)";
       ex.fillRect(x, y, 1.6, 1.6);
     }
     ex.fillStyle = "rgba(2,6,4,0.10)"; ex.fillRect(0, 0, eye.width, eye.height);
-    const thrY = eye.height / 2 - Math.max(-1, Math.min(1, thr0 / 500)) * (eye.height / 2 - 2);
+    const thrY = eye.height / 2 - Math.max(-1, Math.min(1, thr0)) * (eye.height / 2 - 2);
     ex.strokeStyle = "rgba(255,95,86,0.8)"; ex.beginPath(); ex.moveTo(0, thrY); ex.lineTo(eye.width, thrY); ex.stroke();
     const thr = fskThreshold();
     const bitAt = (center: number): number => {
@@ -621,38 +627,120 @@ export function buildSigint(body: HTMLElement) {
   }
 
   /* ---------------- registry engine ---------------- */
+  /* Frame-level duty: the 1-bit/sec trail cannot see keying (CW
+     gaps are shorter than a second), so presence is also kept per
+     spectrum frame — the ring is the duty the classifier trusts;
+     the trail remains the pattern column's display. */
+  const dutyOf = (st: Station, min = 20): number | null =>
+    st.ring.length >= min ? st.ring.reduce((a, b) => a + b, 0) / st.ring.length : null;
+  const wP75 = (st: Station): number => {
+    if (!st.wHist.length) return 0;
+    const a = [...st.wHist].sort((x, y) => x - y);
+    return a[Math.min(a.length - 1, Math.floor(a.length * 0.75))];
+  };
+  const spanOf = (st: Station): number =>
+    st.freqHist.length >= 16 ? Math.max(...st.freqHist) - Math.min(...st.freqHist) : 0;
+  /* Two STABLE tones: most of the pick history within ±45 Hz of one
+     of two cluster centres, little in the middle, on air most of
+     the time. Shared by classify (the RTTY claim) and the merge
+     gate (an identified FSK emission is not a fragment). */
+  const isBimodal = (st: Station): boolean => {
+    const d = dutyOf(st);
+    if (st.freqHist.length < 16 || d === null || d < 0.6) return false;
+    const sorted = [...st.freqHist].sort((a, b) => a - b);
+    /* split at the min/max MIDPOINT, not the median: with quantized
+       peak picks the median lands ON the majority tone and the
+       other cluster reads as "equal", emptying the high side */
+    const med = (sorted[0] + sorted[sorted.length - 1]) / 2;
+    const lows = st.freqHist.filter((f) => f < med), highs = st.freqHist.filter((f) => f > med);
+    const span0 = sorted[sorted.length - 1] - sorted[0];
+    if (!lows.length || !highs.length || span0 <= 110 || span0 >= 520) return false;
+    const loC = lows[Math.floor(lows.length / 2)], hiC = highs[Math.floor(highs.length / 2)];
+    const inLo = st.freqHist.filter((f) => Math.abs(f - loC) <= 45).length;
+    const inHi = st.freqHist.filter((f) => Math.abs(f - hiC) <= 45).length;
+    const mid = st.freqHist.filter((f) => Math.abs(f - med) <= 40).length;
+    const nn = st.freqHist.length;
+    /* two pure tones quantize to a handful of pick bins; a wandering
+       plateau peak (an FM core's ripple) takes many — count distinct */
+    if (new Set(st.freqHist).size > 5) return false;
+    if (!(inLo / nn >= 0.28 && inHi / nn >= 0.28 && (inLo + inHi) / nn >= 0.72 && mid / nn <= 0.3)) return false;
+    /* FSK is constant-envelope: the two tones arrive at ~equal
+       power. A carrier with one sideband in the window also makes
+       two tight clusters — but its clusters sit ~7 dB apart. */
+    if (st.dbHist.length === st.freqHist.length) {
+      let loDb = 0, loN = 0, hiDb = 0, hiN = 0;
+      st.freqHist.forEach((f, k) => {
+        if (Math.abs(f - loC) <= 45) { loDb += st.dbHist[k]; loN++; }
+        if (Math.abs(f - hiC) <= 45) { hiDb += st.dbHist[k]; hiN++; }
+      });
+      if (loN && hiN && Math.abs(loDb / loN - hiDb / hiN) > 4) return false;
+    }
+    return true;
+  };
+  /* AM's signature: a DOMINANT carrier with two SYMMETRIC, weaker
+     sidebands in the pick history — the carrier is matched most,
+     the sidebands at equal ±offset and ~equal (lower) power. */
+  const isAM = (st: Station): boolean => {
+    const d = dutyOf(st);
+    if (d === null || d < 0.9 || st.freqHist.length < 24) return false;
+    if (new Set(st.freqHist).size > 8) return false;
+    const nn = st.freqHist.length;
+    const ctr: number[] = [], lo: Array<[number, number]> = [], hi: Array<[number, number]> = [];
+    st.freqHist.forEach((f, k) => {
+      const db = st.dbHist.length === nn ? st.dbHist[k] : 0;
+      if (Math.abs(f - st.freq) <= 45) ctr.push(db);
+      else if (f < st.freq - 100) lo.push([f, db]);
+      else if (f > st.freq + 100) hi.push([f, db]);
+    });
+    if (ctr.length / nn < 0.4 || lo.length / nn < 0.1 || hi.length / nn < 0.1) return false;
+    const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+    const dLo = st.freq - mean(lo.map((x) => x[0])), dHi = mean(hi.map((x) => x[0])) - st.freq;
+    if (dLo < 150 || dLo > 600 || dHi < 150 || dHi > 600 || Math.abs(dLo - dHi) > 60) return false;
+    const cDb = mean(ctr);
+    return cDb >= mean(lo.map((x) => x[1])) + 3 && cDb >= mean(hi.map((x) => x[1])) + 3;
+  };
+
   const classify = (st: Station): [string, string] => {
     if (st.hits < 12) return ["carrier", "possible"];
-    /* RTTY/FSK is a BIMODAL claim: two stable tones, not jitter. */
-    if (st.freqHist.length >= 16 && st.widthHz < 700) {
-      const sorted = [...st.freqHist].sort((a, b) => a - b);
-      const med = sorted[Math.floor(sorted.length / 2)];
-      const lo = st.freqHist.filter((f) => f < med - 40).length;
-      const hi = st.freqHist.filter((f) => f > med + 40).length;
-      const span = sorted[sorted.length - 1] - sorted[0];
-      if (span > 110 && span < 520 && lo > st.freqHist.length * 0.22 && hi > st.freqHist.length * 0.22) {
-        return ["RTTY · FSK", st.hits > 60 ? "firm" : "probable"];
-      }
-    }
-    /* Duty cycle from the pattern-of-life trail: broadcasters and
-       repeaters are always there; keyed signals come and go. The
-       W1 grader ignored it and called everything CW — width plus
-       duty separates the band honestly. */
-    const recent = st.trail.slice(-30);
-    const duty = recent.length >= 8 ? recent.filter(Boolean).length / recent.length : null;
-    if (st.widthHz > 6000) return ["FM · wide", st.hits > 60 ? "firm" : "probable"];
-    if (st.widthHz > 1200) {
-      if (duty !== null && duty > 0.85) return ["AM · broadcast", "probable"];
-      if (duty !== null && duty > 0.3) return ["SSB · voice", "probable"];
+    const dutyF = dutyOf(st);
+    /* AM first: its carrier+sideband pick pattern can impersonate
+       an FSK pair (carrier + one sideband) or a merged wideband
+       row, so the signature gets first claim. */
+    if (isAM(st)) return ["AM · broadcast", st.hits > 60 ? "firm" : "probable"];
+    /* Excursion: a swept signal's instantaneous width is a lie —
+       its peak travel (span), its robust width (p75 of recent
+       widths) and its merged fragment extent (mergeW) are the
+       honest width. A row that has merged fragments across ~2 kHz
+       is a wide emission FIRST — an FSK pair never merges (gate
+       exemption), so its mergeW stays 0 and this order cannot
+       steal a real RTTY. */
+    const span = spanOf(st);
+    const effW = Math.max(wP75(st), span, st.mergeW ?? 0);
+    if (effW > 1200 && (st.mergeW ?? 0) >= 1900) return ["FM · wide", st.hits > 60 ? "firm" : "probable"];
+    /* RTTY/FSK is a BIMODAL claim: two STABLE tones, not jitter. */
+    if (isBimodal(st)) return ["RTTY · FSK", st.hits > 60 ? "firm" : "probable"];
+    if (span > 3000) return ["FM · wide", st.hits > 60 ? "firm" : "probable"];
+    /* Earned IDs stick: an identified emitter keeps its name
+       through windows that merely fail to re-prove it (an RTTY
+       idling on its mark tone reads as one pure tone; an AM window
+       can miss a sideband). Only shape evidence contradicts —
+       much wider, or gone quiet — never a missing signature. */
+    if ((st.guess === "RTTY · FSK" || st.guess === "AM · broadcast")
+      && wP75(st) <= 600 && dutyF !== null && dutyF >= 0.15)
+      return [st.guess, st.hits > 60 ? "firm" : st.grade];
+    if (effW > 1200) {
+      if (dutyF !== null && dutyF >= 0.92) return ["AM · broadcast", "probable"];
+      if (dutyF !== null && dutyF > 0.15 && dutyF < 0.8) return ["SSB · voice", "probable"];
       return ["wideband signal", "possible"];
     }
-    if (st.widthHz < 320) {
-      if (duty !== null && duty > 0.12 && duty < 0.82) return ["CW beacon", st.hits > 60 ? "firm" : "probable"];
-      if (duty !== null && duty >= 0.9) return ["carrier", "probable"];
-      if (st.hits > 30) return ["CW?", "probable"];
-      return ["carrier", "possible"];
+    if (effW > 320) {
+      if (dutyF !== null && dutyF > 0.15 && dutyF < 0.8) return ["SSB · voice", "probable"];
+      if (dutyF !== null && dutyF >= 0.92) return ["AM · broadcast", "possible"];
+      return ["FSK · data", "possible"];
     }
-    if (duty !== null && duty > 0.3 && duty < 0.92) return ["FSK · data", "possible"];
+    if (dutyF !== null && dutyF > 0.15 && dutyF < 0.8) return ["CW beacon", st.hits > 60 ? "firm" : "probable"];
+    if (dutyF !== null && dutyF >= 0.92) return ["carrier", "probable"];
+    if (st.hits > 30) return ["CW?", "probable"];
     return ["carrier", "possible"];
   };
 
@@ -664,8 +752,12 @@ export function buildSigint(body: HTMLElement) {
     const rawPeaks: Array<{ f: number; db: number; w: number }> = [];
     for (let i = 2; i < n - 2; i++) {
       if (mag[i] > floor + 15 && mag[i] >= mag[i - 1] && mag[i] >= mag[i + 1] && mag[i] > mag[i - 2] + 1.5 && mag[i] > mag[i + 2] + 1.5) {
-        let w = 0; for (let j = i; j < n && mag[j] > floor + 8; j++) w++;
-        for (let j = i - 1; j > 0 && mag[j] > floor + 8; j--) w++;
+        /* width is measured against the peak itself (-26 dB), not
+           the band floor: in a crowded band the median sits high
+           and floor-relative widths collapse to the FFT main lobe. */
+        const wth = mag[i] - 26;
+        let w = 0; for (let j = i; j < n && mag[j] > wth; j++) w++;
+        for (let j = i - 1; j > 0 && mag[j] > wth; j--) w++;
         rawPeaks.push({ f: (i / (n - 1)) * (sr / 2), db: mag[i], w: (w / (n - 1)) * (sr / 2) });
       }
     }
@@ -673,7 +765,7 @@ export function buildSigint(body: HTMLElement) {
     rawPeaks.sort((a, b) => b.db - a.db);
     const peaks: Array<{ f: number; db: number; w: number }> = [];
     for (const p of rawPeaks) {
-      if (peaks.every((q) => Math.abs(q.f - p.f) > 90)) peaks.push(p);
+      if (peaks.every((q) => Math.abs(q.f - p.f) > 200)) peaks.push(p);
       if (peaks.length >= 14) break;
     }
     /* candidate persistence: a peak must return 3 ticks running
@@ -685,31 +777,115 @@ export function buildSigint(body: HTMLElement) {
     for (let i = candidates.length - 1; i >= 0; i--) {
       if (!peaks.some((p) => Math.abs(p.f - candidates[i].f) < 110)) candidates.splice(i, 1);
     }
-    const confirmed = peaks.filter((p) => (candidates.find((c) => Math.abs(c.f - p.f) < 110)?.n ?? 0) >= 3);
+    /* a peak earns a station's attention two ways: the candidate
+       gate (3 consecutive ticks — kills transients), or by landing
+       within 190 Hz of a station that already exists (the station's
+       own history is the persistence evidence — this is what lets
+       an FSK pair's alternating tones both feed one row). One
+       match per station per tick, strongest peaks first. */
+    const confirmed = peaks.filter((p) => (candidates.find((c) => Math.abs(c.f - p.f) < 110)?.n ?? 0) >= 3
+      || stations.some((s) => Math.abs(s.freq - p.f) < 190));
+    const matched = new Set<Station>();
     for (const p of confirmed) {
-      let st = stations.find((s) => Math.abs(s.freq - p.f) < 130);
+      let st = stations.find((s) => !matched.has(s) && Math.abs(s.freq - p.f) < 190);
       if (!st) {
-        st = { freq: p.f, first: now, last: now, hits: 0, peakDb: p.db, widthHz: p.w, guess: "carrier", grade: "possible", trail: [], freqHist: [] };
+        if ((candidates.find((c) => Math.abs(c.f - p.f) < 110)?.n ?? 0) < 3) continue;
+        st = { freq: p.f, first: now, last: now, hits: 0, peakDb: p.db, widthHz: p.w, guess: "carrier", grade: "possible", trail: [], freqHist: [], dbHist: [], ring: [], wHist: [], mergeW: 0 };
         stations.push(st);
       }
       st.last = now; st.hits++; st.peakDb = Math.max(st.peakDb, p.db); st.widthHz = p.w;
       st.freq = st.freq * 0.7 + p.f * 0.3;
-      st.freqHist.push(p.f); if (st.freqHist.length > 24) st.freqHist.shift();
+      st.freqHist.push(p.f); if (st.freqHist.length > 48) st.freqHist.shift();
+      st.dbHist.push(p.db); if (st.dbHist.length > 48) st.dbHist.shift();
+      st.lifeLo = st.lifeLo === undefined ? p.f : Math.min(st.lifeLo, p.f);
+      st.lifeHi = st.lifeHi === undefined ? p.f : Math.max(st.lifeHi, p.f);
+      st.wHist.push(p.w); if (st.wHist.length > 24) st.wHist.shift();
       [st.guess, st.grade] = classify(st);
+      matched.add(st);
+    }
+    /* frame-presence ring: 1 per spectrum frame, matched or not */
+    for (const st of stations) {
+      st.ring.push(matched.has(st) ? 1 : 0);
+      if (st.ring.length > 90) st.ring.shift();
     }
     /* pattern-of-life trail, 1 bit/sec */
     const sec = Math.floor(now / 1000);
     for (const st of stations) {
       const alive = now - st.last < 4000;
-      const lastSec = (st as unknown as { _sec?: number })._sec ?? sec;
-      if (sec !== lastSec) { st.trail.push(alive ? 1 : 0); if (st.trail.length > 90) st.trail.shift(); (st as unknown as { _sec?: number })._sec = sec; }
+      const bag = st as unknown as { _sec?: number };
+      if (bag._sec === undefined) { bag._sec = sec; continue; }
+      if (sec !== bag._sec) { st.trail.push(alive ? 1 : 0); if (st.trail.length > 90) st.trail.shift(); bag._sec = sec; }
     }
-    stations = stations.filter((s) => now - s.last < 30 * 60 * 1000).slice(0, 24);
+    /* merge pass: fragments of one wideband emitter (an AM carrier
+       and its sidebands, an FM core) sit as separate rows though
+       they are one transmitter — fold them together, but only when
+       both are established (hits ≥ 30), both continuous at frame
+       level (duty ≥ 0.9 over a ≥45-frame ring), both PINNED
+       (robust width, window span and lifetime span all narrow —
+       a wide plateau or a roaming peak-chaser is not a fragment),
+       neither already identified as FSK, and the step is small
+       (fragments chain outward from a core; no legit single step
+       in this band exceeds ~1.1 kHz — a 5 kHz reach let chasers
+       eat whole stations). One merge per station per pass. */
+    const mergedOnce = new Set<Station>();
+    let mergedAny = true;
+    while (mergedAny) {
+      mergedAny = false;
+      outer:
+      for (let i = 0; i < stations.length; i++) {
+        for (let j = i + 1; j < stations.length; j++) {
+          const a = stations[i], b = stations[j];
+          if (mergedOnce.has(a) || mergedOnce.has(b)) continue;
+          const da = dutyOf(a, 45), db = dutyOf(b, 45);
+          if (a.hits < 30 || b.hits < 30 || da === null || db === null || da < 0.9 || db < 0.9) continue;
+          if (wP75(a) > 1200 || wP75(b) > 1200) continue;
+          if (spanOf(a) > 1200 || spanOf(b) > 1200) continue;
+          if ((a.lifeHi ?? a.freq) - (a.lifeLo ?? a.freq) > 1600 || (b.lifeHi ?? b.freq) - (b.lifeLo ?? b.freq) > 1600) continue;
+          if (isBimodal(a) || isBimodal(b)) continue;
+          const df = Math.abs(a.freq - b.freq);
+          if (df > 1200) continue;
+          const keep = a.first <= b.first ? a : b;
+          const drop = keep === a ? b : a;
+          const hits = keep.hits + drop.hits;
+          keep.freq = (keep.freq * keep.hits + drop.freq * drop.hits) / hits;
+          keep.hits = hits;
+          keep.first = Math.min(a.first, b.first);
+          keep.last = Math.max(a.last, b.last);
+          keep.peakDb = Math.max(a.peakDb, b.peakDb);
+          keep.widthHz = Math.max(a.widthHz, b.widthHz) + df;
+          /* occupied extent is an interval union: each fragment
+             contributes its centre ± (robust width + half its
+             pick travel); later merges union the stored bounds */
+          const halo = (st: Station) => wP75(st) + spanOf(st) / 2;
+          const iv = (st: Station): [number, number] => st.extLo !== undefined && st.extHi !== undefined
+            ? [st.extLo, st.extHi] : [st.freq - halo(st), st.freq + halo(st)];
+          const [loA, hiA] = iv(a), [loB, hiB] = iv(b);
+          mergedOnce.add(keep);
+          keep.lifeLo = Math.min(a.lifeLo ?? a.freq, b.lifeLo ?? b.freq);
+          keep.lifeHi = Math.max(a.lifeHi ?? a.freq, b.lifeHi ?? b.freq);
+          keep.extLo = Math.min(loA, loB); keep.extHi = Math.max(hiA, hiB);
+          keep.mergeW = keep.extHi - keep.extLo;
+          keep.freqHist = [...keep.freqHist.slice(-24), ...drop.freqHist.slice(-24)];
+          keep.dbHist = [...keep.dbHist.slice(-24), ...drop.dbHist.slice(-24)];
+          keep.wHist = [...keep.wHist.slice(-12), ...drop.wHist.slice(-12)];
+          const rl = Math.max(keep.ring.length, drop.ring.length);
+          keep.ring = Array.from({ length: rl }, (_, k) => Math.max(keep.ring[keep.ring.length - rl + k] ?? 0, drop.ring[drop.ring.length - rl + k] ?? 0));
+          stations.splice(stations.indexOf(drop), 1);
+          [keep.guess, keep.grade] = classify(keep);
+          mergedAny = true;
+          break outer;
+        }
+      }
+    }
+    /* retention: keep the strongest 24, not the first 24 — a busy
+       band must not let early transients starve real stations */
+    stations = stations.filter((s) => now - s.last < 30 * 60 * 1000)
+      .sort((a, b) => b.hits - a.hits).slice(0, 24);
   };
 
   const renderRegistry = () => {
     const rows = stations
-      .filter((st) => Date.now() - st.last < 90000)
+      .filter((st) => Date.now() - st.last < 90000 && st.hits >= 3)
       .sort((a, b) => b.hits - a.hits).slice(0, 12)
       .sort((a, b) => a.freq - b.freq).map((st) => {
       const tr = document.createElement("tr");
@@ -807,7 +983,7 @@ export function buildSigint(body: HTMLElement) {
       window.clearInterval(housekeep);
       stopSource();
       void ctx?.close();
-      try { localStorage.setItem(skey(REG_KEY), JSON.stringify(stations.map(({ trail, freqHist, ...rest }) => rest))); } catch { /* private mode */ }
+      try { localStorage.setItem(skey(REG_KEY), JSON.stringify(stations.map(({ trail, freqHist, dbHist, ring, wHist, mergeW, extLo, extHi, lifeLo, lifeHi, ...rest }) => rest))); } catch { /* private mode */ }
       return;
     }
     renderRegistry();
