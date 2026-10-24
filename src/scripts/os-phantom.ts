@@ -2,9 +2,11 @@
  * room. The Rust binary runs unmodified-in-spirit as wasm32-wasip1 in
  * a worker (public/phantom/phantom-worker.js holds the WASI world:
  * a memory filesystem, clocks, random, and a stdin ring). This file
- * is only the glass: a terminal that renders the byte stream, and an
- * input line that feeds the ring. The port's whole delta against
- * upstream is eight small cfg gates — tools/phantom/ keeps the patch.
+ * is the console the guest is operated through: a state rail with the
+ * machine's lamp and its honest spec plate, a framed screen for the
+ * byte stream, quick keys that send real lines, and an input line
+ * that feeds the ring. The port's whole delta against upstream is
+ * eight small cfg gates — tools/phantom/ keeps the patch.
  *
  * Blocking stdin is real here: the worker waits on a
  * SharedArrayBuffer, which is why the OS pages carry
@@ -56,32 +58,83 @@ class AnsiLines {
 export function buildPhantomApp(body: HTMLElement) {
   body.classList.add("os-term-body");
   body.classList.add("os-phantom");
+  body.classList.add("os-guest");
+
+  /* — the rail: the machine's lamp, its state in one word, the plate
+       that says what the guest is and what its world lacks, power. — */
+  const rail = el("div", "os-guest-rail");
+  const lamp = el("span", "os-guest-lamp");
+  lamp.dataset.state = "booting";
+  const stateWord = el("span", "os-guest-state", "RAISING");
+  const plate = el("span", "os-guest-plate", "GUEST phase1 7.0.1 · RUST · WASM32-WASIP1 · IMAGE 995,163 B · MEMORY VOLATILE · NETWORK: NONE — NO WIRE EXISTS IN ITS WORLD");
+  const wakeBtn = el("button", "os-btn small", "wake");
+  const haltBtn = el("button", "os-btn small", "halt");
+  const copyBtn = el("button", "os-btn small", "copy");
+  rail.append(lamp, stateWord, plate, wakeBtn, haltBtn, copyBtn);
+
+  /* — the screen: the guest's display, framed like one. — */
+  const screen = el("div", "os-guest-screen");
   const transcript = el("div", "os-term-out");
   const liveLine = el("pre", "os-term-text os-phantom-live");
-  const line = el("div", "os-term-line");
+  transcript.appendChild(liveLine);
+  screen.append(transcript);
+
+  /* — quick keys: real lines, sent for the operator. — */
+  const keys = el("div", "os-guest-keys");
+  const keyBtns: HTMLButtonElement[] = [];
+  for (const [label, cmd] of [["boot ⏎", ""], ["help", "help"], ["ls /", "ls /"], ["ps", "ps"], ["plugins", "plugins"], ["uname", "uname"], ["exit", "exit"]] as Array<[string, string]>) {
+    const b = el("button", "os-guest-key", label);
+    b.addEventListener("click", () => sendLine(cmd));
+    keys.append(b);
+    keyBtns.push(b);
+  }
+
+  /* — the line. — */
+  const line = el("div", "os-term-line os-guest-line");
   const prompt = el("span", "os-term-prompt", "phantom ›");
   const input = document.createElement("input");
   input.className = "os-term-input";
   input.setAttribute("autocomplete", "off");
   input.setAttribute("spellcheck", "false");
   input.setAttribute("aria-label", "phantom input — lines for the phantom");
-  const rebootBtn = el("button", "os-btn small", "reboot");
-  const copyBtn = el("button", "os-btn small", "copy");
-  line.append(prompt, input, rebootBtn, copyBtn);
-  body.append(transcript, line);
+  line.append(prompt, input);
+  body.append(rail, screen, keys, line);
+
+  type GuestState = "asleep" | "off" | "booting" | "menu" | "running" | "halted" | "fault";
+  let state: GuestState = "booting";
+  const setState = (st: GuestState, word: string) => {
+    state = st;
+    lamp.dataset.state = st;
+    stateWord.textContent = word;
+    const live = st === "menu" || st === "running";
+    keyBtns.forEach((b) => { b.disabled = !live; });
+    input.disabled = !(live || st === "booting");
+    wakeBtn.disabled = live || st === "booting";
+    haltBtn.disabled = !(live || st === "booting");
+  };
 
   const print = (text: string, cls?: string) => {
     const pre = el("pre", "os-term-text" + (cls ? ` ${cls}` : ""), text);
     transcript.insertBefore(pre, liveLine.parentNode === transcript ? liveLine : null);
     if (liveLine.parentNode !== transcript) transcript.appendChild(liveLine);
-    transcript.scrollTop = transcript.scrollHeight;
+    screen.scrollTop = screen.scrollHeight;
   };
   const renderer = new AnsiLines(
-    (l) => print(l),
+    (l) => {
+      print(l);
+      if (l.includes("boot>")) setState("menu", "BOOT MENU");
+      else if (l.includes("phase1://")) setState("running", "RUNNING");
+    },
     () => { transcript.querySelectorAll("pre:not(.os-phantom-live)").forEach((n) => n.remove()); },
   );
-  const renderTail = () => { liveLine.textContent = renderer.tail(); transcript.scrollTop = transcript.scrollHeight; };
-  transcript.appendChild(liveLine);
+  const renderTail = () => {
+    const tail = renderer.tail();
+    liveLine.textContent = tail;
+    screen.scrollTop = screen.scrollHeight;
+    // the prompts are never committed lines — they live in the tail
+    if (tail.includes("boot>")) setState("menu", "BOOT MENU");
+    else if (tail.includes("phase1://")) setState("running", "RUNNING");
+  };
 
   copyBtn.addEventListener("click", () => {
     const text = [...transcript.querySelectorAll("pre")].map((c) => c.textContent || "").join("\n");
@@ -91,7 +144,6 @@ export function buildPhantomApp(body: HTMLElement) {
   let worker: Worker | null = null;
   let head: Int32Array | null = null;
   let ring: Uint8Array | null = null;
-  let exited = false;
   const RING_CAP = 65536;
 
   const sendLine = (text: string) => {
@@ -105,9 +157,9 @@ export function buildPhantomApp(body: HTMLElement) {
     Atomics.notify(head, 0);
   };
 
+  const isolated = typeof SharedArrayBuffer !== "undefined" && !!(window as any).crossOriginIsolated;
+
   const boot = () => {
-    exited = false;
-    input.disabled = false;
     const sab = new SharedArrayBuffer(64 + RING_CAP);
     head = new Int32Array(sab, 0, 4);
     ring = new Uint8Array(sab, 64, RING_CAP);
@@ -118,39 +170,47 @@ export function buildPhantomApp(body: HTMLElement) {
         for (const chunk of m.batch) { renderer.feed(chunk.bytes); }
         renderTail();
       } else if (m.type === "exit") {
-        exited = true;
-        input.disabled = true;
-        print(`— phase1 shut down (exit ${m.code}). the room it lived in was volatile; reboot raises a fresh one.`, "dim");
+        setState("halted", "HALTED");
+        print(`— phase1 shut down (exit ${m.code}). the room it lived in was volatile; wake raises a fresh one.`, "dim");
       } else if (m.type === "error") {
-        exited = true;
-        input.disabled = true;
+        setState("fault", "FAULTED");
         print(`— the phantom could not wake: ${m.message}`, "err");
       }
     };
-    worker.onerror = () => { print("— the phantom worker faulted. reboot to try again.", "err"); };
+    worker.onerror = () => { setState("fault", "FAULTED"); print("— the phantom worker faulted. wake to try again.", "err"); };
+    setState("booting", "RAISING");
     print("— raising phantom — its boot menu takes an empty line for BOOT.", "dim");
     worker.postMessage({ type: "init", sab, wasmUrl: "/phantom/phantom.wasm", env: { COLUMNS: "100" } });
   };
 
-  rebootBtn.addEventListener("click", () => {
+  const powerOn = () => {
     if (worker) { worker.terminate(); worker = null; }
     transcript.querySelectorAll("pre:not(.os-phantom-live)").forEach((n) => n.remove());
+    if (!isolated) {
+      setState("asleep", "ASLEEP");
+      print("— phantom needs a cross-origin-isolated room to block on stdin (SharedArrayBuffer). This browser or context refuses it, so the phantom sleeps.", "err");
+      return;
+    }
     boot();
-  });
+  };
+  const powerOff = () => {
+    if (state === "menu" || state === "running") { sendLine("exit"); return; } // the guest halts itself, gracefully
+    if (worker) { worker.terminate(); worker = null; }
+    head = null; ring = null;
+    setState("off", "OFFLINE");
+    print("— power cut. the room it lived in was volatile; wake raises a fresh one.", "dim");
+  };
+  wakeBtn.addEventListener("click", powerOn);
+  haltBtn.addEventListener("click", powerOff);
 
   input.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     const text = input.value;
     input.value = "";
-    if (!exited) sendLine(text);
+    if (state === "menu" || state === "running" || state === "booting") sendLine(text);
   });
 
-  if (typeof SharedArrayBuffer === "undefined" || !(window as any).crossOriginIsolated) {
-    input.disabled = true;
-    print("— phantom needs a cross-origin-isolated room to block on stdin (SharedArrayBuffer). This browser or context refuses it, so the phantom sleeps. A hard refresh on the top-level site usually settles it.", "err");
-  } else {
-    boot();
-  }
+  powerOn();
 
   /* The window closing ends the phantom's world. */
   const watch = setInterval(() => {
