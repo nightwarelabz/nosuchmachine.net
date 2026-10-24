@@ -125,7 +125,7 @@ export const LIT_FS = `
 precision mediump float;
 varying vec3 vCol; varying vec3 vNor; varying float vDist; varying float vWY; varying vec3 vWP;
 uniform vec3 uSun; uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform vec3 uTint;
-uniform vec3 uCamPos; uniform vec3 uRim; uniform float uTime;
+uniform vec3 uCamPos; uniform vec3 uRim; uniform float uTime; uniform vec3 uSeason;
 uniform sampler2D uShadowMap; uniform mat4 uShadowVP; uniform float uShadowAmt; uniform float uShadowTexel;
 float dhash(vec2 q) { return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
 float dnoise(vec2 q) {
@@ -191,6 +191,15 @@ void main() {
     float dew = step(0.965, dnoise(dp * 15.0 + 90.0)) * (0.5 + 0.5 * sin(uTime * 1.7 + dp.x * 2.0 + dp.y * 1.3));
     c += vec3(0.55, 0.62, 0.60) * dew * dNear * 0.35;
   }
+  /* the turning year, written on the land: foliage goes amber
+     in autumn and brightens in spring; snow takes the high,
+     flat ground as the cold deepens */
+  float fol = smoothstep(0.06, 0.16, c.g - max(c.r, c.b)) * step(0.04, c.g);
+  vec3 amber = vec3(0.80, 0.42, 0.13) * (0.35 + 0.65 * (c.g + 0.2));
+  c = mix(c, amber, fol * uSeason.y * 0.85);
+  c = mix(c, c * vec3(1.07, 1.03, 0.88) + vec3(0.015), fol * uSeason.z * 0.45);
+  float snow = uSeason.x * smoothstep(1.2, 7.5, vWY + (dnoise(vWP.xz * 0.33) - 0.5) * 7.0) * smoothstep(0.42, 0.72, n.y);
+  c = mix(c, vec3(0.90, 0.93, 0.99), clamp(snow, 0.0, 1.0) * 0.92);
   c = grade(c, 0.55);
   /* height fog: the low places fill first */
   float f = smoothstep(uFogNear, uFogFar, vDist);
@@ -325,7 +334,7 @@ void main() {
 export const WATER_FS = `
 precision mediump float;
 varying vec3 vCol; varying float vAlpha; varying vec3 vWorld; varying float vDist; varying float vDepth;
-uniform vec3 uSun; uniform vec3 uSunCol; uniform vec3 uCamPos; uniform float uTime; uniform vec3 uHor;
+uniform vec3 uSun; uniform vec3 uSunCol; uniform vec3 uCamPos; uniform float uTime; uniform vec3 uHor; uniform float uCold;
 uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uDay;
 void main() {
   vec2 p = vWorld.xz;
@@ -339,9 +348,10 @@ void main() {
   /* foam where the water is thin over the land */
   float foam = smoothstep(0.85, 0.12, vDepth) * (0.5 + 0.30 * sin(uTime * 1.35 + p.x * 1.6 + p.y * 1.25)) * step(0.03, vDepth);
   c = mix(c, vec3(0.90, 0.96, 1.0), clamp(foam, 0.0, 0.6));
+  c = mix(c, vec3(0.80, 0.86, 0.94), uCold * 0.40);
   vec3 hv = normalize(normalize(uSun) + view);
   float spec = pow(max(dot(n, hv), 0.0), 260.0) * 2.3 + pow(max(dot(n, hv), 0.0), 36.0) * 0.16;
-  c += uSunCol * spec * uDay;
+  c += uSunCol * spec * uDay * (1.0 + uCold * 1.6);
   c = mix(c, c * (c * 2.51 + 0.03) / (c * (c * 2.43 + 0.59) + 0.14), 0.45);
   float f = smoothstep(uFogNear, uFogFar, vDist);
   gl_FragColor = vec4(mix(c, uFog, f), vAlpha);
@@ -1085,7 +1095,7 @@ export function buildSimulacrum(body: HTMLElement) {
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
   hud.append(seedLabel, flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, xrBtn, posLabel);
-  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · the gifts are on the bar · matter here obeys UNDERTOW · the iris judges your machine");
+  const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · the gifts are on the bar · matter here obeys UNDERTOW · the year turns with yours · the iris judges your machine");
   wrap.append(stage, hud, powers, hint);
   body.appendChild(wrap);
 
@@ -1226,11 +1236,34 @@ export function buildSimulacrum(body: HTMLElement) {
   };
   const leanOf = (r: DreamRecord) => (r.light - r.shadow) / (6 + r.light + r.shadow);
   const persistRec = () => { rec.ts = Date.now(); try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ } };
+  /* ---- the turning year (state hoisted: seasonMoods is read by
+     setTitle, which refreshLabel runs during construction — the
+     same TDZ that killed the full stack in PR #86's first drive) ---- */
+  const seasonOf = (d: Date): { cold: number; autumn: number; spring: number } => {
+    const start = new Date(d.getFullYear(), 0, 0);
+    const doy = Math.floor((d.getTime() - start.getTime()) / 86400000);
+    const t = (doy / 365.25) * Math.PI * 2;
+    const coldRaw = 0.5 + 0.5 * Math.cos(t - 0.26);
+    return {
+      cold: Math.pow(Math.max(0, coldRaw), 1.5),
+      autumn: Math.exp(-Math.pow((doy - 292) / 27, 2)),
+      spring: Math.exp(-Math.pow((doy - 106) / 25, 2)),
+    };
+  };
+  let seasonNow = seasonOf(new Date());
+  const seasonMoods = (): string[] => {
+    if (seasonNow.autumn > 0.55) return ["the year is turning", "it is gathering the leaves"];
+    if (seasonNow.cold > 0.55) return ["the world is holding its breath", "snow is a kind of listening"];
+    if (seasonNow.spring > 0.55) return ["everything is beginning again", "the ground remembers green"];
+    if (seasonNow.cold < 0.2) return ["the long light", "the world, unhurried"];
+    return [];
+  };
   const moodLines = ["it is dreaming of you", "the weather is being decided", "something here is awake", "it has been waiting", "the account is open"];
   const setTitle = () => {
     titleName.textContent = wName;
     titleSub.textContent = `a simulacrum · seed ${seed}`;
-    titleMood.textContent = moodLines[Math.abs(seed) % moodLines.length];
+    const sm = seasonMoods();
+    titleMood.textContent = sm.length && Math.abs(seed) % 5 < 2 ? sm[Math.abs(seed) % sm.length] : moodLines[Math.abs(seed) % moodLines.length];
     titleEnter.textContent = `click to enter ${wName.toLowerCase()}`;
   };
   /* the commons state is declared HERE, above the label that
@@ -1450,6 +1483,8 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     if (v.length) bloomMesh = makeMesh(new Float32Array(v));
   };
+  let guestBlooms: Bloom[] = [];
+  const rebuildAllBlooms = () => { const keep = blooms; blooms = [...keep, ...guestBlooms]; rebuildBlooms(); blooms = keep; };
   rebuildBlooms();
 
   /* sky dome */
@@ -1561,6 +1596,7 @@ export function buildSimulacrum(body: HTMLElement) {
   let motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
   let rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
   let meteorPts = makePoints(170, [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
+  let snowPts = makePoints(520, [70, 42, 70], [0.94, 0.96, 1.0], [1.3, 2.6], seed ^ 0x5107 & 0xffffff);
   const bindPoints = (pts: { buf: WebGLBuffer }) => {
     gl.bindBuffer(gl.ARRAY_BUFFER, pts.buf);
     const aPos = gl.getAttribLocation(ptsPr, "aPos");
@@ -2206,12 +2242,13 @@ export function buildSimulacrum(body: HTMLElement) {
   const castBloom = () => {
     if (!ready("bloom", 2)) return;
     const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
+    if (netPhase === "on" && mqtt && mqtt.connected) mqtt.publish(stateTopic(), JSON.stringify({ t: "bloom", id: myId, x: Math.round(bx * 10) / 10, z: Math.round(bz * 10) / 10 }));
     if (height(bx, bz) < 0.2) return;
     tow.burst(bx, height(bx, bz) + 0.5, bz, { n: 18, col: [0.98, 0.62, 0.78], spd: 1.7, up: 2.8, grav: -2.2, drag: 1.1, life: 1.6, size: 2.3 });
     blooms.push({ x: bx, z: bz, kind: Math.floor(Math.random() * 4) });
     if (blooms.length > 220) blooms = blooms.slice(-220);
     try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* private mode */ }
-    rebuildBlooms();
+    rebuildAllBlooms();
     audio.cast("bloom");
     witness("bloom");
     giftNote("bloom", "it will keep those flowers");
@@ -2275,6 +2312,7 @@ export function buildSimulacrum(body: HTMLElement) {
       for (const k of Object.keys(raw)) edits.set(k, raw[k]);
     } catch { edits = new Map(); }
     try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
+    guestBlooms = [];
     rebuildBlooms();
     try { signs = JSON.parse(localStorage.getItem(skey(`simulacrum-signs-${seed}`)) || "[]") as Array<[number, number]>; } catch { signs = []; }
     rebuildSigns();
@@ -2352,7 +2390,9 @@ export function buildSimulacrum(body: HTMLElement) {
       const hue = Math.max(0, Math.min(1, Number(info.hue) || 0));
       const ex = peers.get(id);
       if (ex) { ex.name = name; ex.hue = hue; ex.lastSeen = performance.now() / 1000; return; }
-      peers.set(id, { id, name, hue, x: 8, z: 8, y: 30, yaw: 0, fly: false, cx: 8, cz: 8, cy: 30, cyaw: 0, lastSeen: performance.now() / 1000, greeted: false, mesh: null });
+      peers.set(id, { id, name, hue, x: 8, z: 8, y: 30, yaw: 0, fly: false, cx: 8, cz: 8, cy: 30, cyaw: 0, lastSeen: performance.now() / 1000, greeted: true, mesh: null });
+      peerSay(`${name} has come into the world`);
+      refreshLabel();
       return;
     }
     if (topic === stateTopic() && netPhase === "on") {
@@ -2360,12 +2400,24 @@ export function buildSimulacrum(body: HTMLElement) {
       try { st = JSON.parse(payload) as typeof st; } catch { return; }
       if (!st.id || st.id === myId) return;
       if (st.t === "gone") { dropPeer(st.id, false); return; }
+      if (st.t === "bloom") {
+        const bx = Math.max(-2000, Math.min(2000, Number(st.x) || 0)), bz = Math.max(-2000, Math.min(2000, Number(st.z) || 0));
+        if (height(bx, bz) > 0.2) {
+          const rndB = mulberry32((bx * 131 + bz * 17 + 7) & 0xffffff);
+          for (let i = 0; i < 7; i++) guestBlooms.push({ x: bx + (rndB() - 0.5) * 5, z: bz + (rndB() - 0.5) * 5, kind: Math.floor(rndB() * 4) });
+          if (guestBlooms.length > 260) guestBlooms = guestBlooms.slice(-260);
+          rebuildAllBlooms();
+          tow.burst(bx, height(bx, bz) + 0.5, bz, { n: 14, col: [0.98, 0.62, 0.78], spd: 1.6, up: 2.6, grav: -2.2, drag: 1.1, life: 1.5, size: 2.2 });
+        }
+        return;
+      }
       if (st.t !== "s") return;
       const pr = peers.get(st.id);
       if (!pr) return;
       const nx = Math.max(-2000, Math.min(2000, Number(st.x) || 0));
       const nz = Math.max(-2000, Math.min(2000, Number(st.z) || 0));
       if (!pr.greeted) { pr.cx = nx; pr.cz = nz; pr.greeted = true; peerSay(`${pr.name} has come into the world`); refreshLabel(); }
+      else if (Math.hypot(pr.cx - nx, pr.cz - nz) > 60) { pr.cx = nx; pr.cz = nz; }
       pr.x = nx; pr.z = nz; pr.y = Math.max(-20, Math.min(400, Number(st.y) || 0)); pr.yaw = Number(st.yaw) || 0; pr.fly = !!st.fly;
       pr.lastSeen = performance.now() / 1000;
     }
@@ -2395,7 +2447,11 @@ export function buildSimulacrum(body: HTMLElement) {
         mqtt!.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
       }
     };
-    mqtt.onDown = () => { /* the world stays solo-shaped until the wire returns or is closed */ };
+    mqtt.onDown = () => {
+      if (!inCommons || netPhase === "off") return;
+      const dead = mqtt;
+      window.setTimeout(() => { if (inCommons && netPhase !== "off" && mqtt === dead) openWire(); }, 5000);
+    };
     mqtt.connect();
   };
   const leaveCommons = () => {
@@ -2414,6 +2470,11 @@ export function buildSimulacrum(body: HTMLElement) {
     if (seed !== HOME_SEED) swapWorld(HOME_SEED); else refreshLabel();
     peerSay("you are home again");
   };
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && netPhase === "on" && mqtt && mqtt.connected) {
+      mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
+    }
+  });
   const netTick = (dt: number, nowS: number) => {
     if (netPhase === "survey" && nowS >= surveyAt) {
       /* the matching: the fullest shard that still has room,
@@ -2484,10 +2545,13 @@ export function buildSimulacrum(body: HTMLElement) {
     } catch { hint.textContent = "VR refused here — the flat world still walks."; }
   });
 
+  /* the turning year state itself is declared above seasonMoods —
+     setTitle reads it during construction, via refreshLabel */
   /* ---- per-frame helpers ---- */
   const sunDir = (t: number): [number, number, number] => {
     const a = (t - 0.25) * Math.PI * 2;
-    return [Math.cos(a), Math.sin(a), 0.35];
+    /* winter sun rides lower over the same land */
+    return [Math.cos(a), Math.sin(a) * (1 - 0.25 * seasonNow.cold), 0.35];
   };
   const skyColors = (t: number, gloom: number): { zen: number[]; hor: number[]; sun: number[]; fog: number[]; night: number } => {
     const s = sunDir(t), day = Math.max(0, Math.min(1, s[1] * 2.4 + 0.35));
@@ -2499,6 +2563,8 @@ export function buildSimulacrum(body: HTMLElement) {
     zen = mixc(zen, [0.30, 0.22, 0.42], dusk * 0.4);
     zen = mixc(zen, [0.16, 0.19, 0.24], gloom * 0.5);
     hor = mixc(hor, [0.36, 0.40, 0.45], gloom * 0.55);
+    zen = mixc(zen, [0.52, 0.62, 0.78], seasonNow.cold * day * 0.22);
+    hor = mixc(hor, [0.80, 0.84, 0.90], seasonNow.cold * day * 0.18);
     return { zen, hor, sun: [1.0, 0.85 - dusk * 0.25, 0.6 - dusk * 0.3], fog: hor, night: 1 - day };
   };
   const biomeAt = (x: number, z: number): string => {
@@ -2619,6 +2685,7 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
     gl.uniform3fv(gl.getUniformLocation(litPr, "uCamPos"), eye);
     gl.uniform1f(gl.getUniformLocation(litPr, "uTime"), nowS);
+    gl.uniform3f(gl.getUniformLocation(litPr, "uSeason"), seasonNow.cold, seasonNow.autumn, seasonNow.spring);
     gl.uniform3fv(gl.getUniformLocation(litPr, "uRim"), [sc.hor[0] * 0.16, sc.hor[1] * 0.16, sc.hor[2] * 0.16]);
     gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uShadowVP"), false, lightVP);
     gl.uniform1f(gl.getUniformLocation(litPr, "uShadowAmt"), shadowAmt);
@@ -2848,6 +2915,7 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform1f(gl.getUniformLocation(waterPr, "uFogNear"), fogNear);
       gl.uniform1f(gl.getUniformLocation(waterPr, "uFogFar"), fogFar);
       gl.uniform1f(gl.getUniformLocation(waterPr, "uTime"), anKind === "glass" ? glassT : nowS);
+      gl.uniform1f(gl.getUniformLocation(waterPr, "uCold"), seasonNow.cold);
       gl.uniform1f(gl.getUniformLocation(waterPr, "uDay"), Math.max(0.12, Math.min(1, sun[1] * 2.2 + 0.4)));
       gl.bindBuffer(gl.ARRAY_BUFFER, waterMesh.buf);
       const aPos = gl.getAttribLocation(waterPr, "aPos");
@@ -2880,7 +2948,15 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.drawArrays(gl.POINTS, 0, meteorPts.n);
     }
     const rainDraw = anKind === "rainup" ? Math.max(rainAmt, anAmt * 0.8) : rainAmt;
-    if (rainDraw > 0.02) {
+    const snowing = seasonNow.cold > 0.5;
+    if (seasonNow.cold > 0.28) {
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 3.0);
+      gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [70, 42, 70]);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), Math.min(1, (seasonNow.cold - 0.28) * 1.6) * (snowing && rainDraw > 0.02 ? 0.95 : 0.5));
+      bindPoints(snowPts);
+      gl.drawArrays(gl.POINTS, 0, snowPts.n);
+    }
+    if (rainDraw > 0.02 && !snowing) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), anKind === "rainup" ? -24 : 26);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [70, 44, 70]);
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), rainDraw * 0.55);
@@ -2922,6 +2998,7 @@ export function buildSimulacrum(body: HTMLElement) {
       timeSkew *= Math.pow(0.5, dt / 22);
       if (Math.abs(timeSkew) < 0.00002) timeSkew = 0;
       dayT = ((lt.getHours() + lt.getMinutes() / 60 + lt.getSeconds() / 3600) / 24 + timeSkew + 1) % 1;
+      seasonNow = seasonOf(lt);
     }
     if (performance.now() / 1000 < stormUntil && Math.random() < dt / 2.4) { flash = 1; audio.thunder(); }
     /* the sub-consciousness thinks a few times a second, and the
