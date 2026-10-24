@@ -23,6 +23,16 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 export function buildOrc(body: HTMLElement, arg?: string) {
   const wrap = el("div", "os-orc");
+  const hero = el("div", "os-orc-hero");
+  const face = document.createElement("img");
+  face.src = "/orc/orc-256.png";
+  face.alt = "orc — the pixel orc, orc's mark";
+  const heroText = el("div");
+  heroText.append(
+    el("h3", "", "ORC — Orchestration"),
+    el("p", "os-note", "the house browser. Our version of LibreWolf, wrapped to be installed anywhere — the engine travels with it, so every site stands on the same ground."),
+  );
+  hero.append(face, heroText);
   const bar = el("div", "os-files-bar");
   const addr = document.createElement("input");
   addr.className = "os-bottle-input";
@@ -42,7 +52,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     "nosuchmachine.net and everything else, the same on every machine, with no telemetry and no sponsored anything. " +
     "This room previews pages that allow framing; a page that refuses will stay blank here — that refusal is the site's, " +
     "and orc itself is never refused, because there the page stands top-level.");
-  wrap.append(bar, frame, note);
+  wrap.append(hero, bar, frame, note);
   body.appendChild(wrap);
 
   let current = "";

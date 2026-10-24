@@ -531,9 +531,9 @@ function registerEngines() {
     const { VERBS } = await import("./os-shell");
     return VERBS.get("wolf3d")!.run(ctx);
   });
-  verb("orc", "LIVE", "orc [url] — open orc, the house browser: our version of LibreWolf, wrapped to install anywhere and carry its own engine", async (ctx) => {
+  verb("orc", "LIVE", "orc [url] — open ORC (Orchestration), the house browser: our version of LibreWolf, wrapped to install anywhere and carry its own engine", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "orc", arg: ctx.args[0] || "" } }));
-    return "orc opens on the desk — a preview pane here (pages that refuse framing stay blank; that refusal is theirs), and a standalone browser of its own outside: install orc and nosuchmachine.net and everything else run on the same Gecko everywhere. Browser-neutral, no telemetry, no sponsored anything.";
+    return "ORC — Orchestration — opens on the desk: a preview pane here (pages that refuse framing stay blank; that refusal is theirs), and a standalone browser of its own outside: install orc and nosuchmachine.net and everything else run on the same Gecko everywhere. Browser-neutral, no telemetry, no sponsored anything.";
   });
   verb("decode", "LIVE", "decode <hex> — raw advertisement bytes through the decoders (BLE AD structures)", async (ctx) => {
     if (!need(ctx, 1, "decode <hex>")) return;

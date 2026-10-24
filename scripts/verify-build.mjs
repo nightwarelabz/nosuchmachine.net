@@ -104,6 +104,11 @@ const astroJs = fs.readdirSync(path.join(root, "_astro")).filter((f) => f.endsWi
 for (const marker of ["wolf3d.jsdos", "os-wolf-stage", "os-orc-frame", "Wolfenstein 3D"]) {
   assert.ok(astroJs.includes(marker), `OS bundle missing marker: ${marker}`);
 }
+for (const asset of ["orc/orc-64.png", "orc/orc-128.png", "orc/orc-256.png"]) {
+  assert.ok(fs.existsSync(path.join(root, asset)), `Missing orc icon asset: ${asset}`);
+}
+assert.ok(astroJs.includes("orc-64.png"), "OS bundle must carry the orc face icon");
+assert.ok(astroJs.includes("ORC — Orchestration"), "OS bundle must carry orc's expanded name");
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");
 assert.ok(headersOut.includes("/wolf3d/*"), "Served _headers must carry the /wolf3d/* scope");
 assert.ok(headersOut.includes("frame-src 'self' https:"), "OS CSP must allow the orc room's frames");

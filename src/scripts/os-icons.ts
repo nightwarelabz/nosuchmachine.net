@@ -53,10 +53,21 @@ export const ICONS: Record<string, string> = {
 };
 
 /* An icon as a DOM node: <span class="...">svg</span>. The span's
-   class decides the drawn size; the svg takes the span's color. */
+   class decides the drawn size; the svg takes the span's color.
+   One exception, by the house's own choice (Chase, 2026-10-24): orc's
+   mark is not a drawing but the pixel orc face he picked as its main
+   icon — it rides as an image wherever the set is used. */
 export function iconEl(name: string, cls: string): HTMLSpanElement {
   const s = document.createElement("span");
   s.className = cls;
+  if (name === "orc") {
+    const img = document.createElement("img");
+    img.className = "orc-face";
+    img.src = "/orc/orc-64.png";
+    img.alt = "";
+    s.appendChild(img);
+    return s;
+  }
   s.innerHTML = ICONS[name] || "";
   return s;
 }
