@@ -132,6 +132,7 @@ function init() {
     if (text) void navigator.clipboard.writeText(text).then(() => { const old = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(() => (btn.textContent = old), 1400); });
   });
   document.querySelectorAll<HTMLElement>(".bs-out[id]").forEach((out) => {
+    out.setAttribute("aria-live", "polite");
     if (document.querySelector(`[data-copy="${out.id}"]`)) return;
     const b = document.createElement("button");
     b.className = "bs-copy-btn";
