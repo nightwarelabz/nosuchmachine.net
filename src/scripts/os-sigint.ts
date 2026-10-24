@@ -7,7 +7,12 @@
  *
  * The receiver is a real DSP chain in an AudioWorklet
  * (/sdr-worklet.js): NCO mix, Hilbert analytic, CW/SSB/AM/FM demod,
- * wideband FFT for the waterfall. It is fully usable with NO
+ * wideband FFT for the waterfall. W2 adds the analyst's half:
+ * measurement cursors with SNR / occupied-bandwidth readouts, an
+ * eye diagram + bit slicer, an ITA2 RTTY decoder next to the Morse
+ * copy, a modulation grader that reads duty cycle and envelope
+ * statistics before it names a signal, and an intercept log with
+ * export. It is fully usable with NO
  * hardware — sources: a synthesized live band (stations that speak
  * Morse and RTTY among others), the microphone / line-in (a real
  * radio's audio is a real input), audio files, and baseband
@@ -44,7 +49,7 @@ const MORSE_REV: Record<string, string> = Object.fromEntries(Object.entries(MORS
 
 /* ITA2 (Baudot) — letters shift. */
 const ITA2: Record<string, number> = {
-  E: 0x01, A: 0x03, S: 0x04, I: 0x06, U: 0x07, D: 0x09, R: 0x0a, J: 0x0b,
+  E: 0x01, A: 0x03, S: 0x05, I: 0x06, U: 0x07, D: 0x09, R: 0x0a, J: 0x0b,
   N: 0x0c, F: 0x0d, C: 0x0e, K: 0x0f, T: 0x10, Z: 0x11, L: 0x12, W: 0x13,
   H: 0x14, Y: 0x15, P: 0x16, Q: 0x17, O: 0x18, B: 0x19, G: 0x1a, M: 0x1c,
   X: 0x1d, V: 0x1e, " ": 0x04 - 0x04 + 0x04, "\n": 0x02, "\r": 0x08,
@@ -206,13 +211,13 @@ export function buildSigint(body: HTMLElement) {
 
   const modes = el("div", "os-sigint-modes");
   const modeBtns: Record<string, HTMLButtonElement> = {};
-  for (const m of ["cw", "usb", "lsb", "am", "fm"]) {
+  for (const m of ["cw", "usb", "lsb", "am", "fm", "rtty"]) {
     const b = el("button", "os-btn" + (m === "cw" ? " primary" : ""), m.toUpperCase());
     modeBtns[m] = b; modes.appendChild(b);
   }
   const bwSel = document.createElement("select");
   bwSel.className = "os-sigint-sel";
-  for (const [label, v] of [["250 Hz", 250], ["500 Hz", 500], ["2.4 kHz", 2400], ["5 kHz", 5000], ["12 kHz", 12000]] as Array<[string, number]>) {
+  for (const [label, v] of [["250 Hz", 250], ["500 Hz", 500], ["800 Hz", 800], ["2.4 kHz", 2400], ["5 kHz", 5000], ["12 kHz", 12000]] as Array<[string, number]>) {
     const o = document.createElement("option"); o.textContent = label; o.value = String(v); bwSel.appendChild(o);
   }
   bwSel.value = "500";
@@ -223,19 +228,39 @@ export function buildSigint(body: HTMLElement) {
   squelch.type = "range"; squelch.min = "-110"; squelch.max = "-40"; squelch.step = "1"; squelch.value = "-95";
   squelch.className = "os-sigint-slider"; squelch.setAttribute("aria-label", "Squelch");
   modes.append(el("span", "os-note", "bw"), bwSel, el("span", "os-note", "gain"), gain, el("span", "os-note", "sql"), squelch);
+  const markA = el("button", "os-btn", "mark A");
+  const markB = el("button", "os-btn", "mark B");
+  const markX = el("button", "os-btn", "✕ marks");
+  modes.append(markA, markB, markX);
+  const readout = el("p", "os-note os-sigint-readout", "");
 
   const lower = el("div", "os-sigint-lower");
   const copyPane = el("pre", "os-sigint-copy");
   copyPane.textContent = "";
   const copyBox = el("div", "os-sigint-pane");
-  copyBox.append(el("h4", "", "CW COPY"), copyPane);
+  const copyHead = el("div", "os-sigint-copyhead");
+  const tabCw = el("button", "os-btn primary", "CW copy");
+  const tabRtty = el("button", "os-btn", "RTTY copy");
+  copyHead.append(el("h4", "", "COPY"), tabCw, tabRtty);
+  const eye = document.createElement("canvas");
+  eye.className = "os-sigint-eye"; eye.width = 220; eye.height = 64;
+  eye.style.display = "none";
+  copyBox.append(copyHead, eye, copyPane);
   const regBox = el("div", "os-sigint-pane");
   const regTable = el("table", "os-sigint-reg");
   regBox.append(el("h4", "", "EMITTERS — THE REGISTRY"), regTable);
   lower.append(copyBox, regBox);
 
+  const logBox = el("div", "os-sigint-pane os-sigint-logbox");
+  const logHead = el("div", "os-sigint-copyhead");
+  const logExport = el("button", "os-btn", "export log");
+  const logClear = el("button", "os-btn", "clear log");
+  logHead.append(el("h4", "", "INTERCEPT LOG"), logExport, logClear);
+  const logPane = el("pre", "os-sigint-copy os-sigint-log");
+  logBox.append(logHead, logPane);
+
   const status = el("p", "os-note", "receiver off · receive only — the ear never speaks");
-  wrap.append(head, fall, modes, lower, status);
+  wrap.append(head, fall, modes, readout, lower, logBox, status);
   body.appendChild(wrap);
 
   /* ---------------- state ---------------- */
@@ -267,14 +292,63 @@ export function buildSigint(body: HTMLElement) {
     }
   } catch { /* fresh registry */ }
 
+  /* W2 analyst state */
+  let curA: number | null = null, curB: number | null = null;
+  let statsCv: number | null = null;
+  let paneTab: "cw" | "rtty" = "cw";
+  let cwText = "", rttyText = "";
+  interface Intercept { t: number; mode: string; freq: number; text: string }
+  let intercepts: Intercept[] = [];
+  try { intercepts = JSON.parse(localStorage.getItem(skey("sigint-log-v1")) || "[]") as Intercept[]; } catch { intercepts = []; }
+  const commitIntercept = (m: string, text: string) => {
+    const clean = text.replace(/\s+/g, " ").trim();
+    if (clean.length < 6) return;
+    intercepts.push({ t: Date.now(), mode: m, freq, text: clean.slice(0, 220) });
+    if (intercepts.length > 80) intercepts = intercepts.slice(-80);
+    try { localStorage.setItem(skey("sigint-log-v1"), JSON.stringify(intercepts)); } catch { /* private mode */ }
+    renderLog();
+  };
+  const renderLog = () => {
+    logPane.textContent = intercepts.slice(-30).map((i) =>
+      `${new Date(i.t).toLocaleTimeString()} · ${i.mode} · ${(i.freq / 1000).toFixed(3)} kHz · ${i.text}`).join("\n");
+    logPane.scrollTop = logPane.scrollHeight;
+  };
+  renderLog();
+  logClear.addEventListener("click", () => {
+    intercepts = [];
+    try { localStorage.removeItem(skey("sigint-log-v1")); } catch { /* noop */ }
+    renderLog();
+  });
+  logExport.addEventListener("click", () => {
+    const txt = intercepts.map((i) => `${new Date(i.t).toISOString()} · ${i.mode} · ${(i.freq / 1000).toFixed(3)} kHz · ${i.text}`).join("\n");
+    const url = URL.createObjectURL(new Blob([txt || "(empty log)"], { type: "text/plain" }));
+    const a = el("a"); a.setAttribute("href", url); a.setAttribute("download", "sigint-intercept-log.txt"); a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+  markA.addEventListener("click", () => { curA = freq; });
+  markB.addEventListener("click", () => { curB = freq; });
+  markX.addEventListener("click", () => { curA = null; curB = null; });
+  tabCw.addEventListener("click", () => setPane("cw"));
+  tabRtty.addEventListener("click", () => setPane("rtty"));
+  const setPane = (t: "cw" | "rtty") => {
+    paneTab = t;
+    tabCw.classList.toggle("primary", t === "cw");
+    tabRtty.classList.toggle("primary", t === "rtty");
+    eye.style.display = t === "rtty" ? "block" : "none";
+    copyPane.textContent = t === "cw" ? cwText : rttyText;
+  };
+
   /* CW decoder state */
   let envMin = 0.02, envMax = 0.4, markStart = 0, spaceStart = 0, inMark = false;
   let rawMark = false, rawSince = 0;
   let unit = 60; /* ms, adapts */
   let curCode = "";
+  let cwLine = "";
   const setCopy = (txt: string) => {
-    copyPane.textContent = (copyPane.textContent + txt).slice(-2400);
-    copyPane.scrollTop = copyPane.scrollHeight;
+    cwText = (cwText + txt).slice(-2400);
+    cwLine += txt;
+    if (txt === " " && cwLine.replace(/ /g, "").length >= 10) { commitIntercept("CW", cwLine); cwLine = ""; }
+    if (paneTab === "cw") { copyPane.textContent = cwText; copyPane.scrollTop = copyPane.scrollHeight; }
   };
   const flushChar = () => {
     if (!curCode) return;
@@ -283,7 +357,7 @@ export function buildSigint(body: HTMLElement) {
   };
 
   const post = () => {
-    node?.port.postMessage({ freq, mode, bw: Number(bwSel.value), gain: Number(gain.value), squelch: Number(squelch.value) });
+    node?.port.postMessage({ freq, mode: mode === "rtty" ? "fsk" : mode, shift: 170, bw: Number(bwSel.value), gain: Number(gain.value), squelch: Number(squelch.value) });
   };
 
   const tune = (hz: number) => {
@@ -371,6 +445,9 @@ export function buildSigint(body: HTMLElement) {
           }
           if (d.type === "env") feedDecoder(d.v ?? 0, !!d.open);
           if (d.type === "rec" && d.chunk && recording) recChunks.push(d.chunk);
+          const dd = d as { type: string; vs?: Float32Array; cv?: number };
+          if (dd.type === "fsk" && dd.vs) feedFsk(dd.vs);
+          if (dd.type === "stats" && typeof dd.cv === "number") statsCv = dd.cv;
         };
       }
       await ctx.resume();
@@ -424,6 +501,8 @@ export function buildSigint(body: HTMLElement) {
       if (m === "usb" || m === "lsb") bwSel.value = "2400";
       if (m === "am") bwSel.value = "5000";
       if (m === "fm") bwSel.value = "12000";
+      if (m === "rtty") { bwSel.value = "800"; setPane("rtty"); resetRtty(); }
+      if (m === "cw") setPane("cw");
       post();
     });
   }
@@ -470,6 +549,77 @@ export function buildSigint(body: HTMLElement) {
     }
   }
 
+  /* ---------------- RTTY decoder (ITA2) ----------------
+     The worklet streams instantaneous frequency (~2 ms/value);
+     a 45.45-baud symbol is 11 values. UART-style framing: hunt a
+     mark→space edge, sample 5 data bits at symbol centres, honour
+     LTRS/FIGS shifts. The eye folds the same stream at the symbol
+     period so the operator can see the two tones separate. */
+  const ITA2_LTRS: Record<number, string> = {
+    0x01: "E", 0x03: "A", 0x05: "S", 0x06: "I", 0x07: "U", 0x09: "D", 0x0a: "R", 0x0b: "J",
+    0x0c: "N", 0x0d: "F", 0x0e: "C", 0x0f: "K", 0x10: "T", 0x11: "Z", 0x12: "L", 0x13: "W",
+    0x14: "H", 0x15: "Y", 0x16: "P", 0x17: "Q", 0x18: "O", 0x19: "B", 0x1a: "G", 0x1c: "M",
+    0x1d: "X", 0x1e: "V", 0x04: " ", 0x02: "\n", 0x08: "",
+  };
+  const ITA2_FIGS: Record<number, string> = {
+    0x01: "3", 0x03: "-", 0x05: "'", 0x06: "8", 0x07: "7", 0x09: "$", 0x0a: "4", 0x0b: "'",
+    0x0c: ",", 0x0d: "!", 0x0e: ":", 0x0f: "(", 0x10: "5", 0x11: '"', 0x12: ")", 0x13: "2",
+    0x14: "#", 0x15: "6", 0x16: "0", 0x17: "1", 0x18: "9", 0x19: "?", 0x1a: "&", 0x1c: ".",
+    0x1d: "/", 0x1e: ";", 0x04: " ", 0x02: "\n", 0x08: "",
+  };
+  const SPS = 11;
+  let fbuf: number[] = [], fpos = 0, figsShift = false, rttyLine = "";
+  let sampleIdx = 0;
+  const ex = eye.getContext("2d")!;
+  ex.fillStyle = "#020604"; ex.fillRect(0, 0, eye.width, eye.height);
+  const resetRtty = () => { fbuf = []; fpos = 0; figsShift = false; };
+  const fskThreshold = (): number => {
+    if (fbuf.length < 40) return 0;
+    const w = [...fbuf.slice(-440)].sort((a, b) => a - b);
+    return (w[Math.floor(w.length * 0.1)] + w[Math.floor(w.length * 0.9)]) / 2;
+  };
+  const emitRtty = (code: number) => {
+    if (code === 0x1f) { figsShift = false; return; }
+    if (code === 0x1b) { figsShift = true; return; }
+    if (code === 0x00) return;
+    const ch = (figsShift ? ITA2_FIGS : ITA2_LTRS)[code] ?? "·";
+    if (!ch) return;
+    rttyText = (rttyText + ch).slice(-2400);
+    rttyLine += ch;
+    if (ch === "\n" || rttyLine.replace(/ /g, "").length >= 40) { commitIntercept("RTTY", rttyLine); rttyLine = ""; }
+    if (paneTab === "rtty") { copyPane.textContent = rttyText; copyPane.scrollTop = copyPane.scrollHeight; }
+  };
+  function feedFsk(vs: Float32Array) {
+    const thr0 = fskThreshold();
+    for (const v of vs) {
+      fbuf.push(v); sampleIdx++;
+      /* eye: fold at the symbol period, fade slowly */
+      const x = (sampleIdx % SPS) / SPS * eye.width;
+      const y = eye.height / 2 - Math.max(-1, Math.min(1, v / 500)) * (eye.height / 2 - 2);
+      ex.fillStyle = "rgba(120,255,170,0.75)";
+      ex.fillRect(x, y, 1.6, 1.6);
+    }
+    ex.fillStyle = "rgba(2,6,4,0.10)"; ex.fillRect(0, 0, eye.width, eye.height);
+    const thrY = eye.height / 2 - Math.max(-1, Math.min(1, thr0 / 500)) * (eye.height / 2 - 2);
+    ex.strokeStyle = "rgba(255,95,86,0.8)"; ex.beginPath(); ex.moveTo(0, thrY); ex.lineTo(eye.width, thrY); ex.stroke();
+    const thr = fskThreshold();
+    const bitAt = (center: number): number => {
+      let acc = 0, cnt = 0;
+      for (let k = -1; k <= 1; k++) { const idx = Math.round(center) + k; if (idx >= 0 && idx < fbuf.length) { acc += fbuf[idx]; cnt++; } }
+      return cnt && acc / cnt > thr ? 1 : 0;
+    };
+    while (fpos + Math.round(7.5 * SPS) < fbuf.length) {
+      /* hunt a mark→space edge */
+      if (!(fbuf[fpos] <= thr && (fpos === 0 || fbuf[fpos - 1] > thr))) { fpos++; continue; }
+      if (bitAt(fpos + 0.5 * SPS) !== 0) { fpos++; continue; }
+      let code = 0;
+      for (let k = 1; k <= 5; k++) code |= bitAt(fpos + (k + 0.5) * SPS) << (k - 1);
+      emitRtty(code);
+      fpos += Math.round(7.5 * SPS);
+    }
+    if (fpos > 3000) { fbuf = fbuf.slice(fpos); sampleIdx -= fpos; fpos = 0; }
+  }
+
   /* ---------------- registry engine ---------------- */
   const classify = (st: Station): [string, string] => {
     if (st.hits < 12) return ["carrier", "possible"];
@@ -484,11 +634,25 @@ export function buildSigint(body: HTMLElement) {
         return ["RTTY · FSK", st.hits > 60 ? "firm" : "probable"];
       }
     }
-    if (st.widthHz > 6000) return ["FM voice", "probable"];
-    if (st.widthHz > 1800) return ["SSB/AM voice band", "possible"];
-    const keyed = st.trail.slice(-30).includes(1) && st.trail.slice(-30).includes(0);
-    if (st.widthHz < 320 && keyed && st.hits > 60) return ["CW beacon", "firm"];
-    if (st.widthHz < 320 && st.hits > 30) return ["CW?", "probable"];
+    /* Duty cycle from the pattern-of-life trail: broadcasters and
+       repeaters are always there; keyed signals come and go. The
+       W1 grader ignored it and called everything CW — width plus
+       duty separates the band honestly. */
+    const recent = st.trail.slice(-30);
+    const duty = recent.length >= 8 ? recent.filter(Boolean).length / recent.length : null;
+    if (st.widthHz > 6000) return ["FM · wide", st.hits > 60 ? "firm" : "probable"];
+    if (st.widthHz > 1200) {
+      if (duty !== null && duty > 0.85) return ["AM · broadcast", "probable"];
+      if (duty !== null && duty > 0.3) return ["SSB · voice", "probable"];
+      return ["wideband signal", "possible"];
+    }
+    if (st.widthHz < 320) {
+      if (duty !== null && duty > 0.12 && duty < 0.82) return ["CW beacon", st.hits > 60 ? "firm" : "probable"];
+      if (duty !== null && duty >= 0.9) return ["carrier", "probable"];
+      if (st.hits > 30) return ["CW?", "probable"];
+      return ["carrier", "possible"];
+    }
+    if (duty !== null && duty > 0.3 && duty < 0.92) return ["FSK · data", "possible"];
     return ["carrier", "possible"];
   };
 
@@ -551,8 +715,15 @@ export function buildSigint(body: HTMLElement) {
       const tr = document.createElement("tr");
       const alive = Date.now() - st.last < 5000;
       tr.style.opacity = alive ? "1" : "0.45";
+      /* live envelope evidence at the tuned slice outranks the
+         registry's structural guess for the station you're hearing */
+      let guess = st.guess;
+      if (running && Math.abs(st.freq - freq) < 200 && statsCv !== null) {
+        if (statsCv > 0.42) guess = "AM · broadcast";
+        else if (statsCv < 0.15 && st.widthHz > 3000) guess = "FM · wide";
+      }
       const cells = [
-        (st.freq / 1000).toFixed(3), st.guess, st.grade,
+        (st.freq / 1000).toFixed(3), guess, st.grade,
         `${Math.round(st.peakDb)} dB`, st.hits.toString(),
         new Date(st.first).toLocaleTimeString(), new Date(st.last).toLocaleTimeString(),
         st.trail.map((b) => (b ? "▮" : "·")).join(""),
@@ -595,6 +766,38 @@ export function buildSigint(body: HTMLElement) {
     fx.strokeStyle = "#ff5f56"; fx.beginPath(); fx.moveTo(tx, 0); fx.lineTo(tx, H); fx.stroke();
     fx.fillStyle = "rgba(230,255,240,0.75)"; fx.font = "11px monospace";
     for (let k = 0; k <= 24; k += 4) fx.fillText(`${k}`, (k * 1000 / nyq) * W + 3, H - 6);
+    /* measurement cursors */
+    for (const [cf, col, lab] of [[curA, "#57d7ff", "A"], [curB, "#ff57d7", "B"]] as Array<[number | null, string, string]>) {
+      if (cf === null) continue;
+      const cx = (cf / nyq) * W;
+      fx.strokeStyle = col; fx.beginPath(); fx.moveTo(cx, 0); fx.lineTo(cx, H); fx.stroke();
+      fx.fillStyle = col; fx.fillText(lab, cx + 3, 12);
+    }
+    /* measurements: SNR + occupied bandwidth at the tuned slice */
+    if (latestMag && running) {
+      const mag = latestMag, n = mag.length;
+      const binHz = nyq / (n - 1);
+      const tBin = Math.round(freq / binHz);
+      const srt = [...mag].sort((a, b) => a - b);
+      const floorDb = srt[Math.floor(n * 0.5)];
+      const snr = Math.max(0, (mag[Math.min(n - 1, tBin)] ?? floorDb) - floorDb);
+      const halfWin = Math.round(12000 / binHz);
+      const lo = Math.max(0, tBin - halfWin), hi = Math.min(n - 1, tBin + halfWin);
+      let total = 0; const pw: number[] = [];
+      for (let i = lo; i <= hi; i++) { const p = Math.pow(10, mag[i] / 10); pw.push(p); total += p; }
+      let acc = 0, oLo = lo, oHi = hi;
+      for (let i = 0; i < pw.length; i++) { acc += pw[i]; if (acc <= total * 0.005) oLo = lo + i; if (acc <= total * 0.995) oHi = lo + i; }
+      const obw = Math.max(binHz, (oHi - oLo) * binHz);
+      const parts = [
+        `SNR ${snr.toFixed(0)} dB`, `OBW ${obw >= 1000 ? (obw / 1000).toFixed(2) + " kHz" : obw.toFixed(0) + " Hz"}`,
+        `env CV ${statsCv !== null ? statsCv.toFixed(2) : "—"}`,
+      ];
+      if (curA !== null) parts.push(`A ${(curA / 1000).toFixed(3)}`);
+      if (curB !== null) parts.push(`B ${(curB / 1000).toFixed(3)}`);
+      if (curA !== null && curB !== null) parts.push(`Δ ${Math.abs(curA - curB).toFixed(0)} Hz`);
+      const txt = parts.join(" · ");
+      if (readout.textContent !== txt) readout.textContent = txt;
+    }
     requestAnimationFrame(draw);
   };
   requestAnimationFrame(draw);

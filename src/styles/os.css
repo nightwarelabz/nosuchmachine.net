@@ -436,3 +436,11 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-sim { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; }
 .os-sim-canvas { width: 100%; flex: 1; min-height: 320px; background: #0a1420; border: 1px solid var(--os-line); border-radius: 8px; cursor: crosshair; touch-action: none; }
 .os-sim-hud { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ——— SIGINT W2: readouts, eye, log ——— */
+.os-sigint-readout { min-height: 1.1em; font-family: monospace; }
+.os-sigint-copyhead { display: flex; align-items: center; gap: 0.45rem; }
+.os-sigint-copyhead h4 { margin-right: auto; }
+.os-sigint-eye { width: 100%; max-width: 220px; height: 64px; background: #020604; border: 1px solid var(--os-line); border-radius: 6px; margin: 0.3rem 0; }
+.os-sigint-logbox { margin-top: 0.6rem; }
+.os-sigint-log { max-height: 130px; }

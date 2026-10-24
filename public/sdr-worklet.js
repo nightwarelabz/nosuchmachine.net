@@ -74,8 +74,11 @@ class SdrDsp extends AudioWorkletProcessor {
     this.agc = 0.2;
     this.slicePow = 0;
     this.envAcc = 0; this.envN = 0;
+    this.fskAcc = 0; this.fskN = 0; this.fskBatch = [];
+    this.statAcc = 0; this.statAcc2 = 0; this.statN = 0;
     this.specBuf = new Float32Array(FFT_N);
     this.specPos = 0; this.specHop = 0;
+    this.shift = 170;
     this.recOn = false;
     this.recBuf = new Float32Array(8192);
     this.recPos = 0;
@@ -87,6 +90,7 @@ class SdrDsp extends AudioWorkletProcessor {
       if (p.gain !== undefined) this.gain = p.gain;
       if (p.squelch !== undefined) this.squelch = p.squelch;
       if (p.record !== undefined) this.recOn = p.record;
+      if (p.shift !== undefined) this.shift = p.shift;
     };
   }
 
@@ -150,13 +154,45 @@ class SdrDsp extends AudioWorkletProcessor {
         if (this.envN >= 480) {
           this.port.postMessage({ type: "env", v: Math.sqrt(this.envAcc / this.envN), open: sliceDbEarly > this.squelch });
           this.envAcc = 0; this.envN = 0;
+    this.fskAcc = 0; this.fskN = 0; this.fskBatch = [];
+    this.statAcc = 0; this.statAcc2 = 0; this.statN = 0;
         }
       }
       const sliceDb = 10 * Math.log10(this.slicePow + 1e-12);
+      /* slice statistics for the grader: envelope mean/variance of the
+         tuned slice, any mode — AM breathes, FM/CW carriers don't. */
+      {
+        const mag = Math.sqrt(zi * zi + zq * zq);
+        this.statAcc += mag; this.statAcc2 += mag * mag; this.statN++;
+        if (this.statN >= 4800) {
+          const mean = this.statAcc / this.statN;
+          const varr = Math.max(0, this.statAcc2 / this.statN - mean * mean);
+          this.port.postMessage({ type: "stats", mean, cv: mean > 1e-6 ? Math.sqrt(varr) / mean : 0, db: sliceDb });
+          this.statAcc = 0; this.statAcc2 = 0; this.statN = 0;
+        }
+      }
+      /* FSK: instantaneous frequency of the slice, decimated to one
+         value per ~2 ms and batched — the room slices bits from it,
+         folds the eye diagram, and frames ITA2. */
+      if (this.mode === "fsk") {
+        const dot = zi * this.prevI + zq * this.prevQ;
+        const cross = zq * this.prevI - zi * this.prevQ;
+        const inst = Math.atan2(cross, dot) / (2 * Math.PI) * sr;
+        this.prevI = zi; this.prevQ = zq;
+        this.fskAcc += inst; this.fskN++;
+        if (this.fskN >= 96) {
+          this.fskBatch.push(this.fskAcc / this.fskN);
+          this.fskAcc = 0; this.fskN = 0;
+          if (this.fskBatch.length >= 24) {
+            this.port.postMessage({ type: "fsk", vs: new Float32Array(this.fskBatch) });
+            this.fskBatch = [];
+          }
+        }
+      }
       let y = 0;
       if (this.mode === "am") {
         y = Math.sqrt(zi * zi + zq * zq) - 0.02;
-      } else if (this.mode === "fm") {
+      } else if (this.mode === "fm" || this.mode === "fsk") {
         const dot = zi * this.prevI + zq * this.prevQ;
         const cross = zq * this.prevI - zi * this.prevQ;
         y = Math.atan2(cross, dot) * 2.2;
