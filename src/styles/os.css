@@ -140,6 +140,7 @@
 .os-btn:active { transform: scale(0.98); }
 .os-btn.primary { background: var(--os-accent); border-color: var(--os-accent); color: var(--os-on-accent); font-weight: 700; box-shadow: 0 4px 14px var(--os-accent-soft); }
 .os-btn.danger { border-color: #7a2027; color: #ff848c; }
+.os-btn[aria-pressed="true"] { background: rgba(150, 190, 255, 0.22); border-color: rgba(170, 205, 255, 0.65); color: #eaf2ff; }
 .os-btn.small { padding: 0.2rem 0.5rem; font-size: 0.67rem; border-radius: 6px; }
 .os-btnrow { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.7rem; }
 .os-note { color: var(--os-muted); font-size: 0.74rem; line-height: 1.6; }
