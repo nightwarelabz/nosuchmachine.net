@@ -27,7 +27,8 @@ refused in `functions/_lib/guard.ts` before contact and on every redirect hop.
 - `/blacksite/` is **BLACKSITE OS**: the nightjar console ported whole — a
   windowed web OS (boot, desktop, taskbar, process board) with a real shell
   over a persistent virtual filesystem, pipes/redirects/jobs, the full
-  426-command Blacksite roster from nightjar's own generated reference
+  426-command Blacksite roster (197 verbs working: 97 in-room, 100 via the
+  guarded edge) from nightjar's own generated reference
   (`src/data/blacksite-commands.json`) with each command LIVE, EDGE, or a
   named LIMIT, Python (vendored Skulpt) and JavaScript engines, a
   vim-mannered editor, the Wave-10 file parsers, the Gauntlet self-test
