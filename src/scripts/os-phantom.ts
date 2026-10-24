@@ -1,10 +1,10 @@
-/* PHASE2 — PHANTOM · phase1 (Bryforge/phase1 v7.0.1), ported to the
+/* phantom · phase1 (Bryforge/phase1 v7.0.1), ported to the
  * room. The Rust binary runs unmodified-in-spirit as wasm32-wasip1 in
- * a worker (public/phase2/phantom-worker.js holds the WASI world:
+ * a worker (public/phantom/phantom-worker.js holds the WASI world:
  * a memory filesystem, clocks, random, and a stdin ring). This file
  * is only the glass: a terminal that renders the byte stream, and an
  * input line that feeds the ring. The port's whole delta against
- * upstream is eight small cfg gates — tools/phase2/ keeps the patch.
+ * upstream is eight small cfg gates — tools/phantom/ keeps the patch.
  *
  * Blocking stdin is real here: the worker waits on a
  * SharedArrayBuffer, which is why the OS pages carry
@@ -53,18 +53,18 @@ class AnsiLines {
   }
 }
 
-export function buildPhase2App(body: HTMLElement) {
+export function buildPhantomApp(body: HTMLElement) {
   body.classList.add("os-term-body");
-  body.classList.add("os-p2");
+  body.classList.add("os-phantom");
   const transcript = el("div", "os-term-out");
-  const liveLine = el("pre", "os-term-text os-p2-live");
+  const liveLine = el("pre", "os-term-text os-phantom-live");
   const line = el("div", "os-term-line");
-  const prompt = el("span", "os-term-prompt", "phase1 ›");
+  const prompt = el("span", "os-term-prompt", "phantom ›");
   const input = document.createElement("input");
   input.className = "os-term-input";
   input.setAttribute("autocomplete", "off");
   input.setAttribute("spellcheck", "false");
-  input.setAttribute("aria-label", "Phase2 input — lines for the phantom");
+  input.setAttribute("aria-label", "phantom input — lines for the phantom");
   const rebootBtn = el("button", "os-btn small", "reboot");
   const copyBtn = el("button", "os-btn small", "copy");
   line.append(prompt, input, rebootBtn, copyBtn);
@@ -78,7 +78,7 @@ export function buildPhase2App(body: HTMLElement) {
   };
   const renderer = new AnsiLines(
     (l) => print(l),
-    () => { transcript.querySelectorAll("pre:not(.os-p2-live)").forEach((n) => n.remove()); },
+    () => { transcript.querySelectorAll("pre:not(.os-phantom-live)").forEach((n) => n.remove()); },
   );
   const renderTail = () => { liveLine.textContent = renderer.tail(); transcript.scrollTop = transcript.scrollHeight; };
   transcript.appendChild(liveLine);
@@ -111,7 +111,7 @@ export function buildPhase2App(body: HTMLElement) {
     const sab = new SharedArrayBuffer(64 + RING_CAP);
     head = new Int32Array(sab, 0, 4);
     ring = new Uint8Array(sab, 64, RING_CAP);
-    worker = new Worker("/phase2/phantom-worker.js");
+    worker = new Worker("/phantom/phantom-worker.js");
     worker.onmessage = (e) => {
       const m = e.data;
       if (m.type === "out") {
@@ -128,13 +128,13 @@ export function buildPhase2App(body: HTMLElement) {
       }
     };
     worker.onerror = () => { print("— the phantom worker faulted. reboot to try again.", "err"); };
-    print("— raising phase1 7.0.1 (wasm32-wasip1) — its boot menu takes an empty line for BOOT.", "dim");
-    worker.postMessage({ type: "init", sab, wasmUrl: "/phase2/phantom.wasm", env: { COLUMNS: "100" } });
+    print("— raising phantom — its boot menu takes an empty line for BOOT.", "dim");
+    worker.postMessage({ type: "init", sab, wasmUrl: "/phantom/phantom.wasm", env: { COLUMNS: "100" } });
   };
 
   rebootBtn.addEventListener("click", () => {
     if (worker) { worker.terminate(); worker = null; }
-    transcript.querySelectorAll("pre:not(.os-p2-live)").forEach((n) => n.remove());
+    transcript.querySelectorAll("pre:not(.os-phantom-live)").forEach((n) => n.remove());
     boot();
   });
 
@@ -147,7 +147,7 @@ export function buildPhase2App(body: HTMLElement) {
 
   if (typeof SharedArrayBuffer === "undefined" || !(window as any).crossOriginIsolated) {
     input.disabled = true;
-    print("— PHANTOM needs a cross-origin-isolated room to block on stdin (SharedArrayBuffer). This browser or context refuses it, so the phantom sleeps. A hard refresh on the top-level site usually settles it.", "err");
+    print("— phantom needs a cross-origin-isolated room to block on stdin (SharedArrayBuffer). This browser or context refuses it, so the phantom sleeps. A hard refresh on the top-level site usually settles it.", "err");
   } else {
     boot();
   }

@@ -8,7 +8,7 @@ import { registerBenchVerbs } from "./os-verbs3";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
-import { buildPhase2App } from "./os-phase2";
+import { buildPhantomApp } from "./os-phantom";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -61,7 +61,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   chip8: { title: "CHIP-8 Console", icon: "👾" },
   ssh: { title: "SSH", icon: "🔐" },
   relay: { title: "Relay — the house wire", icon: "📻" },
-  phase2: { title: "Phase2 — PHANTOM", icon: "👻" },
+  phantom: { title: "phantom", icon: "👻" },
 };
 
 /* ————— session retention —————
@@ -91,8 +91,10 @@ function restoreSession() {
   try { list = JSON.parse(localStorage.getItem(SESSION_KEY) || "[]"); } catch { list = []; }
   if (!Array.isArray(list)) list = [];
   for (const r of list) {
-    if (!r || !APPS[r.app]) continue;
-    openApp(r.app, r.arg);
+    if (!r) continue;
+    const appId = r.app === "phase2" ? "phantom" : r.app; // renamed 2026-10-24: Phase2 — PHANTOM is just phantom now
+    if (!APPS[appId]) continue;
+    openApp(appId, r.arg);
     const key = r.app === "editor" ? `editor:${r.arg || ""}` : r.app;
     const win = windows.get(key);
     if (!win) continue;
@@ -853,7 +855,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   chip8: buildChip8,
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
-  phase2: buildPhase2App,
+  phantom: buildPhantomApp,
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */

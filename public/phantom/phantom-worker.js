@@ -1,4 +1,4 @@
-/* PHASE2 — PHANTOM · the WASI host for phase1, in a worker.
+/* phantom · the WASI host for phase1, in a worker.
  *
  * phase1 v7 (Bryforge/phase1) compiled to wasm32-wasip1 expects a
  * WASI preview1 world: args, env, clocks, random, stdio, and a
@@ -233,7 +233,7 @@ onmessage = async (e) => {
   try {
     for (const name of ["hello.py", "demo.py"]) {
       try {
-        const res = await fetch("/phase2/plugins/" + name);
+        const res = await fetch("/phantom/plugins/" + name);
         if (res.ok) fsMap.set("/plugins/" + name, { data: new TextEncoder().encode(await res.text()), mtime: Date.now() });
       } catch { /* the plugins are garnish — the phantom boots without them */ }
     }

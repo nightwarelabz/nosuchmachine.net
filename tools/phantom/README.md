@@ -1,9 +1,9 @@
-# PHASE2 — PHANTOM · the phase1 web port
+# phantom · the phase1 web port
 
-`public/phase2/phantom.wasm` is phase1 v7.0.1 (github.com/Bryforge/phase1,
+`public/phantom/phantom.wasm` is phase1 v7.0.1 (github.com/Bryforge/phase1,
 edge/stable @ fb33abf) compiled for `wasm32-wasip1`, hosted in BLACKSITE
-OS by `public/phase2/phantom-worker.js` (the WASI world) and
-`src/scripts/os-phase2.ts` (the glass).
+OS by `public/phantom/phantom-worker.js` (the WASI world) and
+`src/scripts/os-phantom.ts` (the glass).
 
 ## The delta
 
@@ -34,7 +34,7 @@ stay honest limits, not stubs.
     git clone https://github.com/Bryforge/phase1 && cd phase1
     git checkout edge/stable
     git apply /path/to/phase1-phantom.patch
-    tools/phase2/build-phase2.sh .
+    tools/phantom/build-phantom.sh .
 
 ## Host contract
 
@@ -42,6 +42,6 @@ The worker provides WASI preview1: args, env (legacy shell UI +
 cooked input flags set), clocks, random, stdio over a
 SharedArrayBuffer ring (64 KiB at byte 64; header Int32 [write seq,
 read seq, closed, pad]), and a memory filesystem preopened at `.`
-and `/tmp`, seeded with `public/phase2/plugins/*.py`. Sockets are
+and `/tmp`, seeded with `public/phantom/plugins/*.py`. Sockets are
 NOTSUP by construction. Blocking stdin is why the OS scope carries
 `Cross-Origin-Embedder-Policy: credentialless`.
