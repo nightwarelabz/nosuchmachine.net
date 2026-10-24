@@ -2132,8 +2132,14 @@ export function buildSimulacrum(body: HTMLElement) {
   document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
   document.addEventListener("mousemove", (e) => {
     if (!locked) return;
-    yaw -= e.movementX * 0.0024;
-    pitch = Math.max(-1.35, Math.min(1.35, pitch - e.movementY * 0.0024));
+    /* dead zone + clamp: pointer-lock deltas trickle on some
+       browsers (Safari synthesizes them at screen edges) and a
+       resting hand's micro-jitter otherwise becomes a slow,
+       constant veer while walking */
+    const mx = Math.abs(e.movementX) < 1 ? 0 : Math.max(-80, Math.min(80, e.movementX));
+    const my = Math.abs(e.movementY) < 1 ? 0 : Math.max(-80, Math.min(80, e.movementY));
+    yaw -= mx * 0.0024;
+    pitch = Math.max(-1.35, Math.min(1.35, pitch - my * 0.0024));
   });
   const kd = (e: KeyboardEvent) => {
     if (!body.isConnected) return;
@@ -2531,9 +2537,14 @@ export function buildSimulacrum(body: HTMLElement) {
   canvas.addEventListener("touchmove", (e) => {
     if (!lastTouch) return;
     const t = e.touches[0];
-    yaw -= (t.clientX - lastTouch.x) * 0.005;
-    pitch = Math.max(-1.35, Math.min(1.35, pitch - (t.clientY - lastTouch.y) * 0.005));
-    lastTouch = { x: t.clientX, y: t.clientY };
+    /* steering needs a deliberate drag: a resting finger's
+       micro-moves on glass once accumulated into a slow veer */
+    const dx = t.clientX - lastTouch.x, dy = t.clientY - lastTouch.y;
+    if (Math.abs(dx) >= 2 || Math.abs(dy) >= 2) {
+      yaw -= dx * 0.005;
+      pitch = Math.max(-1.35, Math.min(1.35, pitch - dy * 0.005));
+      lastTouch = { x: t.clientX, y: t.clientY };
+    }
     keys.add("KeyW");
   }, { passive: true });
   canvas.addEventListener("touchend", () => { lastTouch = null; keys.delete("KeyW"); });
