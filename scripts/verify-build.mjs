@@ -109,7 +109,7 @@ for (const asset of ["orc/orc-64.png", "orc/orc-128.png", "orc/orc-256.png"]) {
 }
 assert.ok(astroJs.includes("orc-64.png"), "OS bundle must carry the orc face icon");
 assert.ok(astroJs.includes("credentialless"), "orc preview frame must be credentialless (the OS page's COEP require-corp blocks plain cross-origin frames)");
-assert.ok(astroJs.includes("ORC — Orchestration"), "OS bundle must carry orc's expanded name");
+assert.ok(!astroJs.includes("Orchestration"), "ORC is never expanded in public copy (Chase: the expansion is for internal records)");
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");
 assert.ok(headersOut.includes("/wolf3d/*"), "Served _headers must carry the /wolf3d/* scope");
 assert.ok(headersOut.includes("frame-src 'self' https:"), "OS CSP must allow the orc room's frames");

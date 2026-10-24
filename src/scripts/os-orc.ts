@@ -31,10 +31,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   face.src = "/orc/orc-256.png";
   face.alt = "orc — the pixel orc, orc's mark";
   const heroText = el("div");
-  heroText.append(
-    el("h3", "", "ORC — Orchestration"),
-    el("p", "os-note", "the house browser."),
-  );
+  heroText.append(el("h3", "", "ORC"));
   hero.append(face, heroText);
   const bar = el("div", "os-files-bar");
   const addr = document.createElement("input");
