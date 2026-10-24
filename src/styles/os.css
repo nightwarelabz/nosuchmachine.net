@@ -139,6 +139,7 @@
 .os-file-row { display: flex; align-items: center; gap: 0.5rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 0.44rem 0.6rem; cursor: pointer; font-size: 0.81rem; width: 100%; transition: background 0.12s; }
 .os-file-row:hover, .os-file-row.selected { background: rgba(255, 255, 255, 0.06); border-color: var(--os-line-soft); }
 .os-file-actions { margin-left: auto; display: flex; gap: 0.3rem; }
+.os-files-preview { margin-top: 0.8rem; border-top: 1px dashed var(--os-line-soft); padding-top: 0.7rem; color: var(--os-muted); max-height: 240px; overflow: auto; }
 
 /* editor */
 .os-editor-area { width: 100%; height: calc(100% - 30px); background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line-soft); border-radius: 8px; font: inherit; font-size: 0.83rem; line-height: 1.6; padding: 0.65rem; resize: none; }
