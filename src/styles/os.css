@@ -273,3 +273,24 @@
   .os-relay-input { font-size: 16px; }
   .os-relay-card { max-width: none; }
 }
+
+/* ————— mobile consolidation (the phone allocation, in one place) —————
+   An even 4-column icon grid with a uniform label reserve, and a taskbar
+   that fits its row: the start button never wraps, the external nightjar
+   link yields its space (the bench link and the Bench desktop icon stay),
+   and the EMCON chip carries tighter type. */
+@media (max-width: 760px) {
+  .os-icons {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    top: 10px; left: 8px; right: 8px; bottom: auto;
+    gap: 10px 4px; padding: 0; max-width: none;
+  }
+  .os-icon { width: auto; min-height: 80px; padding: 8px 2px 6px; border-radius: 12px; }
+  .os-icon-glyph { font-size: 1.55rem; }
+  .os-icon-label { font-size: 0.66rem; line-height: 1.25; min-height: 2.5em; }
+  .os-start { white-space: nowrap; padding: 0.5rem 0.6rem; font-size: 0.74rem; }
+  .os-task-link[href^="http"] { display: none; }
+  .os-emcon-chip { letter-spacing: 0.05em; padding: 0.38rem 0.55rem; font-size: 0.64rem; }
+  .os-taskbar-apps { min-width: 0; }
+}
+.os-wp-thumb img.os-wp-canvas { object-fit: cover; }
