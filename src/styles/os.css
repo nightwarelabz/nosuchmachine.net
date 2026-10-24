@@ -139,6 +139,9 @@
 .os-file-row { display: flex; align-items: center; gap: 0.5rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 0.44rem 0.6rem; cursor: pointer; font-size: 0.81rem; width: 100%; transition: background 0.12s; }
 .os-file-row:hover, .os-file-row.selected { background: rgba(255, 255, 255, 0.06); border-color: var(--os-line-soft); }
 .os-file-actions { margin-left: auto; display: flex; gap: 0.3rem; }
+.os-chip8 { display: flex; flex-direction: column; gap: 0.6rem; }
+.os-chip8-screen { width: 100%; aspect-ratio: 2 / 1; image-rendering: pixelated; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; outline: none; }
+.os-chip8-screen:focus { border-color: var(--os-accent); box-shadow: 0 0 0 1px var(--os-accent), 0 0 24px rgba(61, 220, 132, 0.15); }
 .os-files-preview { margin-top: 0.8rem; border-top: 1px dashed var(--os-line-soft); padding-top: 0.7rem; color: var(--os-muted); max-height: 240px; overflow: auto; }
 
 /* editor */

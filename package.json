@@ -22,8 +22,10 @@
     "@astrojs/check": "0.9.10",
     "age-encryption": "^0.3.0",
     "astro": "7.3.5",
+    "fengari-web": "^0.1.4",
     "github-slugger": "2.0.0",
     "satteri": "0.10.5",
+    "sql.js": "^1.15.1",
     "typescript": "6.0.3"
   }
 }

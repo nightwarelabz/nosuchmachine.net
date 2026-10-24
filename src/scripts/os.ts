@@ -10,6 +10,7 @@ import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
+import { Chip8, CHIP8_DEMO } from "./os-engines2";
 
 const os = new BlacksiteOS();
 let zTop = 10;
@@ -363,6 +364,63 @@ function buildEditor(body: HTMLElement, arg?: string) {
 
 
 const BOOT_AT = Date.now();
+function buildChip8(body: HTMLElement, arg: string) {
+  const wrap = el("div", "os-chip8");
+  const canvas = document.createElement("canvas");
+  canvas.width = 64; canvas.height = 32;
+  canvas.className = "os-chip8-screen";
+  const bar = el("div", "os-files-bar");
+  const sel = document.createElement("select");
+  sel.className = "os-bottle-select";
+  const demoOpt = document.createElement("option"); demoOpt.value = ""; demoOpt.textContent = "built-in demo";
+  sel.appendChild(demoOpt);
+  const roms: string[] = [];
+  const scan = (dir: string) => { for (const n of os.list(dir)) { const p = (dir === "/" ? "" : dir) + "/" + n; if (os.isDir(p)) { if (!p.startsWith("/sys")) scan(p); } else if (n.endsWith(".ch8")) roms.push(p); } };
+  scan("/home");
+  for (const r of roms) { const o = document.createElement("option"); o.value = r; o.textContent = r; sel.appendChild(o); }
+  if (arg && roms.includes(arg)) sel.value = arg;
+  const status = el("span", "os-note", "");
+  bar.append(sel, status);
+  wrap.append(bar, canvas);
+  const keysNote = el("p", "os-note", "keys: 1 2 3 4 / Q W E R / A S D F / Z X C V map to the hex pad. click the screen, then play.");
+  wrap.appendChild(keysNote);
+  body.appendChild(wrap);
+  const cpu = new Chip8();
+  const KEYMAP: Record<string, number> = { "1": 1, "2": 2, "3": 3, "4": 0xc, q: 4, w: 5, e: 6, r: 0xd, a: 7, s: 8, d: 9, f: 0xe, z: 0xa, x: 0, c: 0xb, v: 0xf };
+  const load = () => {
+    cpu.load(sel.value ? (os.readBytes(sel.value) || CHIP8_DEMO) : CHIP8_DEMO);
+    status.textContent = sel.value || "built-in demo";
+  };
+  sel.addEventListener("change", load);
+  const down = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) { cpu.keys[k] = 1; e.preventDefault(); } };
+  const up = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) cpu.keys[k] = 0; };
+  canvas.tabIndex = 0;
+  canvas.addEventListener("keydown", down);
+  canvas.addEventListener("keyup", up);
+  canvas.addEventListener("pointerdown", () => canvas.focus());
+  load();
+  let dead = false;
+  const obs = new MutationObserver(() => { if (!document.body.contains(wrap)) { dead = true; obs.disconnect(); } });
+  obs.observe(document.body, { childList: true, subtree: true });
+  const ctx2 = canvas.getContext("2d")!;
+  let lastTimer = performance.now();
+  const frame = () => {
+    if (dead) return;
+    for (let i = 0; i < 10; i++) cpu.cycle();
+    const now = performance.now();
+    if (now - lastTimer > 16) { cpu.tickTimers(); lastTimer = now; }
+    if (cpu.drawFlag) {
+      cpu.drawFlag = false;
+      const img = ctx2.createImageData(64, 32);
+      for (let i = 0; i < 64 * 32; i++) { const on = cpu.gfx[i]; img.data[i * 4] = on ? 120 : 8; img.data[i * 4 + 1] = on ? 255 : 14; img.data[i * 4 + 2] = on ? 170 : 10; img.data[i * 4 + 3] = 255; }
+      ctx2.putImageData(img, 0, 0);
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  setTimeout(() => canvas.focus(), 80);
+}
+
 function buildSystem(body: HTMLElement) {
   const wrap = el("div", "os-settings");
   const stats = el("div", "os-sys-grid");
@@ -602,6 +660,7 @@ function boot() {
   updateEmconChip();
   document.getElementById("os-emcon-chip")?.addEventListener("click", () => openApp("settings"));
   document.getElementById("os-start")?.addEventListener("click", () => toggleLauncher());
+  document.addEventListener("blacksite:openapp", (e) => { const d = (e as CustomEvent).detail || {}; if (d.app) openApp(d.app, d.arg); });
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); toggleLauncher(); }
     if (e.altKey && e.key === "Tab") {
