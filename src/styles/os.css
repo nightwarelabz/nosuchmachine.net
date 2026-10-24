@@ -379,3 +379,9 @@
 .os-root input:focus-visible, .os-root textarea:focus-visible, .os-root select:focus-visible { outline: none; border-color: var(--os-accent); box-shadow: 0 0 0 3px var(--os-accent-soft); }
 .os-boot::after { content: ""; width: min(620px, 88vw); height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--os-accent), transparent); background-size: 200% 100%; animation: os-boot-scan 1.5s linear infinite; opacity: 0.85; }
 @keyframes os-boot-scan { from { background-position: 200% 0; } to { background-position: -100% 0; } }
+/* — ghost completion: the console thinks ahead, in the margin's voice — */
+.os-ghost-wrap { position: relative; flex: 1; display: flex; }
+.os-ghost { position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; pointer-events: none; white-space: pre; font: inherit; font-size: 0.86rem; z-index: 2; }
+.os-ghost-mirror { visibility: hidden; }
+.os-ghost-sug { color: var(--os-muted); opacity: 0.55; }
+@media (max-width: 760px) { .os-ghost { font-size: 16px; } }
