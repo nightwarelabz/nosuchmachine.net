@@ -8,6 +8,7 @@ import { registerBenchVerbs } from "./os-verbs3";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
+import { buildPhase2App } from "./os-phase2";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -60,6 +61,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   chip8: { title: "CHIP-8 Console", icon: "👾" },
   ssh: { title: "SSH", icon: "🔐" },
   relay: { title: "Relay — the house wire", icon: "📻" },
+  phase2: { title: "Phase2 — PHANTOM", icon: "👻" },
 };
 
 /* ————— session retention —————
@@ -836,6 +838,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   chip8: buildChip8,
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
+  phase2: buildPhase2App,
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */

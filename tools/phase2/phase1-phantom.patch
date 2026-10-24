@@ -1,0 +1,149 @@
+diff --git a/src/boot_ui_static.rs b/src/boot_ui_static.rs
+index cbf5487..c75c13e 100644
+--- a/src/boot_ui_static.rs
++++ b/src/boot_ui_static.rs
+@@ -380,7 +380,6 @@ pub fn configure_boot(version: &str) -> BootSelection {
+     let mut config = BootConfig::default();
+     let boot_stamp = static_boot_stamp();
+     std::env::set_var("PHASE1_BOOT_STAMP", &boot_stamp);
+-
+     if optics_pro_direct_shell_enabled() {
+         crate::ops_log::log_event(
+             "boot.direct_optics",
+@@ -1555,6 +1554,12 @@ fn strip_ansi(text: &str) -> String {
+ }
+ 
+ fn stty(args: &[&str]) -> io::Result<String> {
++    // PHANTOM (web port): WASI has no tty and no PATH to search — std's
++    // Command PATH lookup panics there. Refusing here drops every raw-
++    // mode consumer onto the cooked line path the project already keeps.
++    if cfg!(target_family = "wasm") {
++        return Err(io::Error::new(io::ErrorKind::Unsupported, "no tty in the room"));
++    }
+     let output = Command::new("stty")
+         .args(args)
+         .stdin(Stdio::inherit())
+diff --git a/src/commands.rs b/src/commands.rs
+index 83b21a6..4c0ce49 100644
+--- a/src/commands.rs
++++ b/src/commands.rs
+@@ -749,8 +749,8 @@ fn run_c(shell: &mut Phase1Shell, args: &[String]) {
+         return;
+     };
+     let nonce = unique_nonce();
+-    let source = std::env::temp_dir().join(format!("phase1_{}.c", nonce));
+-    let binary = std::env::temp_dir().join(format!("phase1_{}", nonce));
++    let source = (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { std::env::temp_dir() }) }).join(format!("phase1_{}.c", nonce));
++    let binary = (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { std::env::temp_dir() }) }).join(format!("phase1_{}", nonce));
+     if let Err(err) = fs::write(&source, code) {
+         println!("gcc: {}", err);
+         return;
+diff --git a/src/kernel.rs b/src/kernel.rs
+index ffb1d9a..e911e4e 100644
+--- a/src/kernel.rs
++++ b/src/kernel.rs
+@@ -1,7 +1,6 @@
+ use std::collections::{HashMap, VecDeque};
+ use std::fmt;
+ use std::path::{Path, PathBuf};
+-use std::process;
+ use std::time::{Duration, Instant};
+ 
+ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+@@ -63,7 +62,7 @@ impl Scheduler {
+         let _ = scheduler.spawn("init", 0, "/sbin/init", 128, false, 0);
+         let _ = scheduler.spawn(
+             "phase1-shell",
+-            process::id(),
++            (if cfg!(target_family = "wasm") { 1 } else { std::process::id() }),
+             "phase1 shell",
+             8192,
+             false,
+@@ -665,7 +664,7 @@ impl Kernel {
+         self.audit
+             .record(format!("sys.spawn name={} bg={}", name, background));
+         self.scheduler
+-            .spawn(name, process::id(), cmdline, 4096, background, 0)
++            .spawn(name, (if cfg!(target_family = "wasm") { 1 } else { std::process::id() }), cmdline, 4096, background, 0)
+             .ok_or_else(|| "process table full".to_string())
+     }
+ 
+diff --git a/src/languages.rs b/src/languages.rs
+index 712fc1e..6e66028 100644
+--- a/src/languages.rs
++++ b/src/languages.rs
+@@ -595,7 +595,7 @@ fn parse_timeout(raw: &str) -> Result<Duration, String> {
+ 
+ fn execute(spec: &LanguageSpec, source: &str, options: &RunOptions) -> io::Result<Output> {
+     let nonce = unique_nonce();
+-    let root = env::temp_dir().join(format!("phase1_lang_{nonce}"));
++    let root = (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { env::temp_dir() }).join(format!("phase1_lang_{nonce}"));
+     fs::create_dir_all(&root)?;
+     let ext = spec.extensions.first().copied().unwrap_or("txt");
+     let source_path = root.join(format!("main.{ext}"));
+diff --git a/src/learn.rs b/src/learn.rs
+index 32b34ec..c396448 100644
+--- a/src/learn.rs
++++ b/src/learn.rs
+@@ -764,7 +764,7 @@ mod tests {
+             .duration_since(UNIX_EPOCH)
+             .map(|duration| duration.as_nanos())
+             .unwrap_or(0);
+-        std::env::temp_dir().join(format!("phase1-learn-shell-{name}-{nonce}"))
++        (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { std::env::temp_dir() }).join(format!("phase1-learn-shell-{name}-{nonce}"))
+     }
+ 
+     #[test]
+diff --git a/src/line_editor.rs b/src/line_editor.rs
+index 6e8c076..eb30d24 100644
+--- a/src/line_editor.rs
++++ b/src/line_editor.rs
+@@ -814,6 +814,12 @@ impl Drop for RawModeGuard {
+ }
+ 
+ fn stty(args: &[&str]) -> io::Result<String> {
++    // PHANTOM (web port): WASI has no tty and no PATH to search — std's
++    // Command PATH lookup panics there. Refusing here drops every raw-
++    // mode consumer onto the cooked line path the project already keeps.
++    if cfg!(target_family = "wasm") {
++        return Err(io::Error::new(io::ErrorKind::Unsupported, "no tty in the room"));
++    }
+     let output = Command::new("stty")
+         .args(args)
+         .stdin(Stdio::inherit())
+diff --git a/src/main.rs b/src/main.rs
+index 4eb5d37..d1785a2 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -162,9 +162,15 @@ fn run_storage_boot_option(boot_config: ui::BootConfig) {
+         "phase1-storage"
+     };
+ 
+-    let helper_path = std::env::current_exe()
+-        .ok()
+-        .and_then(|path| path.parent().map(|dir| dir.join(helper_name)));
++    // PHANTOM (web port): current_exe() panics on WASI rather than
++    // returning Err — the helper simply does not exist in the room.
++    let helper_path = if cfg!(target_family = "wasm") {
++        None
++    } else {
++        std::env::current_exe()
++            .ok()
++            .and_then(|path| path.parent().map(|dir| dir.join(helper_name)))
++    };
+ 
+     match helper_path {
+         Some(path) if path.exists() => {
+diff --git a/src/wasm.rs b/src/wasm.rs
+index 15c0922..448728b 100644
+--- a/src/wasm.rs
++++ b/src/wasm.rs
+@@ -494,7 +494,7 @@ mod tests {
+             .unwrap_or(0);
+         let seq = WASM_TEST_COUNTER.fetch_add(1, Ordering::Relaxed);
+         let dir =
+-            std::env::temp_dir().join(format!("phase1-wasm-test-{}-{nonce}-{seq}", process::id()));
++            (if cfg!(target_family = "wasm") { std::path::PathBuf::from("/tmp") } else { std::env::temp_dir() }).join(format!("phase1-wasm-test-{}-{nonce}-{seq}", (if cfg!(target_family = "wasm") { 1 } else { std::process::id() })));
+         let _ = fs::remove_dir_all(&dir);
+         fs::create_dir_all(&dir).unwrap();
+         fs::write(dir.join("demo.wasm"), b"\0asm\x01\0\0\0").unwrap();
