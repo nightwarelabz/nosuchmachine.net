@@ -884,9 +884,17 @@ export function buildSigint(body: HTMLElement) {
   };
 
   const renderRegistry = () => {
+    /* Display rank: identified stations first, then by hits — the
+       table is the product, and a wall of strong unidentified
+       sideband teeth must not crowd out a quieter station the
+       bench has actually named. Components inside a merged
+       station's extent are part of that station, not rows. */
+    const identified = (st: Station) => (st.guess !== "carrier" && st.guess !== "CW?" ? 1 : 0);
+    const isComponent = (st: Station) => stations.some((o) => o !== st && (o.mergeW ?? 0) > 0
+      && o.extLo !== undefined && o.extHi !== undefined && st.freq >= o.extLo && st.freq <= o.extHi);
     const rows = stations
-      .filter((st) => Date.now() - st.last < 90000 && st.hits >= 3)
-      .sort((a, b) => b.hits - a.hits).slice(0, 12)
+      .filter((st) => Date.now() - st.last < 90000 && st.hits >= 3 && !isComponent(st))
+      .sort((a, b) => identified(b) - identified(a) || b.hits - a.hits).slice(0, 12)
       .sort((a, b) => a.freq - b.freq).map((st) => {
       const tr = document.createElement("tr");
       const alive = Date.now() - st.last < 5000;
