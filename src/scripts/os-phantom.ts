@@ -105,6 +105,40 @@ export class AnsiLines {
   }
 }
 
+/* ——— ghost completion ———
+   As the operator types, the console thinks ahead in ghost text —
+   the way a good editor does. The vocabulary is the guest's OWN:
+   the 93 commands and 51 aliases of phase1's registry (the same
+   table its built-in autocomplete reads), plus the shell's builtins.
+   Nothing is suggested that the machine would not understand. The
+   session's own history outranks the dictionary, and after a file
+   command the known paths of the guest's world complete. Tab takes
+   the whole suggestion; Right-arrow takes it a word at a time;
+   Escape dismisses it for the line as typed. */
+export const GUEST_VOCAB: string[] = ["accounts", "arena", "audit", "avim", "banner", "bg", "boot", "bootcfg", "bootconfig", "branches", "browser", "capabilities", "caps", "cargo", "cat", "cc", "cd", "channels", "clear", "commands", "complete", "cp", "cr3", "cr4", "dash", "dashboard", "date", "dev", "df", "dmesg", "dock", "doctrine", "doom", "echo", "edit", "emac", "emacs", "env", "exit", "export", "fetch", "fg", "find", "forge", "free", "fyr", "game", "gcc", "gh", "git", "github", "go", "golang", "grep", "head", "help", "hint", "hints", "history", "hostname", "hudrails", "id", "ifconfig", "iwconfig", "jobs", "kill", "lang", "language", "learn", "loadcr3", "ls", "lspci", "man", "map", "matrix", "mem", "memory", "mkdir", "mv", "nano", "ned", "neofetch", "nest", "nests", "nice", "nmcli", "nsinfo", "optics", "pcide", "pcie", "pemacs", "phase1-emacs", "phase1emacs", "phase1lang", "ping", "pipeline", "pipes", "plugin", "plugins", "policy", "poweroff", "pro", "ps", "pwd", "py", "python", "python3", "quit", "rain", "reboot", "repo", "rm", "roadmap", "runlang", "rustc", "sandbox", "sec", "security", "selfdev", "shutdown", "spawn", "splash", "status", "style", "su", "sysinfo", "tail", "theme", "tips", "top", "touch", "tree", "uname", "unset", "update", "upgrade", "uptime", "users", "ver", "version", "vi", "vim", "vmstat", "wasi", "wasm", "wc", "whoami", "wifi-connect", "wifi-scan"];
+const FILE_COMMANDS = new Set(["cat", "ls", "cd", "tree", "find", "rm", "cp", "mv", "head", "tail", "avim", "ned", "edit", "vi", "vim", "nano", "emacs", "grep", "wc"]);
+const KNOWN_PATHS = ["/plugins/hello.py", "/plugins/demo.py", "/plugins", "/tmp", "phase1.log", "phase1.workspace", "phase1.conf"];
+export function suggestSuffix(line: string, history: string[], state: string): string {
+  if (!line || line.endsWith("  ")) return "";
+  for (const h of history) if (h.length > line.length && h.toLowerCase().startsWith(line.toLowerCase())) return h.slice(line.length);
+  if (state === "menu") return ""; // the boot menu's keys are its own; history alone speaks there
+  const sp = line.lastIndexOf(" ");
+  if (sp < 0) {
+    const p = line.toLowerCase();
+    const v = GUEST_VOCAB.find((w) => w.startsWith(p) && w.length > p.length);
+    return v ? v.slice(p.length) + " " : "";
+  }
+  const cmd = line.slice(0, sp).trim().split(/\s+/)[0].toLowerCase();
+  const frag = line.slice(sp + 1);
+  if (!frag) return "";
+  if (FILE_COMMANDS.has(cmd)) {
+    const hit = KNOWN_PATHS.find((x) => x.startsWith(frag) && x.length > frag.length);
+    if (hit) return hit.slice(frag.length);
+  }
+  const v = GUEST_VOCAB.find((w) => w.startsWith(frag.toLowerCase()) && w.length > frag.length);
+  return v ? v.slice(frag.length) : "";
+}
+
 export function buildPhantomApp(body: HTMLElement) {
   body.classList.add("os-term-body");
   body.classList.add("os-phantom");
@@ -139,16 +173,47 @@ export function buildPhantomApp(body: HTMLElement) {
     keyBtns.push(b);
   }
 
-  /* — the line. — */
+  /* — the line, with its ghost. — */
   const line = el("div", "os-term-line os-guest-line");
   const prompt = el("span", "os-term-prompt", "phantom ›");
+  const wrap = el("span", "os-ghost-wrap");
   const input = document.createElement("input");
   input.className = "os-term-input";
   input.setAttribute("autocomplete", "off");
   input.setAttribute("spellcheck", "false");
   input.setAttribute("aria-label", "phantom input — lines for the phantom");
-  line.append(prompt, input);
+  const ghost = el("span", "os-ghost");
+  const ghostMirror = el("span", "os-ghost-mirror");
+  const ghostSug = el("span", "os-ghost-sug");
+  ghost.append(ghostMirror, ghostSug);
+  wrap.append(input, ghost);
+  line.append(prompt, wrap);
   body.append(rail, screen, keys, line);
+
+  const history: string[] = [];
+  let dismissedFor = "\u0000";
+  let currentSug = "";
+  const refreshGhost = () => {
+    currentSug = input.value === dismissedFor ? "" : suggestSuffix(input.value, history, state);
+    ghostMirror.textContent = input.value;
+    ghostSug.textContent = currentSug;
+  };
+  input.addEventListener("input", refreshGhost);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Tab" && currentSug) {
+      e.preventDefault();
+      input.value += currentSug;
+      refreshGhost();
+    } else if (e.key === "ArrowRight" && currentSug && input.selectionStart === input.value.length) {
+      e.preventDefault();
+      const m = currentSug.match(/^\S*[ /]?/);
+      input.value += m ? m[0] : currentSug;
+      refreshGhost();
+    } else if (e.key === "Escape" && currentSug) {
+      dismissedFor = input.value;
+      refreshGhost();
+    }
+  });
 
   type GuestState = "asleep" | "off" | "booting" | "menu" | "running" | "halted" | "fault";
   let state: GuestState = "booting";
@@ -219,6 +284,7 @@ export function buildPhantomApp(body: HTMLElement) {
   const RING_CAP = 65536;
 
   const sendLine = (text: string) => {
+    if (text && history[0] !== text) { history.unshift(text); if (history.length > 60) history.pop(); }
     if (!head || !ring) return;
     const bytes = new TextEncoder().encode(text + "\n");
     const w = Atomics.load(head, 0);
@@ -279,6 +345,8 @@ export function buildPhantomApp(body: HTMLElement) {
     if (e.key !== "Enter") return;
     const text = input.value;
     input.value = "";
+    dismissedFor = "\u0000";
+    refreshGhost();
     if (state === "menu" || state === "running" || state === "booting") sendLine(text);
   });
 
