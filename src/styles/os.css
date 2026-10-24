@@ -142,6 +142,10 @@
 .os-chip8 { display: flex; flex-direction: column; gap: 0.6rem; }
 .os-chip8-screen { width: 100%; aspect-ratio: 2 / 1; image-rendering: pixelated; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; outline: none; }
 .os-chip8-screen:focus { border-color: var(--os-accent); box-shadow: 0 0 0 1px var(--os-accent), 0 0 24px rgba(61, 220, 132, 0.15); }
+.os-ssh { display: flex; flex-direction: column; gap: 0.55rem; height: 100%; }
+.os-ssh-prompt { gap: 0.5rem; align-items: center; background: rgba(255, 176, 46, 0.08); border: 1px solid rgba(255, 176, 46, 0.35); border-radius: 8px; padding: 0.5rem 0.6rem; }
+.os-ssh-screen { flex: 1; min-height: 220px; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; padding: 0.6rem 0.7rem; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.76rem; line-height: 1.45; white-space: pre; overflow: auto; color: #d7e3f4; outline: none; cursor: text; }
+.os-ssh-screen:focus { border-color: var(--os-accent); }
 .os-files-preview { margin-top: 0.8rem; border-top: 1px dashed var(--os-line-soft); padding-top: 0.7rem; color: var(--os-muted); max-height: 240px; overflow: auto; }
 
 /* editor */

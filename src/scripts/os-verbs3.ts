@@ -507,6 +507,12 @@ function registerEngines() {
     }
     return "wasm exports <file> — list a module's exports\nwasm run <file> <fn> [numbers...] — call an exported function (its prints land here; WASI fd_write is wired)";
   });
+  verb("ssh", "EDGE", "ssh <user@host[:port]> — open an SSH session window (the room's own client: curve25519, aes-gcm, host-key trust by your hand)", async (ctx) => {
+    const refusal = ctx.os.gate("active"); if (refusal) return refusal;
+    if (!need(ctx, 1, "ssh <user@host[:port]>")) return;
+    document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "ssh", arg: ctx.args[0] } }));
+    return "the SSH window opens on the desk — the fingerprint must be trusted there before any password moves, and the session's cryptography never leaves this tab.";
+  });
   verb("chip8", "LIVE", "chip8 [file.ch8] — open the CHIP-8 console (the demo ROM runs if you name none)", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "chip8", arg: ctx.args[0] || "" } }));
     return "the CHIP-8 console opens on the desk — 64×32, sixteen keys (your 1-4/Q-R/A-F/Z-V rows), four thousand bytes of 1977.";
@@ -629,6 +635,7 @@ function registerSelfTests() {
       ["python engine answers", async () => { const Sk = await loadSkulpt(); return !!Sk; }],
       ["scheme engine evaluates", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runScheme("(define (fact n) (if (< n 2) 1 (* n (fact (- n 1))))) (display (fact 10))", { out: (t: string) => lines.push(t) }); return lines.join("") === "3628800"; }],
       ["brainfuck engine prints HI", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runBrainfuck("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.", "", { out: (t: string) => lines.push(t) }); return lines.join("").startsWith("Hello"); }],
+      ["ssh curve25519 agreement", async () => { const m = await import("./os-ssh"); const a = crypto.getRandomValues(new Uint8Array(32)); const b = crypto.getRandomValues(new Uint8Array(32)); const aPub = m.x25519(a, m.X25519_BASE); const bPub = m.x25519(b, m.X25519_BASE); return m.b64(m.x25519(a, bPub)) === m.b64(m.x25519(b, aPub)); }],
       ["chip-8 cpu: add + jump", async () => { const m = await import("./os-engines2"); const cpu = new m.Chip8(); cpu.load(new Uint8Array([0x60, 0x05, 0x70, 0x03, 0x12, 0x04])); cpu.cycle(); cpu.cycle(); return cpu.V[0] === 8 && cpu.pc === 4; }],
     ];
     let passed = 0; const lines: string[] = [];
