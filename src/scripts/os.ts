@@ -42,7 +42,6 @@ const APPS: Record<string, { title: string; icon: string }> = {
   system: { title: "System — the Noether register", icon: "◆" },
   chip8: { title: "CHIP-8 Console", icon: "👾" },
   ssh: { title: "SSH", icon: "🔐" },
-  cia: { title: "Contact CIA", icon: "🕵️" },
   relay: { title: "Relay — the house wire", icon: "📻" },
 };
 
@@ -599,33 +598,6 @@ function buildSsh(body: HTMLElement, arg?: string) {
   if (arg && hostIn.value) setTimeout(connect, 60);
 }
 
-/* ————— Contact CIA: a form, a joke with a real door at the end ————— */
-function buildCia(body: HTMLElement) {
-  const wrap = el("div", "os-cia");
-  const note = el("p", "os-note", "Every intelligence service keeps a door for walk-ins. The Agency's is public — this room composes your note, files a copy in your tree if you ask, and walks you to the real door. Nothing typed here is transmitted anywhere by this site; the Agency does not take form posts from third-party websites, and anyone who tells you otherwise is selling something.");
-  const nameIn = document.createElement("input"); nameIn.className = "os-bottle-input"; nameIn.placeholder = "codename (optional — the Agency will not know it)";
-  const subject = document.createElement("select"); subject.className = "os-bottle-select";
-  for (const opt of ["I have information", "A sighting worth reporting", "Recruitment — bold of me", "A question for the Agency", "Other"]) { const o = document.createElement("option"); o.textContent = opt; subject.appendChild(o); }
-  const msg = document.createElement("textarea"); msg.className = "os-bottle-area"; msg.rows = 8; msg.placeholder = "Say it plainly. Facts, dates, places. The note stays yours until you carry it through their door.";
-  const count = el("span", "os-note", "0 characters");
-  msg.addEventListener("input", () => { count.textContent = `${msg.value.length} characters`; });
-  const compose = () => `CONTACT NOTE — composed in BLACKSITE OS (nosuchmachine.net)\n\ncodename: ${nameIn.value.trim() || "(none given)"}\nsubject: ${subject.value}\ndate: ${new Date().toISOString()}\n\n${msg.value.trim()}\n\n— carried by hand to the Agency's public door: https://www.cia.gov/report-information`;
-  const bar = el("div", "os-files-bar");
-  const doorBtn = el("button", "os-btn", "take me to the Agency's door ↗");
-  const fileBtn = el("button", "os-btn", "file it in the tree");
-  const dlBtn = el("button", "os-btn", "download the note");
-  bar.append(doorBtn, fileBtn, dlBtn, count);
-  const status = el("p", "os-note", "");
-  doorBtn.addEventListener("click", () => { window.open("https://www.cia.gov/report-information", "_blank", "noopener"); status.textContent = "their door is open in a new tab — paste your note there. this room sent nothing."; });
-  fileBtn.addEventListener("click", () => { os.write("/home/operator/cia-note.txt", compose()); status.textContent = "filed at /home/operator/cia-note.txt — yours, in your tree, on this device only."; });
-  dlBtn.addEventListener("click", () => { const blob = new Blob([compose()], { type: "text/plain" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "contact-note.txt"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); status.textContent = "downloaded. what you do at their door is your business."; });
-  const box = el("div", "os-bottle-box");
-  const h = el("h3", "", "COMPOSE THE NOTE");
-  box.append(h, nameIn, subject, msg);
-  wrap.append(note, box, bar, status);
-  body.appendChild(wrap);
-}
-
 function buildSystem(body: HTMLElement) {
   const wrap = el("div", "os-settings");
   const stats = el("div", "os-sys-grid");
@@ -747,7 +719,6 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   system: buildSystem,
   chip8: buildChip8,
   ssh: buildSsh,
-  cia: buildCia,
   relay: (body) => buildRelayApp(body, os),
 };
 
@@ -850,7 +821,7 @@ function boot() {
     ["terminal", "▸_", "Terminal"], ["files", "📁", "Files"], ["editor", "✎", "Editor"],
     ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "📖", "Journal"],
     ["help", "?", "Help — 427"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "◆", "System"],
-    ["chip8", "👾", "CHIP-8"], ["ssh", "🔐", "SSH"], ["cia", "🕵️", "Contact CIA"], ["relay", "📻", "Relay"],
+    ["chip8", "👾", "CHIP-8"], ["ssh", "🔐", "SSH"], ["relay", "📻", "Relay"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");
