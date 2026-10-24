@@ -44,4 +44,4 @@ SharedArrayBuffer ring (64 KiB at byte 64; header Int32 [write seq,
 read seq, closed, pad]), and a memory filesystem preopened at `.`
 and `/tmp`, seeded with `public/phantom/plugins/*.py`. Sockets are
 NOTSUP by construction. Blocking stdin is why the OS scope carries
-`Cross-Origin-Embedder-Policy: credentialless`.
+`Cross-Origin-Embedder-Policy: require-corp`.
