@@ -135,6 +135,13 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   let ws: WebSocket | null = null;
   let myNick = "";
   let current = "server";
+  const joinedChans = new Set<string>();
+  let intentionalClose = false;
+  let attempts = 0;
+  let keepalive: ReturnType<typeof setInterval> | null = null;
+  let wireHost = "";
+  let wirePort = 6697;
+  let wireClaim = "";
   const buffers = new Map<string, string[]>();
   const users = new Map<string, Set<string>>();
 
@@ -178,12 +185,16 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         send(`PONG :${m.params[0] || ""}`);
         break;
       case "001":
+        attempts = 0;
         push("server", `— registered on the network as ${myNick}`);
-        send(`JOIN ${chanIn.value.trim() || HOUSE_CHANNEL}`);
+        if (joinedChans.size) for (const c of joinedChans) send(`JOIN ${c}`);
+        else send(`JOIN ${chanIn.value.trim() || HOUSE_CHANNEL}`);
         break;
       case "PRIVMSG": {
         const target = m.params[0] === myNick ? m.nick : m.params[0];
         const text = m.params[1] || "";
+        if (text === "\x01VERSION\x01") { send(`NOTICE ${m.nick} :\x01VERSION BLACKSITE Relay — the house wire, nosuchmachine.net\x01`); break; }
+        if (text.startsWith("\x01PING ") && text.endsWith("\x01")) { send(`NOTICE ${m.nick} :${text}`); break; }
         if (text.startsWith("\x01ACTION ") && text.endsWith("\x01")) push(target, `· ${m.nick} ${text.slice(8, -1)}`);
         else push(target, `<${m.nick}> ${text}`);
         break;
@@ -193,7 +204,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         break;
       case "JOIN": {
         const chan = m.params[0];
-        if (m.nick === myNick) { push(chan, `— you stepped into ${chan}`); current = chan; renderTargets(); }
+        if (m.nick === myNick) { joinedChans.add(chan); push(chan, `— you stepped into ${chan}`); current = chan; renderTargets(); }
         else push(chan, `— ${m.nick} arrived`);
         if (!users.has(chan)) users.set(chan, new Set());
         users.get(chan)!.add(m.nick);
@@ -202,6 +213,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       }
       case "PART": {
         const chan = m.params[0];
+        if (m.nick === myNick) joinedChans.delete(chan);
         push(chan, `— ${m.nick} left`);
         users.get(chan)?.delete(m.nick);
         if (chan === current) renderUsers();
@@ -248,23 +260,38 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       return;
     }
     buffers.clear(); users.clear(); current = "server";
+    joinedChans.clear(); intentionalClose = false; attempts = 0;
+    wireHost = host; wirePort = port; wireClaim = claim;
     card.hidden = true; view.hidden = false;
     push("server", `— reaching ${host}:${port} through the house bridge…`);
     renderTargets();
+    openWire();
+    input.focus();
+  };
+
+  /* One bridge connection. The edge lets a held connection go after a few
+     minutes (measured live: a healthy session dropped between 130s and
+     180s), so the wire heals itself: a 45-second IRC PING keeps both legs
+     warm, and an uninvited close re-registers and rejoins every channel
+     the operator was sitting in, buffers untouched. Only /quit — or
+     closing the app — leaves for good. */
+  const openWire = () => {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}/api/irc-bridge?host=${encodeURIComponent(host)}&port=${port}`);
+    ws = new WebSocket(`${proto}//${location.host}/api/irc-bridge?host=${encodeURIComponent(wireHost)}&port=${wirePort}`);
     ws.binaryType = "arraybuffer";
     let pending = "";
     ws.addEventListener("open", () => {
       push("server", "— bridge open; registering…");
-      if (claim) {
-        send(`PASS nsm-claim:${claim}`);
+      if (wireClaim) {
+        send(`PASS nsm-claim:${wireClaim}`);
         if (isHouseName(myNick)) {
-          try { os.write(CLAIM_PATH, `# relay claim code — secret. kept in this browser's blacksite filesystem only.\n${claim}\n`); } catch { /* the code still rides this session */ }
+          try { os.write(CLAIM_PATH, `# relay claim code — secret. kept in this browser's blacksite filesystem only.\n${wireClaim}\n`); } catch { /* the code still rides this session */ }
         }
       }
       send(`NICK ${myNick}`);
       send(`USER ${myNick} 0 * :BLACKSITE Relay guest`);
+      if (keepalive) clearInterval(keepalive);
+      keepalive = setInterval(() => { if (ws && ws.readyState === WebSocket.OPEN) send("PING :relay"); }, 45000);
     });
     ws.addEventListener("message", (ev) => {
       const text = typeof ev.data === "string" ? ev.data : new TextDecoder().decode(new Uint8Array(ev.data as ArrayBuffer));
@@ -276,9 +303,16 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         if (line) handle(parseIrcLine(line));
       }
     });
-    ws.addEventListener("close", () => push(current, "— the wire went quiet (connection closed)"));
-    ws.addEventListener("error", () => push(current, "— bridge error: the network could not be reached"));
-    input.focus();
+    ws.addEventListener("close", () => {
+      if (keepalive) { clearInterval(keepalive); keepalive = null; }
+      if (intentionalClose) { push("server", "— off the wire."); return; }
+      users.clear();
+      attempts += 1;
+      const wait = Math.min(2000 * 2 ** (attempts - 1), 20000);
+      push("server", `— the wire dropped. Stepping back on in ${Math.round(wait / 1000)}s — your place in the room is kept.`);
+      setTimeout(() => { if (!intentionalClose) openWire(); }, wait);
+    });
+    ws.addEventListener("error", () => push("server", "— bridge hiccup; the rejoin below covers it"));
   };
   joinBtn.addEventListener("click", connect);
 
@@ -297,7 +331,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         case "me": send(`PRIVMSG ${current} :\x01ACTION ${arg}\x01`); push(current, `· ${myNick} ${arg}`); break;
         case "nick": send(`NICK ${arg}`); break;
         case "topic": send(`TOPIC ${current} :${arg}`); break;
-        case "quit": send("QUIT :off the wire"); ws.close(); card.hidden = false; view.hidden = true; break;
+        case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); card.hidden = false; view.hidden = true; break;
         default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /topic /quit)`);
       }
       return;
