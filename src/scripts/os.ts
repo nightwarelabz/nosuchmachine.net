@@ -31,15 +31,15 @@ function desktop(): HTMLElement { return document.querySelector(".os-desktop")!;
 
 const APPS: Record<string, { title: string; icon: string }> = {
   terminal: { title: "Terminal — blacksite sh", icon: "▸_" },
-  files: { title: "Files", icon: "🗀" },
+  files: { title: "Files", icon: "📁" },
   editor: { title: "Editor", icon: "✎" },
   processes: { title: "Processes — the board", icon: "☰" },
-  journal: { title: "Journal", icon: "🕮" },
+  journal: { title: "Journal", icon: "📖" },
   gauntlet: { title: "Gauntlet & Diagnose", icon: "⚔" },
   settings: { title: "House Settings", icon: "⚙" },
   help: { title: "Help — the 427", icon: "?" },
   bottle: { title: "Daylight Bottle", icon: "☀" },
-  system: { title: "System — the Noether register", icon: "⬢" },
+  system: { title: "System — the Noether register", icon: "◆" },
   chip8: { title: "CHIP-8 Console", icon: "👾" },
   ssh: { title: "SSH", icon: "🔐" },
   cia: { title: "Contact CIA", icon: "🕵️" },
@@ -252,7 +252,7 @@ function buildFiles(body: HTMLElement) {
     for (const name of os.list(current)) {
       const path = (current === "/" ? "" : current) + "/" + name;
       const isDir = os.isDir(path);
-      const row = el("button", "os-file-row", `${isDir ? "🗀" : "🗎"} ${name}${isDir ? "/" : ""}`);
+      const row = el("button", "os-file-row", `${isDir ? "📁" : "📄"} ${name}${isDir ? "/" : ""}`);
       row.addEventListener("dblclick", () => {
         if (isDir) { current = path; render(); }
         else openApp("editor", path);
@@ -847,9 +847,9 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "▸_", "Terminal"], ["files", "🗀", "Files"], ["editor", "✎", "Editor"],
-    ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "🕮", "Journal"],
-    ["help", "?", "Help — 427"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "⬢", "System"],
+    ["terminal", "▸_", "Terminal"], ["files", "📁", "Files"], ["editor", "✎", "Editor"],
+    ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "📖", "Journal"],
+    ["help", "?", "Help — 427"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "◆", "System"],
     ["chip8", "👾", "CHIP-8"], ["ssh", "🔐", "SSH"], ["cia", "🕵️", "Contact CIA"], ["relay", "📻", "Relay"],
   ];
   for (const [app, icon, label] of defs) {
