@@ -131,6 +131,7 @@ export class BlacksiteOS {
   nextPid = 100;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
   theme = "violent-redteam";
+  wallpaper = "mare";
   journal: Array<{ at: string; text: string }> = [];
   tomatoes: string[] = [];
   bootedAt = Date.now();
@@ -222,7 +223,7 @@ export class BlacksiteOS {
       const macros = localStorage.getItem(MACRO_KEY);
       if (macros) this.macros = new Map(Object.entries(JSON.parse(macros)));
       const settings = localStorage.getItem(SET_KEY);
-      if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; if (s.theme) this.theme = s.theme; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
+      if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; if (s.theme) this.theme = s.theme; if (s.wallpaper) this.wallpaper = s.wallpaper; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
     } catch { if (!this.files.size) this.seed(); }
     if (!this.files.size) this.seed();
   }
@@ -232,7 +233,7 @@ export class BlacksiteOS {
       try {
         localStorage.setItem(VFS_KEY, JSON.stringify([...this.files.entries()]));
         localStorage.setItem(MACRO_KEY, JSON.stringify(Object.fromEntries(this.macros)));
-        localStorage.setItem(SET_KEY, JSON.stringify({ emcon: this.emcon, theme: this.theme, tomatoes: this.tomatoes }));
+        localStorage.setItem(SET_KEY, JSON.stringify({ emcon: this.emcon, theme: this.theme, wallpaper: this.wallpaper, tomatoes: this.tomatoes }));
       } catch { /* storage full/blocked — the room runs volatile and says so in limits */ }
     }, 250);
   }
