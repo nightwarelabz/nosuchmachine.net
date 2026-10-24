@@ -29,6 +29,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["edge bridge", `/api/* — the guarded wire: ${f.live + f.edge} verbs registered, wire verbs behind the public-target guard`, "LIVE"],
     ["emcon standard", `graded silence — currently ${f.emcon.toUpperCase()}`, "LIVE"],
     ["daylight bottle", "age-encrypted bottles, plugged in from bottle.nosuchmachine.net", "LIVE"],
+    ["git", "isomorphic-git over the room's own tree; the wire runs through the site's guarded git proxy", "LIVE"],
     ["timelock", "RSW repeated-squaring seals (the Magic Box construction)", "LIVE"],
     ["gauntlet", "the room tests itself — crypto vectors, vfs, roster, engines", "LIVE"],
   ];
