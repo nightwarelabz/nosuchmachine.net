@@ -359,11 +359,11 @@
    focus and take the theme's wash when they hold it, tiles that lift,
    scrollbars in the house's own metal. Everything re-skins with the
    theme because everything is mixed from its variables. */
-.os-desktop::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(ellipse 90% 55% at 16% -4%, var(--os-accent-soft), transparent 55%); opacity: 0.55; }
+.os-desktop::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(ellipse 115% 62% at 50% -8%, color-mix(in srgb, var(--os-accent) 20%, transparent), transparent 60%), radial-gradient(ellipse 60% 42% at 88% 108%, var(--os-accent-soft), transparent 65%); opacity: 0.85; }
 .os-desktop::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.38) 100%); }
 .os-window:not(.focused) { box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), 0 3px 12px rgba(0, 0, 0, 0.35); }
 .os-window:not(.focused) .os-win-head { background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008)); }
-.os-window.focused .os-win-head { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 17%, transparent), color-mix(in srgb, var(--os-accent) 5%, transparent)); }
+.os-window.focused .os-win-head { background: linear-gradient(180deg, color-mix(in srgb, var(--os-accent) 26%, transparent), color-mix(in srgb, var(--os-accent) 9%, transparent)); }
 .os-icon:hover { background: rgba(255, 255, 255, 0.07); border-color: var(--os-line-soft); transform: translateY(-2px); }
 .os-icon:active { transform: translateY(0) scale(0.96); }
 .os-icon-label { text-shadow: 0 1px 7px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9); }
