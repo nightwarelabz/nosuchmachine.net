@@ -516,7 +516,7 @@ function registerEngines() {
   verb("relay", "EDGE", "relay — open Relay, the house wire: a real IRC client in the room (OFTC, Libera.Chat, hackint; the house channel is #nosuchmachine)", async (ctx) => {
     const refusal = ctx.os.gate("active"); if (refusal) return refusal;
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "relay" } }));
-    return "Relay opens on the desk already standing in #nosuchmachine on OFTC — no account, no registration; you arrive as a guest and /nick names you.";
+    return "Relay opens on the desk already standing in #nosuchmachine on OFTC — no account, no registration; you arrive wearing a machine name (machine1A, machine2D, on without end) and /nick renames you.";
   });
   verb("chip8", "LIVE", "chip8 [file.ch8] — open the CHIP-8 console (the demo ROM runs if you name none)", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "chip8", arg: ctx.args[0] || "" } }));

@@ -43,6 +43,15 @@ const NETWORKS = [
   { host: "irc.hackint.org", label: "hackint" },
 ];
 const HOUSE_CHANNEL = "#nosuchmachine";
+/* House names for arrivals who bring none: machine + digit + letter + one
+   more mark — machine1A, machine2D, machine7Q3 — an endless arrangement.
+   If the network says a drawn name is taken (433), the room draws again. */
+function machineName(): string {
+  const digit = () => String(Math.floor(Math.random() * 10));
+  const letter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  const mark = () => (Math.random() < 0.5 ? digit() : letter());
+  return `machine${digit()}${letter()}${mark()}`;
+}
 const MAX_LINES = 300;
 const CLAIM_PATH = "/home/operator/relay-claim.txt";
 /* The house names — mirrored from the bridge, which is the authority.
@@ -68,7 +77,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const card = el("div", "os-relay-card");
   const intro = el("p", "os-note",
     "The house wire: a real IRC client in this tab, bridged by the site's edge to a public network over TLS. " +
-    "Opening Relay drops you straight into #nosuchmachine on OFTC as a guest — no account, no registration, " +
+    "Opening Relay drops you straight into #nosuchmachine on OFTC wearing a machine name the room issues — " +
+    "machine1A, machine2D, on without end. No account, no registration, " +
     "no name to file; /nick names you once you are in the room. This card is only for changing network or " +
     "wearing a name of your own. (Libera.Chat currently turns bridged guests away — it demands " +
     "SASL from the bridge's network range — so the house room lives on OFTC.) The house names — nightwarelabz, nosuchmachine, chasebryan " +
@@ -83,7 +93,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   }
   const nickIn = document.createElement("input");
   nickIn.className = "os-bottle-input";
-  nickIn.value = `guest-${Math.floor(1000 + Math.random() * 9000)}`;
+  nickIn.value = machineName();
   nickIn.placeholder = "nick";
   nickIn.maxLength = 24;
   const chanIn = document.createElement("input");
@@ -245,6 +255,14 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       case "TOPIC":
         push(m.params[0], `— ${m.nick} set the topic: ${m.params[1] || ""}`);
         break;
+      case "433": {
+        if (/^machine\d[A-Z][0-9A-Z]$/.test(myNick)) {
+          myNick = machineName();
+          push("server", `— that machine name is already worn in the room; you are ${myNick} now`);
+          send(`NICK ${myNick}`);
+        } else push("server", `— the name ${m.params[1] || ""} is taken on this network — /nick another, or wear a machine name`);
+        break;
+      }
       default:
         if (/^4\d\d$/.test(m.command) || /^5\d\d$/.test(m.command)) push("server", `— ${m.params.slice(1).join(" ")}`);
         break;
@@ -256,7 +274,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     if (refusal) { card.hidden = false; cardMsg.textContent = refusal; return; }
     const host = netSel.value;
     const port = tlsIn.checked ? 6697 : 6667;
-    myNick = (nickIn.value.trim() || "guest").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || "guest";
+    myNick = (nickIn.value.trim() || machineName()).replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || machineName();
     const claim = claimIn.value.trim();
     if (isHouseName(myNick) && !claim) {
       card.hidden = false; view.hidden = true;
@@ -295,7 +313,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         }
       }
       send(`NICK ${myNick}`);
-      send(`USER ${myNick} 0 * :BLACKSITE Relay guest`);
+      send(`USER ${myNick} 0 * :BLACKSITE Relay machine`);
       if (keepalive) clearInterval(keepalive);
       keepalive = setInterval(() => { if (ws && ws.readyState === WebSocket.OPEN) send("PING :relay"); }, 45000);
     });
