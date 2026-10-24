@@ -299,8 +299,8 @@ export class SimAudio {
     this.master = c.createGain();
     this.master.gain.value = 0;
     this.muffle.connect(this.master); this.master.connect(comp); comp.connect(c.destination);
-    this.musicBus = c.createGain(); this.musicBus.gain.value = 0.42; this.musicBus.connect(this.muffle);
-    this.ambBus = c.createGain(); this.ambBus.gain.value = 0.8; this.ambBus.connect(this.muffle);
+    this.musicBus = c.createGain(); this.musicBus.gain.value = 0.62; this.musicBus.connect(this.muffle);
+    this.ambBus = c.createGain(); this.ambBus.gain.value = 0.9; this.ambBus.connect(this.muffle);
     const nbuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const nd = nbuf.getChannelData(0);
     let lp = 0;
@@ -323,9 +323,11 @@ export class SimAudio {
 
   private applyGain(t = 0.2) {
     if (!this.ctx || !this.master) return;
-    const target = this.muted ? 0 : this.gate * soundPrefs().volume * 0.85;
+    const prefs = soundPrefs();
+    const target = this.muted || prefs.enabled === false ? 0 : this.gate * prefs.volume;
     this.master.gain.setTargetAtTime(target, this.ctx.currentTime, t);
   }
+  kick() { if (this.ctx && this.ctx.state !== "running") void this.ctx.resume(); }
   setGate(g: number) { if (g !== this.gate) { this.gate = g; this.applyGain(0.4); } }
   setMuted(m: boolean) { this.muted = m; this.applyGain(0.1); }
   setUnderwater(u: boolean) {
@@ -335,9 +337,9 @@ export class SimAudio {
   setWeather(rainAmt: number, alt: number, t: number) {
     if (!this.ctx || !this.windGain || !this.rainGain || !this.windFilter) return;
     const ct = this.ctx.currentTime;
-    this.windGain.gain.setTargetAtTime(0.035 + Math.min(0.10, Math.max(0, alt) * 0.0022) + rainAmt * 0.03, ct, 0.6);
+    this.windGain.gain.setTargetAtTime(0.085 + Math.min(0.17, Math.max(0, alt) * 0.004) + rainAmt * 0.05, ct, 0.6);
     this.windFilter.frequency.setTargetAtTime(420 + Math.sin(t * 0.23) * 130 + Math.sin(t * 0.071) * 90, ct, 0.8);
-    this.rainGain.gain.setTargetAtTime(rainAmt * 0.11, ct, 0.8);
+    this.rainGain.gain.setTargetAtTime(rainAmt * 0.18, ct, 0.8);
   }
 
   private tone(dest: AudioNode, freq: number, t0: number, dur: number, peak: number, type: OscillatorType = "sine", glideTo?: number) {
@@ -365,10 +367,10 @@ export class SimAudio {
       const dur = 13;
       for (const semi of chord) {
         const f = this.root * Math.pow(2, semi / 12);
-        this.tone(this.musicBus, f, now, dur, 0.028, "triangle");
-        this.tone(this.musicBus, f * 1.003, now, dur, 0.02, "sine");
+        this.tone(this.musicBus, f, now, dur, 0.052, "triangle");
+        this.tone(this.musicBus, f * 1.003, now, dur, 0.036, "sine");
       }
-      this.tone(this.musicBus, this.root * Math.pow(2, chord[0] / 12) / 2, now, dur, 0.035, "sine");
+      this.tone(this.musicBus, this.root * Math.pow(2, chord[0] / 12) / 2, now, dur, 0.055, "sine");
       this.chordAt = now + dur * 0.92;
     }
     if (now >= this.pluckAt) {
@@ -377,8 +379,8 @@ export class SimAudio {
         const base = chord[0];
         const note = this.scale[Math.floor(this.rnd() * this.scale.length)];
         const f = this.root * 2 * Math.pow(2, (base + note) / 12);
-        this.tone(this.musicBus, f, now, 2.2, 0.045, "sine");
-        this.tone(this.musicBus, f * 2, now, 2.2, 0.012, "sine");
+        this.tone(this.musicBus, f, now, 2.2, 0.085, "sine");
+        this.tone(this.musicBus, f * 2, now, 2.2, 0.02, "sine");
       }
       this.pluckAt = now + 2.6 + this.rnd() * (dark ? 7 : 4.5) + this.sparse * 4.5;
     }
@@ -400,9 +402,9 @@ export class SimAudio {
   footstep(surface: string) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    if (surface === "water") this.noiseBurst(t, 0.16, 0.10, 900, "bandpass", 0.8);
-    else if (surface === "rock" || surface === "snow") this.noiseBurst(t, 0.07, 0.07, surface === "rock" ? 2100 : 700, "bandpass", 1.2);
-    else this.noiseBurst(t, 0.09, 0.05, 480, "lowpass");
+    if (surface === "water") this.noiseBurst(t, 0.16, 0.16, 900, "bandpass", 0.8);
+    else if (surface === "rock" || surface === "snow") this.noiseBurst(t, 0.07, 0.11, surface === "rock" ? 2100 : 700, "bandpass", 1.2);
+    else this.noiseBurst(t, 0.09, 0.08, 480, "lowpass");
   }
   splash(big = false) { if (this.ctx) this.noiseBurst(this.ctx.currentTime, big ? 0.5 : 0.3, 0.16, 1100, "bandpass", 0.6); }
   thud(v: number) { if (this.ctx && this.ambBus) { this.tone(this.ambBus, 68, this.ctx.currentTime, 0.22, Math.min(0.3, 0.08 + v * 0.02), "sine", 40); this.noiseBurst(this.ctx.currentTime, 0.1, 0.06, 300, "lowpass"); } }
@@ -411,7 +413,7 @@ export class SimAudio {
     const t = this.ctx.currentTime;
     const semis = [0, 7, 12, 16, 19, 24];
     const f = 660 * Math.pow(2, semis[Math.abs(pitchSeed) % semis.length] / 12);
-    this.tone(this.musicBus, f, t, 2.6, 0.05, "sine");
+    this.tone(this.musicBus, f, t, 2.6, 0.075, "sine");
     this.tone(this.musicBus, f * 2.76, t, 1.4, 0.016, "sine");
     this.tone(this.musicBus, f * 5.4, t, 0.7, 0.008, "sine");
   }
@@ -419,8 +421,8 @@ export class SimAudio {
     if (!this.ctx || !this.musicBus) return;
     const t = this.ctx.currentTime;
     const f = 2400 + this.rnd() * 1400;
-    this.tone(this.musicBus, f, t, 0.09, 0.02, "sine", f * 1.3);
-    this.tone(this.musicBus, f * 1.1, t + 0.13, 0.07, 0.016, "sine", f * 1.45);
+    this.tone(this.musicBus, f, t, 0.09, 0.032, "sine", f * 1.3);
+    this.tone(this.musicBus, f * 1.1, t + 0.13, 0.07, 0.026, "sine", f * 1.45);
   }
   thunder() {
     if (!this.ctx) return;
@@ -428,12 +430,22 @@ export class SimAudio {
     this.noiseBurst(t, 1.6, 0.30, 120, "lowpass");
     this.noiseBurst(t + 0.08, 2.4, 0.18, 70, "lowpass");
   }
+  cast(kind: "shape" | "blink" | "storm" | "bloom" | "star" | "time") {
+    if (!this.ctx || !this.musicBus) return;
+    const t = this.ctx.currentTime;
+    if (kind === "shape") { this.tone(this.musicBus, 130, t, 0.7, 0.12, "sine", 65); this.noiseBurst(t, 0.4, 0.05, 240, "lowpass"); }
+    if (kind === "blink") { this.tone(this.musicBus, 1800, t, 0.28, 0.05, "sine", 300); }
+    if (kind === "storm") { this.thunder(); this.tone(this.musicBus, 55, t, 1.8, 0.16, "sine", 38); }
+    if (kind === "bloom") { [0, 4, 7, 12].forEach((sm, i) => this.tone(this.musicBus!, this.root * 2 * Math.pow(2, sm / 12), t + i * 0.07, 1.1, 0.04, "sine")); }
+    if (kind === "star") { this.tone(this.musicBus, 880, t, 1.6, 0.05, "sine"); this.tone(this.musicBus, 1318, t + 0.05, 1.6, 0.03, "sine"); }
+    if (kind === "time") { this.tone(this.musicBus, 440, t, 0.9, 0.05, "sine", 1320); }
+  }
   ui(kind: "take" | "world" | "toggle") {
     if (!this.ctx || !this.musicBus) return;
     const t = this.ctx.currentTime;
-    if (kind === "take") this.tone(this.musicBus, 520, t, 0.3, 0.05, "sine", 780);
-    if (kind === "toggle") this.tone(this.musicBus, 840, t, 0.12, 0.04, "sine");
-    if (kind === "world") for (let i = 0; i < 4; i++) this.tone(this.musicBus, this.root * Math.pow(2, this.scale[i] / 12) * 2, t + i * 0.09, 1.4, 0.05, "sine");
+    if (kind === "take") this.tone(this.musicBus, 520, t, 0.3, 0.09, "sine", 780);
+    if (kind === "toggle") this.tone(this.musicBus, 840, t, 0.12, 0.055, "sine");
+    if (kind === "world") for (let i = 0; i < 4; i++) this.tone(this.musicBus, this.root * Math.pow(2, this.scale[i] / 12) * 2, t + i * 0.09, 1.4, 0.08, "sine");
   }
   dispose() {
     if (this.ctx) void this.ctx.close().catch(() => undefined);
@@ -474,13 +486,20 @@ export class Dreamer {
   private shower = false;
   private showerCool = 120;
   private whisperQ: string[] = [];
+  private rapport = 0;
   intents: Intents = { weather: "clear", aurora: 1, attend: 0, sparse: 0, shower: false };
 
-  constructor(seed: number) {
+  constructor(seed: number, rapport = 0) {
     this.rnd = mulberry32(seed ^ 0xd12e & 0xffffff);
+    this.rapport = rapport;
     const a = this.rnd(), b = this.rnd(), c = this.rnd();
     const tot = a + b + c;
     this.serenity = a / tot; this.tempest = b / tot; this.play = c / tot;
+  }
+  note(...lines: string[]) { this.say(...lines); }
+  greet(remembered: boolean, name: string) {
+    if (remembered) this.say(`it remembers you — ${name} kept your shape`, `${name} again. it kept the light on`);
+    else this.say(`this is ${name}. it is learning your step`);
   }
   insist(seconds: number, now: number) { this.insistUntil = now + seconds; }
   forceWeather(w: Weather) { this.weather = w; this.holdFor = 60; }
@@ -493,7 +512,7 @@ export class Dreamer {
     /* weather — its oldest prerogative */
     if (now > this.insistUntil && this.holdFor <= 0) {
       const r = this.rnd();
-      const rainLine = 0.16 + this.tempest * 0.30 - this.serenity * 0.08;
+      const rainLine = 0.16 + this.tempest * 0.30 - this.serenity * 0.08 - this.rapport * 0.05;
       const mistLine = rainLine + 0.22 + this.serenity * 0.10;
       const next: Weather = r < rainLine ? "rain" : r < mistLine ? "mist" : "clear";
       if (next !== this.weather) {
@@ -520,7 +539,7 @@ export class Dreamer {
     if (p.inWater && !this.saidSwim) { this.saidSwim = true; this.say("it learns that you swim"); }
     /* night work: aurora lean + sparser music + the odd shower */
     const night = p.night;
-    const auroraTarget = night > 0.5 ? 0.7 + this.serenity * 1.5 + this.play * 0.4 : 1;
+    const auroraTarget = night > 0.5 ? 0.7 + this.serenity * 1.5 + this.play * 0.4 + this.rapport * 0.6 : 1;
     this.aurora += (auroraTarget - this.aurora) * Math.min(1, dt * 0.1);
     if (night > 0.6 && this.showerCool <= 0 && this.rnd() < dt * 0.01 * (0.5 + this.play)) {
       this.shower = true; this.showerCool = 150 + this.rnd() * 200;
@@ -530,6 +549,18 @@ export class Dreamer {
     const sparse = Math.max(0, Math.min(1, night * 0.7 + (p.idleFor > 15 ? 0.3 : 0) - p.speed * 0.02));
     this.intents = { weather: this.weather, aurora: this.aurora, attend: this.attend, sparse, shower: this.shower };
   }
+}
+
+/** Forge the world's name from its seed — two or three syllables,
+ * always the same name for the same world. */
+export function worldName(seed: number): string {
+  const rnd = mulberry32(seed ^ 0x9a4e & 0xffffff);
+  const on = ["vel", "thren", "os", "ka", "mi", "ru", "ae", "th", "or", "en", "sil", "var", "un", "ek", "ilo", "ash"];
+  const mid = ["m", "r", "th", "l", "n", "v", "s", ""];
+  const en = ["ora", "os", "ia", "une", "ath", "ire", "ek", "om"];
+  const pick = (a: string[]) => a[Math.floor(rnd() * a.length)];
+  const raw = pick(on) + pick(mid) + (rnd() < 0.45 ? pick(on) + pick(en) : pick(en));
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 /* ---------------- the world ---------------- */
@@ -561,9 +592,19 @@ export function buildSimulacrum(body: HTMLElement) {
   canvas.width = 1024; canvas.height = 640;
   const shade = el("div", "os-sim-shade");
   const whisper = el("div", "os-sim-whisper", "");
+  const opening = el("div", "os-sim-opening");
+  const openingBar = el("div", "os-sim-opening-bar");
+  const openingClose = el("button", "os-btn", "close the opening");
+  openingBar.append(el("span", "os-note", "the opening — a whole machine, inside the world"), openingClose);
+  const openingFrame = document.createElement("iframe");
+  openingFrame.className = "os-sim-opening-frame";
+  openingFrame.setAttribute("title", "the opening");
+  opening.append(openingBar, openingFrame);
+  opening.style.display = "none";
+  const powers = el("div", "os-sim-powers");
   const uw = el("div", "os-sim-uw");
   const stage = el("div", "os-sim-stage");
-  stage.append(canvas, shade, uw, whisper);
+  stage.append(canvas, shade, uw, whisper, opening);
   const hud = el("div", "os-sim-hud");
   const seedLabel = el("span", "os-note", "");
   const newBtn = el("button", "os-btn", "new world");
@@ -571,14 +612,15 @@ export function buildSimulacrum(body: HTMLElement) {
   const wxBtn = el("button", "os-btn", "weather");
   const hourBtn = el("button", "os-btn", "skip hour");
   const sndBtn = el("button", "os-btn", "sound: on");
+  const photoBtn = el("button", "os-btn", "photo");
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
-  hud.append(seedLabel, newBtn, flyBtn, wxBtn, hourBtn, sndBtn, xrBtn, posLabel);
+  hud.append(seedLabel, newBtn, flyBtn, wxBtn, hourBtn, sndBtn, photoBtn, xrBtn, posLabel);
   const hint = el("p", "os-note", "click the world to take it — WASD + mouse · F flies (space/C rise & sink) · shift is swift · T skips an hour · the world sings its own seed");
-  wrap.append(stage, hud, hint);
+  wrap.append(stage, hud, powers, hint);
   body.appendChild(wrap);
 
-  const gl = canvas.getContext("webgl", { antialias: true }) as WebGLRenderingContext | null;
+  const gl = canvas.getContext("webgl", { antialias: true, preserveDrawingBuffer: true }) as WebGLRenderingContext | null;
   if (!gl) { hint.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; return; }
 
   const program = (vs: string, fs: string) => {
@@ -630,15 +672,51 @@ export function buildSimulacrum(body: HTMLElement) {
   let noise = new Noise(seed);
   let moistNoise = new Noise(seed ^ 0x5eed);
   let detailNoise = new Noise(seed ^ 0xd37a);
-  const height = (x: number, z: number): number => {
+  const heightBase = (x: number, z: number): number => {
     const hills = noise.fbm(x * 0.012 + 31, z * 0.012 + 7, 4);
     const ridge = 1 - Math.abs(noise.fbm(x * 0.004 + 3, z * 0.004 + 19, 3) * 2 - 1);
     return -3.5 + hills * 13 + Math.pow(ridge, 3) * 15;
   };
+  /* Worldshaping: the walker's edits live in an overlay on a 2-unit
+     grid, smoothed into the land, kept per world. The pure noise
+     world is underneath, untouched — the gift is a layer on it. */
+  let edits = new Map<string, number>();
+  try {
+    const raw = JSON.parse(localStorage.getItem(skey(`simulacrum-edits-${seed}`)) || "{}") as Record<string, number>;
+    for (const k of Object.keys(raw)) edits.set(k, raw[k]);
+  } catch { edits = new Map(); }
+  const overlayAt = (x: number, z: number): number => {
+    if (!edits.size) return 0;
+    const gx = Math.round(x / 2), gz = Math.round(z / 2);
+    let sum = 0, wsum = 0;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+      const d = edits.get(`${gx + i},${gz + j}`);
+      if (d === undefined) continue;
+      const dist = Math.hypot(i * 2 - (x - gx * 2), j * 2 - (z - gz * 2));
+      const w = Math.max(0, 1 - dist / 5.2);
+      sum += d * w * w; wsum += w * w;
+    }
+    return wsum > 0 ? sum / Math.max(0.55, wsum) : 0;
+  };
+  const height = (x: number, z: number): number => heightBase(x, z) + overlayAt(x, z);
+  const persistEdits = () => {
+    try { localStorage.setItem(skey(`simulacrum-edits-${seed}`), JSON.stringify(Object.fromEntries(edits))); } catch { /* cap reached */ }
+  };
   const moisture = (x: number, z: number) => moistNoise.fbm(x * 0.008 + 99, z * 0.008 + 3, 3);
-  seedLabel.textContent = `seed ${seed}`;
+  let wName = worldName(seed);
+  /* the world's memory of the walker, kept per world */
+  const dreamRecord = (sd: number): { visits: number; rapport: number } => {
+    try { const r = JSON.parse(localStorage.getItem(skey(`simulacrum-dream-${sd}`)) || "null"); if (r && typeof r.visits === "number") return r; } catch { /* fresh */ }
+    return { visits: 0, rapport: 0 };
+  };
+  let rec = dreamRecord(seed);
+  rec.visits++;
+  rec.rapport = Math.min(1, rec.rapport + 0.05);
+  try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ }
+  seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}`;
   let audio = new SimAudio(seed);
-  let dreamer = new Dreamer(seed);
+  let dreamer = new Dreamer(seed, rec.rapport);
+  let greeted = false;
 
   interface Chunk { key: string; terrain: Mesh; lit: Mesh | null; glow: Mesh | null; crystals: Array<[number, number]> }
   const chunks = new Map<string, Chunk>();
@@ -737,6 +815,21 @@ export function buildSimulacrum(body: HTMLElement) {
         box(lit, x, h - 0.3, z, 1.3, 6 + rnd() * 5, 1.3, [0.015, 0.015, 0.02]);
       }
     }
+    /* ruins — rare, seeded, unexplained: pillars, a fallen lintel,
+       rubble. One site per lucky chunk. */
+    if (rnd() < 0.17) {
+      const rx = x0 + 10 + rnd() * (CHUNK - 20), rz = z0 + 10 + rnd() * (CHUNK - 20);
+      const rh = height(rx, rz);
+      if (rh > 1 && slopeAt(rx, rz) < 0.35) {
+        const stone: [number, number, number] = [0.48, 0.46, 0.44];
+        const h1 = 3.4 + rnd() * 2.6, h2 = 2.2 + rnd() * 2.4, gap = 3.6 + rnd() * 1.6;
+        box(lit, rx, rh - 0.3, rz, 1.1, h1, 1.1, stone);
+        box(lit, rx + gap, rh - 0.3, rz, 0.95, h2, 0.95, stone);
+        if (rnd() < 0.6) box(lit, rx + gap / 2, rh + Math.min(h1, h2) - 0.5, rz, gap + 1.6, 0.8, 1.3, stone);
+        box(lit, rx + gap * 0.4, rh - 0.25, rz + 1.8, gap * 0.8, 0.7, 1.1, stone);
+        for (let rb = 0; rb < 4; rb++) box(lit, rx + (rnd() - 0.5) * 7, rh - 0.2, rz + (rnd() - 0.5) * 7, 0.5 + rnd() * 0.6, 0.4 + rnd() * 0.5, 0.5 + rnd() * 0.6, stone);
+      }
+    }
     /* grass + flowers */
     for (let t = 0; t < 14; t++) {
       const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
@@ -758,6 +851,38 @@ export function buildSimulacrum(body: HTMLElement) {
       crystals,
     };
   };
+
+  /* blooms — where the walker has cast Bloom, the world keeps it */
+  interface Bloom { x: number; z: number; kind: number }
+  let blooms: Bloom[] = [];
+  try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
+  let bloomMesh: Mesh | null = null;
+  const rebuildBlooms = () => {
+    if (bloomMesh) { gl.deleteBuffer(bloomMesh.buf); bloomMesh = null; }
+    if (!blooms.length) return;
+    const v: number[] = [];
+    const cols: Array<[number, number, number]> = [[0.95, 0.5, 0.7], [0.98, 0.86, 0.4], [0.66, 0.5, 1.0], [0.5, 0.85, 1.0]];
+    const put = (x: number, y: number, z: number, col: [number, number, number], r: number, h: number) => {
+      for (let k = 0; k < 5; k++) {
+        const a1 = (k / 5) * Math.PI * 2, a2 = ((k + 1) / 5) * Math.PI * 2;
+        v.push(x + Math.cos(a1) * r, y, z + Math.sin(a1) * r, ...col, 0, 0.6, 0);
+        v.push(x + Math.cos(a2) * r, y, z + Math.sin(a2) * r, ...col, 0, 0.6, 0);
+        v.push(x, y + h, z, ...col, 0, 1, 0);
+      }
+    };
+    const brnd = mulberry32(seed ^ 0xb100 & 0xffffff);
+    for (const b of blooms) {
+      for (let i = 0; i < 5; i++) {
+        const bx = b.x + (brnd() - 0.5) * 4.4, bz = b.z + (brnd() - 0.5) * 4.4;
+        const by = height(bx, bz);
+        if (by < 0.2) continue;
+        if (b.kind === 3 && i === 0) put(bx, by - 0.1, bz, cols[3], 0.3, 1.5);
+        else put(bx, by + 0.14, bz, cols[b.kind], 0.13, 0.3);
+      }
+    }
+    if (v.length) bloomMesh = makeMesh(new Float32Array(v));
+  };
+  rebuildBlooms();
 
   /* sky dome */
   const skyMesh = (() => {
@@ -837,11 +962,77 @@ export function buildSimulacrum(body: HTMLElement) {
     ph: birdRnd() * Math.PI * 2, ox: (birdRnd() - 0.5) * 60, oz: (birdRnd() - 0.5) * 60, size: 0.8 + birdRnd() * 0.7, idx: i,
   }));
 
+  /* critters: ground wanderers with a small ethology — graze,
+     wander, startle and flee, re-homing near the walker */
+  const critBuf = gl.createBuffer()!;
+  const critRnd = mulberry32(seed ^ 0xc217 & 0xffffff);
+  interface Critter { hx: number; hz: number; x: number; z: number; hdg: number; state: number; t: number; tx: number; tz: number; col: [number, number, number]; s: number }
+  const critterCols: Array<[number, number, number]> = [[0.45, 0.32, 0.20], [0.72, 0.66, 0.58], [0.30, 0.26, 0.24], [0.55, 0.40, 0.26]];
+  const critters: Critter[] = Array.from({ length: 6 }, (_, i) => ({
+    hx: 8 + (critRnd() - 0.5) * 130, hz: 8 + (critRnd() - 0.5) * 130,
+    x: 0, z: 0, hdg: critRnd() * 6.28, state: 0, t: critRnd() * 4, tx: 0, tz: 0,
+    col: critterCols[i % critterCols.length], s: 0.8 + critRnd() * 0.5,
+  }));
+  for (const c of critters) { c.x = c.hx; c.z = c.hz; c.tx = c.hx; c.tz = c.hz; }
+  const stepCritters = (dt: number) => {
+    for (const c of critters) {
+      if (Math.hypot(c.hx - px, c.hz - pz) > 150) { c.hx = px + (critRnd() - 0.5) * 120; c.hz = pz + (critRnd() - 0.5) * 120; c.x = c.hx; c.z = c.hz; }
+      c.t -= dt;
+      const dWalker = Math.hypot(c.x - px, c.z - pz);
+      if (dWalker < 9 && c.state !== 2) { c.state = 2; c.t = 1.6 + critRnd(); }
+      if (c.t <= 0) {
+        if (c.state === 2 || critRnd() < 0.45) { c.state = 0; c.t = 2 + critRnd() * 4; }
+        else { c.state = 1; c.tx = c.hx + (critRnd() - 0.5) * 46; c.tz = c.hz + (critRnd() - 0.5) * 46; c.t = 6 + critRnd() * 5; }
+      }
+      if (c.state > 0) {
+        const tgt = c.state === 2 ? Math.atan2(c.x - px, c.z - pz) : Math.atan2(c.tx - c.x, c.tz - c.z);
+        let dh = tgt - c.hdg;
+        while (dh > Math.PI) dh -= Math.PI * 2;
+        while (dh < -Math.PI) dh += Math.PI * 2;
+        c.hdg += dh * Math.min(1, dt * 4);
+        const sp = c.state === 2 ? 5.2 : 1.25;
+        const nx = c.x + Math.sin(c.hdg) * sp * dt, nz = c.z + Math.cos(c.hdg) * sp * dt;
+        if (height(nx, nz) > 0.4) { c.x = nx; c.z = nz; }
+        else c.hdg += dt * 2.2;
+      }
+    }
+  };
+  const critterVerts = (): Float32Array => {
+    const v: number[] = [];
+    const push = (x: number, y: number, z: number, col: [number, number, number]) => v.push(x, y, z, ...col, 0, 1, 0);
+    for (const c of critters) {
+      const y = height(c.x, c.z);
+      if (y < 0.3) continue;
+      const bob = c.state > 0 ? Math.abs(Math.sin(performance.now() * 0.012 + c.hx)) * 0.09 : 0;
+      const cy = y + 0.52 * c.s + bob;
+      const fx = Math.sin(c.hdg), fz = Math.cos(c.hdg);
+      const rxv = fz, rzv = -fx;
+      const L = 0.62 * c.s, W = 0.30 * c.s, H = 0.34 * c.s;
+      const corner = (a: number, b: number, dy: number): [number, number, number] => [c.x + fx * a + rxv * b, cy + dy, c.z + fz * a + rzv * b];
+      const quads: Array<[[number, number, number], [number, number, number], [number, number, number], [number, number, number]]> = [
+        [corner(-L, -W, H), corner(L, -W, H), corner(L, W, H), corner(-L, W, H)],
+        [corner(-L, -W, -H), corner(-L, W, -H), corner(L, W, -H), corner(L, -W, -H)],
+        [corner(L, -W, H), corner(L, -W, -H), corner(L, W, -H), corner(L, W, H)],
+        [corner(-L, W, H), corner(-L, W, -H), corner(-L, -W, -H), corner(-L, -W, H)],
+      ];
+      for (const q of quads) { push(...q[0], c.col); push(...q[1], c.col); push(...q[2], c.col); push(...q[0], c.col); push(...q[2], c.col); push(...q[3], c.col); }
+      const dip = c.state === 0 ? -0.22 * c.s : 0;
+      const hc = corner(L + 0.26 * c.s, 0, 0.05 + dip);
+      const hb = corner(L - 0.05, 0, 0.10 + dip);
+      push(hc[0], hc[1], hc[2], c.col); push(hb[0], hb[1] + 0.16 * c.s, hb[2], c.col); push(hb[0], hb[1], hb[2], c.col);
+    }
+    return new Float32Array(v);
+  };
+
   /* ---- walker + weather state ---- */
   let px = 8, pz = 8, py = height(8, 8) + 26;
   let yaw = 0.7, pitch = -0.16, flying = false, vy = 0;
   let vx = 0, vz = 0, bobPhase = 0, bobAmp = 0, landDip = 0, wasGrounded = true, wasInWater = false;
   let keys = new Set<string>();
+  /* the gifts */
+  let starlightOn = false, stormUntil = 0, timeslipUntil = 0, openingOpen = false;
+  const cool = new Map<string, number>();
+  const saidGift = new Set<string>();
   let locked = false, touched = false, muted = false;
   let dayT = 0.32;
   let weather: Weather = "clear";
@@ -855,6 +1046,7 @@ export function buildSimulacrum(body: HTMLElement) {
   canvas.addEventListener("click", () => {
     touched = true;
     if (!audio.live) { audio.start(); audio.ui("take"); }
+    if (!greeted) { greeted = true; dreamer.greet(rec.visits > 1, wName); }
     if (!locked && document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
   });
   document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
@@ -867,7 +1059,14 @@ export function buildSimulacrum(body: HTMLElement) {
     if (!body.isConnected) return;
     if (locked || touched) keys.add(e.code);
     if ((locked || touched) && e.code === "KeyF") { flying = !flying; flyBtn.textContent = flying ? "fly" : "walk"; audio.ui("toggle"); if (!flying) py = Math.max(py, height(px, pz) + 1.7); }
-    if ((locked || touched) && e.code === "KeyT") { dayT = (dayT + 1 / 24) % 1; audio.ui("toggle"); }
+    if ((locked || touched) && e.code === "KeyT") castTimeslip();
+    if ((locked || touched) && e.code === "KeyR") castShape(1);
+    if ((locked || touched) && e.code === "KeyG") castShape(-1);
+    if ((locked || touched) && e.code === "KeyQ") castBlink();
+    if ((locked || touched) && e.code === "KeyX") castStorm();
+    if ((locked || touched) && e.code === "KeyB") castBloom();
+    if ((locked || touched) && e.code === "Digit1") toggleStarlight();
+    if (e.code === "Tab" && body.contains(wrap)) { e.preventDefault(); toggleOpening(); }
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.code);
   document.addEventListener("keydown", kd);
@@ -880,6 +1079,124 @@ export function buildSimulacrum(body: HTMLElement) {
     audio.ui("toggle");
   });
   hourBtn.addEventListener("click", () => { dayT = (dayT + 1 / 24) % 1; audio.ui("toggle"); });
+  photoBtn.addEventListener("click", () => {
+    wrap.classList.add("os-sim-photo");
+    window.setTimeout(() => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = el("a"); a.setAttribute("href", url); a.setAttribute("download", `${wName.toLowerCase()}-${seed}.png`); a.click();
+          window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+        }
+        wrap.classList.remove("os-sim-photo");
+      }, "image/png");
+    }, 420);
+  });
+  const ready = (k: string, cd: number): boolean => {
+    const now = performance.now();
+    if ((cool.get(k) ?? 0) > now) return false;
+    cool.set(k, now + cd * 1000);
+    return true;
+  };
+  const giftNote = (k: string, ...lines: string[]) => {
+    if (saidGift.has(k)) return;
+    saidGift.add(k);
+    dreamer.note(...lines);
+  };
+  const castShape = (dir: 1 | -1) => {
+    if (!ready("shape", 0.35)) return;
+    const tx = px - Math.sin(yaw) * 8, tz = pz - Math.cos(yaw) * 8;
+    const R = 5;
+    for (let gx = Math.floor((tx - R * 2) / 2); gx <= Math.ceil((tx + R * 2) / 2); gx++)
+      for (let gz = Math.floor((tz - R * 2) / 2); gz <= Math.ceil((tz + R * 2) / 2); gz++) {
+        const cxp = gx * 2, czp = gz * 2;
+        const d = Math.hypot(cxp - tx, czp - tz);
+        if (d > R * 2) continue;
+        const fall = Math.max(0, 1 - d / (R * 2));
+        const k = `${gx},${gz}`;
+        const next = Math.max(-14, Math.min(14, (edits.get(k) ?? 0) + dir * 2.4 * fall * fall));
+        edits.set(k, next);
+      }
+    if (edits.size > 4200) { const first = edits.keys().next().value as string; edits.delete(first); }
+    persistEdits();
+    for (const [k, ch] of chunks) {
+      const [cx, cz] = k.split(",").map(Number);
+      if (Math.abs((cx + 0.5) * CHUNK - tx) < CHUNK + R * 2 && Math.abs((cz + 0.5) * CHUNK - tz) < CHUNK + R * 2) {
+        gl.deleteBuffer(ch.terrain.buf);
+        if (ch.lit) gl.deleteBuffer(ch.lit.buf);
+        if (ch.glow) gl.deleteBuffer(ch.glow.buf);
+        chunks.delete(k);
+      }
+    }
+    waterCell = [1e9, 1e9];
+    rebuildBlooms();
+    audio.cast("shape");
+    giftNote("shape", "the land moves for you. it allows this.");
+  };
+  const castBlink = () => {
+    if (!ready("blink", 1.2)) return;
+    const d = 26;
+    px += -Math.sin(yaw) * d;
+    pz += -Math.cos(yaw) * d;
+    if (flying) py += Math.sin(pitch) * d * 0.6;
+    else py = Math.max(py, height(px, pz) + 1.7);
+    audio.cast("blink");
+    giftNote("blink", "you fold the world. it felt that.");
+  };
+  const castStorm = () => {
+    if (!ready("storm", 20)) return;
+    stormUntil = performance.now() / 1000 + 30;
+    dreamer.forceWeather("rain");
+    dreamer.insist(35, performance.now() / 1000);
+    audio.cast("storm");
+    giftNote("storm", "it did not make this weather. you did.");
+  };
+  const castTimeslip = () => {
+    if (!ready("time", 8)) return;
+    timeslipUntil = performance.now() / 1000 + 6;
+    audio.cast("time");
+    giftNote("time", "the hours run like water for you");
+  };
+  const castBloom = () => {
+    if (!ready("bloom", 2)) return;
+    const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
+    if (height(bx, bz) < 0.2) return;
+    blooms.push({ x: bx, z: bz, kind: Math.floor(Math.random() * 4) });
+    if (blooms.length > 220) blooms = blooms.slice(-220);
+    try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* private mode */ }
+    rebuildBlooms();
+    audio.cast("bloom");
+    giftNote("bloom", "it will keep those flowers");
+  };
+  const toggleStarlight = () => {
+    starlightOn = !starlightOn;
+    if (starlightOn) { audio.cast("star"); giftNote("star", "a small star, on loan"); }
+  };
+  const toggleOpening = (open?: boolean) => {
+    openingOpen = open ?? !openingOpen;
+    opening.style.display = openingOpen ? "flex" : "none";
+    if (openingOpen) {
+      if (!openingFrame.getAttribute("src")) openingFrame.setAttribute("src", `${location.origin}/`);
+      if (document.pointerLockElement) document.exitPointerLock();
+      giftNote("opening", "it feels you open the sky, and finds a machine there");
+    }
+  };
+  openingClose.addEventListener("click", () => toggleOpening(false));
+  const powerDefs: Array<[string, string, () => void]> = [
+    ["the opening", "Tab", () => toggleOpening()],
+    ["starlight", "1", toggleStarlight],
+    ["raise land", "R", () => castShape(1)],
+    ["lower land", "G", () => castShape(-1)],
+    ["blink", "Q", castBlink],
+    ["stormcall", "X", castStorm],
+    ["timeslip", "T", castTimeslip],
+    ["bloom", "B", castBloom],
+  ];
+  for (const [label, keyHint, fn] of powerDefs) {
+    const b = el("button", "os-btn os-sim-power", `${label} · ${keyHint}`);
+    b.addEventListener("click", () => { if (!audio.live) audio.start(); touched = true; fn(); });
+    powers.append(b);
+  }
   sndBtn.addEventListener("click", () => {
     if (!audio.live) audio.start();
     muted = !muted;
@@ -897,11 +1214,24 @@ export function buildSimulacrum(body: HTMLElement) {
     waterCell = [1e9, 1e9];
     audio.dispose();
     audio = new SimAudio(seed);
-    dreamer = new Dreamer(seed);
     if (touched) { audio.start(); audio.ui("world"); }
     motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
     rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
-    seedLabel.textContent = `seed ${seed}`;
+    edits = new Map();
+    try {
+      const raw = JSON.parse(localStorage.getItem(skey(`simulacrum-edits-${seed}`)) || "{}") as Record<string, number>;
+      for (const k of Object.keys(raw)) edits.set(k, raw[k]);
+    } catch { edits = new Map(); }
+    try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
+    rebuildBlooms();
+    wName = worldName(seed);
+    rec = dreamRecord(seed);
+    rec.visits++;
+    rec.rapport = Math.min(1, rec.rapport + 0.05);
+    try { localStorage.setItem(skey(`simulacrum-dream-${seed}`), JSON.stringify(rec)); } catch { /* private mode */ }
+    dreamer = new Dreamer(seed, rec.rapport);
+    greeted = false;
+    seedLabel.textContent = `seed ${seed} · ${wName}${rec.visits > 1 ? " · it remembers you" : ""}`;
     spawn();
   });
 
@@ -1017,7 +1347,8 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniform3fv(gl.getUniformLocation(litPr, "uFog"), sc.fog);
     gl.uniform1f(gl.getUniformLocation(litPr, "uFogNear"), fogNear);
     gl.uniform1f(gl.getUniformLocation(litPr, "uFogFar"), fogFar);
-    gl.uniform3fv(gl.getUniformLocation(litPr, "uTint"), [0.55 + 0.45 * Math.max(0, sun[1] + 0.4), 0.55 + 0.45 * Math.max(0, sun[1] + 0.35), 0.6 + 0.4 * Math.max(0, sun[1] + 0.3)]);
+    const starLift = starlightOn ? Math.max(0, 0.35 - Math.max(0, sun[1]) * 0.5) : 0;
+    gl.uniform3fv(gl.getUniformLocation(litPr, "uTint"), [0.55 + 0.45 * Math.max(0, sun[1] + 0.4) + starLift, 0.55 + 0.45 * Math.max(0, sun[1] + 0.35) + starLift, 0.6 + 0.4 * Math.max(0, sun[1] + 0.3) + starLift * 0.8]);
     for (const ch of chunks.values()) {
       bindLit(ch.terrain, m4.ident());
       gl.drawArrays(gl.TRIANGLES, 0, ch.terrain.n);
@@ -1060,11 +1391,64 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
       gl.drawArrays(gl.TRIANGLES, 0, bv.length / 9);
     }
+    /* critters */
+    {
+      const cv = critterVerts();
+      if (cv.length) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, critBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, cv, gl.DYNAMIC_DRAW);
+        gl.useProgram(unlitPr);
+        gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+        gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 1);
+        const aPos = gl.getAttribLocation(unlitPr, "aPos");
+        const aCol = gl.getAttribLocation(unlitPr, "aCol");
+        gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol);
+        gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
+        gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
+        gl.drawArrays(gl.TRIANGLES, 0, cv.length / 9);
+      }
+    }
     /* glow scatter */
     gl.useProgram(unlitPr);
     gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
     gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 0.9 + 0.1 * Math.sin(nowS * 2.2));
     for (const ch of chunks.values()) if (ch.glow) { bindUnlit(ch.glow); gl.drawArrays(gl.TRIANGLES, 0, ch.glow.n); }
+    /* blooms the world kept */
+    if (bloomMesh) {
+      gl.useProgram(unlitPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 0.95);
+      bindUnlit(bloomMesh);
+      gl.drawArrays(gl.TRIANGLES, 0, bloomMesh.n);
+    }
+    /* starlight: a small loaned star at the walker's shoulder */
+    if (starlightOn) {
+      const sx = eye[0] - Math.sin(yaw + 2.2) * 1.7, sz = eye[2] - Math.cos(yaw + 2.2) * 1.7;
+      const sy = eye[1] + 0.9 + Math.sin(nowS * 1.7) * 0.12;
+      const ov: number[] = [];
+      const spike = (dx: number, dy: number, dz: number, r: number, len: number) => {
+        for (let k = 0; k < 4; k++) {
+          const a1 = (k / 4) * Math.PI * 2, a2 = ((k + 1) / 4) * Math.PI * 2;
+          const p1: [number, number, number] = [sx + dy * 0 + (dz !== 0 ? Math.cos(a1) * r : 0) + (dx !== 0 ? 0 : Math.cos(a1) * r * (dy !== 0 ? 1 : 0)), 0, 0];
+          void p1;
+          const base1: [number, number, number] = [sx + (dy !== 0 || dz !== 0 ? Math.cos(a1) * r : 0), sy + (dx !== 0 || dz !== 0 ? Math.sin(a1) * r * (dy === 0 ? 1 : 0) : 0), sz + (dz === 0 ? Math.sin(a1) * r : 0)];
+          const base2: [number, number, number] = [sx + (dy !== 0 || dz !== 0 ? Math.cos(a2) * r : 0), sy + (dx !== 0 || dz !== 0 ? Math.sin(a2) * r * (dy === 0 ? 1 : 0) : 0), sz + (dz === 0 ? Math.sin(a2) * r : 0)];
+          ov.push(...base1, 1, 0.95, 0.8, 0, 1, 0, ...base2, 1, 0.95, 0.8, 0, 1, 0, sx + dx * len, sy + dy * len, sz + dz * len, 1, 0.98, 0.9, 0, 1, 0);
+        }
+      };
+      spike(0, 1, 0, 0.10, 0.42); spike(0, -1, 0, 0.10, 0.42); spike(1, 0, 0, 0.08, 0.3); spike(-1, 0, 0, 0.08, 0.3); spike(0, 0, 1, 0.08, 0.3); spike(0, 0, -1, 0.08, 0.3);
+      gl.bindBuffer(gl.ARRAY_BUFFER, critBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ov), gl.DYNAMIC_DRAW);
+      gl.useProgram(unlitPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(unlitPr, "uMVP"), false, vp);
+      gl.uniform1f(gl.getUniformLocation(unlitPr, "uAlpha"), 1);
+      const aPos = gl.getAttribLocation(unlitPr, "aPos");
+      const aCol = gl.getAttribLocation(unlitPr, "aCol");
+      gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol);
+      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
+      gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
+      gl.drawArrays(gl.TRIANGLES, 0, ov.length / 9);
+    }
     /* water */
     if (waterMesh) {
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -1128,7 +1512,8 @@ export function buildSimulacrum(body: HTMLElement) {
     const now = performance.now();
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    dayT = (dayT + dt / 300) % 1;
+    dayT = (dayT + dt / 300 * (performance.now() / 1000 < timeslipUntil ? 42 : 1)) % 1;
+    if (performance.now() / 1000 < stormUntil && Math.random() < dt / 2.4) { flash = 1; audio.thunder(); }
     /* the sub-consciousness thinks a few times a second, and the
        world follows its intents — weather included */
     thinkClock += dt;
@@ -1261,6 +1646,7 @@ export function buildSimulacrum(body: HTMLElement) {
       }
     }
     buildWater(px, pz);
+    stepCritters(dt);
     /* HUD + EMCON, ~4×/s and 1×/s */
     if ((frames++ & 15) === 0) {
       const heading = Math.atan2(fwd[0], -fwd[1]) * 180 / Math.PI;
@@ -1273,6 +1659,7 @@ export function buildSimulacrum(body: HTMLElement) {
     chipClock += dt;
     if (chipClock > 1) {
       chipClock = 0;
+      audio.kick();
       const chip = document.getElementById("os-emcon-chip");
       audio.setGate(chip && chip.dataset.level === "alpha" ? 0 : 1);
     }
