@@ -1,0 +1,6 @@
+Contact: https://github.com/nightwarelabz/nosuchmachine.net/security/advisories/new
+Contact: https://github.com/nightwarelabz/nosuchmachine.net/issues
+Expires: 2027-10-23T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://nosuchmachine.net/.well-known/security.txt
+Policy: https://github.com/nightwarelabz/nosuchmachine.net/blob/main/docs/blacksite-web.md

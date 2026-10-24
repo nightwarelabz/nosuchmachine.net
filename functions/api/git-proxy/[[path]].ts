@@ -33,7 +33,7 @@ export async function onRequest(context: any) {
     if (v) headers.set(h, v);
   }
   headers.set("user-agent", "git/isomorphic-git (BLACKSITE OS; nosuchmachine.net)");
-  const init: RequestInit = { method: request.method, headers, redirect: "manual" };
+  const init: RequestInit = { method: request.method, headers, redirect: "manual", signal: AbortSignal.timeout(120000) };
   if (request.method === "POST") init.body = await request.arrayBuffer();
   let upstream: Response;
   try {

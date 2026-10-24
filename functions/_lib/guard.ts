@@ -135,6 +135,7 @@ async function dohLookup(name: string, type: "A" | "AAAA"): Promise<string[]> {
   const res = await fetch(url, {
     headers: { accept: "application/dns-json" },
     cf: { cacheTtl: 30, cacheEverything: true },
+    signal: AbortSignal.timeout(5000),
   } as RequestInit);
   if (!res.ok) return [];
   const data: any = await res.json().catch(() => null);

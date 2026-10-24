@@ -470,7 +470,7 @@ function buildSsh(body: HTMLElement, arg?: string) {
     for (const cell of line) {
       const key = `${cell.fg}|${cell.bg}|${cell.bold ? 1 : 0}`;
       if (key !== lastKey) { flush(); cur = `<span style="color:${ANSI_FG[cell.fg]}${cell.bg >= 0 ? `;background:${ANSI_FG[cell.bg]}` : ""}${cell.bold ? ";font-weight:700" : ""}">`; lastKey = key; }
-      cur += cell.ch === "<" ? "&lt;" : cell.ch === "&" ? "&amp;" : cell.ch;
+      cur += cell.ch === "<" ? "&lt;" : cell.ch === "&" ? "&amp;" : cell.ch === ">" ? "&gt;" : cell.ch;
     }
     flush();
     return out ? out + "</span>" : "";
