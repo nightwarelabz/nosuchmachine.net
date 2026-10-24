@@ -224,19 +224,25 @@ const wasi = {
 };
 
 /* ---------------- boot ---------------- */
+/* A fault in here must reach the glass with its reason attached —
+   a worker that dies quietly leaves the operator guessing. */
+self.addEventListener("error", (e) => { try { postMessage({ type: "error", message: "worker error: " + (e.message || "unknown") }); } catch { /* the channel is gone too */ } });
+self.addEventListener("unhandledrejection", (e) => { try { postMessage({ type: "error", message: "worker rejection: " + String((e.reason && e.reason.message) || e.reason) }); } catch { /* as above */ } });
+
 onmessage = async (e) => {
   const msg = e.data;
   if (msg.type !== "init") return;
-  sabHead = new Int32Array(msg.sab, 0, 4);
-  sabRing = new Uint8Array(msg.sab, 64, RING_CAP);
-  Object.assign(ENV, msg.env || {});
   try {
+    sabHead = new Int32Array(msg.sab, 0, 4);
+    sabRing = new Uint8Array(msg.sab, 64, RING_CAP);
+    Object.assign(ENV, msg.env || {});
     for (const name of ["hello.py", "demo.py"]) {
       try {
         const res = await fetch("/phantom/plugins/" + name);
         if (res.ok) fsMap.set("/plugins/" + name, { data: new TextEncoder().encode(await res.text()), mtime: Date.now() });
       } catch { /* the plugins are garnish — the phantom boots without them */ }
     }
+    try { Atomics.wait(sabHead, 3, 0, 0); } catch (werr) { throw new Error("this browser's workers refuse Atomics.wait, the park the phantom sleeps on between keystrokes (" + String((werr && werr.message) || werr) + ")"); }
     const res = await fetch(msg.wasmUrl);
     if (!res.ok) throw new Error("the phantom binary answered " + res.status);
     const bytes = await res.arrayBuffer();
