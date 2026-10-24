@@ -62,7 +62,15 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // open-out button by Chase's ruling — orc proper, or your own
   // browser, is where pages live top-level.
   frame.setAttribute("credentialless", "");
-  frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
+  // NO sandbox attribute — deliberately. A sandboxed frame without
+  // allow-same-origin gets an opaque origin, which makes the framed
+  // page's OWN subresources cross-origin: under the framed OS's COEP
+  // its CSS and module scripts then die for want of CORP/CORS slips,
+  // and the nest renders as raw static HTML (giant icons, no styles,
+  // no JS) — the exact corpse Chase screenshotted. Credentialless
+  // already isolates credentials and storage; origin rules already
+  // keep a framed page out of the parent. The lens door re-adds its
+  // own sandbox at the response level, where it belongs.
   frame.setAttribute("referrerpolicy", "no-referrer");
   wrap.append(hero, bar, frame);
   body.appendChild(wrap);

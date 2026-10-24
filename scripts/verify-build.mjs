@@ -122,6 +122,8 @@ assert.ok(ex2(new URL("../functions/lens.ts", import.meta.url)), "the orc lens f
 const lensSrc = rfs2(new URL("../functions/lens.ts", import.meta.url), "utf8");
 assert.ok(lensSrc.includes("guardUrl"), "the lens must route every target through the shared SSRF guard");
 assert.ok(!/content-security-policy[^\n]*allow-same-origin/.test(lensSrc), "lens pages must never run with this origin's privileges");
+const orcSrc = rfs2(new URL("../src/scripts/os-orc.ts", import.meta.url), "utf8");
+assert.ok(!orcSrc.includes('setAttribute("sandbox"'), "the orc frame must NOT be sandboxed: an opaque origin starves the framed page of its own subresources (the unstyled-nest corpse)");
 assert.ok(astroJs.includes("/lens?u="), "the orc room must route non-credentialless browsers through the lens");
 assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
 
