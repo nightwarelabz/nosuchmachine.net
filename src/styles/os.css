@@ -293,7 +293,9 @@
   .os-icon-label { font-size: 0.66rem; line-height: 1.25; min-height: 2.5em; text-shadow: 0 1px 5px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9); }
   .os-window { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
   .os-win-resize { display: none; }
-  .os-taskbar { gap: 0.4rem; padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom)); }
+  .os-taskbar { gap: 0.3rem; padding: 0.24rem 0.5rem calc(0.24rem + env(safe-area-inset-bottom)); }
+  .os-taskbar-apps { display: none; }
+  .os-winmenu-btn { display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--os-line-soft); border-radius: 8px; padding: 0.24rem 0.55rem; font-size: 0.72rem; color: inherit; cursor: pointer; white-space: nowrap; min-height: 30px; }
   .os-taskbar > * { flex-shrink: 0; }
   .os-taskbar-apps { flex: 1 1 auto; min-width: 0; }
   .os-start { white-space: nowrap; padding: 0.34rem 0.55rem; font-size: 0.72rem; line-height: 1.15; }
@@ -305,5 +307,12 @@
 .os-wp-thumb:hover { border-color: var(--os-accent); transform: translateY(-1px); color: var(--os-ink); }
 .os-wp-thumb img.os-wp-canvas { object-fit: cover; }
 .os-sys-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.os-winmenu-btn { display: none; }
+.os-winmenu { padding-bottom: 0.4rem; }
+.os-winmenu-head { padding: 0.55rem 0.8rem; color: var(--os-muted); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--os-line-soft); }
+.os-winmenu-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.5rem; }
+.os-winmenu-go { flex: 1; text-align: left; background: none; border: none; color: inherit; font: inherit; font-size: 0.88rem; padding: 0.55rem 0.4rem; cursor: pointer; border-radius: 7px; }
+.os-winmenu-go:hover { background: rgba(255, 255, 255, 0.06); }
+.os-winmenu-x { background: rgba(255, 255, 255, 0.09); border: 1px solid var(--os-line); color: inherit; border-radius: 7px; width: 32px; height: 32px; cursor: pointer; font-size: 0.9rem; line-height: 1; }
 .os-aegis-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 200; max-width: min(92vw, 560px); background: rgba(10, 6, 8, 0.94); border: 1px solid var(--os-accent); border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.78rem; line-height: 1.45; box-shadow: 0 10px 34px rgba(0,0,0,0.55); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .os-aegis-banner strong { color: var(--os-accent); }
