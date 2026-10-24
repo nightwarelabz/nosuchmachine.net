@@ -43,8 +43,11 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   addr.setAttribute("aria-label", "Address");
   addr.placeholder = "address or search";
   const go = el("button", "os-btn", "go");
-  const out = el("button", "os-btn", "open in your browser");
-  bar.append(addr, go, out);
+  const get = el("a", "os-btn", "get orc");
+  get.setAttribute("href", "https://github.com/nightwarelabz/orc/releases/latest");
+  get.setAttribute("target", "_blank");
+  get.setAttribute("rel", "noreferrer");
+  bar.append(addr, go, get);
   const frame = document.createElement("iframe");
   frame.className = "os-orc-frame";
   frame.setAttribute("title", "orc preview pane");
@@ -55,27 +58,26 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // attribute is the sanctioned door: the framed page loads in an
   // ephemeral, cookie-less context and owes no COEP headers. Sites
   // that forbid framing outright still refuse, and browsers without
-  // credentialless frames fall back to the open-out button.
+  // credentialless frames are the only door in; there is no
+  // open-out button by Chase's ruling — orc proper, or your own
+  // browser, is where pages live top-level.
   frame.setAttribute("credentialless", "");
   frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
   frame.setAttribute("referrerpolicy", "no-referrer");
   wrap.append(hero, bar, frame);
   body.appendChild(wrap);
 
-  let current = "";
   const navigate = (raw: string) => {
     let url = raw.trim();
     if (!url) return;
     if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
       url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
     }
-    current = url;
     addr.value = url;
     frame.src = url;
   };
   go.addEventListener("click", () => navigate(addr.value));
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
-  out.addEventListener("click", () => { if (current) window.open(current, "_blank", "noopener,noreferrer"); });
   // The starter pane is example.org on purpose: it is one of the few
   // well-known pages that permits framing, so the room opens alive.
   // (nosuchmachine.net itself sends frame-ancestors 'none' — the bench
