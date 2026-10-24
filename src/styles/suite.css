@@ -293,3 +293,33 @@
   .bs-card { padding: 0.95rem; border-radius: 10px; }
   .bs-foot { padding: 1rem 0.85rem 1.4rem; }
 }
+
+/* ————————————————————————————————
+   WAVE 7 polish: selection, focus, scrollbars, panel motion, and the
+   phone gets the last word on tables and chips.
+   ———————————————————————————————— */
+html { color-scheme: dark; }
+::selection { background: rgba(255, 59, 71, 0.55); color: #fff; }
+:focus-visible { outline: 2px solid var(--bs-cyan); outline-offset: 2px; border-radius: 4px; }
+.bs-out, .bs-rail, .report-item pre { scrollbar-width: thin; scrollbar-color: #26314a transparent; }
+.bs-out::-webkit-scrollbar, .report-item pre::-webkit-scrollbar { width: 8px; height: 8px; }
+.bs-out::-webkit-scrollbar-thumb, .report-item pre::-webkit-scrollbar-thumb { background: #26314a; border-radius: 8px; }
+.panel:not([hidden]) { animation: bs-panel-in 0.28s cubic-bezier(0.22, 0.9, 0.3, 1); }
+@keyframes bs-panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes bs-drift { from { transform: translate3d(-1.5%, -1%, 0) scale(1); } to { transform: translate3d(1.5%, 1.5%, 0) scale(1.06); } }
+body::before { animation: bs-drift 30s ease-in-out infinite alternate; }
+@media (max-width: 760px) {
+  .bs-topbar { padding-top: calc(0.55rem + env(safe-area-inset-top)); }
+  .bs-rail { scroll-snap-type: x proximity; -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent); mask-image: linear-gradient(90deg, #000 92%, transparent); }
+  .bs-rail .rail-btn { scroll-snap-align: start; }
+}
+@media (max-width: 560px) {
+  .bs-stats { display: grid; grid-template-columns: 1fr 1fr; }
+  .bs-stats span { border-radius: 12px; }
+  .bs-checks, .bs-checks tbody, .bs-checks tr, .bs-checks td { display: block; width: 100%; }
+  .bs-checks tr { padding: 0.35rem 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.06); }
+  .bs-checks td { border-bottom: none; padding: 0.18rem 0.7rem; }
+  .bs-checks td:first-child { padding-top: 0.45rem; }
+  .bs-checks td:last-child { padding-bottom: 0.45rem; }
+  .bs-resolvers { grid-template-columns: 1fr; }
+}
