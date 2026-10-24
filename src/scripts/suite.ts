@@ -128,6 +128,14 @@ function init() {
     const text = src instanceof HTMLInputElement || src instanceof HTMLTextAreaElement ? src.value : src?.textContent || "";
     if (text) void navigator.clipboard.writeText(text).then(() => { const old = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(() => (btn.textContent = old), 1400); });
   });
+  document.querySelectorAll<HTMLElement>(".bs-out[id]").forEach((out) => {
+    if (document.querySelector(`[data-copy="${out.id}"]`)) return;
+    const b = document.createElement("button");
+    b.className = "bs-copy-btn";
+    b.dataset.copy = out.id;
+    b.textContent = "copy output";
+    out.before(b);
+  });
   initLab();
   initNetTools();
   renderReport();

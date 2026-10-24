@@ -16,7 +16,7 @@ const onBook = Astro.url.pathname.startsWith("/book/");
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#090b0e" />
     <meta name="description" content={description} />
@@ -31,6 +31,17 @@ const onBook = Astro.url.pathname.startsWith("/book/");
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="BLACKSITE WEB by NIGHTWARE LABZ — the nightjar pentest bench, in your browser." />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL("/brand/nightware/social.png", Astro.site).toString()} />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "Organization", "@id": "https://nosuchmachine.net/#org", name: "NIGHTWARE LABZ", url: "https://nosuchmachine.net/", logo: "https://nosuchmachine.net/brand/nightware/nightjar-icon.png", sameAs: ["https://github.com/nightwarelabz"] },
+        { "@type": "WebSite", "@id": "https://nosuchmachine.net/#site", name: "nosuchmachine.net — BLACKSITE", url: "https://nosuchmachine.net/", publisher: { "@id": "https://nosuchmachine.net/#org" }, inLanguage: "en" },
+        { "@type": "SoftwareApplication", name: "BLACKSITE OS", applicationCategory: "SecurityApplication", operatingSystem: "Web browser", url: "https://nosuchmachine.net/", description: "A windowed operating system in a browser tab: the nightjar Blacksite pentest bench with a real shell, virtual filesystem, eight programming engines, git, SSH, and Relay (IRC) built in. One knock, read, grade. Public targets only.", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } },
+      ],
+    })} />
     {isNotFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/brand/nightware/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/brand/nightware/nightjar-icon.png" />

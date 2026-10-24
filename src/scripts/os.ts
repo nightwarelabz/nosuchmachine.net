@@ -7,6 +7,7 @@ import { registerWireVerbs } from "./os-verbs2";
 import { registerBenchVerbs } from "./os-verbs3";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
+import { buildRelayApp } from "./os-irc";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -36,12 +37,13 @@ const APPS: Record<string, { title: string; icon: string }> = {
   journal: { title: "Journal", icon: "🕮" },
   gauntlet: { title: "Gauntlet & Diagnose", icon: "⚔" },
   settings: { title: "House Settings", icon: "⚙" },
-  help: { title: "Help — the 426", icon: "?" },
+  help: { title: "Help — the 427", icon: "?" },
   bottle: { title: "Daylight Bottle", icon: "☀" },
   system: { title: "System — the Noether register", icon: "⬢" },
   chip8: { title: "CHIP-8 Console", icon: "👾" },
   ssh: { title: "SSH", icon: "🔐" },
   cia: { title: "Contact CIA", icon: "🕵️" },
+  relay: { title: "Relay — the house wire", icon: "📻" },
 };
 
 export function openApp(app: string, arg?: string) {
@@ -145,7 +147,16 @@ function buildTerminal(body: HTMLElement) {
   input.setAttribute("autocomplete", "off");
   input.setAttribute("spellcheck", "false");
   input.setAttribute("aria-label", "Terminal input");
-  line.append(prompt, input);
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "os-btn small";
+  copyBtn.textContent = "copy";
+  copyBtn.title = "copy the whole transcript";
+  copyBtn.addEventListener("click", () => {
+    const text = [...transcript.children].map((c) => c.textContent || "").join("\n");
+    void navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
+    input.focus();
+  });
+  line.append(prompt, input, copyBtn);
   body.append(transcript, line);
   const setPrompt = () => { prompt.textContent = `${os.env.USER}@blacksite:${os.cwd.replace(os.env.HOME, "~")}$ `; };
   setPrompt();
@@ -161,7 +172,7 @@ function buildTerminal(body: HTMLElement) {
     setWallpaper: (kind) => setWallpaper(kind),
     setTheme: (name) => applyTheme(name),
   };
-  io.print("BLACKSITE OS — web edition. `help` for the 426, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
+  io.print("BLACKSITE OS — web edition. `help` for the 427, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
   io.print("doctrine: one knock, read, grade. public targets only.", "dim");
   // the launcher (start button / Ctrl-K) can hand this terminal a line to run
   document.addEventListener("blacksite:run", async (e) => {
@@ -368,7 +379,7 @@ function buildEditor(body: HTMLElement, arg?: string) {
 
 
 const BOOT_AT = Date.now();
-function buildChip8(body: HTMLElement, arg: string) {
+function buildChip8(body: HTMLElement, arg?: string) {
   const wrap = el("div", "os-chip8");
   const canvas = document.createElement("canvas");
   canvas.width = 64; canvas.height = 32;
@@ -427,7 +438,7 @@ function buildChip8(body: HTMLElement, arg: string) {
 
 /* ————— SSH app: a real terminal over the room's SSH client ————— */
 const ANSI_FG = ["#3a4458", "#ff5f57", "#3ddc84", "#ffb02e", "#58a6ff", "#d368d8", "#39c5cf", "#d7e3f4", "#6b7a94", "#ff848c", "#7bf0ab", "#ffd479", "#8fc2ff", "#eba8f2", "#7ae3ea", "#ffffff"];
-function buildSsh(body: HTMLElement, arg: string) {
+function buildSsh(body: HTMLElement, arg?: string) {
   const wrap = el("div", "os-ssh");
   const bar = el("div", "os-files-bar");
   const hostIn = document.createElement("input"); hostIn.className = "os-bottle-input"; hostIn.placeholder = "host"; hostIn.style.flex = "1";
@@ -466,6 +477,15 @@ function buildSsh(body: HTMLElement, arg: string) {
     return out ? out + "</span>" : "";
   };
   const repaint = () => { screenEl.innerHTML = grid.map(renderLine).join("\n") || " "; };
+  const copyBar = el("div", "os-files-bar");
+  const gridText = () => grid.map((row) => row.map((c) => c.ch).join("").replace(/\s+$/, "")).join("\n");
+  const mkCopy = (label: string, getText: () => string) => {
+    const b = el("button", "os-btn small", label);
+    b.addEventListener("click", () => { void navigator.clipboard.writeText(getText()).then(() => { const old = b.textContent; b.textContent = "copied ✓"; setTimeout(() => (b.textContent = old), 1400); }); screenEl.focus(); });
+    return b;
+  };
+  copyBar.append(mkCopy("copy screen", gridText), mkCopy("copy scrollback", () => [...scrollback, gridText()].join("\n")));
+  wrap.insertBefore(copyBar, screenEl);
   const scrollUp = () => { scrollback.push(grid[0].map((c) => c.ch).join("").replace(/\s+$/, "")); if (scrollback.length > 400) scrollback.shift(); grid.shift(); grid.push(Array.from({ length: cols }, blank)); };
   const decoder = new TextDecoder();
   let escState = 0; let escBuf = "";
@@ -616,7 +636,7 @@ function buildSystem(body: HTMLElement) {
   const cells: Array<[string, string]> = [
     [OS_RELEASE.version + " " + OS_RELEASE.codename, "RELEASE"],
     [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, "WORKING VERBS — IN-ROOM + EDGE"],
-    ["426", "COMMANDS ON THE ROSTER"],
+    ["427", "COMMANDS ON THE ROSTER"],
     [`${vs.files}`, "FILES IN THE VFS"],
     [`${(vs.bytes / 1024).toFixed(1)} KB`, "VFS CONTENT"],
     [`${(lsBytes / 1024).toFixed(1)} KB`, "LOCAL STORAGE FOOTPRINT"],
@@ -701,13 +721,13 @@ function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSet
 function buildHelp(body: HTMLElement) {
   const search = document.createElement("input");
   search.className = "os-help-search";
-  search.placeholder = "search the 426 — try 'smtp', 'modbus', 'jwt'…";
+  search.placeholder = "search the 427 — try 'smtp', 'modbus', 'jwt'…";
   const listEl = el("div", "os-help-list");
   body.append(search, listEl);
   const render = (q: string) => {
     listEl.innerHTML = "";
     const rows = (roster as any[]).filter((r) => !q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || r.section.includes(q));
-    const head = el("p", "os-note", `${rows.length} of 426 commands · status is this room's honest standing`);
+    const head = el("p", "os-note", `${rows.length} of 427 commands · status is this room's honest standing`);
     listEl.appendChild(head);
     for (const r of rows.slice(0, 150)) {
       const status = VERBS.get(r.verb)?.status || "LIMIT";
@@ -725,6 +745,10 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   journal: buildJournal, gauntlet: buildGauntlet, settings: buildSettings, help: buildHelp,
   bottle: (body) => buildBottleApp(body, os),
   system: buildSystem,
+  chip8: buildChip8,
+  ssh: buildSsh,
+  cia: buildCia,
+  relay: (body) => buildRelayApp(body, os),
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
@@ -808,7 +832,7 @@ function boot() {
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
     "kernel: blacksite sh · vfs: mounted (persistent, this browser)",
-    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 426 on the roster`,
+    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 427 on the roster`,
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     "doctrine loaded: one knock, read, grade.",
     "",
@@ -825,8 +849,8 @@ function boot() {
   const defs: Array<[string, string, string]> = [
     ["terminal", "▸_", "Terminal"], ["files", "🗀", "Files"], ["editor", "✎", "Editor"],
     ["processes", "☰", "Processes"], ["gauntlet", "⚔", "Gauntlet"], ["journal", "🕮", "Journal"],
-    ["help", "?", "Help — 426"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "⬢", "System"],
-    ["chip8", "👾", "CHIP-8"], ["ssh", "🔐", "SSH"], ["cia", "🕵️", "Contact CIA"],
+    ["help", "?", "Help — 427"], ["settings", "⚙", "Settings"], ["bottle", "☀", "Daylight Bottle"], ["system", "⬢", "System"],
+    ["chip8", "👾", "CHIP-8"], ["ssh", "🔐", "SSH"], ["cia", "🕵️", "Contact CIA"], ["relay", "📻", "Relay"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");
