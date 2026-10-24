@@ -306,6 +306,8 @@
 .os-wp-thumb { display: flex; flex-direction: column; gap: 4px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--os-line-soft); border-radius: 10px; padding: 6px; cursor: pointer; font-size: 0.68rem; color: var(--os-muted); transition: border-color 0.12s, transform 0.1s; }
 .os-wp-thumb:hover { border-color: var(--os-accent); transform: translateY(-1px); color: var(--os-ink); }
 .os-wp-thumb img.os-wp-canvas { object-fit: cover; }
+.os-p2 .os-term-text { min-height: 1.25em; }
+.os-p2-live { opacity: 0.92; }
 .os-sys-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
 .os-winmenu-btn { display: none; }
 .os-winmenu { padding-bottom: 0.4rem; }
