@@ -31,8 +31,15 @@ export async function onRequest(context: any) {
   }
   if (!addresses.length) return err("relay bridge: the network does not resolve to a public address.", 403);
   const { connect } = await import("cloudflare:sockets");
+  // Connect by hostname, not by the guard's resolved IP: with TLS on, the
+  // certificate is issued for the network's name — an IP literal fails SNI
+  // and validation, and the leg dies silently (proven live: port 6667
+  // answered with the network banner while 6697 closed without a byte).
+  // The guard above has already proven this name resolves to public space,
+  // and the host is allowlisted, so the name is the right dial string.
+  void addresses;
   const socket = connect(
-    { hostname: addresses[0], port },
+    { hostname: host, port },
     { secureTransport: port === 6697 ? "on" : "off", allowHalfOpen: false },
   );
   const pair = new (globalThis as any).WebSocketPair();
