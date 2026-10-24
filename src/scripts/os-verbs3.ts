@@ -2,6 +2,7 @@
 import { verb, b64ToB, bToB64, bToHex, hexToB, mmh3 } from "./os-shell";
 import { runScheme, runBrainfuck, runLua, runSql, wasmExports, runWasm } from "./os-engines2";
 import { api, exchange, edgeDns, dnsRecords, fmtBytes, hostPort, need } from "./os-verbs";
+import { registerGit } from "./os-git";
 import { asUrl, fetchEdge } from "./os-verbs2";
 
 type Ctx = { args: string[]; stdin: string; os: any; io: any; raw: string };
@@ -647,6 +648,7 @@ export function registerBenchVerbs() {
   registerProbes();
   registerBatteries();
   registerEngines();
+  registerGit(verb);
   registerTimelock();
   registerSelfTests();
 }
