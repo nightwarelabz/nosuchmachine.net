@@ -68,8 +68,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const card = el("div", "os-relay-card");
   const intro = el("p", "os-note",
     "The house wire: a real IRC client in this tab, bridged by the site's edge to a public network over TLS. " +
-    "No account and nothing stored — pick a nick and step in. The house channel is #nosuchmachine on OFTC; " +
-    "on IRC, whoever arrives first opens the room. (Libera.Chat currently turns bridged guests away — it demands " +
+    "Opening Relay drops you straight into #nosuchmachine on OFTC as a guest — no account, no registration, " +
+    "no name to file; /nick names you once you are in the room. This card is only for changing network or " +
+    "wearing a name of your own. (Libera.Chat currently turns bridged guests away — it demands " +
     "SASL from the bridge's network range — so the house room lives on OFTC.) The house names — nightwarelabz, nosuchmachine, chasebryan " +
     "and kin — are claimed: the bridge opens them only with the house claim code, so nobody on this wire wears " +
     "the operator's name but the operator.");
@@ -118,13 +119,16 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   input.className = "os-relay-input";
   input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /part · /nick name";
   input.maxLength = 400;
+  const idBtn = el("button", "os-btn small", "name / network");
+  idBtn.title = "change name or network";
+  idBtn.addEventListener("click", () => { card.hidden = false; cardMsg.textContent = "— wearing a new name re-enters the wire as that name; the room keeps your conversation."; nickIn.focus(); });
   const copyBtn = el("button", "os-btn small", "copy");
   copyBtn.title = "copy this conversation";
   copyBtn.addEventListener("click", () => {
     void navigator.clipboard.writeText((buffers.get(current) || []).join("\n")).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
     input.focus();
   });
-  inputRow.append(input, copyBtn);
+  inputRow.append(input, idBtn, copyBtn);
   main.append(linesEl, inputRow);
   const usersEl = el("div", "os-relay-users");
   view.append(targetsEl, main, usersEl);
@@ -249,7 +253,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
 
   const connect = () => {
     const refusal = os.gate("active");
-    if (refusal) { push("server", refusal); }
+    if (refusal) { card.hidden = false; cardMsg.textContent = refusal; return; }
     const host = netSel.value;
     const port = tlsIn.checked ? 6697 : 6667;
     myNick = (nickIn.value.trim() || "guest").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || "guest";
@@ -259,6 +263,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       cardMsg.textContent = `— "${myNick}" is a claimed house name. It opens only with the house claim code — enter it above, or pick any other nick.`;
       return;
     }
+    if (ws) { intentionalClose = true; if (keepalive) { clearInterval(keepalive); keepalive = null; } try { ws.close(); } catch { /* already gone */ } }
     buffers.clear(); users.clear(); current = "server";
     joinedChans.clear(); intentionalClose = false; attempts = 0;
     wireHost = host; wirePort = port; wireClaim = claim;
@@ -279,6 +284,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
     ws = new WebSocket(`${proto}//${location.host}/api/irc-bridge?host=${encodeURIComponent(wireHost)}&port=${wirePort}`);
     ws.binaryType = "arraybuffer";
+    const mine = ws;
     let pending = "";
     ws.addEventListener("open", () => {
       push("server", "— bridge open; registering…");
@@ -304,6 +310,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       }
     });
     ws.addEventListener("close", () => {
+      if (ws !== mine) return;
       if (keepalive) { clearInterval(keepalive); keepalive = null; }
       if (intentionalClose) { push("server", "— off the wire."); return; }
       users.clear();
@@ -315,6 +322,22 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     ws.addEventListener("error", () => push("server", "— bridge hiccup; the rejoin below covers it"));
   };
   joinBtn.addEventListener("click", connect);
+
+  /* No registration, no form to clear: opening Relay steps straight into
+     the house channel as a guest. The card above is for changing network
+     or wearing a name of your own — never a toll booth. */
+  connect();
+
+  /* Closing the window leaves the wire — no ghost sessions idling in the
+     room after the operator has gone. */
+  const ghostWatch = setInterval(() => {
+    if (!document.body.contains(wrap)) {
+      clearInterval(ghostWatch);
+      intentionalClose = true;
+      if (keepalive) clearInterval(keepalive);
+      try { ws?.close(); } catch { /* already gone */ }
+    }
+  }, 2000);
 
   input.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
