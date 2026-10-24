@@ -44,7 +44,7 @@ function loadPlayer(): Promise<void> {
 export function buildWolf3d(body: HTMLElement) {
   const wrap = el("div", "os-wolf3d");
   const stage = el("div", "os-wolf-stage");
-  const status = el("p", "os-note", "warming up the DOS machine…");
+  const status = el("p", "os-note", "loading…");
   const bar = el("div", "os-files-bar");
   const full = el("button", "os-btn small", "fullscreen");
   full.addEventListener("click", () => { void stage.requestFullscreen?.().catch(() => undefined); });
@@ -53,10 +53,7 @@ export function buildWolf3d(body: HTMLElement) {
   notice.setAttribute("target", "_blank");
   notice.setAttribute("rel", "noreferrer");
   bar.append(full, notice);
-  const keys = el("p", "os-note",
-    "Wolfenstein 3D — shareware episode 1 (1992), unaltered, running on DOSBox in this tab. " +
-    "Move: arrow keys · fire: Ctrl · open doors: Space · strafe: Alt · run: Shift · weapons: 1–4. " +
-    "On touch screens the player raises its own pad and keys. Saves stay in this browser.");
+  const keys = el("p", "os-note", "arrows move · ctrl fire · space open · alt strafe · shift run · 1–4 weapons");
   wrap.append(bar, stage, status, keys);
   body.appendChild(wrap);
 
@@ -74,7 +71,7 @@ export function buildWolf3d(body: HTMLElement) {
   void loadPlayer().then(() => {
     if (dead) return;
     if (!window.Dos) { status.textContent = "the player loaded without its Dos — the machine stays dark."; return; }
-    status.textContent = "DOS machine running — click the screen, then play. First boot takes a few seconds.";
+    status.textContent = "click the screen to play.";
     dos = window.Dos(stage, {
       url: "/wolf3d/wolf3d.jsdos",
       pathPrefix: "/wolf3d/emulators/",

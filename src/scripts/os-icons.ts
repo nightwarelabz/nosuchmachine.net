@@ -60,7 +60,11 @@ export const ICONS: Record<string, string> = {
 export function iconEl(name: string, cls: string): HTMLSpanElement {
   const s = document.createElement("span");
   s.className = cls;
-  if (name === "orc") {
+  // Chase's ruling (2026-10-24): the orc face is used sparingly — the
+  // taskbar, and the orc room's own hero plate (a direct <img> there).
+  // Everywhere else (desktop, launcher, window title) orc wears the
+  // drawn globe like every other app.
+  if (name === "orc" && cls === "os-task-icon") {
     const img = document.createElement("img");
     img.className = "orc-face";
     img.src = "/orc/orc-64.png";
