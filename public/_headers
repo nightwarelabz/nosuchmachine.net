@@ -26,18 +26,28 @@
 # strict policy above.
 /
   ! Content-Security-Policy
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   Cross-Origin-Embedder-Policy: require-corp
 
 /blacksite/*
   ! Content-Security-Policy
-  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   Cross-Origin-Embedder-Policy: require-corp
 
 # phantom: the worker and the wasm binary it hosts. Same
 # relaxations as the OS scope it serves, plus the embedder policy the
 # SharedArrayBuffer stdin ring requires.
 /phantom/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Cross-Origin-Embedder-Policy: require-corp
+
+# wolf3d: the js-dos player and the DOSBox wasm it hosts. The worker
+# that runs the machine is served from this subtree, so it needs the
+# same wasm-unsafe-eval + embedder policy as the OS scope it serves —
+# without the removal line below, the strict catch-all policy above
+# would ride along and WebAssembly compilation would stay forbidden.
+/wolf3d/*
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   Cross-Origin-Embedder-Policy: require-corp

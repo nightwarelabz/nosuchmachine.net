@@ -457,6 +457,7 @@ function registerEngines() {
       "            the database lives at /home/operator/room.db and persists in the tree",
       "  wasm      WebAssembly modules from the tree — wasm exports <f> · wasm run <f> <fn> [args]",
       "  chip8     a CHIP-8 machine (1980s, 4K, honest) — chip8 [file.ch8] opens the console",
+      "  dos       a DOS machine — DOSBox in wasm (js-dos, vendored) — wolf3d opens Wolfenstein 3D on it",
       "every engine states its own limits where it has them; none of them phone home.",
     ].join("\n");
   });
@@ -521,6 +522,18 @@ function registerEngines() {
   verb("chip8", "LIVE", "chip8 [file.ch8] — open the CHIP-8 console (the demo ROM runs if you name none)", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "chip8", arg: ctx.args[0] || "" } }));
     return "the CHIP-8 console opens on the desk — 64×32, sixteen keys (your 1-4/Q-R/A-F/Z-V rows), four thousand bytes of 1977.";
+  });
+  verb("wolf3d", "LIVE", "wolf3d — open Wolfenstein 3D: the unaltered 1992 shareware episode on the room's DOS machine (DOSBox in wasm, vendored js-dos)", async () => {
+    document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "wolf3d" } }));
+    return "Castle Wolfenstein opens on the desk — episode 1, Escape from Wolfenstein, exactly as id shipped it as shareware in 1992. Arrows move, Ctrl fires, Space opens doors. The other five episodes were commercial then and stay that way — they are not in the bundle.";
+  });
+  verb("wolfenstein", "LIVE", "wolfenstein — an alias of wolf3d", async (ctx) => {
+    const { VERBS } = await import("./os-shell");
+    return VERBS.get("wolf3d")!.run(ctx);
+  });
+  verb("orc", "LIVE", "orc [url] — open ORC (Orchestration), the house browser: our version of LibreWolf, wrapped to install anywhere and carry its own engine", async (ctx) => {
+    document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "orc", arg: ctx.args[0] || "" } }));
+    return "ORC — Orchestration — opens on the desk: a preview pane here (pages that refuse framing stay blank; that refusal is theirs), and a standalone browser of its own outside: install orc and nosuchmachine.net and everything else run on the same Gecko everywhere. Browser-neutral, no telemetry, no sponsored anything.";
   });
   verb("decode", "LIVE", "decode <hex> — raw advertisement bytes through the decoders (BLE AD structures)", async (ctx) => {
     if (!need(ctx, 1, "decode <hex>")) return;

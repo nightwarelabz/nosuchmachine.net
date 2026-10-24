@@ -1,0 +1,26 @@
+Wolfenstein 3D in BLACKSITE OS — what is here and under what terms
+
+THE GAME
+  Wolfenstein 3D, shareware episode 1, version 1.4 (the .WL1 data).
+  Copyright (c) 1992 id Software. The files inside wolf3d.jsdos are
+  BYTE-IDENTICAL to the original shareware distribution, including its
+  own READ1ST.TXT, VENDOR.DOC and ORDER.FRM. The shareware license in
+  READ1ST.TXT grants the right to copy and distribute the program and
+  encourages passing it along for evaluation; VENDOR.DOC thanks
+  distributors for doing exactly that. Nothing here is altered.
+  Only the free shareware episode ships. Episodes 2–6 were commercial
+  in 1992 and remain so — they are not in this bundle.
+
+THE PLAYER
+  js-dos 8.5.3 (GPL-2.0) — https://js-dos.com
+  DOSBox (GPL-2.0) via its wdosbox WebAssembly build.
+  Vendored, self-hosted, minimal set:
+    js-dos.js, js-dos.css
+    emulators/emulators.js, wdosbox.js, wdosbox.wasm,
+    wlibzip.js, wlibzip.wasm
+  No js-dos CDN is contacted at runtime; the player runs entirely
+  from this site, in the visitor's own tab.
+
+SAVES
+  The player's saves live in the visitor's own browser storage
+  (js-dos local persistence). The site receives nothing.

@@ -9,6 +9,8 @@ import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
+import { buildWolf3d } from "./os-wolf3d";
+import { buildOrc } from "./os-orc";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
 import roster from "../data/blacksite-commands.json";
@@ -64,6 +66,8 @@ const APPS: Record<string, { title: string; icon: string }> = {
   ssh: { title: "SSH", icon: "ssh" },
   relay: { title: "Relay — the house wire", icon: "relay" },
   phantom: { title: "phantom", icon: "phantom" },
+  wolf3d: { title: "Wolfenstein 3D", icon: "wolf3d" },
+  orc: { title: "orc — the house browser", icon: "orc" },
 };
 
 /* ————— session retention —————
@@ -968,6 +972,8 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
   phantom: buildPhantomApp,
+  wolf3d: buildWolf3d,
+  orc: buildOrc,
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
@@ -1082,6 +1088,7 @@ function boot() {
     ["processes", "processes", "Processes"], ["gauntlet", "gauntlet", "Gauntlet"], ["journal", "journal", "Journal"],
     ["help", "help", "Help — 427"], ["settings", "settings", "Settings"], ["bottle", "bottle", "Daylight Bottle"], ["system", "system", "System"],
     ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
+    ["wolf3d", "wolf3d", "Wolfenstein 3D"], ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");

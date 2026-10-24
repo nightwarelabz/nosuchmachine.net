@@ -24,6 +24,8 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["scheme / bf engines", "hand-built Lisp + Brainfuck interpreters, in this source", "LIVE"],
     ["wasm room", "WebAssembly modules from the tree, instantiated in the room", "LIVE"],
     ["chip-8 machine", "a full CHIP-8 CPU with a console on the desk", "LIVE"],
+    ["dos machine", "DOSBox in WebAssembly (js-dos, vendored, self-hosted) — Wolfenstein 3D's shareware episode runs on it, unaltered 1992 data under its shareware license", "LIVE"],
+    ["orc", "the house browser — our version of LibreWolf in its wraparound: a room here, a standalone installable browser of its own", "LIVE"],
     ["javascript engine", "the native room — your programs, in the room", "LIVE"],
     ["file parsers", "ELF · PE · Mach-O · ZIP · PDF · images · Wasm · SQLite · gzip · TAR · plist", "LIVE"],
     ["edge bridge", `/api/* — the guarded wire: ${f.live + f.edge} verbs registered, wire verbs behind the public-target guard`, "LIVE"],
