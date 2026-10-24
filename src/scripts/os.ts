@@ -721,7 +721,7 @@ function buildSettings(body: HTMLElement) {
     const b = el("button", "os-wp-thumb");
     const img = document.createElement("img");
     img.src = "/nightmare.webp"; img.alt = ""; img.className = "os-wp-canvas"; img.loading = "lazy";
-    b.append(img, el("span", "", "Nightmare"));
+    b.append(img, el("span", "", "nightmare"));
     b.addEventListener("click", () => setWallpaper("mare"));
     wpRow.appendChild(b);
   }
