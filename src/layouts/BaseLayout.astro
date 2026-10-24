@@ -34,6 +34,7 @@ const onBook = Astro.url.pathname.startsWith("/book/");
     {isNotFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/brand/nightware/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/brand/nightware/nightjar-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="sitemap" href="/sitemap.xml" />
     {onBook && <link rel="stylesheet" href="/book-nav-boot.css" />}
     <title>{pageTitle}</title>

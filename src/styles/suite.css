@@ -178,6 +178,46 @@
 .bs-note { font-size: 0.73rem; color: var(--bs-faint); line-height: 1.6; }
 .bs-warn { border-left: 3px solid var(--bs-amber); background: rgba(35, 24, 5, 0.75); padding: 0.75rem 0.95rem; font-size: 0.79rem; color: #f3d9a4; line-height: 1.6; border-radius: 0 8px 8px 0; }
 
+/* ————— structured result views ————— */
+.bs-view { margin-bottom: 0.9rem; }
+.bs-view:empty { display: none; }
+.bs-view-h { font-size: 0.8rem; letter-spacing: 0.14em; color: var(--bs-muted); margin: 0.9rem 0 0.5rem; font-weight: 800; }
+.bs-view-h:first-child { margin-top: 0; }
+.bs-view-note { color: var(--bs-muted); font-size: 0.8rem; line-height: 1.6; }
+.bs-view-warn { color: #f3d9a4; font-size: 0.8rem; line-height: 1.55; margin: 0.45rem 0 0; }
+.bs-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 0.14rem 0.55rem; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.05em; border: 1px solid var(--bs-line-soft); color: var(--bs-muted); white-space: nowrap; }
+.bs-pill.ok { color: var(--bs-green); border-color: rgba(61, 220, 132, 0.4); }
+.bs-pill.warn { color: var(--bs-amber); border-color: rgba(255, 176, 46, 0.4); }
+.bs-pill.bad { color: #ff848c; border-color: rgba(255, 59, 71, 0.45); }
+.bs-chiprow { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
+.bs-resolvers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.7rem; }
+.bs-rcard { background: var(--bs-panel); border: 1px solid var(--bs-line-soft); border-radius: 10px; padding: 0.75rem 0.85rem; }
+.bs-rcard-head { display: flex; gap: 0.45rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.bs-rcard-note { color: var(--bs-faint); font-size: 0.76rem; margin: 0; }
+.bs-rrow { display: flex; gap: 0.5rem; align-items: center; padding: 0.28rem 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.05); flex-wrap: wrap; }
+.bs-rrow:last-child { border-bottom: none; }
+.bs-rdata { font-size: 0.76rem; word-break: break-all; flex: 1 1 180px; }
+.bs-rttl { color: var(--bs-faint); font-size: 0.66rem; white-space: nowrap; }
+.bs-ladder { display: flex; flex-direction: column; gap: 0.55rem; }
+.bs-rung { background: var(--bs-panel); border: 1px solid var(--bs-line-soft); border-left: 3px solid var(--bs-cyan); border-radius: 10px; padding: 0.75rem 0.9rem; }
+.bs-rung:first-child { border-left-color: var(--bs-green); }
+.bs-rung-top { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+.bs-rung-pos { font-size: 0.6rem; letter-spacing: 0.18em; color: var(--bs-cyan); font-weight: 800; }
+.bs-rung-sub { color: var(--bs-muted); font-size: 0.76rem; margin: 0.25rem 0 0.5rem; }
+.bs-rung-fp { color: var(--bs-faint); font-size: 0.66rem; margin: 0.4rem 0 0; word-break: break-all; }
+.bs-gradewrap { display: flex; gap: 1.1rem; align-items: center; background: var(--bs-panel); border: 1px solid var(--bs-line-soft); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+.bs-medallion { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; }
+.bs-medallion-in { width: 78px; height: 78px; border-radius: 50%; background: #0a0e16; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.bs-medallion-in strong { font-size: 1.9rem; line-height: 1; color: #fff; }
+.bs-medallion-in span { font-size: 0.62rem; color: var(--bs-muted); letter-spacing: 0.08em; }
+.bs-grademeta { flex: 1 1 260px; min-width: 0; }
+.bs-grade-url { font-size: 0.86rem; word-break: break-all; margin: 0 0 0.55rem; color: var(--bs-ink); }
+.bs-checks { width: 100%; border-collapse: collapse; font-size: 0.78rem; background: var(--bs-panel); border: 1px solid var(--bs-line-soft); border-radius: 10px; overflow: hidden; }
+.bs-checks td { padding: 0.5rem 0.7rem; border-bottom: 1px dashed rgba(255, 255, 255, 0.05); vertical-align: top; }
+.bs-checks tr:last-child td { border-bottom: none; }
+.bs-check-detail { color: var(--bs-faint); font-size: 0.72rem; word-break: break-word; }
+@media (max-width: 760px) { .bs-gradewrap { padding: 0.85rem; } .bs-medallion { width: 80px; height: 80px; } .bs-medallion-in { width: 64px; height: 64px; } .bs-checks td { padding: 0.45rem 0.5rem; } }
+
 /* ————— report ————— */
 .report-item { border: 1px solid var(--bs-line-soft); border-radius: 10px; margin-bottom: 0.85rem; background: var(--bs-panel); overflow: hidden; }
 .report-item header { display: flex; justify-content: space-between; gap: 1rem; padding: 0.65rem 0.95rem; border-bottom: 1px solid var(--bs-line-soft); font-size: 0.82rem; background: rgba(19, 26, 40, 0.55); }

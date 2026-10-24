@@ -21,6 +21,126 @@ async function api(path: string): Promise<any> {
   return data;
 }
 
+/* ————— structured result views —————
+   The raw ledger stays in the <pre> below; these render the same data
+   as an instrument face: resolver cards, a certificate ladder, a grade
+   medallion. Built with textContent only — remote data never becomes
+   markup. A renderer failing must never break the raw output. */
+function h<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function viewInto(id: string, build: (box: HTMLElement) => void) {
+  const box = $(id);
+  if (!box) return;
+  box.innerHTML = "";
+  try { build(box); } catch { box.innerHTML = ""; }
+}
+function pill(text: string, kind: "ok" | "warn" | "bad" | "dim"): HTMLElement {
+  return h("span", `bs-pill ${kind}`, text);
+}
+function renderDnsView(data: any) {
+  viewInto("dns-view", (box) => {
+    if (!data?.ok) return;
+    for (const type of data.types || []) {
+      const resolvers = data.results?.[type] || [];
+      box.appendChild(h("h3", "bs-view-h", `${type} — ${(data.name || "").toString()}`));
+      const grid = h("div", "bs-resolvers");
+      for (const r of resolvers) {
+        const card = h("div", "bs-rcard");
+        const head = h("div", "bs-rcard-head");
+        head.append(h("strong", "", r.label || r.resolver || "resolver"), pill(r.ok ? `${r.ms ?? "?"} ms` : "failed", r.ok ? "dim" : "bad"));
+        if (r.ok && r.ad) head.appendChild(pill("DNSSEC ✓", "ok"));
+        card.appendChild(head);
+        if (!r.ok) card.appendChild(h("p", "bs-rcard-note", r.error || "no answer"));
+        else if (!(r.records || []).length) card.appendChild(h("p", "bs-rcard-note", `no ${type} records (${r.statusName || "empty"})`));
+        else for (const rec of r.records) {
+          const row = h("div", "bs-rrow");
+          row.append(h("span", "bs-rdata", String(rec.data).slice(0, 120)), h("span", "bs-rttl", `ttl ${rec.ttl}`));
+          card.appendChild(row);
+        }
+        grid.appendChild(card);
+      }
+      box.appendChild(grid);
+    }
+  });
+}
+function renderTlsView(data: any) {
+  viewInto("tls-view", (box) => {
+    if (!data?.ok) return;
+    const chips = h("div", "bs-chiprow");
+    chips.append(pill(String(data.serverHelloVersion || "TLS"), "dim"), pill(String(data.cipherSuite || "cipher unknown"), "dim"), pill(`${data.ms ?? "?"} ms`, "dim"));
+    box.appendChild(chips);
+    const chain = Array.isArray(data.chain) ? data.chain : [];
+    if (!chain.length) {
+      box.appendChild(h("p", "bs-view-note", "The certificate flight arrived encrypted (TLS 1.3) — the version and cipher above are real; the chain itself is honestly unreadable from one handshake. The raw ledger below says the same."));
+    }
+    const ladder = h("div", "bs-ladder");
+    chain.forEach((cert: any, i: number) => {
+      const rung = h("div", "bs-rung");
+      const top = h("div", "bs-rung-top");
+      top.append(h("span", "bs-rung-pos", i === 0 ? "LEAF" : `INTERMEDIATE ${i}`), h("strong", "", String(cert.subject || "(unparsed)")));
+      rung.appendChild(top);
+      if (cert.issuer) rung.appendChild(h("p", "bs-rung-sub", `issued by ${cert.issuer}`));
+      const pills = h("div", "bs-chiprow");
+      if (typeof cert.daysRemaining === "number") pills.append(pill(cert.expired ? "EXPIRED" : `${cert.daysRemaining} days left`, cert.expired ? "bad" : cert.daysRemaining <= 21 ? "warn" : "ok"));
+      if (Array.isArray(cert.sans)) pills.append(pill(`${cert.sans.length} SAN${cert.sans.length === 1 ? "" : "s"}`, "dim"));
+      if (cert.signatureAlgorithm) pills.append(pill(String(cert.signatureAlgorithm), "dim"));
+      rung.appendChild(pills);
+      if (cert.sha256Fingerprint) rung.appendChild(h("p", "bs-rung-fp", `SHA-256 ${String(cert.sha256Fingerprint).slice(0, 47)}…`));
+      ladder.appendChild(rung);
+    });
+    box.appendChild(ladder);
+    for (const f of data.findings || []) box.appendChild(h("p", "bs-view-warn", `⚠ ${f}`));
+  });
+}
+function renderHttpView(data: any) {
+  viewInto("http-view", (box) => {
+    if (!data?.ok) return;
+    const sec = data.security || {};
+    const grade = String(sec.grade || "?");
+    const score = Number(sec.score ?? 0);
+    const color = grade === "A" ? "#3ddc84" : grade === "B" ? "#9ede57" : grade === "C" ? "#ffb02e" : grade === "D" ? "#ff8c2e" : "#ff3b47";
+    const wrap = h("div", "bs-gradewrap");
+    const med = h("div", "bs-medallion");
+    med.style.background = `conic-gradient(${color} ${score * 3.6}deg, #1a2438 0deg)`;
+    const inner = h("div", "bs-medallion-in");
+    inner.append(h("strong", "", grade), h("span", "", `${score}/100`));
+    med.appendChild(inner);
+    const meta = h("div", "bs-grademeta");
+    meta.append(h("p", "bs-grade-url", String(data.finalUrl || "")), );
+    const prow = h("div", "bs-chiprow");
+    prow.append(pill(`HTTP ${data.finalStatus}`, data.finalStatus < 400 ? "ok" : "warn"), pill(`${data.redirectHops ?? 0} redirect${data.redirectHops === 1 ? "" : "s"}`, "dim"));
+    if (data.fingerprint?.server) prow.append(pill(String(data.fingerprint.server), "dim"));
+    meta.appendChild(prow);
+    if (data.mixedContentRisk) meta.appendChild(h("p", "bs-view-warn", `⚠ ${data.mixedContentRisk}`));
+    if (data.cors?.verdict) meta.appendChild(h("p", "bs-view-note", `CORS: ${data.cors.verdict}`));
+    wrap.append(med, meta);
+    box.appendChild(wrap);
+    const table = h("table", "bs-checks");
+    for (const c of sec.checks || []) {
+      const tr = h("tr");
+      const tdState = h("td"); tdState.appendChild(pill(c.pass ? "PASS" : "MISS", c.pass ? "ok" : "bad"));
+      tr.append(tdState, h("td", "", String(c.label)), h("td", "bs-check-detail", String(c.detail || "").slice(0, 130)));
+      table.appendChild(tr);
+    }
+    box.appendChild(table);
+    const cookies = Array.isArray(data.cookies) ? data.cookies : [];
+    if (cookies.length) {
+      box.appendChild(h("h3", "bs-view-h", `Cookies — ${cookies.length}`));
+      for (const ck of cookies) {
+        const row = h("div", "bs-rrow");
+        row.append(h("span", "bs-rdata", String(ck.name || "(unnamed)")));
+        const fl = ck.flags || {};
+        row.append(pill(fl.secure ? "Secure" : "no Secure", fl.secure ? "ok" : "bad"), pill(fl.httpOnly ? "HttpOnly" : "no HttpOnly", fl.httpOnly ? "ok" : "warn"), pill(fl.sameSite ? `SameSite=${fl.sameSite}` : "no SameSite", fl.sameSite ? "ok" : "warn"));
+        box.appendChild(row);
+      }
+    }
+  });
+}
+
 export async function runDns(nameOverride?: string, typeOverride?: string) {
   const name = nameOverride || val("dns-name") || globalTarget();
   const type = typeOverride || val("dns-type") || "A";
@@ -28,6 +148,7 @@ export async function runDns(nameOverride?: string, typeOverride?: string) {
   busy("dns-out", `Asking three resolvers for ${name} ${type}…`);
   const data = await api(`/api/dns?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`);
   show("dns-out", data);
+  renderDnsView(data);
   if (data.ok) emitReport("dns", `DNS ${type} for ${data.name}`, data.results);
   return data;
 }
@@ -39,6 +160,7 @@ export async function runTls(hostOverride?: string) {
   busy("tls-out", `Flying a handshake at ${host}:${port}…`);
   const data = await api(`/api/tls?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}`);
   show("tls-out", data);
+  renderTlsView(data);
   if (data.ok) emitReport("tls", `TLS inspection: ${data.host}:${data.port}`, data);
   return data;
 }
@@ -50,6 +172,7 @@ export async function runHttpAudit(urlOverride?: string) {
   busy("http-out", `Auditing ${url} — one GET per hop, grading everything that comes back…`);
   const data = await api(`/api/http-audit?url=${encodeURIComponent(url)}`);
   show("http-out", data);
+  renderHttpView(data);
   if (data.ok) emitReport("http-audit", `HTTP audit: ${data.finalUrl} (${data.finalStatus}) — grade ${data.security?.grade} (${data.security?.score}/100)`, data);
   return data;
 }

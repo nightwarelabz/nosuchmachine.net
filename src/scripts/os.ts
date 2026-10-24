@@ -9,6 +9,7 @@ import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
+import { identifyFile, hexdump } from "./os-parse";
 
 const os = new BlacksiteOS();
 let zTop = 10;
@@ -22,6 +23,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return e;
 }
 function root(): HTMLElement { return document.getElementById("os-root")!; }
+function tdDecode(bytes: Uint8Array): string { return new TextDecoder().decode(bytes); }
 function desktop(): HTMLElement { return document.querySelector(".os-desktop")!; }
 
 const APPS: Record<string, { title: string; icon: string }> = {
@@ -225,7 +227,9 @@ function buildFiles(body: HTMLElement) {
   fileInput.type = "file"; fileInput.hidden = true;
   bar.append(pathLabel, upBtn, importBtn, newFileBtn, newDirBtn, fileInput);
   const list = el("div", "os-files-list");
-  body.append(bar, list);
+  const preview = el("pre", "os-plain os-files-preview");
+  preview.textContent = "select a file to inspect it — the room's parsers read its bones (format, headers, strings) without opening it.";
+  body.append(bar, list, preview);
   const render = () => {
     pathLabel.textContent = current;
     list.innerHTML = "";
@@ -240,6 +244,12 @@ function buildFiles(body: HTMLElement) {
       row.addEventListener("click", () => {
         list.querySelectorAll(".os-file-row").forEach((r) => r.classList.remove("selected"));
         row.classList.add("selected");
+        if (isDir) { preview.textContent = `${path}/ — a folder. double-click to enter.`; return; }
+        const bytes = os.readBytes(path);
+        if (!bytes) { preview.textContent = "could not read that file."; return; }
+        const id = identifyFile(bytes, name);
+        const head = id.kind === "text" ? tdDecode(bytes.slice(0, 1200)) : hexdump(bytes.slice(0, 128), 0);
+        preview.textContent = `${name} — ${id.summary} · ${bytes.length} bytes\n\n${head}`;
       });
       const actions = el("span", "os-file-actions");
       if (!isDir) {
@@ -594,6 +604,14 @@ function boot() {
   document.getElementById("os-start")?.addEventListener("click", () => toggleLauncher());
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); toggleLauncher(); }
+    if (e.altKey && e.key === "Tab") {
+      e.preventDefault();
+      const wins = [...windows.values()].filter((w) => w.style.display !== "none");
+      if (wins.length > 1) {
+        const sorted = wins.sort((a, b) => Number(a.style.zIndex || 0) - Number(b.style.zIndex || 0));
+        focusWindow(sorted[0]);
+      }
+    }
   });
   document.addEventListener("blacksite:toast", (e) => osToast((e as CustomEvent).detail?.text || ""));
   document.addEventListener("blacksite:emcon", () => updateEmconChip());
