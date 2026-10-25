@@ -839,6 +839,23 @@ export function buildWyrdfall(body: HTMLElement): void {
   body.appendChild(wrap);
   const Q = <E extends Element = HTMLElement>(sel: string) => wrap.querySelector(sel) as E;
   const canvas = Q<HTMLCanvasElement>(".os-wy-canvas");
+  /* Never a silent black window: any failure in the engine below — no
+     WebGL, a shader this device's compiler refuses, a world that will
+     not build — lands on this plate in plain words, where the player
+     (and a screenshot) can see it. */
+  const wyFail = (title: string, detail: string) => {
+    try {
+      if (wrap.querySelector(".os-wy-fail")) return;
+      const plate = document.createElement("div");
+      plate.className = "os-wy-fail";
+      const h = document.createElement("div");
+      h.className = "os-wy-fail-h"; h.textContent = title;
+      const p = document.createElement("pre");
+      p.className = "os-wy-fail-p"; p.textContent = detail.slice(0, 900);
+      plate.append(h, p);
+      wrap.appendChild(plate);
+    } catch { /* the plate is a courtesy, never a new failure */ }
+  };
   const hudEl = Q(".os-wy-hud"), crossEl = Q(".os-wy-cross"), interactEl = Q(".os-wy-interact");
   const hpBar = Q(".os-wy-bar.hp i"), mpBar = Q(".os-wy-bar.mp i"), stBar = Q(".os-wy-bar.st i");
   const clockEl = Q(".os-wy-clock"), compStrip = Q(".os-wy-compstrip");
@@ -2163,16 +2180,27 @@ export function buildWyrdfall(body: HTMLElement): void {
 
   /* ————————————————— the textured engine ————————————————— */
   const gl = (canvas.getContext("webgl2", { antialias: false, alpha: false }) || canvas.getContext("webgl", { antialias: false, alpha: false })) as WebGLRenderingContext;
+  if (!gl) {
+    wyFail("The province could not take shape here", "This browser would not grant the game a WebGL canvas. In a browser that asks permission for WebGL, allow it and reopen the game; a private or lockdown mode can also refuse it.");
+    return;
+  }
+  canvas.addEventListener("webglcontextlost", (ev) => {
+    ev.preventDefault();
+    wyFail("The light went out", "The browser took the graphics context back — this can happen when a device is short on graphics memory. Close the game and open it again.");
+  });
+  const glFails: string[] = [];
   function mkProg(vs: string, fs: string): WebGLProgram {
     const sh = (type: number, src: string) => {
       const s = gl.createShader(type)!;
       gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) glFails.push(`${type === gl.VERTEX_SHADER ? "vertex" : "fragment"} shader: ${gl.getShaderInfoLog(s) || "unknown error"}`);
       return s;
     };
     const p = gl.createProgram()!;
     gl.attachShader(p, sh(gl.VERTEX_SHADER, vs));
     gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
     gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) glFails.push(`program link: ${gl.getProgramInfoLog(p) || "unknown error"}`);
     return p;
   }
   const LIT_VS = `
@@ -2269,6 +2297,10 @@ export function buildWyrdfall(body: HTMLElement): void {
       gl_FragColor = vec4(c, 0.88);
     }`;
   const litP = mkProg(LIT_VS, LIT_FS), skyP = mkProg(SKY_VS, SKY_FS), watP = mkProg(WAT_VS, WAT_FS);
+  if (glFails.length) {
+    wyFail("The province could not take shape here", "This device's graphics compiler refused the game's shaders:\n" + glFails.join("\n"));
+    return;
+  }
   const LU = {
     mvp: gl.getUniformLocation(litP, "uMVP"), camPos: gl.getUniformLocation(litP, "uCamPos"),
     sunDir: gl.getUniformLocation(litP, "uSunDir"), sunCol: gl.getUniformLocation(litP, "uSunCol"),
@@ -2678,7 +2710,7 @@ export function buildWyrdfall(body: HTMLElement): void {
   }
 
   /* ——— the frame ——— */
-  let raf = 0, lastT = performance.now() / 1000;
+  let raf = 0, lastT = performance.now() / 1000, renderErrs = 0;
   const frame = () => {
     raf = requestAnimationFrame(frame);
     const now = performance.now() / 1000;
@@ -2688,14 +2720,25 @@ export function buildWyrdfall(body: HTMLElement): void {
     else if (dlgOpen) { /* the world holds its breath */ }
     if (placeT > 0) { placeT -= dt; if (placeT <= 0) placeEl.hidden = true; }
     if (toastT > 0) { toastT -= dt; if (toastT <= 0) toastEl.hidden = true; }
-    render(now);
+    try { render(now); } catch (e) {
+      renderErrs++;
+      if (renderErrs === 3) {
+        cancelAnimationFrame(raf);
+        wyFail("The province faltered", "Rendering failed on this device: " + (e instanceof Error ? e.message : String(e)));
+      }
+    }
     void dt;
   };
-  buildTerrain();
-  buildTowns();
-  buildDressing();
-  uploadScene();
-  spawnWanderers();
+  try {
+    buildTerrain();
+    buildTowns();
+    buildDressing();
+    uploadScene();
+    spawnWanderers();
+  } catch (e) {
+    wyFail("The province could not take shape here", "World-building failed on this device: " + (e instanceof Error ? e.message : String(e)));
+    return;
+  }
   createEl.hidden = false;
   frame();
   const obs = new MutationObserver(() => {
