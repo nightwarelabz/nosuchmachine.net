@@ -202,8 +202,8 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => win.remove(), 150); });
-  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
+  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); syncBuildPlateCover(); return; } win.classList.add("os-win-out"); setTimeout(() => { win.remove(); syncBuildPlateCover(); }, 150); });
+  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); syncBuildPlateCover(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); syncBuildPlateCover(); }, 130); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
@@ -279,6 +279,7 @@ function focusWindow(win: HTMLElement) {
   if (wasHidden) { sfx("back"); if (!REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); } }
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
   saveSession();
+  syncBuildPlateCover();
 }
 function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   const bar = document.getElementById("os-taskbar-apps")!;
@@ -294,9 +295,9 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
     // or a hidden one's — brings it forward.
     if (win.classList.contains("focused") && win.style.display !== "none") {
       sfx("min");
-      if (REDUCED) { win.style.display = "none"; saveSession(); return; }
+      if (REDUCED) { win.style.display = "none"; saveSession(); syncBuildPlateCover(); return; }
       win.classList.add("os-win-min");
-      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130);
+      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); syncBuildPlateCover(); }, 130);
       return;
     }
     focusWindow(win);
@@ -351,6 +352,7 @@ function startDrag(e: PointerEvent, win: HTMLElement) {
     if (kind === "t") toggleMaximize(win);
     else if (kind === "l" || kind === "r") snapWindow(win, kind);
     saveSession();
+    syncBuildPlateCover();
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
@@ -363,7 +365,7 @@ function startResize(e: PointerEvent, win: HTMLElement) {
     win.style.width = `${Math.max(320, startW + ev.clientX - startX)}px`;
     win.style.height = `${Math.max(200, startH + ev.clientY - startY)}px`;
   };
-  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); };
+  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); syncBuildPlateCover(); };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
@@ -1194,7 +1196,25 @@ function mountBuildPlate(): void {
   buildPlateEl = plate;
   setInterval(() => {
     if (buildPlateSessionEl) buildPlateSessionEl.textContent = `session ${fmtSessionClock(Date.now() - BOOT_AT)}`;
+    syncBuildPlateCover();
   }, 1000);
+}
+/* Window glass is translucent, so a plate merely UNDER a window still
+ * ghosts through it — where any visible window's frame reaches the
+ * plate's corner, the plate hides outright, and returns when the corner
+ * is clear again. Called from the window lifecycle (focus covers open,
+ * raise, maximize, snap) and reconciled on the plate's own second. */
+function syncBuildPlateCover(): void {
+  if (!buildPlateEl) return;
+  const pr = buildPlateEl.getBoundingClientRect();
+  let covered = false;
+  if (pr.width > 0) {
+    for (const w of visibleWindows()) {
+      const wr = w.getBoundingClientRect();
+      if (wr.left < pr.right && wr.right > pr.left && wr.top < pr.bottom && wr.bottom > pr.top) { covered = true; break; }
+    }
+  }
+  buildPlateEl.style.visibility = covered ? "hidden" : "";
 }
 function renderBuildPlate(v: { version?: unknown; chunk?: unknown; built?: unknown }): void {
   mountBuildPlate();
