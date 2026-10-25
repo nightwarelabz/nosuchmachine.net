@@ -653,6 +653,16 @@ export function buildWyrdfall(body: HTMLElement) {
     <div class="os-wy-death" hidden>
       <div class="os-wy-death-line"></div>
       <button class="os-wy-rise">rise at the temple</button>
+    </div>
+    <div class="os-wy-touch" style="display:none">
+      <div class="os-wy-stick"><div class="os-wy-stick-dot"></div></div>
+      <div class="os-wy-tbtns">
+        <button class="os-wy-tbtn big" data-t="use">use</button>
+        <button class="os-wy-tbtn" data-t="atk">strike</button>
+        <button class="os-wy-tbtn" data-t="cast">cast</button>
+        <button class="os-wy-tbtn" data-t="jump">leap</button>
+        <button class="os-wy-tbtn" data-t="mend">mend</button>
+      </div>
     </div>`;
   body.appendChild(wrap);
   const Q = <T extends Element = HTMLElement>(s: string): T => wrap.querySelector(s) as T;
@@ -715,10 +725,10 @@ export function buildWyrdfall(body: HTMLElement) {
     gl.linkProgram(p);
     return p;
   };
-  const mkBuf = () => {
+  const mkBuf = (floats: number) => {
     const b = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, 1500000 * 4, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, floats * 4, gl.DYNAMIC_DRAW);
     return b;
   };
   const litP = mkProg(LIT_VS, LIT_FS), skyP = mkProg(SKY_VS, SKY_FS), watP = mkProg(WATER_VS, WATER_FS);
@@ -728,7 +738,7 @@ export function buildWyrdfall(body: HTMLElement) {
   const aPos = gl.getAttribLocation(litP, "aPos"), aCol = gl.getAttribLocation(litP, "aCol"), aNor = gl.getAttribLocation(litP, "aNor");
   const aPosS = gl.getAttribLocation(skyP, "aPos");
   const aPosW = gl.getAttribLocation(watP, "aPos"), aAuxW = gl.getAttribLocation(watP, "aAux");
-  const dynBuf = mkBuf(), staBuf = mkBuf(), terrBuf = mkBuf();
+  const dynBuf = mkBuf(400000), staBuf = gl.createBuffer(), terrBuf = gl.createBuffer();
   gl.enable(gl.DEPTH_TEST);
   gl.clearColor(0.02, 0.02, 0.03, 1);
 
@@ -1299,19 +1309,19 @@ export function buildWyrdfall(body: HTMLElement) {
   let staCount = 0, terrCount = 0, phase = 0, jumpOff = 0;
   function uploadStatic(a: Float32Array) {
     gl.bindBuffer(gl.ARRAY_BUFFER, staBuf);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, a);
+    gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW);
     staCount = a.length / 9;
   }
   gl.bindBuffer(gl.ARRAY_BUFFER, terrBuf);
-  gl.bufferSubData(gl.ARRAY_BUFFER, 0, world.terrain);
+  gl.bufferData(gl.ARRAY_BUFFER, world.terrain, gl.STATIC_DRAW);
   terrCount = world.terrain.length / 9;
   uploadStatic(world.lit);
-  const watBuf = mkBuf();
+  const watBuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, watBuf);
-  gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
     -880, 0.35, -880, 0, 880, 0.35, -880, 0, 880, 0.35, 880, 0,
     -880, 0.35, -880, 0, 880, 0.35, 880, 0, -880, 0.35, 880, 0,
-  ]));
+  ]), gl.STATIC_DRAW);
   const invert4 = (out: number[], m: number[]): number[] => {
     const a00 = m[0], a01 = m[1], a02 = m[2], a03 = m[3], a10 = m[4], a11 = m[5], a12 = m[6], a13 = m[7];
     const a20 = m[8], a21 = m[9], a22 = m[10], a23 = m[11], a30 = m[12], a31 = m[13], a32 = m[14], a33 = m[15];
@@ -1374,6 +1384,57 @@ export function buildWyrdfall(body: HTMLElement) {
     if (e.code === "KeyF") { if (laptop) { if (grounded) { vy = 8.2; grounded = false; } } else castBolt(); }
   });
   wrap.addEventListener("keyup", (e) => { keys[e.code] = false; });
+  /* ——— touch hands: a stick to walk, a drag to look, buttons to act ——— */
+  const touchEl = Q(".os-wy-touch");
+  const useBtn = Q<HTMLButtonElement>(".os-wy-tbtn[data-t='use']");
+  const isTouchDev = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  touchEl.style.display = isTouchDev ? "block" : "none";
+  const touch = { on: false, f: 0, r: 0, id: -1, cx: 0, cy: 0, lookId: -1, lx: 0, ly: 0 };
+  const stickEl = Q(".os-wy-stick"), stickDot = Q(".os-wy-stick-dot");
+  stickEl.addEventListener("touchstart", (e) => {
+    const t = e.changedTouches[0];
+    const r = stickEl.getBoundingClientRect();
+    touch.id = t.identifier; touch.cx = r.left + r.width / 2; touch.cy = r.top + r.height / 2; touch.on = true;
+    e.preventDefault();
+  }, { passive: false });
+  wrap.addEventListener("touchstart", (e) => {
+    for (const t of Array.from(e.changedTouches)) {
+      if (t.target === canvas && touch.lookId === -1) { touch.lookId = t.identifier; touch.lx = t.clientX; touch.ly = t.clientY; }
+    }
+  }, { passive: true });
+  wrap.addEventListener("touchmove", (e) => {
+    for (const t of Array.from(e.changedTouches)) {
+      if (t.identifier === touch.id) {
+        const dx = clamp((t.clientX - touch.cx) / 44, -1, 1), dy = clamp((t.clientY - touch.cy) / 44, -1, 1);
+        touch.r = dx; touch.f = -dy;
+        stickDot.style.transform = `translate(${dx * 30}px, ${dy * 30}px)`;
+      } else if (t.identifier === touch.lookId) {
+        pyaw -= (t.clientX - touch.lx) * 0.0052;
+        ppitch = clamp(ppitch - (t.clientY - touch.ly) * 0.0052, -1.35, 1.35);
+        touch.lx = t.clientX; touch.ly = t.clientY;
+      }
+    }
+    if (touch.id !== -1) e.preventDefault();
+  }, { passive: false });
+  const touchEnd = (e: TouchEvent) => {
+    for (const t of Array.from(e.changedTouches)) {
+      if (t.identifier === touch.id) { touch.id = -1; touch.on = false; touch.f = 0; touch.r = 0; stickDot.style.transform = ""; }
+      if (t.identifier === touch.lookId) touch.lookId = -1;
+    }
+  };
+  wrap.addEventListener("touchend", touchEnd);
+  wrap.addEventListener("touchcancel", touchEnd);
+  touchEl.querySelectorAll<HTMLButtonElement>(".os-wy-tbtn").forEach((b) => {
+    b.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      const t = b.dataset.t;
+      if (t === "use") curInteract?.run();
+      if (t === "atk") swingStart();
+      if (t === "cast") castBolt();
+      if (t === "mend") castHeal();
+      if (t === "jump" && grounded) { vy = 8.2; grounded = false; }
+    }, { passive: false });
+  });
   /* ——— the glass menu ——— */
   const menuBtns = menuEl.querySelectorAll<HTMLButtonElement>("button[data-m]");
   function syncMenu() {
@@ -1472,16 +1533,18 @@ export function buildWyrdfall(body: HTMLElement) {
     if (!paused) {
       const fAmt = ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0);
       const rAmt = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
-      const moving = fAmt !== 0 || rAmt !== 0;
-      const sprint = !!(keys.ShiftLeft || keys.ShiftRight) && stamina > 2 && moving;
+      const fIn = touch.on ? touch.f : fAmt, rIn = touch.on ? touch.r : rAmt;
+      const moving = fIn !== 0 || rIn !== 0;
+      const sprint = (!!(keys.ShiftLeft || keys.ShiftRight) || (touch.on && Math.hypot(touch.f, touch.r) > 0.95)) && stamina > 2 && moving;
       if (sprint) { stamina = Math.max(0, stamina - 11 * dt); athAcc += dt; if (athAcc > 4) { athAcc = 0; skillUse("athletics", 0.4); } }
       else stamina = Math.min(100, stamina + (moving ? 5 : 9) * dt);
       if (moving) {
         let sp = sprint ? 6.9 : 4.3;
         if (scene.kind === "overworld" && groundY < 0.35) sp *= 0.55;
         const sy = Math.sin(pyaw), cy = Math.cos(pyaw);
-        let wx = -sy * fAmt + cy * rAmt, wz = -cy * fAmt - sy * rAmt;
-        const wl = Math.hypot(wx, wz) || 1; wx /= wl; wz /= wl;
+        let wx = -sy * fIn + cy * rIn, wz = -cy * fIn - sy * rIn;
+        const wl = Math.hypot(wx, wz) || 1;
+        sp *= Math.min(1, wl); wx /= wl; wz /= wl;
         px += wx * sp * dt; pz += wz * sp * dt;
         stepAcc += sp * dt;
         if (stepAcc > 2.1 && grounded) { stepAcc = 0; audio.step(scene.kind !== "overworld"); }
@@ -1718,6 +1781,8 @@ export function buildWyrdfall(body: HTMLElement) {
       compStrip.style.transform = `translateX(${-frac * 50}%)`;
     }
     hurtEl.style.opacity = String(clamp(hurtT, 0, 0.55));
+    touchEl.style.visibility = isTouchDev && started && !panelsOpen() && scene.kind !== "title" ? "visible" : "hidden";
+    if (isTouchDev) useBtn.textContent = curInteract ? (curInteract.label.split("—")[0] || "use").trim() : "use";
     const chromeOff = photoOn && locked;
     hudEl.style.visibility = started && !chromeOff ? "visible" : "hidden";
     Q<HTMLElement>(".os-wy-burger").style.visibility = started && !chromeOff ? "visible" : "hidden";
