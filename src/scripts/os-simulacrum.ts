@@ -1166,6 +1166,11 @@ export class MqttMini {
   }
 }
 export function buildSimulacrum(body: HTMLElement) {
+  /* THE GIFTS REST (Chase, 2026-10-24): the player neither sees
+     nor uses the gifts — the world is the gift. All gift logic
+     stays whole below for testing; every player-facing door
+     (keys, menu buttons, title line) checks this one flag. */
+  const GIFTS_LIVE = false;
   const wrap = el("div", "os-sim");
   const canvas = document.createElement("canvas");
   canvas.className = "os-sim-canvas";
@@ -1178,7 +1183,8 @@ export function buildSimulacrum(body: HTMLElement) {
   const titleMood = el("div", "os-sim-title-mood", "");
   const titleEnter = el("div", "os-sim-title-enter", "click to enter");
   const titleKeys = el("div", "os-sim-title-keys", "the opening · tab — starlight · 1 — blink · q — stormcall · x — bloom · b");
-  titleScr.append(titleName, titleSub, titleMood, titleEnter, titleKeys);
+  titleScr.append(titleName, titleSub, titleMood, titleEnter);
+  if (GIFTS_LIVE) titleScr.append(titleKeys);
   const opening = el("div", "os-sim-opening");
   const openingBar = el("div", "os-sim-opening-bar");
   const openingClose = el("button", "os-btn", "close the opening");
@@ -1211,9 +1217,12 @@ export function buildSimulacrum(body: HTMLElement) {
   const menuKeys = el("div", "os-sim-menu-keys");
   menuKeys.append(
     el("div", "os-note", "move · w a s d — look · mouse — jump · space — sink · c"),
-    el("div", "os-note", "swift · shift — fly · f — shape the land · r / g — menu · m"),
+    el("div", "os-note", "swift · shift — fly · f — menu · m"),
   );
-  menu.append(menuRow, el("div", "os-sim-menu-h", "the gifts"), powers, el("div", "os-sim-menu-h", "the keys"), menuKeys);
+  const recordH = el("div", "os-sim-menu-h", "the record");
+  const recordEl = el("div", "os-sim-record");
+  if (GIFTS_LIVE) menu.append(menuRow, el("div", "os-sim-menu-h", "the gifts"), powers, recordH, recordEl, el("div", "os-sim-menu-h", "the keys"), menuKeys);
+  else menu.append(menuRow, recordH, recordEl, el("div", "os-sim-menu-h", "the keys"), menuKeys);
   stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, menuBtn, menu);
   /* the front door and the making: a start screen over an unmade
      world, and a loading veil for the one full making */
@@ -2723,13 +2732,13 @@ export function buildSimulacrum(body: HTMLElement) {
     audio.kick();
     if (locked || touched) keys.add(e.code);
     if ((locked || touched) && e.code === "KeyF") { flying = !flying; flyBtn.textContent = flying ? "fly" : "walk"; audio.ui("toggle"); if (!flying) py = Math.max(py, height(px, pz) + 1.7); }
-    if ((locked || touched) && e.code === "KeyR") castShape(1);
-    if ((locked || touched) && e.code === "KeyG") castShape(-1);
-    if ((locked || touched) && e.code === "KeyQ") castBlink();
-    if ((locked || touched) && e.code === "KeyX") castStorm();
-    if ((locked || touched) && e.code === "KeyB") castBloom();
-    if ((locked || touched) && e.code === "Digit1") toggleStarlight();
-    if (e.code === "Tab" && body.contains(wrap)) { e.preventDefault(); toggleOpening(); }
+    if (GIFTS_LIVE && (locked || touched) && e.code === "KeyR") castShape(1);
+    if (GIFTS_LIVE && (locked || touched) && e.code === "KeyG") castShape(-1);
+    if (GIFTS_LIVE && (locked || touched) && e.code === "KeyQ") castBlink();
+    if (GIFTS_LIVE && (locked || touched) && e.code === "KeyX") castStorm();
+    if (GIFTS_LIVE && (locked || touched) && e.code === "KeyB") castBloom();
+    if (GIFTS_LIVE && (locked || touched) && e.code === "Digit1") toggleStarlight();
+    if (GIFTS_LIVE && e.code === "Tab" && body.contains(wrap)) { e.preventDefault(); toggleOpening(); }
     if (e.code === "KeyM" && body.contains(wrap)) setMenu(!menuOpen);
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.code);
@@ -2827,6 +2836,27 @@ export function buildSimulacrum(body: HTMLElement) {
   /* places found — kept per world, whispered once */
   let foundSet = new Set<string>();
   try { foundSet = new Set(JSON.parse(localStorage.getItem(skey(`simulacrum-found-${seed}`)) || "[]") as string[]); } catch { foundSet = new Set(); }
+  /* THE RECORD — what the walker has done in this world, kept per
+     world and counted plainly in the menu. (The world's own
+     account of the walker is a different matter, and is never
+     numbered.) */
+  const deeds: { chunks: string[]; strange: string[] } = (() => {
+    try { const d = JSON.parse(localStorage.getItem(skey(`simulacrum-deeds-${seed}`)) || "{}"); return { chunks: Array.isArray(d.chunks) ? d.chunks : [], strange: Array.isArray(d.strange) ? d.strange : [] }; }
+    catch { return { chunks: [], strange: [] }; }
+  })();
+  const saveDeeds = () => { try { localStorage.setItem(skey(`simulacrum-deeds-${seed}`), JSON.stringify(deeds)); } catch { /* the record is kept in memory */ } };
+  const WONDER_NAMES = ["the titan arch", "the standing ring", "the world spike", "the ribcage", "the first garden", "the three sisters"];
+  const renderRecord = () => {
+    const w = WONDER_NAMES.filter((n) => foundSet.has(n)).length;
+    recordEl.replaceChildren(
+      el("div", "os-note", `wonders found · ${w} of 6`),
+      el("div", "os-note", `the home field walked · ${deeds.chunks.length} of 49`),
+      el("div", "os-note", `places found · ${foundSet.size}`),
+      el("div", "os-note", `strangenesses witnessed · ${deeds.strange.length}`),
+      el("div", "os-note", `blooms planted · ${blooms.length}`),
+      el("div", "os-note", `land shaped · ${edits.size} places`),
+    );
+  };
   const checkDiscoveries = () => {
     for (const poi of pois) {
       if (foundSet.has(poi.name)) continue;
@@ -2886,12 +2916,13 @@ export function buildSimulacrum(body: HTMLElement) {
   let chromeTimer = 6;
   const chromeWake = () => { wrap.classList.add("chrome-on"); chromeTimer = 4; };
   /* one door for everything the slab used to carry: a small button,
-     and a glass sheet that rises from it — toggles, gifts, the keys */
+     and a glass sheet that rises from it — toggles, the record, the keys */
   let menuOpen = false;
   function setMenu(open: boolean) {
     menuOpen = open;
     wrap.classList.toggle("menu-on", open);
     if (open) {
+      renderRecord();
       chromeWake();
       if (document.pointerLockElement === canvas) document.exitPointerLock();
     }
@@ -3763,6 +3794,7 @@ export function buildSimulacrum(body: HTMLElement) {
       audio.setHush(anKind === "hush" ? anAmt : 0);
       audio.setEcho(anKind === "echo" && anAmt > 0.4);
       if (anKind !== lastAnKind) {
+        if (anKind && !deeds.strange.includes(anKind)) { deeds.strange.push(anKind); saveDeeds(); }
         if (anKind === "stutter") { timeSkew = -20 / 1440; flash = Math.max(flash, 0.55); }
         if (anKind === "bell") { audio.bell(); birdsFlee = 1; }
         if (anKind === "murmur") audio.murmur();
@@ -3846,6 +3878,7 @@ export function buildSimulacrum(body: HTMLElement) {
       for (const so of worldSolids) pushOut(so.x, so.z, so.r, so.top);
     }
     checkDiscoveries();
+    { const hcx = Math.floor(px / CHUNK), hcz = Math.floor(pz / CHUNK), hk = `${hcx},${hcz}`; if (Math.abs(hcx) <= 3 && Math.abs(hcz) <= 3 && !deeds.chunks.includes(hk)) { deeds.chunks.push(hk); saveDeeds(); } }
     hSpeedNow = Math.hypot(vx, vz);
     const hSpeed = hSpeedNow;
     if (flying) {
