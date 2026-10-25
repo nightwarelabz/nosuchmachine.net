@@ -3,3 +3,14 @@
 name = "nosuchmachine-net"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "./dist"
+
+# Relay's room memory lives in a Durable Object: one room per network,
+# holding a rolling, expiring, purgeable buffer of the room's recent
+# lines so any device that joins hears what the room recently said.
+[[durable_objects.bindings]]
+name = "RELAY_ROOM"
+class_name = "RelayRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RelayRoom"]
