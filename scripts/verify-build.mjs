@@ -181,6 +181,13 @@ assert.ok(ircSrc.includes("const selectTarget"), "Relay view changes must go thr
 assert.ok(ircSrc.includes("joinFocus"), "Automatic rejoins must not steal the view from the target being read");
 assert.ok(ircSrc.includes("SERVICE_NICKS"), "NickServ/ChanServ windows must be excluded from the kept log (they carry passwords and codes)");
 assert.ok(ircSrc.includes("It was NOT sent"), "Relay must refuse to send a credential handed to it this visit");
+// GuardianAngel (Chase, 2026-10-25): automated moderation that acts
+// within the authority the client holds — link removal, measured spam
+// strikes, warn/remove/ban escalation when op, view-only guard without.
+assert.ok(ircSrc.includes("guardianProcess"), "GuardianAngel must read every room line before it is shown");
+assert.ok(ircSrc.includes("addStrike"), "GuardianAngel strikes must escalate warn -> remove -> ban");
+assert.ok(ircSrc.includes("[link removed]"), "GuardianAngel must remove links from room lines");
+assert.ok(ircSrc.includes("purgeLines"), "A GuardianAngel removal must purge the offender's lines from Relay logs that hear it");
 assert.ok(astroJs.includes("hard refresh to check chat if chat works. added persistence to the chat"), "The pinned dev note must carry the current developer message in the served bundle");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
