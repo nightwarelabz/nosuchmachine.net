@@ -61,7 +61,10 @@ const CLAIM_PATH = "/home/operator/relay-claim.txt";
    refuses an unclaimed house name no matter what any client asks. */
 const HOUSE_NAMES = ["nightwarelabz", "nosuchmachine", "chasebryan", "chase", "nightjar"];
 function isHouseName(nick: string): boolean {
-  const base = nick.toLowerCase().replace(/[_`^|\-]/g, "");
+  // The strip class mirrors the bridge's claimedName exactly — backslash
+  // included — so the card's courtesy check never disagrees with the
+  // bridge's enforcement (a chase\bryan is the same claim both places).
+  const base = nick.toLowerCase().replace(/[_`^|\\-]/g, "");
   return HOUSE_NAMES.some((h) => base === h || (base.startsWith(h) && /^\d+$/.test(base.slice(h.length))));
 }
 
@@ -95,10 +98,11 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   card.hidden = true;
   wrap.appendChild(card);
 
-  const hideIdentityBox = () => { card.replaceChildren(); card.hidden = true; };
+  const hideIdentityBox = () => { card.replaceChildren(); card.hidden = true; wrap.classList.remove("card-open"); };
 
   const showIdentityBox = () => {
     card.replaceChildren();
+    wrap.classList.add("card-open");
     const note = el("p", "os-note",
       "A name of your own — only if you want one. The room never asks: you are already in it wearing a " +
       "machine name. Add a password if the name is registered to you on the network (NickServ) and Relay " +
@@ -158,11 +162,22 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     const cancelBtn = el("button", "os-btn", "back to the room");
     const syncClaim = () => { claimWrap.hidden = !isHouseName(nickIn.value.trim()); };
     nickIn.addEventListener("input", syncClaim);
+    nickIn.addEventListener("change", syncClaim);
     cancelBtn.addEventListener("click", () => { hideIdentityBox(); });
     enterBtn.addEventListener("click", () => {
       const nick = (nickIn.value.trim() || machineName()).replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "") || machineName();
       const claim = claimIn.value.trim();
-      if (isHouseName(nick) && !claim) { msg.textContent = `— "${nick}" stays shut without its code. Take any other name — or the machine name.`; return; }
+      if (isHouseName(nick) && !claim) {
+        // Re-check at the click itself, not only while typing: however
+        // the name got into the field (autofill, paste, a change event
+        // the input event missed), a house name is met with the claim
+        // field and the ask — never a bare refusal.
+        syncClaim();
+        claimWrap.hidden = false;
+        msg.textContent = `— "${nick}" is claimed by the house. Enter its claim code above and enter again — or take any other name.`;
+        claimIn.focus();
+        return;
+      }
       if (regIn.checked && (!passIn.value.trim() || !mailIn.value.trim())) { msg.textContent = "— registering takes both a password and an email for the code."; return; }
       const channel = chanIn.value.trim().startsWith("#") ? chanIn.value.trim() : HOUSE_CHANNEL;
       hideIdentityBox();
@@ -498,6 +513,12 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       }
       case "NOTICE": {
         const text = m.params[1] || "";
+        if (m.nick === "relay.bridge") {
+          // The house bridge speaks for itself — its refusal is the one
+          // notice that must never be dressed as network chatter.
+          push("server", `— the bridge: ${text}`);
+          break;
+        }
         if (m.nick.includes(".")) {
           // a server speaking: its connection housekeeping (hostname and
           // ident lookups against the bridge) can never succeed and is
@@ -665,10 +686,19 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         if (line) handle(parseIrcLine(line));
       }
     });
-    ws.addEventListener("close", () => {
+    ws.addEventListener("close", (ev) => {
       if (ws !== mine) return;
       registered = false;
       if (keepalive) { clearInterval(keepalive); keepalive = null; }
+      if ((ev as CloseEvent).code === 4403) {
+        // The bridge's claim refusal is FINAL: the same presentation
+        // would be refused forever, so the wire does not heal itself
+        // over it. The operator is pointed at the identity box instead.
+        intentionalClose = true;
+        push("server", "— the bridge refused that name: it is claimed by the house and opens only with its claim code. The identity box is up — present the code there, or wear another name.");
+        showIdentityBox();
+        return;
+      }
       if (intentionalClose) { push("server", "— off the wire."); return; }
       users.clear();
       attempts += 1;

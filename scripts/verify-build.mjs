@@ -160,6 +160,19 @@ assert.ok(ircSrc.includes("IDLE_MS"), "Relay idle must engage automatically afte
 assert.ok(ircSrc.includes("rosterTouch"), "Relay must keep a roster of everyone who enters the room");
 assert.ok(ircSrc.includes("kept — not in the room"), "Relay must show kept users who are not in the room");
 assert.ok(ircSrc.includes("resetName"), "Relay must offer the deliberate new-name reset");
+// Relay identity card + login flow (main-chat audit, 2026-10-25): the
+// card and the room are alternative views over an opaque window; a
+// bridge claim refusal is final (4403), speaks as the bridge, and the
+// claim field is re-checked at the Enter click.
+const osCssSrc = fs.readFileSync("src/styles/os.css", "utf8");
+assert.ok(/\.os-relay \{[^}]*background:/.test(osCssSrc), "Relay window must paint an opaque house background (no wallpaper bleed)");
+assert.ok(osCssSrc.includes(".os-relay.card-open .os-relay-view"), "With the identity card open, the room view must step aside");
+assert.ok(/\.os-relay-card \{[^}]*overflow-y: auto/.test(osCssSrc), "The identity card must scroll its own length");
+assert.ok(ircSrc.includes('nickIn.addEventListener("change", syncClaim)'), "Claim reveal must also bind the nick field's change event");
+assert.ok(ircSrc.includes("code === 4403"), "Client must treat bridge close 4403 (claim refusal) as final — no reconnect loop");
+assert.ok(ircSrc.includes('m.nick === "relay.bridge"'), "The bridge's own NOTICE must be dressed as the bridge, not as network chatter");
+const bridgeSrc = fs.readFileSync("functions/api/irc-bridge.ts", "utf8");
+assert.ok(bridgeSrc.includes("closeBoth(4403)"), "Bridge must close claim refusals with code 4403");
 assert.ok(astroJs.includes("hard refresh to check chat if chat works. added persistence to the chat"), "The pinned dev note must carry the current developer message in the served bundle");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");

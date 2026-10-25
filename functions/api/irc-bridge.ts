@@ -69,9 +69,12 @@ export async function onRequest(context: any) {
   const writer = socket.writable.getWriter();
   const reader = socket.readable.getReader();
   let closed = false;
-  const closeBoth = () => {
+  const closeBoth = (code?: number) => {
     if (closed) return; closed = true;
-    try { server.close(); } catch { /* already gone */ }
+    // A claim refusal closes with 4403 so the client can tell a final
+    // refusal from a dropped wire — and stop re-presenting the same
+    // refused name in an auto-reconnect loop.
+    try { if (code) server.close(code); else server.close(); } catch { /* already gone */ }
     try { reader.cancel(); } catch { /* already gone */ }
     try { socket.close(); } catch { /* already gone */ }
   };
@@ -113,7 +116,7 @@ export async function onRequest(context: any) {
             try {
               server.send(new TextEncoder().encode(`:relay.bridge NOTICE * :the name "${want}" is claimed \u2014 it belongs to the house, and it opens only with the house claim code. Pick another nick, or enter the claim code in Relay.\r\n`));
             } catch { /* the refusal still closes */ }
-            setTimeout(closeBoth, 300);
+            setTimeout(() => closeBoth(4403), 300);
             return;
           }
         }
