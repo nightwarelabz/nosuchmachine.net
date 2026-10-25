@@ -40,7 +40,7 @@ export const ICONS: Record<string, string> = {
   gauntlet: wrap(`<path d="M4 4l11.5 11.5M20 4L8.5 15.5"/><path d="M13.6 16.8l2.9 2.9M10.4 16.8l-2.9 2.9"/>${dot(17.9, 18.3, 0.95)}${dot(6.1, 18.3, 0.95)}`),
   settings: wrap(`<circle cx="12" cy="12" r="3"/>${spokes(5.4, 8.6)}`),
   help: wrap(`<circle cx="12" cy="12" r="9"/><path d="M9.8 9.2a2.4 2.4 0 1 1 2.8 2.4c-.7.35-1.1.9-1.1 1.9"/>${dot(12, 16.9, 1)}`),
-  bottle: wrap(`<circle cx="12" cy="12" r="3.6"/>${spokes(5.9, 8.5)}`),
+  bottle: wrap(`<rect x="10.2" y="2.4" width="3.6" height="2.5" rx="0.7"/><path d="M10.5 4.9v3.4c0 1-.3 1.7-1 2.3l-1.2 1.2c-.8.8-1.3 1.8-1.3 3v3.7a2.5 2.5 0 0 0 2.5 2.5h5a2.5 2.5 0 0 0 2.5-2.5v-3.7c0-1.2-.5-2.2-1.3-3l-1.2-1.2c-.7-.6-1-1.3-1-2.3V4.9"/><path d="M9.9 13.9h4.2v4.7H9.9z"/><path d="M11 16.2h2"/>`),
   system: wrap(`<path d="M12 3.2L20 12l-8 8.8L4 12Z"/><path d="M12 8.2l3.6 3.8-3.6 3.8-3.6-3.8Z"/>`),
   chip8: wrap(`<rect x="7" y="7" width="10" height="10" rx="1.6"/><rect x="10.2" y="10.2" width="3.6" height="3.6"/>${pins()}`),
   ssh: wrap(`<circle cx="8" cy="15.5" r="4.2"/><path d="M11 12.5L19.5 4"/><path d="M16.8 6.7l2.4.4M14.9 8.6l2.3.5"/>`),
