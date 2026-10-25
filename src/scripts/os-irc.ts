@@ -380,6 +380,13 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const scheduleSave = () => { if (!saveTimer) saveTimer = setTimeout(saveLog, 250); };
   const onPageHide = () => { if (saveTimer) { clearTimeout(saveTimer); saveLog(); } };
   window.addEventListener("pagehide", onPageHide);
+  /* The history divider Relay used to draw between a restored log and
+     the live wire is retired (Chase, 2026-10-25): the words simply
+     stand in the chat, unannounced. Copies the old build already saved
+     into kept logs are filtered out here, as the log is read, so no
+     restore ever shows one again. The match rides the divider's tail —
+     its head phrase must never appear in this file again, even as data. */
+  const DEAD_DIVIDER_TAIL = "The wire picks up below.";
   const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]>; roster: Record<string, Record<string, { s: string; l: number }>>; away: string } | null => {
     try {
       const raw = localStorage.getItem(skey(RELAY_LOG_KEY));
@@ -389,7 +396,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       const clean: Record<string, string[]> = {};
       for (const [t, lines] of Object.entries(data.buffers)) {
         if (SERVICE_NICKS.has(t.toLowerCase())) continue; // service windows were never meant to be kept — older logs lose them here
-        if (Array.isArray(lines)) clean[t] = lines.filter((l) => typeof l === "string").slice(-MAX_LINES);
+        if (Array.isArray(lines)) clean[t] = lines.filter((l) => typeof l === "string" && !l.includes(DEAD_DIVIDER_TAIL)).slice(-MAX_LINES);
       }
       if (!Object.keys(clean).length) return null;
       const cleanRoster: Record<string, Record<string, { s: string; l: number }>> = {};
@@ -1003,7 +1010,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     if (restored.current && buffers.has(restored.current)) current = restored.current;
     renderTargets();
     renderLines();
-    push(current, "— kept from before: everything above was said earlier. The wire picks up below.");
   }
 
   /* No box, no form: Relay opens already standing in the house channel,
