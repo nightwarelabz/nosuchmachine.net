@@ -4,8 +4,14 @@
 // to a public IRC network. This is a plug, not a relay in the open sense:
 // the destination must be one of the allowlisted public networks below,
 // and the target still passes the site-wide public-target guard before any
-// socket opens. The bridge pipes lines and keeps nothing.
+// socket opens. The bridge pipes lines — and, through _lib/relay-memory,
+// it also holds the room's recent lines in a short, deliberately mutable
+// memory (expiring, capped, purged by moderation, wiped on a claimed
+// name's word) so a client joining from any device hears what the room
+// recently said. With no memory binding configured it keeps nothing, as
+// it always did.
 import { guardTarget, err } from "../_lib/guard";
+import { memAppend, memPurgeNick, memReplay, memWipe } from "../_lib/relay-memory";
 
 const NETWORKS: Record<string, number[]> = {
   "irc.libera.chat": [6697, 6667],
@@ -68,6 +74,8 @@ export async function onRequest(context: any) {
   } catch (e: any) {
     return err(`relay bridge: the connection could not be opened (${String(e?.message || e).slice(0, 120)}).`, 502);
   }
+  const mem = context.env?.RELAY_MEMORY || null;
+  let myNick = "";
   const pair = new (globalThis as any).WebSocketPair();
   const [client, server] = Object.values(pair) as any[];
   server.accept();
@@ -103,12 +111,70 @@ export async function onRequest(context: any) {
     () => { if (connectTimer) clearTimeout(connectTimer); armIdle(); },
     () => closeBoth(),
   );
+  /* ————— the memory tap —————
+     The wire itself is forwarded byte-for-byte untouched; alongside it,
+     a line tap watches what the room says. Channel lines are remembered,
+     a removal purges the removed voice from the memory, and when this
+     session's own join echoes back, the room's recent past is replayed
+     down this one wire — tagged, so the client can lay it in with its
+     true time and never mistake it for the living moment. */
+  const enc = new TextEncoder();
+  const tapDec = new TextDecoder();
+  let inBuf = "";
+  const observeLine = (line: string) => {
+    if (!mem) return;
+    try {
+      let m = /^:(\S+) PRIVMSG (\S+) :([\s\S]*)$/.exec(line) || /^:(\S+) PRIVMSG (\S+) (\S[\s\S]*)$/.exec(line);
+      if (m) {
+        const nick = m[1].split("!")[0];
+        if (m[2].startsWith("#") && !nick.includes(".")) {
+          void memAppend(mem, host, m[2], { t: Date.now(), p: m[1], x: m[3] });
+        }
+        return;
+      }
+      m = /^:(\S+) KICK (\S+) (\S+)/.exec(line);
+      if (m) { void memPurgeNick(mem, host, m[2], m[3]); return; }
+      m = /^:(\S+) JOIN :?(\S+)$/.exec(line);
+      if (m) {
+        const nick = m[1].split("!")[0];
+        if (myNick && nick.toLowerCase() === myNick.toLowerCase()) {
+          const chan = m[2];
+          void (async () => {
+            const past = await memReplay(mem, host, chan);
+            for (const pastLine of past) {
+              if (closed) return;
+              try {
+                server.send(enc.encode(`@time=${new Date(pastLine.t).toISOString()};relaymem=1 :${pastLine.p} PRIVMSG ${chan} :${pastLine.x}\r\n`));
+              } catch { return; }
+            }
+          })();
+        }
+        return;
+      }
+      m = /^:(\S+) NICK :?(\S+)$/.exec(line);
+      if (m) {
+        const old = m[1].split("!")[0];
+        if (myNick && old.toLowerCase() === myNick.toLowerCase()) myNick = m[2];
+      }
+    } catch { /* the tap never breaks the wire */ }
+  };
   (async () => {
     try {
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value && value.length) { armIdle(); server.send(value); }
+        if (value && value.length) {
+          armIdle(); server.send(value);
+          if (mem) {
+            inBuf += tapDec.decode(value, { stream: true });
+            let idx;
+            while ((idx = inBuf.indexOf("\n")) >= 0) {
+              const line = inBuf.slice(0, idx).replace(/\r$/, "");
+              inBuf = inBuf.slice(idx + 1);
+              if (line) observeLine(line);
+            }
+          }
+        }
       }
     } catch { /* the wire ended */ }
     closeBoth();
@@ -143,6 +209,30 @@ export async function onRequest(context: any) {
             } catch { /* the refusal still closes */ }
             setTimeout(() => closeBoth(4403), 300);
             return;
+          }
+          myNick = want;
+        }
+        if (upper.startsWith("RELAYMEM-WIPE")) {
+          // A control line for the bridge alone — it never crosses to
+          // the network. Only a session that presented the house claim
+          // may wipe a room's memory, and it says so either way.
+          const chan = raw.split(/\s+/)[1] || "";
+          const say = (text: string) => { try { server.send(new TextEncoder().encode(`:relay.bridge NOTICE * :${text}\r\n`)); } catch { /* the answer is best-effort; the act is what counts */ } };
+          if (!mem) say("this bridge keeps no room memory — there is nothing to wipe.");
+          else if (!claimed) say("a memory wipe opens only with a claimed house name.");
+          else if (!chan.startsWith("#")) say("name the channel to wipe: RELAYMEM-WIPE #channel");
+          else {
+            void memWipe(mem, host, chan);
+            say(`the room's memory of ${chan} is wiped — every device forgets it together.`);
+          }
+          continue;
+        }
+        if (mem && myNick) {
+          // The speaker's own lines join the memory at the sending —
+          // a lone voice in the room is still the room speaking.
+          const pm = /^PRIVMSG (\S+) :([\s\S]*)$/i.exec(raw) || /^PRIVMSG (\S+) (\S[\s\S]*)$/i.exec(raw);
+          if (pm && pm[1].startsWith("#")) {
+            void memAppend(mem, host, pm[1], { t: Date.now(), p: `${myNick}!${myNick}@relay.bridge`, x: pm[2] });
           }
         }
         await writer.write(new TextEncoder().encode(raw + "\r\n"));
