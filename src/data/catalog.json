@@ -1,5 +1,58 @@
 [
   {
+    "slug": "nightjar",
+    "name": "nightjar",
+    "summary": "A native network instrument for iPhone and Mac. It began as a passive BLE listening post and grew a send/serve bench, an encrypted messenger, a cryptography vault, and the Blacksite console.",
+    "purpose": "Put a listening post, a protocol and recon bench, and a graded defensive posture in the operator's pocket — one instrument whose rooms share a process board, an exposure standard, and a single hash-chained night log.",
+    "approach": "Swift apps for iOS 17 and macOS 14 from one Xcode project, over a Python send/serve overlay kept from the listening-post line. The Listen room is receive-only and never connects or pairs. Send and Serve speak TCP, UDP, TLS, HTTP and BLE GATT. EMCON audits exposure and gates anything that emits. Skelli, the onboard specialist, reads live state and works the controls herself; her model inference runs on the device.",
+    "categories": ["Security", "Applications"],
+    "technologies": ["Swift", "Python", "Bluetooth LE", "MLX"],
+    "capabilities": [
+      "Receive-only BLE listening: sightings, a decoder bench, tracker hunt and JSONL sessions — listening never connects or pairs",
+      "Send and Serve bench: protocol payloads and listeners over TCP, UDP, TLS, HTTP and BLE GATT, with stealth mode and canary personas",
+      "Blacksite, the built-in console: shell, editors, protocol and security audit instruments, and the EAZY battery",
+      "EMCON exposure audit with graded conditions that gate the emitting organs, and a hash-chained night log across all rooms",
+      "Knocktalk encrypted messaging and a Vault of hashes, key derivation, authenticated encryption and envelopes",
+      "Skelli: an on-device specialist who answers from live state and operates the instrument"
+    ],
+    "limitations": [
+      "No App Store or TestFlight listing: building from source with Xcode and your own signing is the install path",
+      "Free Personal Team signing lasts seven days, and each device needs its own signing and trust setup",
+      "Skelli's local minds depend on the device's hardware and memory; the Apple model requires iOS 26 with Apple Intelligence enabled"
+    ],
+    "maturity": "Current release · v12.0",
+    "status": "Flagship app",
+    "githubUrl": "https://github.com/nightwarelabz/nightjar",
+    "links": [
+      {
+        "label": "Releases",
+        "href": "https://github.com/nightwarelabz/nightjar/releases"
+      },
+      {
+        "label": "Privacy",
+        "href": "https://github.com/nightwarelabz/nightjar/blob/main/PRIVACY.md"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Project README",
+        "href": "https://github.com/nightwarelabz/nightjar/blob/main/README.md"
+      },
+      {
+        "label": "PRIVACY.md",
+        "href": "https://github.com/nightwarelabz/nightjar/blob/main/PRIVACY.md"
+      },
+      {
+        "label": "Releases",
+        "href": "https://github.com/nightwarelabz/nightjar/releases"
+      }
+    ],
+    "featured": false,
+    "accent": "#b4e9c7",
+    "diagram": "systems",
+    "collection": "core"
+  },
+  {
     "slug": "orange",
     "name": "Orange",
     "summary": "A pre-alpha mathematical language for cryptography. The compiler checks and evaluates a typed fragment; it does not generate native code or check proofs.",
@@ -22,53 +75,53 @@
     ],
     "maturity": "Pre-alpha language",
     "status": "Pre-alpha",
-    "githubUrl": "https://github.com/chasebryan/orange",
+    "githubUrl": "https://github.com/nightwarelabz/orange",
     "links": [
       {
         "label": "Orange Book",
-        "href": "https://github.com/chasebryan/orange/blob/main/docs/THE_ORANGE_BOOK.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/main/docs/THE_ORANGE_BOOK.md"
       },
       {
         "label": "Reference",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/README.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/README.md"
       },
       {
         "label": "Roadmap",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/docs/ROADMAP.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/docs/ROADMAP.md"
       }
     ],
     "sources": [
       {
         "label": "README.md",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/README.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/README.md"
       },
       {
         "label": "docs/ROADMAP.md",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/docs/ROADMAP.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/docs/ROADMAP.md"
       },
       {
         "label": "docs/CRYPTANALYSIS_2026.md",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/docs/CRYPTANALYSIS_2026.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/docs/CRYPTANALYSIS_2026.md"
       },
       {
         "label": "compiler/README.md",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/README.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/README.md"
       },
       {
         "label": "compiler/crates/orangec/src/main.rs",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/crates/orangec/src/main.rs"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/crates/orangec/src/main.rs"
       },
       {
         "label": "compiler/fixtures/s3b/valid-sha256-functions.or",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/fixtures/s3b/valid-sha256-functions.or"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/fixtures/s3b/valid-sha256-functions.or"
       },
       {
         "label": "compiler/crates/orangec/tests/s3b_conformance.rs",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/crates/orangec/tests/s3b_conformance.rs"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/compiler/crates/orangec/tests/s3b_conformance.rs"
       },
       {
         "label": "algorithms/README.md",
-        "href": "https://github.com/chasebryan/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/algorithms/README.md"
+        "href": "https://github.com/nightwarelabz/orange/blob/94c2fda3b26c41a707272468dd59054695d882ed/algorithms/README.md"
       }
     ],
     "featured": true,
@@ -106,33 +159,33 @@
     ],
     "maturity": "RF observation prototype",
     "status": "RF prototype",
-    "githubUrl": "https://github.com/chasebryan/airwav",
+    "githubUrl": "https://github.com/nightwarelabz/airwav",
     "links": [
       {
         "label": "Architecture",
-        "href": "https://github.com/chasebryan/airwav/blob/main/docs/architecture.md"
+        "href": "https://github.com/nightwarelabz/airwav/blob/main/docs/architecture.md"
       },
       {
         "label": "Validation record",
-        "href": "https://github.com/chasebryan/airwav/blob/main/docs/validation.md"
+        "href": "https://github.com/nightwarelabz/airwav/blob/main/docs/validation.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/airwav/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/airwav/blob/main/README.md"
       },
       {
         "label": "Cargo.toml",
-        "href": "https://github.com/chasebryan/airwav/blob/main/Cargo.toml"
+        "href": "https://github.com/nightwarelabz/airwav/blob/main/Cargo.toml"
       },
       {
         "label": "lib.rs",
-        "href": "https://github.com/chasebryan/airwav/blob/main/crates/airwav-dsp/src/lib.rs"
+        "href": "https://github.com/nightwarelabz/airwav/blob/main/crates/airwav-dsp/src/lib.rs"
       },
       {
         "label": "validation.md",
-        "href": "https://github.com/chasebryan/airwav/blob/main/docs/validation.md"
+        "href": "https://github.com/nightwarelabz/airwav/blob/main/docs/validation.md"
       }
     ],
     "featured": false,
@@ -167,25 +220,25 @@
     ],
     "maturity": "Scientific workbench",
     "status": "Workbench",
-    "githubUrl": "https://github.com/chasebryan/centl",
+    "githubUrl": "https://github.com/nightwarelabz/centl",
     "links": [
       {
         "label": "Numerics",
-        "href": "https://github.com/chasebryan/centl/blob/main/docs/NUMERICS.md"
+        "href": "https://github.com/nightwarelabz/centl/blob/main/docs/NUMERICS.md"
       },
       {
         "label": "Scientific engine",
-        "href": "https://github.com/chasebryan/centl/tree/main/src-web/engine"
+        "href": "https://github.com/nightwarelabz/centl/tree/main/src-web/engine"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/centl/blob/42508684c4386b575d7b52e763565345a76bcb9e/README.md"
+        "href": "https://github.com/nightwarelabz/centl/blob/42508684c4386b575d7b52e763565345a76bcb9e/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/centl/tree/42508684c4386b575d7b52e763565345a76bcb9e"
+        "href": "https://github.com/nightwarelabz/centl/tree/42508684c4386b575d7b52e763565345a76bcb9e"
       }
     ],
     "featured": false,
@@ -221,29 +274,29 @@
     ],
     "maturity": "Usable local workbench; engineering prototype without independent security audit.",
     "status": "Local workbench",
-    "githubUrl": "https://github.com/chasebryan/sigil",
+    "githubUrl": "https://github.com/nightwarelabz/sigil",
     "links": [
       {
         "label": "Project documentation",
-        "href": "https://github.com/chasebryan/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/README.md"
+        "href": "https://github.com/nightwarelabz/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/README.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/README.md"
+        "href": "https://github.com/nightwarelabz/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/README.md"
       },
       {
         "label": "profile.go",
-        "href": "https://github.com/chasebryan/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/internal/crypto/profile.go"
+        "href": "https://github.com/nightwarelabz/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/internal/crypto/profile.go"
       },
       {
         "label": "seal.go",
-        "href": "https://github.com/chasebryan/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/internal/crypto/seal.go"
+        "href": "https://github.com/nightwarelabz/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/internal/crypto/seal.go"
       },
       {
         "label": "server_test.go",
-        "href": "https://github.com/chasebryan/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/internal/gui/server_test.go"
+        "href": "https://github.com/nightwarelabz/sigil/blob/00e03f388c4b9b2a40f8b0052083cbedf8da3114/internal/gui/server_test.go"
       }
     ],
     "featured": false,
@@ -278,37 +331,84 @@
     ],
     "maturity": "Experimental release · v0.1.0",
     "status": "Experimental v0.1",
-    "githubUrl": "https://github.com/chasebryan/snoot",
+    "githubUrl": "https://github.com/nightwarelabz/snoot",
     "links": [
       {
         "label": "Release v0.1.0",
-        "href": "https://github.com/chasebryan/snoot/releases/tag/v0.1.0"
+        "href": "https://github.com/nightwarelabz/snoot/releases/tag/v0.1.0"
       },
       {
         "label": "Accuracy and limits",
-        "href": "https://github.com/chasebryan/snoot/blob/main/docs/accuracy.md"
+        "href": "https://github.com/nightwarelabz/snoot/blob/main/docs/accuracy.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/snoot/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/snoot/blob/main/README.md"
       },
       {
         "label": "Cargo.toml",
-        "href": "https://github.com/chasebryan/snoot/blob/main/Cargo.toml"
+        "href": "https://github.com/nightwarelabz/snoot/blob/main/Cargo.toml"
       },
       {
         "label": "mod.rs",
-        "href": "https://github.com/chasebryan/snoot/blob/main/src/engines/mod.rs"
+        "href": "https://github.com/nightwarelabz/snoot/blob/main/src/engines/mod.rs"
       },
       {
         "label": "accuracy.md",
-        "href": "https://github.com/chasebryan/snoot/blob/main/docs/accuracy.md"
+        "href": "https://github.com/nightwarelabz/snoot/blob/main/docs/accuracy.md"
       },
       {
         "label": "v0.1.0",
-        "href": "https://github.com/chasebryan/snoot/releases/tag/v0.1.0"
+        "href": "https://github.com/nightwarelabz/snoot/releases/tag/v0.1.0"
+      }
+    ],
+    "featured": false,
+    "accent": "#b8a5e6",
+    "diagram": "crypto",
+    "collection": "core"
+  },
+  {
+    "slug": "magicbox",
+    "name": "Magic Box",
+    "summary": "An experimental file-encryption container. AES-256-GCM encrypts the contents; the key is locked behind an embedded repeated-squaring time-lock puzzle. There is no password and no separate key file.",
+    "purpose": "Seal a file so that opening it costs a chosen amount of computation: the puzzle, the wrapped key, the nonce and the authenticated ciphertext travel in one .mbox file, and opening needs only the box and its public decoder.",
+    "approach": "A fresh 256-bit AES key encrypts the file under AES-256-GCM, which also authenticates the entire header. The key is masked with an HKDF-SHA256 value derived from the end of a repeated-squaring chain modulo a fresh 3072-bit RSA modulus — an RSW time-lock. The sealer, briefly holding the factors, computes the chain's end efficiently; the box records neither the factors nor the plaintext key.",
+    "categories": ["Cryptography"],
+    "technologies": ["Python", "AES-256-GCM", "HKDF-SHA256"],
+    "capabilities": [
+      "seal, inspect and open commands, also runnable as python -m magicbox; sealing requires an explicit --work",
+      "AES-256-GCM authenticates the whole header, including the lock parameters and the wrapped key",
+      "Opening refuses boxes above its work budget (1,000,000 squarings by default) unless the budget is raised explicitly",
+      "Contents are streamed and the format adds exactly 854 bytes; a decrypted destination becomes visible only after its tag verifies"
+    ],
+    "limitations": [
+      "The lock is a computation delay, not access control: anyone holding the box can solve the public lock and open it",
+      "The work parameter is a computation count, not a guaranteed duration",
+      "Experimental and unaudited; it does not promise secure erasure of Python process memory"
+    ],
+    "maturity": "Experimental container · v1",
+    "status": "Experimental",
+    "githubUrl": "https://github.com/nightwarelabz/magicbox",
+    "links": [
+      {
+        "label": "Security model",
+        "href": "https://github.com/nightwarelabz/magicbox/blob/main/SECURITY.md"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Project README",
+        "href": "https://github.com/nightwarelabz/magicbox/blob/main/README.md"
+      },
+      {
+        "label": "SECURITY.md",
+        "href": "https://github.com/nightwarelabz/magicbox/blob/main/SECURITY.md"
+      },
+      {
+        "label": "pyproject.toml",
+        "href": "https://github.com/nightwarelabz/magicbox/blob/main/pyproject.toml"
       }
     ],
     "featured": false,
@@ -341,25 +441,25 @@
     ],
     "maturity": "Early but substantial reverse-engineering workbench.",
     "status": "Early workbench",
-    "githubUrl": "https://github.com/chasebryan/kaiju",
+    "githubUrl": "https://github.com/nightwarelabz/kaiju",
     "links": [
       {
         "label": "Project documentation",
-        "href": "https://github.com/chasebryan/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/README.md"
+        "href": "https://github.com/nightwarelabz/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/README.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/README.md"
+        "href": "https://github.com/nightwarelabz/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/README.md"
       },
       {
         "label": "architecture.md",
-        "href": "https://github.com/chasebryan/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/docs/architecture.md"
+        "href": "https://github.com/nightwarelabz/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/docs/architecture.md"
       },
       {
         "label": "lib.rs",
-        "href": "https://github.com/chasebryan/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/crates/kaiju-analysis/src/lib.rs"
+        "href": "https://github.com/nightwarelabz/kaiju/blob/93995843381dc1f3180d1d611d39fe51a7c4fdcb/crates/kaiju-analysis/src/lib.rs"
       }
     ],
     "featured": false,
@@ -388,25 +488,25 @@
     ],
     "maturity": "Released application · v0.4.0",
     "status": "Released v0.4",
-    "githubUrl": "https://github.com/chasebryan/tractor",
+    "githubUrl": "https://github.com/nightwarelabz/tractor",
     "links": [
       {
         "label": "Release v0.4.0",
-        "href": "https://github.com/chasebryan/tractor/releases/tag/v0.4.0"
+        "href": "https://github.com/nightwarelabz/tractor/releases/tag/v0.4.0"
       },
       {
         "label": "Architecture and providers",
-        "href": "https://github.com/chasebryan/tractor/blob/main/docs/providers.md"
+        "href": "https://github.com/nightwarelabz/tractor/blob/main/docs/providers.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/tractor/blob/916a0d5e25068cf7f0713dd49ae9072f8c936a81/README.md"
+        "href": "https://github.com/nightwarelabz/tractor/blob/916a0d5e25068cf7f0713dd49ae9072f8c936a81/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/tractor/tree/916a0d5e25068cf7f0713dd49ae9072f8c936a81"
+        "href": "https://github.com/nightwarelabz/tractor/tree/916a0d5e25068cf7f0713dd49ae9072f8c936a81"
       }
     ],
     "featured": false,
@@ -439,25 +539,25 @@
     ],
     "maturity": "Exact research framework",
     "status": "Research framework",
-    "githubUrl": "https://github.com/chasebryan/centl-cbx",
+    "githubUrl": "https://github.com/nightwarelabz/centl-cbx",
     "links": [
       {
         "label": "Research modules",
-        "href": "https://github.com/chasebryan/centl-cbx/tree/main/research"
+        "href": "https://github.com/nightwarelabz/centl-cbx/tree/main/research"
       },
       {
         "label": "Kernel",
-        "href": "https://github.com/chasebryan/centl-cbx/tree/main/kernel"
+        "href": "https://github.com/nightwarelabz/centl-cbx/tree/main/kernel"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/centl-cbx/blob/8da8d7a13991adfbd7fa1b76dd4d85e56c3c8ca2/README.md"
+        "href": "https://github.com/nightwarelabz/centl-cbx/blob/8da8d7a13991adfbd7fa1b76dd4d85e56c3c8ca2/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/centl-cbx/tree/8da8d7a13991adfbd7fa1b76dd4d85e56c3c8ca2"
+        "href": "https://github.com/nightwarelabz/centl-cbx/tree/8da8d7a13991adfbd7fa1b76dd4d85e56c3c8ca2"
       }
     ],
     "featured": false,
@@ -496,29 +596,29 @@
     ],
     "maturity": "Experimental unaudited protocol reference implementation.",
     "status": "Protocol prototype",
-    "githubUrl": "https://github.com/chasebryan/ZP-1",
+    "githubUrl": "https://github.com/nightwarelabz/ZP-1",
     "links": [
       {
         "label": "Project documentation",
-        "href": "https://github.com/chasebryan/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/README.md"
+        "href": "https://github.com/nightwarelabz/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/README.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/README.md"
+        "href": "https://github.com/nightwarelabz/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/README.md"
       },
       {
         "label": "provider.rs",
-        "href": "https://github.com/chasebryan/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/src/provider.rs"
+        "href": "https://github.com/nightwarelabz/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/src/provider.rs"
       },
       {
         "label": "object.rs",
-        "href": "https://github.com/chasebryan/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/src/object.rs"
+        "href": "https://github.com/nightwarelabz/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/src/object.rs"
       },
       {
         "label": "exhaustive_mutation.rs",
-        "href": "https://github.com/chasebryan/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/tests/exhaustive_mutation.rs"
+        "href": "https://github.com/nightwarelabz/ZP-1/blob/b35a004eb45e6bb60072d8e753b80db1d05888cb/tests/exhaustive_mutation.rs"
       }
     ],
     "featured": false,
@@ -551,33 +651,33 @@
     ],
     "maturity": "Active research/public-review artifact; substantive implementation with extensive evidence tooling.",
     "status": "Systems research",
-    "githubUrl": "https://github.com/chasebryan/-wuci-ji",
+    "githubUrl": "https://github.com/nightwarelabz/-wuci-ji",
     "links": [
       {
         "label": "Project documentation",
-        "href": "https://github.com/chasebryan/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/README.md"
+        "href": "https://github.com/nightwarelabz/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/README.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/README.md"
+        "href": "https://github.com/nightwarelabz/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/README.md"
       },
       {
         "label": "SECURITY_BOUNDARY.md",
-        "href": "https://github.com/chasebryan/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/docs/SECURITY_BOUNDARY.md"
+        "href": "https://github.com/nightwarelabz/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/docs/SECURITY_BOUNDARY.md"
       },
       {
         "label": "PRODUCTION_READINESS.md",
-        "href": "https://github.com/chasebryan/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/docs/PRODUCTION_READINESS.md"
+        "href": "https://github.com/nightwarelabz/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/docs/PRODUCTION_READINESS.md"
       },
       {
         "label": "ledger.s",
-        "href": "https://github.com/chasebryan/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/src/ledger.s"
+        "href": "https://github.com/nightwarelabz/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/src/ledger.s"
       },
       {
         "label": "wuci_prism.py",
-        "href": "https://github.com/chasebryan/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/tools/wuci_prism.py"
+        "href": "https://github.com/nightwarelabz/-wuci-ji/blob/fec91dc6618d477908790520118bae7e25909c43/tools/wuci_prism.py"
       }
     ],
     "featured": false,
@@ -615,25 +715,25 @@
     ],
     "maturity": "Working language bootstrap; native compiler layers remain planned.",
     "status": "Language bootstrap",
-    "githubUrl": "https://github.com/chasebryan/fyr",
+    "githubUrl": "https://github.com/nightwarelabz/fyr",
     "links": [
       {
         "label": "Project documentation",
-        "href": "https://github.com/chasebryan/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/README.md"
+        "href": "https://github.com/nightwarelabz/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/README.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/README.md"
+        "href": "https://github.com/nightwarelabz/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/README.md"
       },
       {
         "label": "lib.rs",
-        "href": "https://github.com/chasebryan/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/crates/fyr/src/lib.rs"
+        "href": "https://github.com/nightwarelabz/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/crates/fyr/src/lib.rs"
       },
       {
         "label": "DESIGN.md",
-        "href": "https://github.com/chasebryan/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/docs/DESIGN.md"
+        "href": "https://github.com/nightwarelabz/fyr/blob/299b317d332f603a50f26b3788154ec562ed294b/docs/DESIGN.md"
       }
     ],
     "featured": false,
@@ -672,33 +772,33 @@
     ],
     "maturity": "Pre-release Linux prototype",
     "status": "Linux prototype",
-    "githubUrl": "https://github.com/chasebryan/JLR",
+    "githubUrl": "https://github.com/nightwarelabz/JLR",
     "links": [
       {
         "label": "Overview",
-        "href": "https://github.com/chasebryan/JLR/blob/main/docs/OVERVIEW.md"
+        "href": "https://github.com/nightwarelabz/JLR/blob/main/docs/OVERVIEW.md"
       },
       {
         "label": "Security boundaries",
-        "href": "https://github.com/chasebryan/JLR/blob/main/docs/SECURITY_BOUNDARIES.md"
+        "href": "https://github.com/nightwarelabz/JLR/blob/main/docs/SECURITY_BOUNDARIES.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/JLR/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/JLR/blob/main/README.md"
       },
       {
         "label": "Cargo.toml",
-        "href": "https://github.com/chasebryan/JLR/blob/main/Cargo.toml"
+        "href": "https://github.com/nightwarelabz/JLR/blob/main/Cargo.toml"
       },
       {
         "label": "engine.rs",
-        "href": "https://github.com/chasebryan/JLR/blob/main/crates/jlr-policy/src/engine.rs"
+        "href": "https://github.com/nightwarelabz/JLR/blob/main/crates/jlr-policy/src/engine.rs"
       },
       {
         "label": "SECURITY_BOUNDARIES.md",
-        "href": "https://github.com/chasebryan/JLR/blob/main/docs/SECURITY_BOUNDARIES.md"
+        "href": "https://github.com/nightwarelabz/JLR/blob/main/docs/SECURITY_BOUNDARIES.md"
       }
     ],
     "featured": false,
@@ -734,7 +834,7 @@
     ],
     "maturity": "Published research corpus",
     "status": "Published research",
-    "githubUrl": "https://github.com/chasebryan/warlock-index",
+    "githubUrl": "https://github.com/nightwarelabz/warlock-index",
     "links": [
       {
         "label": "Visit WARLOCK-INDEX",
@@ -742,25 +842,25 @@
       },
       {
         "label": "Product standard",
-        "href": "https://github.com/chasebryan/warlock-index/blob/main/docs/standards/product-standard.md"
+        "href": "https://github.com/nightwarelabz/warlock-index/blob/main/docs/standards/product-standard.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/warlock-index/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/warlock-index/blob/main/README.md"
       },
       {
         "label": "product-standard.md",
-        "href": "https://github.com/chasebryan/warlock-index/blob/main/docs/standards/product-standard.md"
+        "href": "https://github.com/nightwarelabz/warlock-index/blob/main/docs/standards/product-standard.md"
       },
       {
         "label": "build-library.mjs",
-        "href": "https://github.com/chasebryan/warlock-index/blob/main/site/build-library.mjs"
+        "href": "https://github.com/nightwarelabz/warlock-index/blob/main/site/build-library.mjs"
       },
       {
         "label": "main?recursive=1",
-        "href": "https://api.github.com/repos/chasebryan/warlock-index/git/trees/main?recursive=1"
+        "href": "https://api.github.com/repos/nightwarelabz/warlock-index/git/trees/main?recursive=1"
       }
     ],
     "featured": false,
@@ -797,33 +897,33 @@
     ],
     "maturity": "Deterministic simulation sandbox",
     "status": "Simulation",
-    "githubUrl": "https://github.com/chasebryan/tracksim",
+    "githubUrl": "https://github.com/nightwarelabz/tracksim",
     "links": [
       {
         "label": "Navigation mathematics",
-        "href": "https://github.com/chasebryan/tracksim/blob/main/docs/NAVIGATION.md"
+        "href": "https://github.com/nightwarelabz/tracksim/blob/main/docs/NAVIGATION.md"
       },
       {
         "label": "Architecture",
-        "href": "https://github.com/chasebryan/tracksim/blob/main/docs/ARCHITECTURE.md"
+        "href": "https://github.com/nightwarelabz/tracksim/blob/main/docs/ARCHITECTURE.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/tracksim/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/tracksim/blob/main/README.md"
       },
       {
         "label": "package.json",
-        "href": "https://github.com/chasebryan/tracksim/blob/main/package.json"
+        "href": "https://github.com/nightwarelabz/tracksim/blob/main/package.json"
       },
       {
         "label": "kalman.ts",
-        "href": "https://github.com/chasebryan/tracksim/blob/main/packages/sim/src/math/kalman.ts"
+        "href": "https://github.com/nightwarelabz/tracksim/blob/main/packages/sim/src/math/kalman.ts"
       },
       {
         "label": "NAVIGATION.md",
-        "href": "https://github.com/chasebryan/tracksim/blob/main/docs/NAVIGATION.md"
+        "href": "https://github.com/nightwarelabz/tracksim/blob/main/docs/NAVIGATION.md"
       }
     ],
     "featured": false,
@@ -852,25 +952,25 @@
     ],
     "maturity": "Reproducible simulation",
     "status": "Simulation",
-    "githubUrl": "https://github.com/chasebryan/transcentrevg-1",
+    "githubUrl": "https://github.com/nightwarelabz/transcentrevg-1",
     "links": [
       {
         "label": "Technical notes",
-        "href": "https://github.com/chasebryan/transcentrevg-1/blob/main/docs/transcentrevg-1.md"
+        "href": "https://github.com/nightwarelabz/transcentrevg-1/blob/main/docs/transcentrevg-1.md"
       },
       {
         "label": "Synthetic benchmark records",
-        "href": "https://github.com/chasebryan/transcentrevg-1/blob/main/docs/benchmark.json"
+        "href": "https://github.com/nightwarelabz/transcentrevg-1/blob/main/docs/benchmark.json"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/transcentrevg-1/blob/5dcb22bb09c3483305ccb85f252974f0f613c01c/README.md"
+        "href": "https://github.com/nightwarelabz/transcentrevg-1/blob/5dcb22bb09c3483305ccb85f252974f0f613c01c/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/transcentrevg-1/tree/5dcb22bb09c3483305ccb85f252974f0f613c01c"
+        "href": "https://github.com/nightwarelabz/transcentrevg-1/tree/5dcb22bb09c3483305ccb85f252974f0f613c01c"
       }
     ],
     "featured": false,
@@ -898,25 +998,25 @@
     ],
     "maturity": "P0 research prototype",
     "status": "Research prototype",
-    "githubUrl": "https://github.com/chasebryan/peel",
+    "githubUrl": "https://github.com/nightwarelabz/peel",
     "links": [
       {
         "label": "Semantics",
-        "href": "https://github.com/chasebryan/peel/blob/main/docs/SEMANTICS.md"
+        "href": "https://github.com/nightwarelabz/peel/blob/main/docs/SEMANTICS.md"
       },
       {
         "label": "Trust boundary",
-        "href": "https://github.com/chasebryan/peel/blob/main/docs/TRUST.md"
+        "href": "https://github.com/nightwarelabz/peel/blob/main/docs/TRUST.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/peel/blob/d9e1a9c07eeaea2dc93b9b345defecd9e1240a8b/README.md"
+        "href": "https://github.com/nightwarelabz/peel/blob/d9e1a9c07eeaea2dc93b9b345defecd9e1240a8b/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/peel/tree/d9e1a9c07eeaea2dc93b9b345defecd9e1240a8b"
+        "href": "https://github.com/nightwarelabz/peel/tree/d9e1a9c07eeaea2dc93b9b345defecd9e1240a8b"
       }
     ],
     "featured": false,
@@ -945,25 +1045,25 @@
     ],
     "maturity": "Formal language prototype · v0.2.0",
     "status": "Language prototype",
-    "githubUrl": "https://github.com/chasebryan/enkel",
+    "githubUrl": "https://github.com/nightwarelabz/enkel",
     "links": [
       {
         "label": "Formal specification",
-        "href": "https://github.com/chasebryan/enkel/blob/main/docs/SPEC.md"
+        "href": "https://github.com/nightwarelabz/enkel/blob/main/docs/SPEC.md"
       },
       {
         "label": "Validation notes",
-        "href": "https://github.com/chasebryan/enkel/blob/main/docs/VALIDATION.md"
+        "href": "https://github.com/nightwarelabz/enkel/blob/main/docs/VALIDATION.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/enkel/blob/cbdb1e3c33fbd122655f9a3c5e0c604f415f8625/README.md"
+        "href": "https://github.com/nightwarelabz/enkel/blob/cbdb1e3c33fbd122655f9a3c5e0c604f415f8625/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/enkel/tree/cbdb1e3c33fbd122655f9a3c5e0c604f415f8625"
+        "href": "https://github.com/nightwarelabz/enkel/tree/cbdb1e3c33fbd122655f9a3c5e0c604f415f8625"
       }
     ],
     "featured": false,
@@ -992,25 +1092,25 @@
     ],
     "maturity": "Developing curriculum · 0.9.0-dev",
     "status": "Developing curriculum",
-    "githubUrl": "https://github.com/chasebryan/orange-school",
+    "githubUrl": "https://github.com/nightwarelabz/orange-school",
     "links": [
       {
         "label": "Start here",
-        "href": "https://github.com/chasebryan/orange-school/blob/main/curriculum/modules/ori-001/lesson.md"
+        "href": "https://github.com/nightwarelabz/orange-school/blob/main/curriculum/modules/ori-001/lesson.md"
       },
       {
         "label": "Learner pathways",
-        "href": "https://github.com/chasebryan/orange-school/blob/main/docs/learner-pathways.md"
+        "href": "https://github.com/nightwarelabz/orange-school/blob/main/docs/learner-pathways.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/orange-school/blob/0911ae7d7312e6c9ee0ed9b4f33076f0f0e6adb2/README.md"
+        "href": "https://github.com/nightwarelabz/orange-school/blob/0911ae7d7312e6c9ee0ed9b4f33076f0f0e6adb2/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/orange-school/tree/0911ae7d7312e6c9ee0ed9b4f33076f0f0e6adb2"
+        "href": "https://github.com/nightwarelabz/orange-school/tree/0911ae7d7312e6c9ee0ed9b4f33076f0f0e6adb2"
       }
     ],
     "featured": false,
@@ -1044,25 +1144,25 @@
     ],
     "maturity": "Cryptanalysis teaching workbench",
     "status": "Teaching workbench",
-    "githubUrl": "https://github.com/chasebryan/aesop",
+    "githubUrl": "https://github.com/nightwarelabz/aesop",
     "links": [
       {
         "label": "Command and field-guide reference",
-        "href": "https://github.com/chasebryan/aesop/tree/main/aesop/manual"
+        "href": "https://github.com/nightwarelabz/aesop/tree/main/aesop/manual"
       },
       {
         "label": "Architecture",
-        "href": "https://github.com/chasebryan/aesop/blob/main/aesop/registry.py"
+        "href": "https://github.com/nightwarelabz/aesop/blob/main/aesop/registry.py"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/aesop/blob/869cdcf6095e5b5b60e60b6658de1270c7eb6ec8/README.md"
+        "href": "https://github.com/nightwarelabz/aesop/blob/869cdcf6095e5b5b60e60b6658de1270c7eb6ec8/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/aesop/tree/869cdcf6095e5b5b60e60b6658de1270c7eb6ec8"
+        "href": "https://github.com/nightwarelabz/aesop/tree/869cdcf6095e5b5b60e60b6658de1270c7eb6ec8"
       }
     ],
     "featured": false,
@@ -1089,29 +1189,29 @@
     ],
     "maturity": "Working manuscript",
     "status": "Working manuscript",
-    "githubUrl": "https://github.com/chasebryan/Black-Calculus",
+    "githubUrl": "https://github.com/nightwarelabz/Black-Calculus",
     "links": [
       {
         "label": "Read the first chapter",
-        "href": "https://github.com/chasebryan/Black-Calculus/blob/main/manuscript/01-the-veil/01-the-adversarial-world.md"
+        "href": "https://github.com/nightwarelabz/Black-Calculus/blob/main/manuscript/01-the-veil/01-the-adversarial-world.md"
       },
       {
         "label": "Book outline",
-        "href": "https://github.com/chasebryan/Black-Calculus/blob/main/manuscript/00-master-outline.md"
+        "href": "https://github.com/nightwarelabz/Black-Calculus/blob/main/manuscript/00-master-outline.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/Black-Calculus/blob/0f21083b17809f8390b859c7a99d6dd1606a142d/README.md"
+        "href": "https://github.com/nightwarelabz/Black-Calculus/blob/0f21083b17809f8390b859c7a99d6dd1606a142d/README.md"
       },
       {
         "label": "01-the-adversarial-world.md",
-        "href": "https://github.com/chasebryan/Black-Calculus/blob/0f21083b17809f8390b859c7a99d6dd1606a142d/manuscript/01-the-veil/01-the-adversarial-world.md"
+        "href": "https://github.com/nightwarelabz/Black-Calculus/blob/0f21083b17809f8390b859c7a99d6dd1606a142d/manuscript/01-the-veil/01-the-adversarial-world.md"
       },
       {
         "label": "00-master-outline.md",
-        "href": "https://github.com/chasebryan/Black-Calculus/blob/0f21083b17809f8390b859c7a99d6dd1606a142d/manuscript/00-master-outline.md"
+        "href": "https://github.com/nightwarelabz/Black-Calculus/blob/0f21083b17809f8390b859c7a99d6dd1606a142d/manuscript/00-master-outline.md"
       }
     ],
     "featured": false,
@@ -1146,25 +1246,25 @@
     ],
     "maturity": "Browser MVP",
     "status": "Browser MVP",
-    "githubUrl": "https://github.com/chasebryan/case-grid",
+    "githubUrl": "https://github.com/nightwarelabz/case-grid",
     "links": [
       {
         "label": "Repository",
-        "href": "https://github.com/chasebryan/case-grid"
+        "href": "https://github.com/nightwarelabz/case-grid"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/case-grid/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/case-grid/blob/main/README.md"
       },
       {
         "label": "app.js",
-        "href": "https://github.com/chasebryan/case-grid/blob/main/src/app.js"
+        "href": "https://github.com/nightwarelabz/case-grid/blob/main/src/app.js"
       },
       {
         "label": "main?recursive=1",
-        "href": "https://api.github.com/repos/chasebryan/case-grid/git/trees/main?recursive=1"
+        "href": "https://api.github.com/repos/nightwarelabz/case-grid/git/trees/main?recursive=1"
       }
     ],
     "featured": false,
@@ -1199,25 +1299,25 @@
     ],
     "maturity": "Initial workstation setup utility",
     "status": "Setup utility",
-    "githubUrl": "https://github.com/chasebryan/devprep",
+    "githubUrl": "https://github.com/nightwarelabz/devprep",
     "links": [
       {
         "label": "Platform coverage",
-        "href": "https://github.com/chasebryan/devprep/blob/main/docs/platforms.md"
+        "href": "https://github.com/nightwarelabz/devprep/blob/main/docs/platforms.md"
       },
       {
         "label": "Catalog",
-        "href": "https://github.com/chasebryan/devprep/blob/main/docs/catalog.md"
+        "href": "https://github.com/nightwarelabz/devprep/blob/main/docs/catalog.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/devprep/blob/a034c000ce8935bc37c7a7c760f980a2057bd794/README.md"
+        "href": "https://github.com/nightwarelabz/devprep/blob/a034c000ce8935bc37c7a7c760f980a2057bd794/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/devprep/tree/a034c000ce8935bc37c7a7c760f980a2057bd794"
+        "href": "https://github.com/nightwarelabz/devprep/tree/a034c000ce8935bc37c7a7c760f980a2057bd794"
       }
     ],
     "featured": false,
@@ -1246,25 +1346,25 @@
     ],
     "maturity": "Fictional tabletop simulation",
     "status": "Fictional simulation",
-    "githubUrl": "https://github.com/chasebryan/DOG1",
+    "githubUrl": "https://github.com/nightwarelabz/DOG1",
     "links": [
       {
         "label": "Model notes",
-        "href": "https://github.com/chasebryan/DOG1/blob/main/docs/dog1.md"
+        "href": "https://github.com/nightwarelabz/DOG1/blob/main/docs/dog1.md"
       },
       {
         "label": "Video demonstration",
-        "href": "https://github.com/chasebryan/DOG1/blob/main/media/DOG1.mp4"
+        "href": "https://github.com/nightwarelabz/DOG1/blob/main/media/DOG1.mp4"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/DOG1/blob/5d0403978aafb8c69fd76397f4222317014a8af9/README.md"
+        "href": "https://github.com/nightwarelabz/DOG1/blob/5d0403978aafb8c69fd76397f4222317014a8af9/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/DOG1/tree/5d0403978aafb8c69fd76397f4222317014a8af9"
+        "href": "https://github.com/nightwarelabz/DOG1/tree/5d0403978aafb8c69fd76397f4222317014a8af9"
       }
     ],
     "featured": false,
@@ -1299,25 +1399,25 @@
     ],
     "maturity": "Exploratory model-state prototype",
     "status": "Exploratory prototype",
-    "githubUrl": "https://github.com/chasebryan/dr-proto",
+    "githubUrl": "https://github.com/nightwarelabz/dr-proto",
     "links": [
       {
         "label": "Methodology",
-        "href": "https://github.com/chasebryan/dr-proto/blob/main/METHODOLOGY.md"
+        "href": "https://github.com/nightwarelabz/dr-proto/blob/main/METHODOLOGY.md"
       },
       {
         "label": "Offline report source",
-        "href": "https://github.com/chasebryan/dr-proto/blob/main/demo_report.html"
+        "href": "https://github.com/nightwarelabz/dr-proto/blob/main/demo_report.html"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/dr-proto/blob/9d74275f14dd9815e9fe9dc7edcede983cdd00f9/README.md"
+        "href": "https://github.com/nightwarelabz/dr-proto/blob/9d74275f14dd9815e9fe9dc7edcede983cdd00f9/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/dr-proto/tree/9d74275f14dd9815e9fe9dc7edcede983cdd00f9"
+        "href": "https://github.com/nightwarelabz/dr-proto/tree/9d74275f14dd9815e9fe9dc7edcede983cdd00f9"
       }
     ],
     "featured": false,
@@ -1352,25 +1452,25 @@
     ],
     "maturity": "Finite search and certificate experiment",
     "status": "Certificate experiment",
-    "githubUrl": "https://github.com/chasebryan/ES-ASM-SNIPER",
+    "githubUrl": "https://github.com/nightwarelabz/ES-ASM-SNIPER",
     "links": [
       {
         "label": "Frozen search specification",
-        "href": "https://github.com/chasebryan/ES-ASM-SNIPER/blob/main/SPEC.md"
+        "href": "https://github.com/nightwarelabz/ES-ASM-SNIPER/blob/main/SPEC.md"
       },
       {
         "label": "Independent certifier",
-        "href": "https://github.com/chasebryan/ES-ASM-SNIPER/blob/main/src/certify.c"
+        "href": "https://github.com/nightwarelabz/ES-ASM-SNIPER/blob/main/src/certify.c"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/ES-ASM-SNIPER/blob/95365017412f3fff86e092d770b0504b01e8bcd1/README.md"
+        "href": "https://github.com/nightwarelabz/ES-ASM-SNIPER/blob/95365017412f3fff86e092d770b0504b01e8bcd1/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/ES-ASM-SNIPER/tree/95365017412f3fff86e092d770b0504b01e8bcd1"
+        "href": "https://github.com/nightwarelabz/ES-ASM-SNIPER/tree/95365017412f3fff86e092d770b0504b01e8bcd1"
       }
     ],
     "featured": false,
@@ -1400,37 +1500,37 @@
     ],
     "maturity": "Systems research substrate",
     "status": "Research substrate",
-    "githubUrl": "https://github.com/chasebryan/Latticra",
+    "githubUrl": "https://github.com/nightwarelabz/Latticra",
     "links": [
       {
         "label": "System substrate handbook",
-        "href": "https://github.com/chasebryan/Latticra/tree/main/docs/latticra-system-substrate"
+        "href": "https://github.com/nightwarelabz/Latticra/tree/main/docs/latticra-system-substrate"
       },
       {
         "label": "Architecture seed",
-        "href": "https://github.com/chasebryan/Latticra/blob/main/docs/ARCHITECTURE_SEED.md"
+        "href": "https://github.com/nightwarelabz/Latticra/blob/main/docs/ARCHITECTURE_SEED.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/README.md"
+        "href": "https://github.com/nightwarelabz/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/README.md"
       },
       {
         "label": "ARCHITECTURE_SEED.md",
-        "href": "https://github.com/chasebryan/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/docs/ARCHITECTURE_SEED.md"
+        "href": "https://github.com/nightwarelabz/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/docs/ARCHITECTURE_SEED.md"
       },
       {
         "label": "lat_pipeline.c",
-        "href": "https://github.com/chasebryan/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/src/lat_pipeline.c"
+        "href": "https://github.com/nightwarelabz/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/src/lat_pipeline.c"
       },
       {
         "label": "seal_effect_decision.c",
-        "href": "https://github.com/chasebryan/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/src/seal_effect_decision.c"
+        "href": "https://github.com/nightwarelabz/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/src/seal_effect_decision.c"
       },
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/docs/latticra-system-substrate/README.md"
+        "href": "https://github.com/nightwarelabz/Latticra/blob/758947a27fa5aee5f8711bd431ac337af86c3db3/docs/latticra-system-substrate/README.md"
       }
     ],
     "featured": false,
@@ -1459,25 +1559,25 @@
     ],
     "maturity": "Small local shell utility",
     "status": "Shell utility",
-    "githubUrl": "https://github.com/chasebryan/mint-terminal-predictor",
+    "githubUrl": "https://github.com/nightwarelabz/mint-terminal-predictor",
     "links": [
       {
         "label": "Predictor implementation",
-        "href": "https://github.com/chasebryan/mint-terminal-predictor/blob/main/shell/mint-predict.bash"
+        "href": "https://github.com/nightwarelabz/mint-terminal-predictor/blob/main/shell/mint-predict.bash"
       },
       {
         "label": "Tests",
-        "href": "https://github.com/chasebryan/mint-terminal-predictor/blob/main/tests/test_predictor.sh"
+        "href": "https://github.com/nightwarelabz/mint-terminal-predictor/blob/main/tests/test_predictor.sh"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/mint-terminal-predictor/blob/b83e21d6ea302f2fee6611450e658ac03390267a/README.md"
+        "href": "https://github.com/nightwarelabz/mint-terminal-predictor/blob/b83e21d6ea302f2fee6611450e658ac03390267a/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/mint-terminal-predictor/tree/b83e21d6ea302f2fee6611450e658ac03390267a"
+        "href": "https://github.com/nightwarelabz/mint-terminal-predictor/tree/b83e21d6ea302f2fee6611450e658ac03390267a"
       }
     ],
     "featured": false,
@@ -1506,25 +1606,25 @@
     ],
     "maturity": "Procedural creative film",
     "status": "Creative film",
-    "githubUrl": "https://github.com/chasebryan/Muddog-fleer",
+    "githubUrl": "https://github.com/nightwarelabz/Muddog-fleer",
     "links": [
       {
         "label": "Scene and sound design",
-        "href": "https://github.com/chasebryan/Muddog-fleer/blob/main/docs/film.md"
+        "href": "https://github.com/nightwarelabz/Muddog-fleer/blob/main/docs/film.md"
       },
       {
         "label": "Wordless v2 film",
-        "href": "https://github.com/chasebryan/Muddog-fleer/blob/main/media/Muddog-fleer-v2-8c3b958.mp4"
+        "href": "https://github.com/nightwarelabz/Muddog-fleer/blob/main/media/Muddog-fleer-v2-8c3b958.mp4"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/Muddog-fleer/blob/60ce9779be32b6f52b01043972f53f5b21027759/README.md"
+        "href": "https://github.com/nightwarelabz/Muddog-fleer/blob/60ce9779be32b6f52b01043972f53f5b21027759/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/Muddog-fleer/tree/60ce9779be32b6f52b01043972f53f5b21027759"
+        "href": "https://github.com/nightwarelabz/Muddog-fleer/tree/60ce9779be32b6f52b01043972f53f5b21027759"
       }
     ],
     "featured": false,
@@ -1553,25 +1653,25 @@
     ],
     "maturity": "First-pass native RF prototype",
     "status": "RF prototype",
-    "githubUrl": "https://github.com/chasebryan/nevins-port",
+    "githubUrl": "https://github.com/nightwarelabz/nevins-port",
     "links": [
       {
         "label": "Architecture",
-        "href": "https://github.com/chasebryan/nevins-port/blob/main/docs/architecture.md"
+        "href": "https://github.com/nightwarelabz/nevins-port/blob/main/docs/architecture.md"
       },
       {
         "label": "Build blockers",
-        "href": "https://github.com/chasebryan/nevins-port/blob/main/docs/build-blockers.md"
+        "href": "https://github.com/nightwarelabz/nevins-port/blob/main/docs/build-blockers.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/nevins-port/blob/612a42f720f168a32e063a341fd451e855939629/README.md"
+        "href": "https://github.com/nightwarelabz/nevins-port/blob/612a42f720f168a32e063a341fd451e855939629/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/nevins-port/tree/612a42f720f168a32e063a341fd451e855939629"
+        "href": "https://github.com/nightwarelabz/nevins-port/tree/612a42f720f168a32e063a341fd451e855939629"
       }
     ],
     "featured": false,
@@ -1601,33 +1701,33 @@
     ],
     "maturity": "Educational virtual OS console",
     "status": "Educational console",
-    "githubUrl": "https://github.com/chasebryan/phase1",
+    "githubUrl": "https://github.com/Bryforge/phase1",
     "links": [
       {
         "label": "Learning companion",
-        "href": "https://github.com/chasebryan/phase1/blob/main/LEARNING.md"
+        "href": "https://github.com/Bryforge/phase1/blob/main/docs/project/LEARNING.md"
       },
       {
         "label": "Virtual kernel source",
-        "href": "https://github.com/chasebryan/phase1/blob/main/src/kernel.rs"
+        "href": "https://github.com/Bryforge/phase1/blob/main/src/kernel.rs"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/phase1/blob/af69a78c86628a73e578893ccde95eaffefcfaae/README.md"
+        "href": "https://github.com/Bryforge/phase1/blob/main/README.md"
       },
       {
         "label": "Cargo.toml",
-        "href": "https://github.com/chasebryan/phase1/blob/af69a78c86628a73e578893ccde95eaffefcfaae/Cargo.toml"
+        "href": "https://github.com/Bryforge/phase1/blob/main/Cargo.toml"
       },
       {
         "label": "kernel.rs",
-        "href": "https://github.com/chasebryan/phase1/blob/af69a78c86628a73e578893ccde95eaffefcfaae/src/kernel.rs"
+        "href": "https://github.com/Bryforge/phase1/blob/main/src/kernel.rs"
       },
       {
         "label": "policy.rs",
-        "href": "https://github.com/chasebryan/phase1/blob/af69a78c86628a73e578893ccde95eaffefcfaae/src/policy.rs"
+        "href": "https://github.com/Bryforge/phase1/blob/main/src/policy.rs"
       }
     ],
     "featured": false,
@@ -1664,33 +1764,33 @@
     ],
     "maturity": "Experimental specification draft",
     "status": "Specification draft",
-    "githubUrl": "https://github.com/chasebryan/PITHOS",
+    "githubUrl": "https://github.com/nightwarelabz/PITHOS",
     "links": [
       {
         "label": "Repository",
-        "href": "https://github.com/chasebryan/PITHOS"
+        "href": "https://github.com/nightwarelabz/PITHOS"
       },
       {
         "label": "PITHOS-1 draft",
-        "href": "https://github.com/chasebryan/PITHOS/blob/main/docs/PITHOS-1.md"
+        "href": "https://github.com/nightwarelabz/PITHOS/blob/main/docs/PITHOS-1.md"
       },
       {
         "label": "Review agenda",
-        "href": "https://github.com/chasebryan/PITHOS/blob/main/docs/REVIEW-AGENDA.md"
+        "href": "https://github.com/nightwarelabz/PITHOS/blob/main/docs/REVIEW-AGENDA.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/PITHOS/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/PITHOS/blob/main/README.md"
       },
       {
         "label": "WIRE-FORMAT.md",
-        "href": "https://github.com/chasebryan/PITHOS/blob/main/docs/WIRE-FORMAT.md"
+        "href": "https://github.com/nightwarelabz/PITHOS/blob/main/docs/WIRE-FORMAT.md"
       },
       {
         "label": "REVIEW-AGENDA.md",
-        "href": "https://github.com/chasebryan/PITHOS/blob/main/docs/REVIEW-AGENDA.md"
+        "href": "https://github.com/nightwarelabz/PITHOS/blob/main/docs/REVIEW-AGENDA.md"
       }
     ],
     "featured": false,
@@ -1725,29 +1825,29 @@
     ],
     "maturity": "Pre-alpha toolkit",
     "status": "Pre-alpha toolkit",
-    "githubUrl": "https://github.com/chasebryan/pmgs",
+    "githubUrl": "https://github.com/nightwarelabz/pmgs",
     "links": [
       {
         "label": "Repository",
-        "href": "https://github.com/chasebryan/pmgs"
+        "href": "https://github.com/nightwarelabz/pmgs"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/pmgs/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/pmgs/blob/main/README.md"
       },
       {
         "label": "pyproject.toml",
-        "href": "https://github.com/chasebryan/pmgs/blob/main/pyproject.toml"
+        "href": "https://github.com/nightwarelabz/pmgs/blob/main/pyproject.toml"
       },
       {
         "label": "orbits.py",
-        "href": "https://github.com/chasebryan/pmgs/blob/main/src/pmgs/orbits.py"
+        "href": "https://github.com/nightwarelabz/pmgs/blob/main/src/pmgs/orbits.py"
       },
       {
         "label": "capture.py",
-        "href": "https://github.com/chasebryan/pmgs/blob/main/src/pmgs/capture.py"
+        "href": "https://github.com/nightwarelabz/pmgs/blob/main/src/pmgs/capture.py"
       }
     ],
     "featured": false,
@@ -1776,25 +1876,25 @@
     ],
     "maturity": "Small reconstruction research prototype",
     "status": "Research prototype",
-    "githubUrl": "https://github.com/chasebryan/point3",
+    "githubUrl": "https://github.com/nightwarelabz/point3",
     "links": [
       {
         "label": "Authenticated C experiment",
-        "href": "https://github.com/chasebryan/point3/blob/main/point3-w.c"
+        "href": "https://github.com/nightwarelabz/point3/blob/main/point3-w.c"
       },
       {
         "label": "Cryptol specification",
-        "href": "https://github.com/chasebryan/point3/blob/main/Point3W.cry"
+        "href": "https://github.com/nightwarelabz/point3/blob/main/Point3W.cry"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/point3/blob/1456a30057e66195e68b739253eca257d15eaa33/README.md"
+        "href": "https://github.com/nightwarelabz/point3/blob/1456a30057e66195e68b739253eca257d15eaa33/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/point3/tree/1456a30057e66195e68b739253eca257d15eaa33"
+        "href": "https://github.com/nightwarelabz/point3/tree/1456a30057e66195e68b739253eca257d15eaa33"
       }
     ],
     "featured": false,
@@ -1829,25 +1929,25 @@
     ],
     "maturity": "Radio-workbench prototype",
     "status": "Radio prototype",
-    "githubUrl": "https://github.com/chasebryan/rf-commons",
+    "githubUrl": "https://github.com/nightwarelabz/rf-commons",
     "links": [
       {
         "label": "Repository",
-        "href": "https://github.com/chasebryan/rf-commons"
+        "href": "https://github.com/nightwarelabz/rf-commons"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/rf-commons/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/rf-commons/blob/main/README.md"
       },
       {
         "label": "dev.mjs",
-        "href": "https://github.com/chasebryan/rf-commons/blob/main/scripts/dev.mjs"
+        "href": "https://github.com/nightwarelabz/rf-commons/blob/main/scripts/dev.mjs"
       },
       {
         "label": "main?recursive=1",
-        "href": "https://api.github.com/repos/chasebryan/rf-commons/git/trees/main?recursive=1"
+        "href": "https://api.github.com/repos/nightwarelabz/rf-commons/git/trees/main?recursive=1"
       }
     ],
     "featured": false,
@@ -1877,29 +1977,29 @@
     ],
     "maturity": "Formal-model prototype",
     "status": "Formal-model prototype",
-    "githubUrl": "https://github.com/chasebryan/SEAL",
+    "githubUrl": "https://github.com/nightwarelabz/SEAL",
     "links": [
       {
         "label": "Review packet",
-        "href": "https://github.com/chasebryan/SEAL/blob/main/docs/SEAL_CORE_V0_REVIEW_PACKET.md"
+        "href": "https://github.com/nightwarelabz/SEAL/blob/main/docs/SEAL_CORE_V0_REVIEW_PACKET.md"
       },
       {
         "label": "F* authority gate",
-        "href": "https://github.com/chasebryan/SEAL/blob/main/src/Seal.Gate.fst"
+        "href": "https://github.com/nightwarelabz/SEAL/blob/main/src/Seal.Gate.fst"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/SEAL/blob/a78240822505003e5bccce6915f39f78f38ff669/README.md"
+        "href": "https://github.com/nightwarelabz/SEAL/blob/a78240822505003e5bccce6915f39f78f38ff669/README.md"
       },
       {
         "label": "Seal.Gate.fst",
-        "href": "https://github.com/chasebryan/SEAL/blob/a78240822505003e5bccce6915f39f78f38ff669/src/Seal.Gate.fst"
+        "href": "https://github.com/nightwarelabz/SEAL/blob/a78240822505003e5bccce6915f39f78f38ff669/src/Seal.Gate.fst"
       },
       {
         "label": "Seal.Proofs.fst",
-        "href": "https://github.com/chasebryan/SEAL/blob/a78240822505003e5bccce6915f39f78f38ff669/src/Seal.Proofs.fst"
+        "href": "https://github.com/nightwarelabz/SEAL/blob/a78240822505003e5bccce6915f39f78f38ff669/src/Seal.Proofs.fst"
       }
     ],
     "featured": false,
@@ -1937,41 +2037,41 @@
     ],
     "maturity": "Bootable OS seed",
     "status": "Bootable OS seed",
-    "githubUrl": "https://github.com/chasebryan/tcs",
+    "githubUrl": "https://github.com/nightwarelabz/tcs",
     "links": [
       {
         "label": "Repository",
-        "href": "https://github.com/chasebryan/tcs"
+        "href": "https://github.com/nightwarelabz/tcs"
       },
       {
         "label": "Architecture",
-        "href": "https://github.com/chasebryan/tcs/blob/main/docs/ARCHITECTURE.md"
+        "href": "https://github.com/nightwarelabz/tcs/blob/main/docs/ARCHITECTURE.md"
       },
       {
         "label": "Verification record",
-        "href": "https://github.com/chasebryan/tcs/blob/main/docs/VERIFICATION.md"
+        "href": "https://github.com/nightwarelabz/tcs/blob/main/docs/VERIFICATION.md"
       },
       {
         "label": "Saved boot artifacts",
-        "href": "https://github.com/chasebryan/tcs/blob/main/artifacts/README.md"
+        "href": "https://github.com/nightwarelabz/tcs/blob/main/artifacts/README.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/tcs/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/tcs/blob/main/README.md"
       },
       {
         "label": "policy.c",
-        "href": "https://github.com/chasebryan/tcs/blob/main/lib/policy.c"
+        "href": "https://github.com/nightwarelabz/tcs/blob/main/lib/policy.c"
       },
       {
         "label": "VERIFICATION.md",
-        "href": "https://github.com/chasebryan/tcs/blob/main/docs/VERIFICATION.md"
+        "href": "https://github.com/nightwarelabz/tcs/blob/main/docs/VERIFICATION.md"
       },
       {
         "label": "main?recursive=1",
-        "href": "https://api.github.com/repos/chasebryan/tcs/git/trees/main?recursive=1"
+        "href": "https://api.github.com/repos/nightwarelabz/tcs/git/trees/main?recursive=1"
       }
     ],
     "featured": false,
@@ -2006,29 +2106,29 @@
     ],
     "maturity": "Focused v1 audit tool",
     "status": "Audit tool",
-    "githubUrl": "https://github.com/chasebryan/TELL",
+    "githubUrl": "https://github.com/nightwarelabz/TELL",
     "links": [
       {
         "label": "Repository",
-        "href": "https://github.com/chasebryan/TELL"
+        "href": "https://github.com/nightwarelabz/TELL"
       },
       {
         "label": "Specification",
-        "href": "https://github.com/chasebryan/TELL/blob/main/SPEC.md"
+        "href": "https://github.com/nightwarelabz/TELL/blob/main/SPEC.md"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/TELL/blob/main/README.md"
+        "href": "https://github.com/nightwarelabz/TELL/blob/main/README.md"
       },
       {
         "label": "observe.go",
-        "href": "https://github.com/chasebryan/TELL/blob/main/internal/observe/observe.go"
+        "href": "https://github.com/nightwarelabz/TELL/blob/main/internal/observe/observe.go"
       },
       {
         "label": "main?recursive=1",
-        "href": "https://api.github.com/repos/chasebryan/TELL/git/trees/main?recursive=1"
+        "href": "https://api.github.com/repos/nightwarelabz/TELL/git/trees/main?recursive=1"
       }
     ],
     "featured": false,
@@ -2063,25 +2163,25 @@
     ],
     "maturity": "Defensive review utility",
     "status": "Review utility",
-    "githubUrl": "https://github.com/chasebryan/tobacco",
+    "githubUrl": "https://github.com/nightwarelabz/tobacco",
     "links": [
       {
         "label": "Rule coverage and limits",
-        "href": "https://github.com/chasebryan/tobacco/blob/main/docs/RULES.md"
+        "href": "https://github.com/nightwarelabz/tobacco/blob/main/docs/RULES.md"
       },
       {
         "label": "Report model",
-        "href": "https://github.com/chasebryan/tobacco/blob/main/tobacco/models.py"
+        "href": "https://github.com/nightwarelabz/tobacco/blob/main/tobacco/models.py"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/tobacco/blob/3810a84754fd55648d062243a3f2039ab6ce1bb6/README.md"
+        "href": "https://github.com/nightwarelabz/tobacco/blob/3810a84754fd55648d062243a3f2039ab6ce1bb6/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/tobacco/tree/3810a84754fd55648d062243a3f2039ab6ce1bb6"
+        "href": "https://github.com/nightwarelabz/tobacco/tree/3810a84754fd55648d062243a3f2039ab6ce1bb6"
       }
     ],
     "featured": false,
@@ -2110,25 +2210,25 @@
     ],
     "maturity": "Small document-language prototype",
     "status": "Language prototype",
-    "githubUrl": "https://github.com/chasebryan/vitamins",
+    "githubUrl": "https://github.com/nightwarelabz/vitamins",
     "links": [
       {
         "label": "Example document",
-        "href": "https://github.com/chasebryan/vitamins/blob/main/examples/tiny_note.vit"
+        "href": "https://github.com/nightwarelabz/vitamins/blob/main/examples/tiny_note.vit"
       },
       {
         "label": "Generated LaTeX example",
-        "href": "https://github.com/chasebryan/vitamins/blob/main/examples/tiny_note.tex"
+        "href": "https://github.com/nightwarelabz/vitamins/blob/main/examples/tiny_note.tex"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/vitamins/blob/b4a765816d0e83ab898071d8461e9a108fba96cc/README.md"
+        "href": "https://github.com/nightwarelabz/vitamins/blob/b4a765816d0e83ab898071d8461e9a108fba96cc/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/vitamins/tree/b4a765816d0e83ab898071d8461e9a108fba96cc"
+        "href": "https://github.com/nightwarelabz/vitamins/tree/b4a765816d0e83ab898071d8461e9a108fba96cc"
       }
     ],
     "featured": false,
@@ -2163,25 +2263,25 @@
     ],
     "maturity": "Small open-data application",
     "status": "Open-data application",
-    "githubUrl": "https://github.com/chasebryan/weatherline",
+    "githubUrl": "https://github.com/nightwarelabz/weatherline",
     "links": [
       {
         "label": "Go service",
-        "href": "https://github.com/chasebryan/weatherline/blob/main/main.go"
+        "href": "https://github.com/nightwarelabz/weatherline/blob/main/main.go"
       },
       {
         "label": "Browser interface",
-        "href": "https://github.com/chasebryan/weatherline/tree/main/web"
+        "href": "https://github.com/nightwarelabz/weatherline/tree/main/web"
       }
     ],
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/chasebryan/weatherline/blob/c44402eea4a88a28e102e35e0941508bbd671e2a/README.md"
+        "href": "https://github.com/nightwarelabz/weatherline/blob/c44402eea4a88a28e102e35e0941508bbd671e2a/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/chasebryan/weatherline/tree/c44402eea4a88a28e102e35e0941508bbd671e2a"
+        "href": "https://github.com/nightwarelabz/weatherline/tree/c44402eea4a88a28e102e35e0941508bbd671e2a"
       }
     ],
     "featured": false,

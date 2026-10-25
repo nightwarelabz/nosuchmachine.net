@@ -236,15 +236,24 @@ function passwordStrength(pw: string) {
   const penalty = /(.)\1{2,}|1234|abcd|qwer|password|letmein/i.test(pw) ? " — but it contains an obvious pattern, which real cracking ignores entropy math for" : "";
   return { bits, verdict: (bits < 35 ? "Weak" : bits < 60 ? "Fair" : bits < 90 ? "Strong" : "Excellent") + penalty, crackTimeOffline: bits < 35 ? "seconds to hours" : bits < 60 ? "days to years" : bits < 90 ? "centuries+ at 10^10 guesses/sec" : "beyond practical brute force", length: pw.length, pool };
 }
+function randBelow(max: number): number {
+  // Rejection sampling over a 32-bit draw: redraw any value in the tail
+  // that a bare % max would over-represent, so every result in [0, max)
+  // is equiprobable. The bias is real whenever max does not divide 2^32,
+  // which no alphabet size used here does.
+  const limit = Math.floor(0x100000000 / max) * max;
+  let x = crypto.getRandomValues(new Uint32Array(1))[0];
+  while (x >= limit) x = crypto.getRandomValues(new Uint32Array(1))[0];
+  return x % max;
+}
 function genPassword() {
   const len = Math.min(128, Math.max(8, Number(val("pwgen-length")) || 20));
   const sets = ["abcdefghjkmnpqrstuvwxyz", "ABCDEFGHJKMNPQRSTUVWXYZ", "23456789", "!@#$%^&*()-_=+[]{}"];
   const all = sets.join("");
-  const out: string[] = sets.map((s) => s[crypto.getRandomValues(new Uint32Array(1))[0] % s.length]);
-  const rnd = crypto.getRandomValues(new Uint32Array(len));
-  for (let i = out.length; i < len; i++) out.push(all[rnd[i] % all.length]);
+  const out: string[] = sets.map((s) => s[randBelow(s.length)]);
+  for (let i = out.length; i < len; i++) out.push(all[randBelow(all.length)]);
   // Fisher-Yates shuffle with crypto randomness.
-  for (let i = out.length - 1; i > 0; i--) { const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1); [out[i], out[j]] = [out[j], out[i]]; }
+  for (let i = out.length - 1; i > 0; i--) { const j = randBelow(i + 1); [out[i], out[j]] = [out[j], out[i]]; }
   const pw = out.join("");
   setVal("pwgen-out", pw);
   show("pwgen-meta", passwordStrength(pw));
@@ -270,8 +279,92 @@ function classifyIp(n: number): string {
   if (inR("0.0.0.0", 8)) return "Unspecified / this-network";
   return "Public";
 }
+function ip6ToBig(ip: string): bigint | null {
+  let rest = ip.trim().toLowerCase();
+  // An embedded IPv4 tail (e.g. ::ffff:192.168.1.1) counts as two groups.
+  const v4 = rest.match(/(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4) {
+    const n = ipToInt(v4[1]);
+    if (n === null) return null;
+    rest = rest.slice(0, rest.length - v4[1].length) + ((n >>> 16) & 0xffff).toString(16) + ":" + (n & 0xffff).toString(16);
+  }
+  const halves = rest.split("::");
+  if (halves.length > 2) return null;
+  const parseSide = (s: string): number[] | null => {
+    if (s === "") return [];
+    const out: number[] = [];
+    for (const g of s.split(":")) {
+      if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+  const left = parseSide(halves[0]);
+  const right = halves.length === 2 ? parseSide(halves[1]) : null;
+  if (left === null || right === null && halves.length === 2) return null;
+  let groups: number[];
+  if (halves.length === 2) {
+    const missing = 8 - left.length - (right as number[]).length;
+    if (missing < 1) return null;
+    groups = [...left, ...new Array(missing).fill(0), ...(right as number[])];
+  } else {
+    if (left.length !== 8) return null;
+    groups = left;
+  }
+  let n = 0n;
+  for (const g of groups) n = (n << 16n) + BigInt(g);
+  return n;
+}
+function bigToIp6(n: bigint): string {
+  const groups: number[] = [];
+  for (let i = 0; i < 8; i++) groups.push(Number((n >> BigInt(16 * (7 - i))) & 0xffffn));
+  // RFC 5952: compress the longest run of zero groups, when it spans at least two.
+  let bestStart = -1, bestLen = 0, curStart = -1, curLen = 0;
+  for (let i = 0; i < 8; i++) {
+    if (groups[i] === 0) { if (curStart < 0) curStart = i; curLen++; if (curLen > bestLen) { bestStart = curStart; bestLen = curLen; } }
+    else { curStart = -1; curLen = 0; }
+  }
+  const hex = groups.map((g) => g.toString(16));
+  if (bestLen < 2) return hex.join(":");
+  return hex.slice(0, bestStart).join(":") + "::" + hex.slice(bestStart + bestLen).join(":");
+}
+function classifyIp6(n: bigint): string {
+  const inR = (base: string, bits: number) => { const b = ip6ToBig(base)!; const shift = BigInt(128 - bits); return (n >> shift) === (b >> shift); };
+  if (n === 0n) return "Unspecified";
+  if (n === 1n) return "Loopback";
+  if (inR("fe80::", 10)) return "Link-local";
+  if (inR("fc00::", 7)) return "Private (ULA, RFC4193)";
+  if (inR("ff00::", 8)) return "Multicast";
+  if (inR("2001:db8::", 32)) return "Documentation (TEST-NET for v6)";
+  if (inR("::ffff:0:0", 96)) return "IPv4-mapped";
+  return "Public (global unicast)";
+}
+function runSubnet6(input: string) {
+  const [ipPart, prefixPart] = input.split("/");
+  const ip = ip6ToBig((ipPart || "").trim());
+  if (ip === null) return show("subnet-out", "Enter an IPv6 address, with optional /prefix — e.g. 2001:db8:85a3::8a2e:370:7334/64");
+  const prefix = prefixPart !== undefined ? Number(prefixPart) : 64;
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > 128) return show("subnet-out", "Prefix must be 0–128.");
+  const hostBits = BigInt(128 - prefix);
+  const mask = ((1n << 128n) - 1n) ^ ((1n << hostBits) - 1n);
+  const network = ip & mask;
+  const last = network | ((1n << hostBits) - 1n);
+  const result: any = {
+    address: bigToIp6(ip), class: classifyIp6(ip), prefix: `/${prefix}`,
+    netmask: bigToIp6(mask),
+    networkAddress: bigToIp6(network), lastAddress: bigToIp6(last),
+    // 2^128 is far past Number's exact range, so the count travels as text.
+    totalAddresses: (1n << hostBits).toString(),
+    firstUsable: bigToIp6(network), lastUsable: bigToIp6(last),
+    binary: ip.toString(2).padStart(128, "0").replace(/(.{16})(?=.)/g, "$1."),
+    asHex: "0x" + ip.toString(16).padStart(32, "0"),
+  };
+  show("subnet-out", result);
+  emitReport("subnet", `Subnet math: ${input}`, result);
+}
 function runSubnet() {
   const input = val("subnet-input").trim();
+  if (input.includes(":")) return runSubnet6(input);
   const [ipPart, prefixPart] = input.split("/");
   const ip = ipToInt((ipPart || "").trim());
   if (ip === null) return show("subnet-out", "Enter an IPv4 address, with optional /prefix — e.g. 192.168.1.10/24");
