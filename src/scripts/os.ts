@@ -1082,7 +1082,61 @@ function updateEmconChip() {
 }
 
 /* ---------------- boot ---------------- */
+/* ————— the live wire: the OS keeps itself current —————
+   Every build stamps /version.json with the OS chunk it produced. The
+   running OS checks that stamp (never cached) shortly after boot, every
+   45 seconds, and whenever the tab comes back into view. When the stamp
+   names a newer chunk than the one running, this window says so and
+   reloads onto the new build. The guards matter as much as the push: a
+   missing or unreadable stamp means silence, an unidentified running
+   build means silence, and a version this session already chased is not
+   chased again for ten minutes — a deployment still rolling across the
+   edge can never reload-loop a visitor. */
+const UPDATE_ATTEMPT_KEY = "blacksite-update-attempt";
+function startUpdateWatch(): void {
+  const baseName = (u: string) => { try { return new URL(u).pathname.split("/").pop() || ""; } catch { return ""; } };
+  const CHUNK_RE = /^os\.[A-Za-z0-9_-]+\.js$/;
+  let mine = baseName(import.meta.url);
+  if (!CHUNK_RE.test(mine)) {
+    for (const e of performance.getEntriesByType("resource")) {
+      const b = baseName(e.name);
+      if (CHUNK_RE.test(b)) { mine = b; break; }
+    }
+  }
+  if (!CHUNK_RE.test(mine)) return; // this build cannot name itself — stay silent
+  let taking = false;
+  const check = async () => {
+    if (taking || document.hidden) return;
+    let theirs = "";
+    try {
+      const r = await fetch(`/version.json?cb=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) return;
+      const v = (await r.json()) as { chunk?: unknown };
+      theirs = typeof v.chunk === "string" ? v.chunk : "";
+    } catch { return; }
+    if (!theirs || theirs === mine) {
+      try { sessionStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch { /* storage denied */ }
+      return;
+    }
+    try {
+      const prev = JSON.parse(sessionStorage.getItem(UPDATE_ATTEMPT_KEY) || "null") as { chunk: string; at: number } | null;
+      if (prev && prev.chunk === theirs && Date.now() - prev.at < 10 * 60 * 1000) return;
+      sessionStorage.setItem(UPDATE_ATTEMPT_KEY, JSON.stringify({ chunk: theirs, at: Date.now() }));
+    } catch { /* attempts unkept — the update is still taken, once per page */ }
+    taking = true;
+    const bar = document.createElement("div");
+    bar.className = "os-update-bar";
+    bar.textContent = "BLACKSITE has been updated — reloading onto the new build…";
+    document.body.appendChild(bar);
+    setTimeout(() => location.reload(), 3500);
+  };
+  setTimeout(() => void check(), 20000);
+  setInterval(() => void check(), 45000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) void check(); });
+}
+
 function boot() {
+  startUpdateWatch();
   sweepNestKeys();
   registerCoreVerbs();
   registerWireVerbs();
