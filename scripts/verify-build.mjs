@@ -198,7 +198,7 @@ assert.ok(ircSrc.includes("purgeLines"), "A GuardianAngel removal must purge the
 assert.ok(!ircSrc.includes("setGuardian"), "GuardianAngel has no off switch — it stays on (house ruling)");
 assert.ok(!ircSrc.includes("[link removed]"), "GuardianAngel carries no text: links are cut, not labelled");
 assert.ok(!ircSrc.includes("GuardianAngel warned"), "GuardianAngel never announces itself in the room");
-assert.ok(astroJs.includes("the room remembers its last day now"), "The pinned dev note must carry the current developer message in the served bundle");
+assert.ok(astroJs.includes("happy halloween hackerz!"), "The pinned dev note must carry the current developer message in the served bundle");
 // Relay room memory (Chase, 2026-10-25): the bridge holds the room's
 // recent lines in a mutable, expiring memory (KV) and replays them to
 // any joining device — nobody is a ghost for speaking from another

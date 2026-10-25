@@ -207,7 +207,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      A topic-of-the-day bar for developer messages: it ships with the
      build, so what it says is always true of the build you are looking
      at, and it never scrolls away with the conversation. */
-  const DEV_NOTE = "the room remembers its last day now — join from any device and the conversation is there. no hard refresh needed; the os updates itself. /wipe takes back only what you yourself said.";
+  const DEV_NOTE = "happy halloween hackerz!";
   const noteEl = el("div", "os-relay-note");
   noteEl.append(el("span", "os-relay-note-tag", "dev note · pinned"), document.createTextNode(DEV_NOTE));
 

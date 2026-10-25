@@ -1148,9 +1148,11 @@ function updateEmconChip() {
    chased again for ten minutes — a deployment still rolling across the
    edge can never reload-loop a visitor. */
 const UPDATE_ATTEMPT_KEY = "blacksite-update-attempt";
-function startUpdateWatch(): void {
+const CHUNK_RE = /^os\.[A-Za-z0-9_-]+\.js$/;
+/* The running build names its own chunk the same way a probe would:
+   from this module's URL, falling back to the resource timeline. */
+function ownChunk(): string {
   const baseName = (u: string) => { try { return new URL(u).pathname.split("/").pop() || ""; } catch { return ""; } };
-  const CHUNK_RE = /^os\.[A-Za-z0-9_-]+\.js$/;
   let mine = baseName(import.meta.url);
   if (!CHUNK_RE.test(mine)) {
     for (const e of performance.getEntriesByType("resource")) {
@@ -1158,7 +1160,55 @@ function startUpdateWatch(): void {
       if (CHUNK_RE.test(b)) { mine = b; break; }
     }
   }
-  if (!CHUNK_RE.test(mine)) return; // this build cannot name itself — stay silent
+  return CHUNK_RE.test(mine) ? mine : "";
+}
+
+/* ————— the build plate —————
+   Bare text on the desktop, top-right: which build this is, when it was
+   built, and how long this session has been up. No box, no border, no
+   pointer — it is there to be read, never clicked. It renders at once
+   with the running chunk and the session clock; the version and built
+   lines fill in from the update watcher's own /version.json reads, so
+   the plate never fetches anything itself. */
+let buildPlateEl: HTMLElement | null = null;
+let buildPlateSessionEl: HTMLElement | null = null;
+function fmtSessionClock(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+function mountBuildPlate(): void {
+  if (buildPlateEl) return;
+  const plate = el("div", "os-build-plate");
+  plate.setAttribute("aria-hidden", "true");
+  const mine = ownChunk();
+  if (mine) plate.append(el("div", "", `build ${mine}`));
+  buildPlateSessionEl = el("div", "", `session ${fmtSessionClock(Date.now() - BOOT_AT)}`);
+  plate.append(buildPlateSessionEl);
+  desktop().appendChild(plate);
+  buildPlateEl = plate;
+  setInterval(() => {
+    if (buildPlateSessionEl) buildPlateSessionEl.textContent = `session ${fmtSessionClock(Date.now() - BOOT_AT)}`;
+  }, 1000);
+}
+function renderBuildPlate(v: { version?: unknown; chunk?: unknown; built?: unknown }): void {
+  mountBuildPlate();
+  if (!buildPlateEl || !buildPlateSessionEl) return;
+  buildPlateEl.replaceChildren();
+  if (typeof v.version === "string" && v.version) buildPlateEl.append(el("div", "", `version ${v.version}`));
+  if (typeof v.chunk === "string" && v.chunk) buildPlateEl.append(el("div", "", `build ${v.chunk}`));
+  if (typeof v.built === "string" && v.built) {
+    const d = new Date(v.built);
+    if (!Number.isNaN(d.getTime())) buildPlateEl.append(el("div", "", `built ${d.toISOString().replace("T", " ").slice(0, 19)} UTC`));
+  }
+  buildPlateEl.append(buildPlateSessionEl);
+}
+
+function startUpdateWatch(): void {
+  const mine = ownChunk();
+  if (!mine) return; // this build cannot name itself — stay silent
   let taking = false;
   const check = async () => {
     if (taking || document.hidden) return;
@@ -1166,7 +1216,8 @@ function startUpdateWatch(): void {
     try {
       const r = await fetch(`/version.json?cb=${Date.now()}`, { cache: "no-store" });
       if (!r.ok) return;
-      const v = (await r.json()) as { chunk?: unknown };
+      const v = (await r.json()) as { chunk?: unknown; version?: unknown; built?: unknown };
+      renderBuildPlate(v);
       theirs = typeof v.chunk === "string" ? v.chunk : "";
     } catch { return; }
     if (!theirs || theirs === mine) {
@@ -1192,6 +1243,7 @@ function startUpdateWatch(): void {
 
 function boot() {
   startUpdateWatch();
+  mountBuildPlate();
   sweepNestKeys();
   registerCoreVerbs();
   registerWireVerbs();
