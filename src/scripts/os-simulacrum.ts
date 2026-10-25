@@ -262,17 +262,29 @@ void main() {
   float md = max(dot(d, normalize(uMoonDir)), 0.0);
   c += vec3(0.82, 0.88, 1.0) * (pow(md, 900.0) * 1.35 + pow(md, 60.0) * 0.05 + pow(md, 8.0) * 0.045) * uNight;
   if (uNight > 0.02 && d.y > 0.0) {
-    vec2 sp = floor(d.xz / max(0.035, d.y) * 14.0);
-    float st = step(0.9975, hash21(sp)) * uNight;
-    vec3 starCol = mix(vec3(0.72, 0.84, 1.0), vec3(1.0, 0.88, 0.72), hash21(sp + 3.0));
-    c += starCol * st * (0.55 + 0.45 * sin(uNight * 40.0 + hash21(sp + 7.0) * 20.0));
+    /* stars are points, not cells: a lit cell shows a small round
+       star at its heart, and the whole field bows out at the
+       zenith, where this projection stretches cells into squares */
+    vec2 sp = d.xz / max(0.035, d.y) * 14.0;
+    vec2 cell = floor(sp);
+    vec2 cf = fract(sp) - 0.5;
+    float on = step(0.9975, hash21(cell));
+    float disc = smoothstep(0.42, 0.08, length(cf));
+    float poleFade = 1.0 - smoothstep(0.88, 0.99, d.y);
+    vec3 starCol = mix(vec3(0.72, 0.84, 1.0), vec3(1.0, 0.88, 0.72), hash21(cell + 3.0));
+    c += starCol * on * disc * poleFade * uNight * (0.55 + 0.45 * sin(uNight * 40.0 + hash21(cell + 7.0) * 20.0));
   }
   if (uNight > 0.05 && d.y > -0.05) {
-    /* the galactic band: a faint nebula river across the night */
+    /* the galactic band: a faint nebula river across the night —
+       sampled on the direction's own circle, so there is no
+       azimuth seam, and faded at the zenith, where it used to
+       gather into a pinwheel */
     float gb = exp(-pow((d.y - 0.30) * 2.0, 2.0));
-    float neb = fbm2(vec2(atan(d.z, d.x) * 2.6 + 4.0, d.y * 7.0));
+    vec2 nb = d.xz / max(0.22, length(d.xz));
+    float neb = fbm2(nb * 2.3 + vec2(0.0, d.y * 7.0));
     vec3 nebCol = mix(vec3(0.16, 0.08, 0.30), vec3(0.05, 0.25, 0.30), neb);
-    c += nebCol * gb * smoothstep(0.45, 0.85, neb) * uNight * 0.5;
+    float nebFade = 1.0 - smoothstep(0.80, 0.96, d.y);
+    c += nebCol * gb * smoothstep(0.45, 0.85, neb) * uNight * 0.5 * nebFade;
   }
   if (uNight > 0.25 && d.y > 0.03) {
     float band = exp(-pow((d.y - 0.40) * 3.1, 2.0));
@@ -284,7 +296,7 @@ void main() {
   if (d.y > 0.015) {
     vec2 cuv = d.xz / (d.y + 0.22);
     float cl = fbm2(cuv * 1.15 + vec2(uTime * 0.006, uTime * 0.0016));
-    float cov = smoothstep(1.05 - uCover, 1.30 - uCover, cl) * smoothstep(0.015, 0.14, d.y);
+    float cov = smoothstep(1.05 - uCover, 1.30 - uCover, cl) * smoothstep(0.015, 0.14, d.y) * (1.0 - smoothstep(0.88, 0.99, d.y));
     float sunAmt = pow(s, 3.0);
     vec3 cloudCol = mix(vec3(0.34, 0.38, 0.46), vec3(1.03, 1.0, 0.97), clamp(0.35 + sunAmt + (1.0 - uGloom) * 0.3, 0.0, 1.0));
     cloudCol *= (1.0 - uGloom * 0.45);
