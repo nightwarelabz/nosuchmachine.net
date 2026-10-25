@@ -672,6 +672,15 @@ export function buildBloodbath(body: HTMLElement) {
       o.connect(g); o2.connect(g2); g2.connect(g);
       o.start(t); o2.start(t); o.stop(t + 3.5); o2.stop(t + 3.5);
     },
+    /* the window is gone: leave nothing sounding behind */
+    shutdown() {
+      if (!this.ctx) return;
+      if (this.droneNodes) { try { this.droneNodes.stop(); } catch { /* already still */ } this.droneNodes = null; }
+      this.delaySend = null;
+      const c = this.ctx;
+      this.ctx = null;
+      void c.close().catch(() => { /* the context is already closed */ });
+    },
   };
 
   /* ————— voices of the pit ————— */
@@ -1126,7 +1135,7 @@ export function buildBloodbath(body: HTMLElement) {
   let lastT = performance.now();
   const frame = () => {
     requestAnimationFrame(frame);
-    if (!wrap.isConnected) return;
+    if (!wrap.isConnected) { audio.shutdown(); return; }
     const now = performance.now();
     const nowS = now / 1000;
     const dt = Math.min(0.05, (now - lastT) / 1000);
