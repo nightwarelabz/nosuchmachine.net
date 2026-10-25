@@ -2987,13 +2987,25 @@ export function buildSimulacrum(body: HTMLElement) {
      world and counted plainly in the menu. (The world's own
      account of the walker is a different matter, and is never
      numbered.) */
-  const deeds: { chunks: string[]; strange: string[]; spirit: number } = (() => {
-    try { const d = JSON.parse(localStorage.getItem(skey(`simulacrum-deeds-${seed}`)) || "{}"); return { chunks: Array.isArray(d.chunks) ? d.chunks : [], strange: Array.isArray(d.strange) ? d.strange : [], spirit: typeof d.spirit === "number" ? d.spirit : 0 }; }
-    catch { return { chunks: [], strange: [], spirit: 0 }; }
+  const deeds: { chunks: string[]; strange: string[]; spirit: number; offered: number; found: number } = (() => {
+    try { const d = JSON.parse(localStorage.getItem(skey(`simulacrum-deeds-${seed}`)) || "{}"); return { chunks: Array.isArray(d.chunks) ? d.chunks : [], strange: Array.isArray(d.strange) ? d.strange : [], spirit: typeof d.spirit === "number" ? d.spirit : 0, offered: typeof d.offered === "number" ? d.offered : 0, found: typeof d.found === "number" ? d.found : 0 }; }
+    catch { return { chunks: [], strange: [], spirit: 0, offered: 0, found: 0 }; }
   })();
   const saveDeeds = () => { try { localStorage.setItem(skey(`simulacrum-deeds-${seed}`), JSON.stringify(deeds)); } catch { /* the record is kept in memory */ } };
   let lastTendAt = 0;
   const WONDER_NAMES = ["the titan arch", "the standing ring", "the world spike", "the ribcage", "the first garden", "the three sisters"];
+  /* the strangeness log: what has been witnessed, by name, in the
+     world's own sideways language. What has not been seen is not
+     written — the log is a diary, not a checklist. */
+  const STRANGE_LOG: Record<string, [string, string]> = {
+    hush: ["the hush", "the listening"], stutter: ["the stutter", "the day, caught on something"],
+    echo: ["the echo", "steps come back wrong"], chroma: ["the chroma", "the wrong colour of light"],
+    glass: ["the glass sea", "the sea gone to glass"], rainup: ["the rising rain", "rain that forgot how to fall"],
+    bell: ["the bell", "a bell, from no tower"], star: ["the moved star", "that one is not fixed"],
+    procession: ["the procession", "lights where no road is"], secondsun: ["the second sun", "there were two"],
+    stone: ["the stone", "it was not there yesterday"], stretch: ["the stretch", "the world breathing in"],
+    murmur: ["the murmur", "your name, almost"], visitor: ["the visitor", "it did not stop"],
+  };
   const renderRecord = () => {
     const w = WONDER_NAMES.filter((n) => foundSet.has(n)).length;
     recordEl.replaceChildren(
@@ -3001,9 +3013,12 @@ export function buildSimulacrum(body: HTMLElement) {
       el("div", "os-note", `the home field walked · ${deeds.chunks.length} of 49`),
       el("div", "os-note", `places found · ${foundSet.size}`),
       el("div", "os-note", `strangenesses witnessed · ${deeds.strange.length}`),
+      ...deeds.strange.filter((k) => STRANGE_LOG[k]).map((k) => el("div", "os-note", `· ${STRANGE_LOG[k][0]} — ${STRANGE_LOG[k][1]}`)),
       el("div", "os-note", `blooms planted · ${blooms.length}`),
       el("div", "os-note", `land shaped · ${edits.size} places`),
       ...(deeds.spirit > 0 ? [el("div", "os-note", `a spirit of light · seen ${deeds.spirit} ${deeds.spirit === 1 ? "time" : "times"}`)] : []),
+      ...(deeds.offered > 0 ? [el("div", "os-note", `lights left for strangers · ${deeds.offered}`)] : []),
+      ...(deeds.found > 0 ? [el("div", "os-note", `lights found from strangers · ${deeds.found}`)] : []),
     );
   };
   const checkDiscoveries = () => {
@@ -3035,6 +3050,7 @@ export function buildSimulacrum(body: HTMLElement) {
     try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* private mode */ }
     rebuildAllBlooms();
     audio.chime(2);
+    if (netPhase === "on") { deeds.offered++; saveDeeds(); }
   };
   const castBloom = () => {
     if (!ready("bloom", 2)) return;
@@ -3233,6 +3249,7 @@ export function buildSimulacrum(body: HTMLElement) {
           for (let i = 0; i < 7; i++) guestBlooms.push({ x: bx + (rndB() - 0.5) * 5, z: bz + (rndB() - 0.5) * 5, kind: Math.floor(rndB() * 4) });
           if (guestBlooms.length > 260) guestBlooms = guestBlooms.slice(-260);
           rebuildAllBlooms();
+          deeds.found++; saveDeeds();
           tow.burst(bx, height(bx, bz) + 0.5, bz, { n: 14, col: [0.98, 0.62, 0.78], spd: 1.6, up: 2.6, grav: -2.2, drag: 1.1, life: 1.5, size: 2.2 });
         }
         return;
