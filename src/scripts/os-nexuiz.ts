@@ -29,12 +29,14 @@
  */
 import { skey } from "./os-depth";
 
-/* The house bridge address (wss) lands here when thisissparta2!
- * opens to the web — one constant, on purpose. Empty means the
- * public bridge is not published yet. A per-browser override can be
- * set in local storage under blacksite-nexuiz-bridge (the seam the
- * bridge's own contract reserves). */
-const HOUSE_BRIDGE = "";
+/* The house bridge address (wss) — one constant, on purpose.
+ * This is the public door to thisissparta2!: the Tailscale Funnel
+ * endpoint on the host Mac, TLS-terminated, proxying the bridge
+ * that pipes the browser session to the room's server. A
+ * per-browser override can be set in local storage under
+ * blacksite-nexuiz-bridge (the seam the bridge's own contract
+ * reserves). */
+const HOUSE_BRIDGE = "wss://chases-macbook-air-1.taildc9dec.ts.net";
 
 function bridgeUrl(): string {
   try {
