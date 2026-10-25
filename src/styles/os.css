@@ -604,3 +604,11 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
   .os-wy-dialog { bottom: 10px; }
   .os-wy-compass { width: 210px; }
 }
+.os-wy-canvas { touch-action: none; }
+.os-wy-touch { position: absolute; inset: 0; pointer-events: none; z-index: 4; visibility: hidden; }
+.os-wy-stick { position: absolute; left: 18px; bottom: 158px; width: 106px; height: 106px; border-radius: 50%; border: 1px solid rgba(216,180,106,0.45); background: rgba(10,10,14,0.32); pointer-events: auto; touch-action: none; }
+.os-wy-stick-dot { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%; background: rgba(216,180,106,0.35); border: 1px solid rgba(216,180,106,0.6); }
+.os-wy-tbtns { position: absolute; right: 14px; bottom: 158px; display: grid; grid-template-columns: 62px 62px; gap: 8px; pointer-events: none; }
+.os-wy-tbtn { height: 54px; border-radius: 12px; background: rgba(10,10,14,0.5); border: 1px solid rgba(216,180,106,0.45); color: #ecdfba; font-family: inherit; font-size: 12.5px; pointer-events: auto; touch-action: none; }
+.os-wy-tbtn.big { grid-column: span 2; height: 46px; }
+.os-wy-tbtn:active { background: rgba(216,180,106,0.30); }
