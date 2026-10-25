@@ -10,7 +10,7 @@ import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
 import { buildWolf3d } from "./os-wolf3d";
-import { buildNexuiz } from "./os-nexuiz";
+import { buildNexuiz, nexuizStageFullscreen } from "./os-nexuiz";
 import { buildOrc } from "./os-orc";
 import { buildSimulacrum } from "./os-simulacrum";
 import { buildBloodbath } from "./os-bloodbath";
@@ -173,7 +173,7 @@ export function openApp(app: string, arg?: string) {
   sub?.noteOpen(app);
   const key = app === "editor" ? `editor:${arg || ""}` : app;
   const existing = windows.get(key);
-  if (existing) { focusWindow(existing); const body = existing.querySelector<HTMLElement>(".os-win-body"); body?.dispatchEvent(new CustomEvent("os:focus-arg", { detail: arg })); return; }
+  if (existing) { focusWindow(existing); const body = existing.querySelector<HTMLElement>(".os-win-body"); if (app === "nexuiz" && body) nexuizStageFullscreen(body); body?.dispatchEvent(new CustomEvent("os:focus-arg", { detail: arg })); return; }
   const win = el("section", "os-window");
   win.dataset.app = app;
   win.style.zIndex = String(++zTop);
@@ -210,6 +210,9 @@ export function openApp(app: string, arg?: string) {
   win.classList.add("os-win-in");
   focusWindow(win);
   serveBuild(app, body, arg);
+  /* the nexuiz room opens onto the whole screen — the click that
+     opened it is the gesture; see nexuizStageFullscreen. */
+  if (app === "nexuiz") nexuizStageFullscreen(body);
   saveSession();
 }
 /* The mobile bar has no room for a button per window: one button

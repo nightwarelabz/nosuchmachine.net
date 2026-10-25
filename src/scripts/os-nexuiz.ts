@@ -68,6 +68,21 @@ function touchFirst(): boolean {
   }
 }
 
+/* Opening the room takes the whole screen. The click that opens
+ * the window is the gesture fullscreen asks for, and the builder
+ * runs inside it; the OS open path calls this too, for a room
+ * that was prepared ahead of the click (built at idle, when no
+ * gesture stands) and for a window that already stands. Any
+ * refusal — a session restored without a click, a browser that
+ * wants its own say — leaves the window exactly as opened:
+ * fullscreen is a welcome, never a gate. A touch-first stage
+ * (data-touch) never asks: its note is not a game to enlarge. */
+export function nexuizStageFullscreen(body: HTMLElement) {
+  const stage = body.querySelector<HTMLElement>(".os-nexuiz-stage");
+  if (!stage || stage.dataset.touch || document.fullscreenElement === stage) return;
+  try { void stage.requestFullscreen?.().catch(() => undefined); } catch { /* the window stands */ }
+}
+
 function relayName(): string {
   try {
     const raw = localStorage.getItem(skey("blacksite-relay-v2"));
@@ -96,6 +111,7 @@ export function buildNexuiz(body: HTMLElement) {
   notice0.setAttribute("target", "_blank");
   notice0.setAttribute("rel", "noreferrer");
   if (touchFirst()) {
+    stage.dataset.touch = "1";
     bar.appendChild(notice0);
     const plateNote = el("p", "os-note", "nexuiz is played with a keyboard and a mouse — this screen is touch-first, and there are no touch controls. open the site on a laptop or desktop and the table is yours.");
     plateNote.style.padding = "18px 14px";
@@ -172,10 +188,19 @@ export function buildNexuiz(body: HTMLElement) {
     }
   };
   window.addEventListener("message", onMsg);
+  /* The frame cannot see the parent's fullscreen state, so the
+   * stage tells it: the play page refits its canvas to the new
+   * size, so the game takes the whole display (play.js). */
+  const tellFs = () => {
+    try { frame.contentWindow?.postMessage({ from: "house", type: "fullscreen", on: document.fullscreenElement === stage }, location.origin); } catch { /* no frame, no word */ }
+  };
+  document.addEventListener("fullscreenchange", tellFs);
+  frame.addEventListener("load", tellFs);
   const obs = new MutationObserver(() => {
     if (!document.body.contains(wrap)) {
       obs.disconnect();
       window.removeEventListener("message", onMsg);
+      document.removeEventListener("fullscreenchange", tellFs);
       frame.src = "about:blank";
     }
   });
@@ -186,4 +211,5 @@ export function buildNexuiz(body: HTMLElement) {
   } else {
     deal("menu", "the game's own menu. single player ladder, create a match, options — as shipped in 2009.");
   }
+  nexuizStageFullscreen(body);
 }
