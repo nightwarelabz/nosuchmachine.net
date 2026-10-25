@@ -168,6 +168,14 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     card.hidden = false;
   };
 
+  /* ————— the dev note — pinned at the top of the chat —————
+     A topic-of-the-day bar for developer messages: it ships with the
+     build, so what it says is always true of the build you are looking
+     at, and it never scrolls away with the conversation. */
+  const DEV_NOTE = "hard refresh to check chat if chat works. added persistence to the chat";
+  const noteEl = el("div", "os-relay-note");
+  noteEl.append(el("span", "os-relay-note-tag", "dev note · pinned"), document.createTextNode(DEV_NOTE));
+
   /* ————— session view ————— */
   const view = el("div", "os-relay-view");
   const targetsEl = el("div", "os-relay-targets");
@@ -203,6 +211,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   main.append(linesEl, inputRow);
   const usersEl = el("div", "os-relay-users");
   view.append(targetsEl, main, usersEl);
+  wrap.appendChild(noteEl);
   wrap.appendChild(view);
   body.appendChild(wrap);
 
