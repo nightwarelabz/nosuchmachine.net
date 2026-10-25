@@ -275,6 +275,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   let attempts = 0;
   let keepalive: ReturnType<typeof setInterval> | null = null;
   let capFallback: ReturnType<typeof setTimeout> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let wireHost = "";
   let wirePort = 6697;
   let wireClaim = "";
@@ -369,7 +370,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     } catch { /* private modes keep nothing — the visit only, as before */ }
   };
   const scheduleSave = () => { if (!saveTimer) saveTimer = setTimeout(saveLog, 250); };
-  window.addEventListener("pagehide", () => { if (saveTimer) { clearTimeout(saveTimer); saveLog(); } });
+  const onPageHide = () => { if (saveTimer) { clearTimeout(saveTimer); saveLog(); } };
+  window.addEventListener("pagehide", onPageHide);
   const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]>; roster: Record<string, Record<string, { s: string; l: number }>>; away: string } | null => {
     try {
       const raw = localStorage.getItem(skey(RELAY_LOG_KEY));
@@ -623,7 +625,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const bump = () => { lastAct = Date.now(); if (presence === "idle") setPresence("here"); };
   window.addEventListener("keydown", bump, { passive: true });
   window.addEventListener("pointerdown", bump, { passive: true });
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) bump(); });
+  const onVis = () => { if (!document.hidden) bump(); };
+  document.addEventListener("visibilitychange", onVis);
   const IDLE_MS = 4 * 60_000;
   const idleWatch = setInterval(() => { if (presence === "here" && Date.now() - lastAct > IDLE_MS) setPresence("idle"); }, 15_000);
   /* OFTC has no away-notify: the room's states are read by WHO — once
@@ -971,7 +974,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       attempts += 1;
       const wait = Math.min(2000 * 2 ** (attempts - 1), 20000);
       push("server", `— the wire dropped. Stepping back on in ${Math.round(wait / 1000)}s — your place in the room is kept.`);
-      setTimeout(() => { if (!intentionalClose) openWire(); }, wait);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => { reconnectTimer = null; if (!intentionalClose) openWire(); }, wait);
     });
     ws.addEventListener("error", () => push("server", "— bridge hiccup; the rejoin below covers it"));
   };
@@ -1004,15 +1008,32 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   if (restored && restored.current && buffers.has(restored.current)) selectTarget(restored.current);
 
   /* Closing the window leaves the wire — no ghost sessions idling in the
-     room after the operator has gone. */
+     room after the operator has gone. The teardown is TOTAL, and it is
+     the only door out: every listener this instance put on window or
+     document comes off (a dead room must not keep answering keys and
+     touches, stacking one ghost per opening), every watch and timer
+     stops — including a pending reconnect, which must never be able
+     to resurrect the wire behind a closed window — the kept log is
+     flushed, and the socket closes. Reopening builds a fresh
+     instance that starts clean. */
+  const teardown = () => {
+    window.removeEventListener("keydown", bump);
+    window.removeEventListener("pointerdown", bump);
+    document.removeEventListener("visibilitychange", onVis);
+    window.removeEventListener("pagehide", onPageHide);
+    clearInterval(idleWatch);
+    clearInterval(whoWatch);
+    if (keepalive) { clearInterval(keepalive); keepalive = null; }
+    if (capFallback) { clearTimeout(capFallback); capFallback = null; }
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveLog(); }
+    intentionalClose = true;
+    try { ws?.close(); } catch { /* already gone */ }
+  };
   const ghostWatch = setInterval(() => {
     if (!document.body.contains(wrap)) {
       clearInterval(ghostWatch);
-      clearInterval(idleWatch);
-      clearInterval(whoWatch);
-      intentionalClose = true;
-      if (keepalive) clearInterval(keepalive);
-      try { ws?.close(); } catch { /* already gone */ }
+      teardown();
     }
   }, 2000);
 

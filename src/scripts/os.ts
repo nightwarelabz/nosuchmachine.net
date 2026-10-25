@@ -153,7 +153,15 @@ function serveBuild(app: string, body: HTMLElement, arg?: string) {
   catch {
     sub?.noteScar();
     body.replaceChildren();
-    try { BUILDERS[app]?.(body, arg); } catch { /* an empty window, not a fallen desk */ }
+    try { BUILDERS[app]?.(body, arg); }
+    catch (e: any) {
+      /* the retry faltered too — the window says so, in itself,
+         instead of standing empty and silent about why. */
+      const plate = el("div", "os-note");
+      plate.style.padding = "1.2rem";
+      plate.textContent = `this room would not build: ${e?.message || e} — the desk stands; the failure is this window's alone. close it and open it again, and if it persists the journal holds the hour.`;
+      body.replaceChildren(plate);
+    }
   }
 }
 export function openApp(app: string, arg?: string) {
@@ -277,7 +285,20 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   if (APPS[app]) btn.append(iconEl(APPS[app].icon, "os-task-icon"));
   btn.append(document.createTextNode(title));
   btn.dataset.task = key;
-  btn.addEventListener("click", () => { win.style.display = win.style.display === "none" ? "" : win.style.display; focusWindow(win); });
+  btn.addEventListener("click", () => {
+    // the taskbar button is a toggle, like every desk's: clicking the
+    // FOCUSED window's button puts it away (the same fall the title
+    // bar's minimize gives it); clicking any other window's button —
+    // or a hidden one's — brings it forward.
+    if (win.classList.contains("focused") && win.style.display !== "none") {
+      sfx("min");
+      if (REDUCED) { win.style.display = "none"; saveSession(); return; }
+      win.classList.add("os-win-min");
+      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130);
+      return;
+    }
+    focusWindow(win);
+  });
   bar.appendChild(btn);
   syncWinMenu();
 }
@@ -392,9 +413,18 @@ function buildTerminal(body: HTMLElement) {
   };
   io.print("BLACKSITE OS — web edition. `help` for the 427, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
   io.print("doctrine: one knock, read, grade. public targets only.", "dim");
-  // the launcher (start button / Ctrl-K) can hand this terminal a line to run
+  // the launcher (start button / Ctrl-K) can hand this terminal a line
+  // to run — and exactly ONE terminal answers: the one standing in a
+  // window. Every terminal ever built keeps a listener on the
+  // document; a room prepared ahead in the cache (its body rides the
+  // document, connected, in the subcache) or one already closed would
+  // otherwise run the line too, in the dark. A terminal speaks for
+  // the desk only while its input stands inside a window, and the
+  // line itself is claimed by the first rightful speaker.
   document.addEventListener("blacksite:run", async (e) => {
-    if (!body.isConnected) return;
+    if (!input.isConnected || !input.closest(".os-window")) return;
+    if ((e as CustomEvent & { _claimed?: boolean })._claimed) return;
+    (e as CustomEvent & { _claimed?: boolean })._claimed = true;
     const cmd = (e as CustomEvent).detail as string;
     if (!cmd) return;
     io.print(`${prompt.textContent}${cmd}`, "cmd");
@@ -483,7 +513,13 @@ function buildFiles(body: HTMLElement) {
         const bytes = os.readBytes(path);
         if (!bytes) { preview.textContent = "could not read that file."; return; }
         const id = identifyFile(bytes, name);
-        const head = id.kind === "text" ? tdDecode(bytes.slice(0, 1200)) : hexdump(bytes.slice(0, 128), 0);
+        // the parser's text verdicts carry names — "Plain text",
+        // "JSON", "XML document", "Script (shebang)" — never the bare
+        // word "text"; and hexdump's second argument is a byte CAP,
+        // not an offset. The old pair of mistakes (kind === "text",
+        // cap 0) left this head empty for every file in the room.
+        const isText = /text|json|xml|script/i.test(id.kind);
+        const head = isText ? tdDecode(bytes.slice(0, 1200)) : hexdump(bytes.slice(0, 128));
         preview.textContent = `${name} — ${id.summary} · ${bytes.length} bytes\n\n${head}`;
       });
       const actions = el("span", "os-file-actions");
@@ -491,7 +527,15 @@ function buildFiles(body: HTMLElement) {
         const dl = el("button", "os-btn small", "download");
         dl.addEventListener("click", (e) => { e.stopPropagation(); downloadFile(path); });
         const run = el("button", "os-btn small", "run");
-        run.addEventListener("click", (e) => { e.stopPropagation(); openApp("terminal"); void execLine(os, `run ${path}`, termIO(body)); });
+        run.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // the output lands in THIS window's preview pane — the
+          // operator pressed run here. (It used to be handed to an io
+          // that printed to the devtools console, where nobody in the
+          // room could see a word of it.)
+          preview.textContent = `$ run ${path}\n`;
+          void execLine(os, `run ${path}`, filesRunIO(preview));
+        });
         actions.append(dl, run);
       }
       const del = el("button", "os-btn small danger", "delete");
@@ -521,8 +565,13 @@ function buildFiles(body: HTMLElement) {
   body.addEventListener("os:focus-arg", ((e: CustomEvent) => { if (e.detail === "import") fileInput.click(); }) as EventListener);
   render();
 }
-function termIO(_body: HTMLElement): ShellIO {
-  return { print: (t, cls) => console.log(`[blacksite] ${t} ${cls || ""}`), clear: () => undefined, openApp: (a, arg) => openApp(a, arg), setWallpaper, setTheme: applyTheme };
+function filesRunIO(preview: HTMLElement): ShellIO {
+  return {
+    print: (t) => { preview.textContent += (preview.textContent && !preview.textContent.endsWith("\n") ? "\n" : "") + t + "\n"; preview.scrollTop = preview.scrollHeight; },
+    clear: () => { preview.textContent = ""; },
+    openApp: (a, arg) => openApp(a, arg),
+    setWallpaper, setTheme: applyTheme,
+  };
 }
 function downloadFile(path: string) {
   const bytes = os.readBytes(path);
@@ -549,7 +598,7 @@ function buildEditor(body: HTMLElement, arg?: string) {
   const setStatus = (extra = "") => { status.textContent = `${path} — ${mode.toUpperCase()}${dirty ? " [+]" : ""}${extra ? " · " + extra : ""}`; };
   setStatus("i for insert discipline · Esc normal · :w save · :q leave — vim manners, web-sized");
   area.addEventListener("input", () => { dirty = true; setStatus(); });
-  const save = () => { try { os.write(path, area.value); dirty = false; setStatus("written"); } catch (e: any) { setStatus(String(e?.message || e)); } };
+  const save = (): boolean => { try { os.write(path, area.value); dirty = false; setStatus("written"); return true; } catch (e: any) { setStatus(`write failed: ${e?.message || e} — nothing was saved, and the buffer is still here`); return false; } };
   const quit = () => { body.closest<HTMLElement>(".os-window")?.querySelector<HTMLButtonElement>(".os-win-close")?.click(); };
   area.addEventListener("keydown", (e) => {
     if (mode === "command") {
@@ -559,11 +608,17 @@ function buildEditor(body: HTMLElement, arg?: string) {
         commandLine = ""; mode = "normal";
         if (cmd === "w") save();
         else if (cmd === "q") { if (dirty) setStatus("unsaved — :q! to abandon"); else quit(); }
-        else if (cmd === "wq") { save(); quit(); }
+        // :wq quits only on a save that LANDED — a failed write keeps
+        // the editor open with the buffer intact and the reason in
+        // the status line. (It used to quit unconditionally, and the
+        // work went out with the window.)
+        else if (cmd === "wq") { if (save()) quit(); }
         else if (cmd === "q!") quit();
         else if (cmd.startsWith("w ")) { try { os.write(cmd.slice(2).trim(), area.value); dirty = false; setStatus("written"); } catch (err: any) { setStatus(String(err?.message || err)); } }
         else setStatus(`not a room command: :${cmd}`);
-        setStatus();
+        // no trailing setStatus() here: every branch above leaves the
+        // word it means in the status line — a blanket refresh after
+        // them wiped save's failure line the instant it was written.
       } else if (e.key === "Escape") { mode = "normal"; commandLine = ""; setStatus(); }
       else if (e.key === "Backspace") commandLine = commandLine.slice(0, -1);
       else if (e.key.length === 1) { commandLine += e.key; status.textContent = `:${commandLine}`; }

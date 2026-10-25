@@ -131,7 +131,7 @@ async function repoRoot(os: BlacksiteOS): Promise<string | null> {
 }
 
 export function registerGit(verb: (name: string, status: any, help: string, run: (ctx: CtxLike) => Promise<string | void>) => void) {
-  verb("git", "EDGE", "git <clone|init|status|log|add|commit|branch|checkout|remote|pull|push|config> — real git, in the room's own tree", async (ctx) => {
+  const runGit = async (ctx: CtxLike) => {
     const os: BlacksiteOS = ctx.os;
     const sub = ctx.args[0];
     const rest = ctx.args.slice(1);
@@ -173,7 +173,10 @@ export function registerGit(verb: (name: string, status: any, help: string, run:
     }
     if (sub === "init") {
       const dir = rest[0] ? os.norm(`${os.cwd}/${rest[0]}`) : os.cwd;
-      os.mkdir(dir);
+      // bare `git init` starts the repo in the cwd itself — which
+      // already exists, and os.mkdir refuses an existing path. Only a
+      // named target needs making.
+      if (!os.isDir(dir)) os.mkdir(dir);
       await git.init({ fs, dir });
       return `empty git repository in ${dir}/.git — the room keeps its history in the tree.`;
     }
@@ -249,5 +252,11 @@ export function registerGit(verb: (name: string, status: any, help: string, run:
       }
       default: return usage;
     }
-  });
+  };
+  // Every git operation runs as the room's own hand (withOwnOps): a
+  // clone or checkout writes a thousand files in a breath — AEGIS's
+  // bulk-mutation shape read wrong. Its cadence and entropy heuristics
+  // stand down for the room's own git; the signature checks (ransom
+  // names and texts, the decoy canaries) stay armed throughout.
+  verb("git", "EDGE", "git <clone|init|status|log|add|commit|branch|checkout|remote|pull|push|config> — real git, in the room's own tree", async (ctx) => ctx.os.withOwnOps(() => runGit(ctx)));
 }

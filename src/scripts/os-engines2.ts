@@ -330,7 +330,12 @@ export async function runWasm(bytes: Uint8Array, fnName: string, args: number[],
 /* ————————————————— Lua (Fengari) ————————————————— */
 let luaPromise: Promise<any> | null = null;
 function loadLua(): Promise<any> {
-  if (!luaPromise) luaPromise = loadScriptOnce("/vendor/fengari/fengari-web.js", "fengari");
+  if (!luaPromise) {
+    luaPromise = loadScriptOnce("/vendor/fengari/fengari-web.js", "fengari");
+    // a failed load must not brick the engine for the whole session:
+    // evict the rejection so the next run tries the wire again.
+    luaPromise.catch(() => { luaPromise = null; });
+  }
   return luaPromise;
 }
 export async function runLua(source: string, io: IO): Promise<void> {
@@ -362,6 +367,9 @@ function loadSql(): Promise<any> {
       const init = await loadScriptOnce("/vendor/sql.js/sql-wasm.js", "initSqlJs");
       return init({ locateFile: (f: string) => `/vendor/sql.js/${f}` });
     })();
+    // same eviction law as loadLua: a rejected load is retried next
+    // time, never served from the cache forever.
+    sqlPromise.catch(() => { sqlPromise = null; });
   }
   return sqlPromise;
 }
@@ -369,6 +377,7 @@ export async function runSql(dbBytes: Uint8Array | null, statements: string): Pr
   const SQL = await loadSql();
   const db = new SQL.Database(dbBytes ? dbBytes : undefined);
   const out: string[] = [];
+  let bytes: Uint8Array;
   try {
     const results = db.exec(statements);
     for (const r of results) {
@@ -380,8 +389,11 @@ export async function runSql(dbBytes: Uint8Array | null, statements: string): Pr
     const counts = db.getRowsModified?.() ?? 0;
     if (!results.length) out.push(counts ? `ok — ${counts} row(s) changed` : "ok");
   } finally {
-    const bytes = db.export() as Uint8Array;
+    // export + close on every path — but NEVER return from finally:
+    // a return there swallows the exec error whole, and a bad
+    // statement came back to the operator as a bland "ok".
+    bytes = db.export() as Uint8Array;
     db.close();
-    return { text: out.join("\n"), dbBytes: bytes };
   }
+  return { text: out.join("\n"), dbBytes: bytes! };
 }

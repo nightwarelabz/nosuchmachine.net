@@ -52,10 +52,30 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // The hall has a floor: at MAX_NEST the room stops framing and
   // says so, rather than melting the browser one mirror later.
   if (DEPTH >= MAX_NEST) {
-    const floor = el("p", "os-note", `the mirrors end here — ${MAX_NEST} nests deep is where physics collects. orc standalone starts fresh at the surface.`);
+    const floor = el("p", "os-note", `the mirrors end here — ${MAX_NEST} nests deep is where physics collects. there is no pane left to frame another page in — but the address bar is not dead: it drives THIS frame, and what you open replaces the room you are standing in (one mirror up, the desk is as you left it). orc standalone starts fresh at the surface.`);
     floor.style.padding = "1.2rem";
     wrap.append(hero, bar, floor);
     body.appendChild(wrap);
+    // The bar drives the frame this room itself stands in. House
+    // pages go direct; the wider web rides the lens — at this depth
+    // a bare cross-origin navigation dies on the ancestors' COEP
+    // wall, and the lens is the door that gets through.
+    let lensForcedFloor = false;
+    const navigateSelf = (raw: string) => {
+      let url = raw.trim();
+      if (!url) return;
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+        url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
+      }
+      addr.value = url;
+      let u: URL;
+      try { u = new URL(url); } catch { return; }
+      window.location.href = !lensForcedFloor && u.origin === window.location.origin ? url : `/lens?u=${encodeURIComponent(url)}`;
+    };
+    go.addEventListener("click", () => navigateSelf(addr.value));
+    lens.addEventListener("click", () => { lensForcedFloor = true; navigateSelf(addr.value); });
+    addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigateSelf(addr.value); e.stopPropagation(); });
+    if (arg) navigateSelf(arg);
     return;
   }
   // The frame's credentialless-ness is a property of the DOOR, not
