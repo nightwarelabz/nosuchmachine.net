@@ -29,11 +29,29 @@ const NETWORKS: Record<string, number[]> = {
    here — only its SHA-256; the client presents it as PASS nsm-claim:<code>
    before NICK, the bridge verifies and swallows that line, and the code
    never crosses to the network. Network-wide, NickServ registration is
-   the second lock; this lock guards every door this site opens. */
+   the second lock; this lock guards every door this site opens.
+   The comparison folds the FULL IRC nick special set first: brackets
+   and braces are legal nick characters, and RFC1459 casemapping pairs
+   { } | ~ with [ ] \ ^ — without the fold, chasebryan{ or
+   chasebryan[] walked straight past the gate and rendered in the room
+   as the house. The client twin (os-irc.ts isHouseName) folds the
+   identical way, so the courtesy check and the enforcement agree. */
 const PROTECTED = ["nightwarelabz", "nosuchmachine", "chasebryan", "chase", "nightjar"];
 const CLAIM_SHA256 = "02f61fd0c47816f3400fafcdcc05c33b01c13c636075ac6edbccaa983acfac01";
+/* RFC1459 casemap, then strip every nick-decoration character: two
+   nicks that a network would treat as the same name — or that merely
+   render as the same name in the room — fold to the same base here. */
+function foldNick(nick: string): string {
+  return nick
+    .toLowerCase()
+    .replace(/\{/g, "[")
+    .replace(/\}/g, "]")
+    .replace(/\|/g, "\\")
+    .replace(/~/g, "^")
+    .replace(/[\[\]\\^`_|-]/g, "");
+}
 function claimedName(nick: string): string | null {
-  const base = nick.toLowerCase().replace(/[_`^|\\-]/g, "");
+  const base = foldNick(nick);
   for (const p of PROTECTED) {
     if (base === p) return p;
     if (base.startsWith(p) && /^\d+$/.test(base.slice(p.length))) return p;
@@ -44,6 +62,16 @@ function claimedName(nick: string): string | null {
 export async function onRequest(context: any) {
   const { request } = context;
   if (request.headers.get("Upgrade") !== "websocket") return err("relay bridge: websocket upgrade required.", 426);
+  // Browser callers must come from the site itself: any web page can
+  // otherwise open bridge sessions out of a visitor's browser and burn
+  // the house's wires as a connection mule. A missing Origin is a
+  // non-browser client, which is the bridge's own kind of caller.
+  const origin = request.headers.get("Origin");
+  if (origin) {
+    let originUrl: string | null = null;
+    try { originUrl = new URL(origin).origin; } catch { originUrl = null; }
+    if (originUrl !== new URL(request.url).origin) return err("relay bridge: websocket upgrades are accepted from this site only.", 403);
+  }
   const url = new URL(request.url);
   const host = (url.searchParams.get("host") || "").toLowerCase();
   const port = Number(url.searchParams.get("port") || 6697);
@@ -135,7 +163,7 @@ export async function onRequest(context: any) {
       if (m) {
         const nick = m[1].split("!")[0];
         if (m[2].startsWith("#") && !nick.includes(".")) {
-          void memAppend(mem, host, m[2], { t: Date.now(), p: m[1], x: m[3] });
+          void memAppend(mem, host, m[2], { t: Date.now(), p: m[1], x: m[3] }, CLAIM_SHA256);
         }
         return;
       }
@@ -174,10 +202,14 @@ export async function onRequest(context: any) {
           armIdle(); server.send(value);
           if (mem) {
             inBuf += tapDec.decode(value, { stream: true });
+            // The tap's buffer is capped like the client's: newline-
+            // free junk from either side must not pin isolate memory.
+            if (inBuf.length > MAX_BUF) { closeBoth(); return; }
             let idx;
             while ((idx = inBuf.indexOf("\n")) >= 0) {
               const line = inBuf.slice(0, idx).replace(/\r$/, "");
               inBuf = inBuf.slice(idx + 1);
+              if (line.length > MAX_LINE) { closeBoth(); return; }
               if (line) observeLine(line);
             }
           }
@@ -189,15 +221,24 @@ export async function onRequest(context: any) {
   let claimed = false;
   let refused = false;
   let lineBuf = "";
+  // Line discipline: IRC lines are short by protocol (512 bytes on the
+  // wire); 8 KB is generous headroom for this bridge's own control
+  // lines, and 64 KB of un-newlined buffer is far past any honest use.
+  // Either overflow closes the session — an uncapped buffer is a
+  // memory pin any client can set and walk away from.
+  const MAX_BUF = 64 * 1024;
+  const MAX_LINE = 8 * 1024;
   server.addEventListener("message", async (event: any) => {
     if (refused) return;
     try {
       const text = event.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(event.data)) : String(event.data);
       lineBuf += text;
+      if (lineBuf.length > MAX_BUF) { closeBoth(); return; }
       let idx;
       while ((idx = lineBuf.indexOf("\n")) >= 0) {
         const raw = lineBuf.slice(0, idx).replace(/\r$/, "");
         lineBuf = lineBuf.slice(idx + 1);
+        if (raw.length > MAX_LINE) { closeBoth(); return; }
         if (!raw) continue;
         const upper = raw.toUpperCase();
         if (upper.startsWith("PASS NSM-CLAIM:")) {
@@ -242,7 +283,7 @@ export async function onRequest(context: any) {
           // a lone voice in the room is still the room speaking.
           const pm = /^PRIVMSG (\S+) :([\s\S]*)$/i.exec(raw) || /^PRIVMSG (\S+) (\S[\s\S]*)$/i.exec(raw);
           if (pm && pm[1].startsWith("#")) {
-            void memAppend(mem, host, pm[1], { t: Date.now(), p: `${myNick}!${myNick}@relay.bridge`, x: pm[2] });
+            void memAppend(mem, host, pm[1], { t: Date.now(), p: `${myNick}!${myNick}@relay.bridge`, x: pm[2] }, CLAIM_SHA256);
           }
         }
         await writer.write(new TextEncoder().encode(raw + "\r\n"));

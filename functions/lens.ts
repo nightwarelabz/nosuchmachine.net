@@ -21,6 +21,9 @@
 // - The house itself is refused as a target (no lens loops; the room
 //   frames house pages directly).
 // - Bodies are capped; binary/app payloads are refused by type.
+// - EVERY response carries a sandbox CSP and nosniff — including the
+//   pass-through branch, whose upstream content-types (SVG above all)
+//   must never execute as this origin on a top-level navigation.
 // - Rewritten pages are served under a sandbox CSP with NO
 //   allow-same-origin, so lens content runs with an opaque origin
 //   and cannot reach the OS's storage or APIs, on top of the room
@@ -35,10 +38,19 @@ const MAX_HOPS = 5;
 const MAX_BYTES = 3 * 1024 * 1024;
 const HOUSE = /(^|\.)nosuchmachine\.net$/i;
 
+/* Callers hand refusal() text they do not control — the upstream
+   content-type segment and guard/fetch error messages — so everything
+   it interpolates is escaped before it becomes markup. (The page's own
+   sandbox CSP already refuses scripts; this keeps the page honest
+   markup too, not defaceable by a hostile target's header text.) */
+function escHtml(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function refusal(title: string, detail: string, status = 400): Response {
   const html = `<!doctype html><meta charset="utf-8"><title>orc lens</title>
 <style>body{background:#0b0e13;color:#cfd6e4;font:14px/1.6 ui-monospace,Menlo,monospace;margin:0;display:grid;place-items:center;min-height:100vh}main{max-width:34rem;padding:2rem}h1{font-size:1rem;color:#ffdf6b;letter-spacing:.08em}a{color:#8ab4ff}</style>
-<main><h1>THE LENS REFUSES</h1><p>${title}</p><p>${detail}</p><p><a href="https://github.com/nightwarelabz/orc/releases/latest">get orc</a> — the standalone browses natively, no lens involved.</p></main>`;
+<main><h1>THE LENS REFUSES</h1><p>${escHtml(title)}</p><p>${escHtml(detail)}</p><p><a href="https://github.com/nightwarelabz/orc/releases/latest">get orc</a> — the standalone browses natively, no lens involved.</p></main>`;
   return new Response(html, {
     status,
     headers: {
@@ -145,9 +157,20 @@ export async function onRequestGet(context: any) {
     return refusal("The fetch failed.", String(e?.message || e), 502);
   }
   const type = (res.headers.get("content-type") || "").toLowerCase();
+  // Every response the lens serves — rewritten page, stylesheet, and
+  // pass-through resource alike — carries a sandbox CSP and nosniff.
+  // The pass-through branch serves the upstream content-type from THIS
+  // origin: an SVG (or any active type) opened by top-level navigation
+  // would otherwise run its script with the site origin's privileges.
+  // "sandbox" with no allowances makes such a document inert. The HTML
+  // branch below replaces this with its own wider-but-still-sandboxed
+  // policy (scripts allowed, origin still opaque); refusal() sets the
+  // same pair itself.
   const baseHeaders: Record<string, string> = {
     "cache-control": "no-store",
     "referrer-policy": "no-referrer",
+    "content-security-policy": "sandbox",
+    "x-content-type-options": "nosniff",
   };
   if (!res.ok && res.status !== 404 && res.status !== 403) {
     // Mirror honest failures as a lens note; 404/403 pages still render below.

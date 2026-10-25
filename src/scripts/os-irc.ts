@@ -76,10 +76,18 @@ const CLAIM_PATH = "/home/operator/relay-claim.txt";
    refuses an unclaimed house name no matter what any client asks. */
 const HOUSE_NAMES = ["nightwarelabz", "nosuchmachine", "chasebryan", "chase", "nightjar"];
 function isHouseName(nick: string): boolean {
-  // The strip class mirrors the bridge's claimedName exactly — backslash
-  // included — so the card's courtesy check never disagrees with the
-  // bridge's enforcement (a chase\bryan is the same claim both places).
-  const base = nick.toLowerCase().replace(/[_`^|\\-]/g, "");
+  // The fold mirrors the bridge's claimedName exactly — RFC1459
+  // casemapping first ({ } | ~ pair with [ ] \ ^), then every nick-
+  // decoration character stripped — so the card's courtesy check never
+  // disagrees with the bridge's enforcement (a chase{bryan} or a
+  // chasebryan[] is the same claim both places).
+  const base = nick
+    .toLowerCase()
+    .replace(/\{/g, "[")
+    .replace(/\}/g, "]")
+    .replace(/\|/g, "\\")
+    .replace(/~/g, "^")
+    .replace(/[\[\]\\^`_|-]/g, "");
   return HOUSE_NAMES.some((h) => base === h || (base.startsWith(h) && /^\d+$/.test(base.slice(h.length))));
 }
 
