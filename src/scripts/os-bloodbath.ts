@@ -580,7 +580,6 @@ export function buildBloodbath(body: HTMLElement) {
      trackpad and keys — chosen in the menu, kept between visits */
   let inputMode: "mouse" | "laptop" = "mouse";
   try { if (localStorage.getItem("bloodbath-input") === "laptop") inputMode = "laptop"; } catch { /* a desk, then */ }
-  let lastMX = -1, lastMY = -1;
   let irisMode: "auto" | "high" | "low" = "auto";
   let capIdx = 0, dprCap = 1.5, ashFrac = 1, fpsE = 60, irisAt = 0;
   const stick = { on: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
@@ -704,7 +703,7 @@ export function buildBloodbath(body: HTMLElement) {
     btnIris.textContent = `iris · ${irisMode}`;
     btnInput.textContent = `input · ${inputMode}`;
     menuKeys.textContent = inputMode === "laptop"
-      ? "wasd move · trackpad look — no lock, just slide · space fire · e — the hook · f jump — leaps off the hook · shift run · m menu"
+      ? "wasd move · trackpad look · space fire · e — the hook · f jump — leaps off the hook · shift run · m menu"
       : "wasd move · mouse look · lmb fire · rmb / f — the hook · space jump — leaps off the hook · shift run · m menu";
     btnPhoto.textContent = photoOn ? "photo · on" : "photo";
     menuTally.textContent = `the pit holds ${best.total + kills} · best wave ${Math.max(best.wave, wave)} · this run — wave ${Math.max(1, wave)} · ${kills} kills · ${headshots} between the eyes`;
@@ -726,8 +725,6 @@ export function buildBloodbath(body: HTMLElement) {
   btnInput.addEventListener("click", () => {
     inputMode = inputMode === "mouse" ? "laptop" : "mouse";
     try { localStorage.setItem("bloodbath-input", inputMode); } catch { /* this visit only */ }
-    if (inputMode === "laptop" && document.pointerLockElement === canvas) document.exitPointerLock();
-    lastMX = -1; lastMY = -1;
     refreshMenu();
   });
   btnIris.addEventListener("click", () => { irisMode = irisMode === "auto" ? "high" : irisMode === "high" ? "low" : "auto"; refreshMenu(); });
@@ -739,8 +736,9 @@ export function buildBloodbath(body: HTMLElement) {
   menubtn.addEventListener("click", () => { audio.start(); setMenu(!menuOn); });
 
   /* ————— input ————— */
-  /* pointer lock is a desk courtesy; a trackpad never asks for it */
-  const lockLook = () => { if (inputMode === "mouse") canvas.requestPointerLock(); };
+  /* the mouse is captured in both schemes — a trackpad turns the
+     world the same way under lock; what changes is the keys */
+  const lockLook = () => { canvas.requestPointerLock(); };
   canvas.addEventListener("click", () => {
     wrap.focus();
     if (state === "play" && !locked && !menuOn) lockLook();
@@ -759,25 +757,13 @@ export function buildBloodbath(body: HTMLElement) {
   });
   document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
   wrap.addEventListener("mousemove", (e) => {
-    if (state !== "play" || menuOn) return;
-    if (locked) {
-      yaw -= e.movementX * 0.0023;
-      pitch = clamp(pitch - e.movementY * 0.0023, -1.35, 1.35);
-      return;
-    }
-    if (inputMode !== "laptop") return;
-    /* trackpad look: slide to look — movement deltas where the
-       browser offers them, plain travel where it does not */
-    let dx = e.movementX, dy = e.movementY;
-    if (!dx && !dy && lastMX >= 0) { dx = e.clientX - lastMX; dy = e.clientY - lastMY; }
-    lastMX = e.clientX; lastMY = e.clientY;
-    if (Math.abs(dx) > 140 || Math.abs(dy) > 140) return;
-    yaw -= dx * 0.0023;
-    pitch = clamp(pitch - dy * 0.0023, -1.35, 1.35);
+    if (!locked || state !== "play" || menuOn) return;
+    yaw -= e.movementX * 0.0023;
+    pitch = clamp(pitch - e.movementY * 0.0023, -1.35, 1.35);
   });
   wrap.addEventListener("mousedown", (e) => {
     if (state !== "play" || menuOn) return;
-    if (e.button === 0 && (locked || inputMode === "laptop")) firing = true;
+    if (e.button === 0 && locked) firing = true;
     if (e.button === 2) rmbHeld = true;
   });
   document.addEventListener("mouseup", (e) => { if (e.button === 0) firing = false; if (e.button === 2) rmbHeld = false; });
