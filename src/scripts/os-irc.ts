@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { sfx } from "./os-sound";
+import { skey } from "./os-depth";
 /* Relay — the house wire. A real IRC client in the tab: it speaks the IRC
    protocol itself (registration, PING/PONG, channels, private messages,
    NAMES) over a WebSocket to the site's own bridge, which pipes it to a
@@ -167,6 +168,14 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     card.hidden = false;
   };
 
+  /* ————— the dev note — pinned at the top of the chat —————
+     A topic-of-the-day bar for developer messages: it ships with the
+     build, so what it says is always true of the build you are looking
+     at, and it never scrolls away with the conversation. */
+  const DEV_NOTE = "hard refresh to check chat if chat works. added persistence to the chat";
+  const noteEl = el("div", "os-relay-note");
+  noteEl.append(el("span", "os-relay-note-tag", "dev note · pinned"), document.createTextNode(DEV_NOTE));
+
   /* ————— session view ————— */
   const view = el("div", "os-relay-view");
   const targetsEl = el("div", "os-relay-targets");
@@ -187,11 +196,22 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   copyBtn.addEventListener("click", () => {
     void navigator.clipboard.writeText((buffers.get(current) || []).join("\n")).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
   });
+  const forgetBtn = el("button", "os-btn small", "forget");
+  forgetBtn.title = "forget this conversation — wipe the log kept on this machine";
+  forgetBtn.addEventListener("click", () => {
+    try { localStorage.removeItem(skey(RELAY_LOG_KEY)); } catch { /* nothing kept anyway */ }
+    buffers.clear();
+    pendingJoins = [];
+    current = "server";
+    renderTargets();
+    push("server", "— forgotten. This machine keeps nothing of the room now.");
+  });
   input.setAttribute("enterkeyhint", "send");
-  inputRow.append(input, sendBtn, idBtn, copyBtn);
+  inputRow.append(input, sendBtn, idBtn, copyBtn, forgetBtn);
   main.append(linesEl, inputRow);
   const usersEl = el("div", "os-relay-users");
   view.append(targetsEl, main, usersEl);
+  wrap.appendChild(noteEl);
   wrap.appendChild(view);
   body.appendChild(wrap);
 
@@ -212,6 +232,56 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const buffers = new Map<string, string[]>();
   const users = new Map<string, Set<string>>();
 
+  /* ————— retention: the room keeps its words on this machine —————
+     A refresh used to cost the whole conversation: buffers lived only
+     in the tab. Now the log — every target's lines, the name you wear,
+     the channels you sit in — persists to this device's own storage
+     (skey: the surface keeps it, nests stay volatile, factory reset
+     wipes it). Nothing is kept server-side; the network still sees
+     only the wire. Passwords and the house claim code are NEVER part
+     of the log — they ride the visit in memory only, as always. The
+     "forget" button wipes the log on the spot. */
+  const RELAY_LOG_KEY = "blacksite-relay-v1";
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  const saveLog = () => {
+    saveTimer = null;
+    try {
+      const data = { v: 1, nick: myNick, current, channels: [...joinedChans], buffers: Object.fromEntries(buffers) };
+      let body = JSON.stringify(data);
+      // A pathological log sheds its oldest lines before it sheds the room.
+      let guard = 0;
+      while (body.length > 1_200_000 && guard++ < 8) {
+        for (const lines of Object.values(data.buffers)) if (lines.length > 25) lines.splice(0, Math.ceil(lines.length / 2));
+        body = JSON.stringify(data);
+      }
+      localStorage.setItem(skey(RELAY_LOG_KEY), body);
+    } catch { /* private modes keep nothing — the visit only, as before */ }
+  };
+  const scheduleSave = () => { if (!saveTimer) saveTimer = setTimeout(saveLog, 250); };
+  window.addEventListener("pagehide", () => { if (saveTimer) { clearTimeout(saveTimer); saveLog(); } });
+  const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]> } | null => {
+    try {
+      const raw = localStorage.getItem(skey(RELAY_LOG_KEY));
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== "object" || !data.buffers || typeof data.buffers !== "object") return null;
+      const clean: Record<string, string[]> = {};
+      for (const [t, lines] of Object.entries(data.buffers)) {
+        if (Array.isArray(lines)) clean[t] = lines.filter((l) => typeof l === "string").slice(-MAX_LINES);
+      }
+      if (!Object.keys(clean).length) return null;
+      return {
+        // A claimed house name is never restored from storage: it opens
+        // only with its code, presented fresh each visit.
+        nick: typeof data.nick === "string" && data.nick && !isHouseName(data.nick) ? data.nick : "",
+        current: typeof data.current === "string" ? data.current : "server",
+        channels: Array.isArray(data.channels) ? data.channels.filter((c) => typeof c === "string" && c.startsWith("#")) : [],
+        buffers: clean,
+      };
+    } catch { return null; }
+  };
+  let pendingJoins: string[] = [];
+
   const stamp = () => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -222,6 +292,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     buf.push(`${stamp()} ${text}`);
     if (buf.length > MAX_LINES) buf.splice(0, buf.length - MAX_LINES);
     if (target === current) renderLines();
+    scheduleSave();
   };
   const renderLines = () => {
     linesEl.textContent = "";
@@ -264,6 +335,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         }
         if (joinedChans.size) for (const c of joinedChans) send(`JOIN ${c}`);
         else send(`JOIN ${joinTarget}`);
+        if (pendingJoins.length) { for (const c of pendingJoins) send(`JOIN ${c}`); pendingJoins = []; }
         break;
       case "PRIVMSG": {
         const target = m.params[0] === myNick ? m.nick : m.params[0];
@@ -400,9 +472,25 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     });
     ws.addEventListener("error", () => push("server", "— bridge hiccup; the rejoin below covers it"));
   };
+  /* Retention: if this machine kept a log, the room reopens with its
+     words in place, wearing the same name, and steps back into every
+     channel the operator was sitting in — a refresh costs nothing. */
+  const restored = loadLog();
+  if (restored) {
+    for (const [t, lines] of Object.entries(restored.buffers)) buffers.set(t, lines);
+    pendingJoins = restored.channels.filter((c) => c !== HOUSE_CHANNEL);
+    if (restored.current && buffers.has(restored.current)) current = restored.current;
+    renderTargets();
+    renderLines();
+    push(current, "— kept from before: everything above was said earlier. The wire picks up below.");
+  }
+
   /* No box, no form: Relay opens already standing in the house channel,
      wearing an issued machine name. Identity is opt-in, from the button. */
-  connectWith({ host: NETWORKS[0].host, port: 6697, nick: machineName(), channel: HOUSE_CHANNEL, password: "", registerEmail: "", claim: "" });
+  connectWith({ host: NETWORKS[0].host, port: 6697, nick: restored?.nick || machineName(), channel: HOUSE_CHANNEL, password: "", registerEmail: "", claim: "" });
+  // connectWith lands on the server tab; if a kept log was restored, put
+  // the operator back on the target they were reading when they left.
+  if (restored && restored.current && buffers.has(restored.current)) { current = restored.current; renderTargets(); renderLines(); }
 
   /* Closing the window leaves the wire — no ghost sessions idling in the
      room after the operator has gone. */
