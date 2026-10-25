@@ -19,17 +19,17 @@ stock is on the record.
 - Engine C sources: **one patch file** — inserted lines across
   `snd_main.c` and `gl_backend.c` (two `#ifdef` guard pairs,
   plus the GLES2 framebuffer-bind repair in
-  R_Mesh_CreateFramebufferObject), and two modified lines in
-  `shader_glsl.h` (shader constants spelled as float literals
-  so strict GLSL ES 1.00 compilers accept them — see the
-  deviation register for all three),
+  R_Mesh_CreateFramebufferObject), one modified line in
+  `gl_textures.c` (the GLES2 framebuffer color format), and
+  two modified lines in `shader_glsl.h` (shader constants
+  spelled as float literals so strict GLSL ES 1.00 compilers
+  accept them — see the deviation register for all of it),
   saved beside this file as `engine-patches.patch` (guards:
   adjustment 3). Everything else is the tree's own build-system
   surface (make variables), plus the loader pre-js
   (`tools/nexuiz/pre.js`, derived from the tree's `wasm/pre.js`,
   GPL like the engine). `git diff --stat` on the build checkout
-  shows exactly those three files: +4/+4 guard lines and two
-  lines modified.
+  shows exactly those four files: 21 insertions, 3 deletions.
 
 ## The build-system adjustments
 
@@ -141,8 +141,8 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
 
 - Engine C sources: **one patch file** (`engine-patches.patch`
   beside this file): 8 inserted #ifdef-guard lines across
-  `snd_main.c` + `gl_backend.c` (see adjustment 3); an
-  11-line framebuffer repair in `gl_backend.c`'s
+  `snd_main.c` + `gl_backend.c` (see adjustment 3); a
+  10-line framebuffer repair in `gl_backend.c`'s
   R_Mesh_CreateFramebufferObject — the GLES2 flavor generated
   a framebuffer but never bound it before attaching its
   textures (the desktop path binds through
