@@ -86,6 +86,11 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      Older builds saved the claim code into the filesystem; that practice
      is retired, and any copy found is destroyed on sight. */
   try { if (os.read(CLAIM_PATH)) os.remove(CLAIM_PATH); } catch { /* nothing saved, nothing to scrub */ }
+  /* The board wipe (Chase's order, 2026-10-25): the pre-presence kept
+     log is retired — its key is destroyed on sight, so every visitor's
+     kept conversation and roster clear exactly once and the room
+     starts over with a clean board under the v2 key. */
+  try { localStorage.removeItem(skey("blacksite-relay-v1")); } catch { /* nothing old to clear */ }
   const card = el("div", "os-relay-card");
   card.hidden = true;
   wrap.appendChild(card);
@@ -297,7 +302,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      only the wire. Passwords and the house claim code are NEVER part
      of the log — they ride the visit in memory only, as always. The
      "forget" button wipes the log on the spot. */
-  const RELAY_LOG_KEY = "blacksite-relay-v1";
+  const RELAY_LOG_KEY = "blacksite-relay-v2";
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   const saveLog = () => {
     saveTimer = null;

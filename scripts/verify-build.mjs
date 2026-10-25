@@ -144,7 +144,8 @@ assert.ok(ircSrc.includes('sendBtn.addEventListener("click"'), "Relay must wire 
 // Relay retention (Chase, 2026-10-25): a refresh must not cost the room its
 // words. The log persists on-device under the depth-namespaced key, restore
 // runs before the auto-connect, and the forget button can wipe it.
-assert.ok(ircSrc.includes('skey(RELAY_LOG_KEY)') && ircSrc.includes('"blacksite-relay-v1"'), "Relay retention must persist under the skey-namespaced blacksite-relay-v1 key");
+assert.ok(ircSrc.includes('skey(RELAY_LOG_KEY)') && ircSrc.includes('"blacksite-relay-v2"'), "Relay retention must persist under the skey-namespaced blacksite-relay-v2 key");
+assert.ok(ircSrc.includes('removeItem(skey("blacksite-relay-v1"))'), "Relay must destroy the retired v1 log key on sight — the board wipe that starts the room clean");
 assert.ok(ircSrc.includes("const restored = loadLog();"), "Relay must restore its kept log before reconnecting");
 assert.ok(ircSrc.includes("forgetBtn"), "Relay must offer the forget button that wipes the kept log");
 // The pinned dev note (Chase, 2026-10-25): a topic-of-the-day bar at the

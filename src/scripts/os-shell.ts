@@ -403,7 +403,7 @@ export class BlacksiteOS {
       } catch { /* storage full/blocked — the room runs volatile and says so in limits */ }
     }, 250);
   }
-  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
+  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(skey("blacksite-relay-v2")); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
   spawn(cmd: string): Proc {
     const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now() };
     this.procs.push(proc);
