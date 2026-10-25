@@ -297,6 +297,15 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-relay-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 7px; color: inherit; font: inherit; font-size: 0.85rem; padding: 0.55rem 0.65rem; }
 .os-relay-users { overflow-y: auto; font-size: 0.76rem; border-left: 1px solid rgba(255,255,255,0.08); padding-left: 0.55rem; }
 .os-relay-users-h { color: var(--os-dim, #9fb0c3); margin-bottom: 0.35rem; }
+.os-relay-self { display: flex; flex-direction: column; gap: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.55rem; margin-bottom: 0.55rem; }
+.os-relay-self-line { font-size: 0.78rem; overflow-wrap: anywhere; }
+.os-relay-self-btns { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.os-relay-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 0.4rem; background: #3ddc84; vertical-align: 1px; }
+.os-relay-dot[data-state="idle"] { background: #e8b13c; }
+.os-relay-dot[data-state="away"] { background: #69707d; }
+.os-relay-dot[data-state="gone"] { background: transparent; border: 1px solid #69707d; width: 5px; height: 5px; }
+.os-relay-user.gone { opacity: 0.45; }
+.os-relay-state { color: var(--os-dim, #9fb0c3); font-size: 0.66rem; margin-left: 0.35rem; }
 .os-relay-user { padding: 0.1rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 760px) {
   .os-task-link { display: inline-block; font-size: 0.68rem; padding: 0.3rem 0.35rem; }

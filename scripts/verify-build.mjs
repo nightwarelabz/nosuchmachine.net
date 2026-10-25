@@ -150,6 +150,15 @@ assert.ok(ircSrc.includes("forgetBtn"), "Relay must offer the forget button that
 // The pinned dev note (Chase, 2026-10-25): a topic-of-the-day bar at the
 // top of the chat carrying the current developer message, verbatim.
 assert.ok(ircSrc.includes("os-relay-note"), "Relay must render the pinned dev note bar");
+// Relay presence + kept roster (Chase, 2026-10-25): auto-idle and manual
+// away ride real IRC AWAY with away-notify negotiated; everyone who
+// enters is kept on-device; the worn name resets only on purpose.
+assert.ok(ircSrc.includes("CAP REQ :away-notify"), "Relay must negotiate away-notify so presence shows as it changes");
+assert.ok(ircSrc.includes("setPresence"), "Relay must carry presence state (here / idle / away)");
+assert.ok(ircSrc.includes("IDLE_MS"), "Relay idle must engage automatically after quiet minutes");
+assert.ok(ircSrc.includes("rosterTouch"), "Relay must keep a roster of everyone who enters the room");
+assert.ok(ircSrc.includes("kept — not in the room"), "Relay must show kept users who are not in the room");
+assert.ok(ircSrc.includes("resetName"), "Relay must offer the deliberate new-name reset");
 assert.ok(astroJs.includes("hard refresh to check chat if chat works. added persistence to the chat"), "The pinned dev note must carry the current developer message in the served bundle");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
