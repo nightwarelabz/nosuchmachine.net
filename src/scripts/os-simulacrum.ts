@@ -1655,12 +1655,32 @@ export function buildSimulacrum(body: HTMLElement) {
     octa(a, x, y + 0.30 * s, z, (0.85 + rnd() * 0.5) * s, (0.5 + rnd() * 0.35) * s, (0.8 + rnd() * 0.5) * s, g, rnd() * 1.2);
     if (rnd() < 0.55) octa(a, x + (rnd() - 0.5) * 1.3 * s, y + 0.18 * s, z + (rnd() - 0.5) * 1.3 * s, 0.5 * s, 0.32 * s, 0.48 * s, vary(g, 0.15, rnd), rnd() * 1.2);
   };
-  const shardGeo = (glow: number[], x: number, y: number, z: number, s: number, colA: Col3, colB: Col3, rnd: () => number) => {
-    const n = 2 + Math.floor(rnd() * 3);
-    for (let i = 0; i < n; i++) {
-      const ox = (rnd() - 0.5) * 0.9 * s, oz = (rnd() - 0.5) * 0.9 * s, hh = (1.4 + rnd() * 1.9) * s;
-      octa(glow, x + ox, y + hh * 0.32, z + oz, 0.30 * s, hh * 0.5, 0.30 * s, vary(rnd() < 0.6 ? colA : colB, 0.14, rnd), rnd() * 0.9);
-    }
+  /* a true crystal cluster: points of six-sided prism growing
+     from a rock matrix, each point in three tones — dark root,
+     brightening shaft, pale termination — the way amethyst
+     deepens and clears. Two families: amethyst and quartz. A
+     small heart of glow sits inside the main point, nothing more;
+     the rest is honest lit stone, not flat colour */
+  const crystalGeo = (lit: number[], glow: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
+    const amethyst = rnd() < 0.65;
+    const base: Col3 = amethyst ? [0.30, 0.20, 0.48] : [0.50, 0.53, 0.60];
+    const mid: Col3 = amethyst ? [0.46, 0.31, 0.74] : [0.67, 0.71, 0.79];
+    const tip: Col3 = amethyst ? [0.70, 0.54, 0.99] : [0.86, 0.90, 0.97];
+    octa(lit, x, y + 0.10 * s, z, 0.88 * s, 0.30 * s, 0.82 * s, vary([0.36, 0.34, 0.38], 0.15, rnd), rnd() * 1.2);
+    const point = (px: number, pz: number, ps: number, lean: number, ang: number) => {
+      const lx = Math.cos(ang) * lean, lz = Math.sin(ang) * lean;
+      const h1 = 0.9 * ps, h2 = 0.8 * ps;
+      prism(lit, px, y + 0.05 * s, pz, 0.17 * ps, 0.125 * ps, h1, 6, vary(base, 0.12, rnd), lx * h1, lz * h1, rnd() * 0.5);
+      const mx = px + lx * h1, mz = pz + lz * h1, my = y + 0.05 * s + h1;
+      prism(lit, mx, my, mz, 0.125 * ps, 0.10 * ps, h2, 6, vary(mid, 0.12, rnd), lx * h2, lz * h2, rnd() * 0.5);
+      prism(lit, mx + lx * h2, my + h2, mz + lz * h2, 0.105 * ps, 0.008 * ps, 0.55 * ps, 6, vary(tip, 0.10, rnd), lx * 0.16, lz * 0.16, rnd() * 0.5);
+    };
+    point(x, z, s * (1.5 + rnd() * 0.7), 0.05 + rnd() * 0.10, rnd() * 6.28);
+    const nSide = 2 + Math.floor(rnd() * 2);
+    for (let i = 0; i < nSide; i++) { const a = rnd() * 6.28, d = (0.35 + rnd() * 0.3) * s; point(x + Math.cos(a) * d, z + Math.sin(a) * d, s * (0.8 + rnd() * 0.5), 0.25 + rnd() * 0.35, a); }
+    const nSmall = 2 + Math.floor(rnd() * 3);
+    for (let i = 0; i < nSmall; i++) { const a = rnd() * 6.28, d = (0.5 + rnd() * 0.4) * s; point(x + Math.cos(a) * d, z + Math.sin(a) * d, s * (0.35 + rnd() * 0.3), 0.3 + rnd() * 0.4, a); }
+    octa(glow, x, y + 0.9 * s, z, 0.10 * s, 0.16 * s, 0.10 * s, amethyst ? [0.55, 0.38, 0.95] : [0.75, 0.82, 0.95]);
   };
   const shroomGeo = (lit: number[], glow: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
     prism(lit, x, y - 0.03, z, 0.10 * s, 0.14 * s, 0.55 * s, 6, [0.78, 0.72, 0.62]);
@@ -1745,14 +1765,15 @@ export function buildSimulacrum(body: HTMLElement) {
       }
       pois.push({ name: "the standing ring", x, z, r: 55 });
     }
-    /* the world spike — a crystal the size of a tower */
+    /* the world spike — a crystal cluster the size of a tower */
     {
       const [x, z] = findLand(rnd() * 6.28, 380 + rnd() * 200);
       const y = height(x, z);
-      octa(glow, x, y + 17, z, 6.5, 21, 6.5, [0.55, 0.38, 1.0], rnd() * 0.8);
-      octa(glow, x + 7, y + 8, z + 3, 3.2, 10, 3.2, [0.42, 0.72, 1.0], rnd() * 0.8);
+      crystalGeo(lit, glow, x, y - 0.5, z, 6.2, rnd);
+      crystalGeo(lit, glow, x + 8, y - 0.5, z + 4, 2.8, rnd);
       rockGeo(lit, x + 4, y, z - 4, 2.6, rnd);
-      worldSolids.push({ x, z, r: 5.2, top: y + 38 });
+      rockGeo(lit, x - 6, y, z + 5, 1.9, rnd);
+      worldSolids.push({ x, z, r: 6.4, top: y + 32 });
       pois.push({ name: "the world spike", x, z, r: 50 });
     }
     /* the ribcage of something old */
@@ -1792,7 +1813,7 @@ export function buildSimulacrum(body: HTMLElement) {
         const a = (k / 3) * Math.PI * 2 + rnd() * 0.5, sx = x + Math.cos(a) * 15, sz = z + Math.sin(a) * 15;
         const sy = height(sx, sz), s = 2.4 + rnd() * 0.8;
         treeDead(lit, sx, sy, sz, s, rnd);
-        shardGeo(glow, sx, sy + 4.4 * s, sz, 0.8, [0.62, 0.36, 1.0], [0.45, 0.75, 1.0], rnd);
+        crystalGeo(lit, glow, sx, sy + 4.4 * s, sz, 0.5, rnd);
         worldSolids.push({ x: sx, z: sz, r: 0.9 * s, top: sy + 5 * s });
       }
       pois.push({ name: "the three sisters", x, z, r: 46 });
@@ -1839,6 +1860,9 @@ export function buildSimulacrum(body: HTMLElement) {
     const lean = leanOf(rec);
     const wonderBias = 1 + lean * 0.55;
     const gloomBias = 1 - lean * 0.5;
+    /* crystals grow in pockets, not everywhere: one chunk in
+       five is crystal country, the rest is clean */
+    const crystalPocket = rnd() < 0.20;
     /* how forested is this place? a field, not a coin per chunk —
        and the forest field gathers trees into true woods with
        clearings between, not a uniform sprinkle */
@@ -1874,7 +1898,7 @@ export function buildSimulacrum(body: HTMLElement) {
       if (h < 0.4) continue;
       const roll = rnd();
       if (roll < 0.34) { const s = 0.6 + rnd() * 1.5; rockGeo(lit, x, h - 0.15, z, s, rnd); solids.push({ x, z, r: 0.95 * s, top: h + 0.9 * s }); }
-      else if (roll < 0.34 + 0.13 * wonderBias) { const s = 0.7 + rnd() * 0.9; shardGeo(glow, x, h - 0.1, z, s, [0.62, 0.36, 1.0], [0.45, 0.75, 1.0], rnd); crystals.push([x, z]); solids.push({ x, z, r: 0.55 * s, top: h + 3.2 * s }); }
+      else if (crystalPocket && roll < 0.34 + 0.10 * wonderBias) { const s = 0.45 + rnd() * 0.35; crystalGeo(lit, glow, x, h - 0.1, z, s, rnd); crystals.push([x, z]); solids.push({ x, z, r: s + 0.35, top: h + 5.2 * s }); }
       else if (roll < 0.55 && moisture(x, z) > 0.52) { const s = 0.8 + rnd() * 1.1; shroomGeo(lit, glow, x, h, z, s, rnd); }
       else if (roll < 0.565 * gloomBias) { boxS(lit, x, h - 0.3, z, 1.3, 6 + rnd() * 5, 1.3, [0.015, 0.015, 0.02], rnd() * 3.14); solids.push({ x, z, r: 1.0, top: h + 10 }); }
     }
@@ -1953,7 +1977,7 @@ export function buildSimulacrum(body: HTMLElement) {
         if (by < 0.2) continue;
         /* what you plant is what you see: a true flower, stem,
            petal ring and heart — one kind still grows a shard */
-        if (b.kind === 3 && i === 0) shardGeo(v, bx, by - 0.1, bz, 0.9, cols[3], cols[0], brnd);
+        if (b.kind === 3 && i === 0) crystalGeo(v, v, bx, by - 0.1, bz, 0.5, brnd);
         else flowerGeo(v, v, bx, by, bz, 1.5 + brnd() * 0.9, cols[b.kind], brnd);
       }
     }
