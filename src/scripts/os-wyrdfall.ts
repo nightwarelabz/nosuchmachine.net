@@ -714,7 +714,7 @@ export function buildWyrdfall(body: HTMLElement) {
   };
 
   /* ——— GL ——— */
-  const gl = canvas.getContext("webgl", { antialias: false, alpha: false }) as WebGLRenderingContext;
+  const gl = (canvas.getContext("webgl2", { antialias: false, alpha: false }) || canvas.getContext("webgl", { antialias: false, alpha: false })) as WebGLRenderingContext;
   const XR = (gl.getExtension("OES_standard_derivatives") as { enable?: () => void } | null);
   if (XR && XR.enable) XR.enable.call(gl);
   const mkProg = (vsSrc: string, fsSrc: string) => {
@@ -732,14 +732,37 @@ export function buildWyrdfall(body: HTMLElement) {
     return b;
   };
   const litP = mkProg(LIT_VS, LIT_FS), skyP = mkProg(SKY_VS, SKY_FS), watP = mkProg(WATER_VS, WATER_FS);
-  const litU = { vp: gl.getUniformLocation(litP, "uVP"), sun: gl.getUniformLocation(litP, "uSunDir"), tint: gl.getUniformLocation(litP, "uTint"), fog: gl.getUniformLocation(litP, "uFog"), cam: gl.getUniformLocation(litP, "uCamPos"), fogCol: gl.getUniformLocation(litP, "uFogColor"), amb: gl.getUniformLocation(litP, "uAmbient"), time: gl.getUniformLocation(litP, "uTime") };
-  const skyU = { vp: gl.getUniformLocation(skyP, "uVP"), sun: gl.getUniformLocation(skyP, "uSunDir"), night: gl.getUniformLocation(skyP, "uNight"), time: gl.getUniformLocation(skyP, "uTime"), tint: gl.getUniformLocation(skyP, "uTint"), sunset: gl.getUniformLocation(skyP, "uSunset") };
-  const watU = { vp: gl.getUniformLocation(watP, "uVP"), sun: gl.getUniformLocation(watP, "uSunDir"), time: gl.getUniformLocation(watP, "uTime"), tint: gl.getUniformLocation(watP, "uTint"), night: gl.getUniformLocation(watP, "uNight"), cam: gl.getUniformLocation(watP, "uCamPos"), sunset: gl.getUniformLocation(watP, "uSunset"), aux: gl.getUniformLocation(watP, "uAuxKind") };
+  const litU = { mvp: gl.getUniformLocation(litP, "uMVP"), model: gl.getUniformLocation(litP, "uModel"), cam: gl.getUniformLocation(litP, "uCam"), sun: gl.getUniformLocation(litP, "uSun"), fog: gl.getUniformLocation(litP, "uFog"), fogNear: gl.getUniformLocation(litP, "uFogNear"), fogFar: gl.getUniformLocation(litP, "uFogFar"), tint: gl.getUniformLocation(litP, "uTint"), camPos: gl.getUniformLocation(litP, "uCamPos"), rim: gl.getUniformLocation(litP, "uRim"), time: gl.getUniformLocation(litP, "uTime"), season: gl.getUniformLocation(litP, "uSeason"), shadowAmt: gl.getUniformLocation(litP, "uShadowAmt"), shadowMap: gl.getUniformLocation(litP, "uShadowMap") };
+  const skyU = { vp: gl.getUniformLocation(skyP, "uVP"), zen: gl.getUniformLocation(skyP, "uZen"), hor: gl.getUniformLocation(skyP, "uHor"), sunDir: gl.getUniformLocation(skyP, "uSunDir"), sunCol: gl.getUniformLocation(skyP, "uSunCol"), night: gl.getUniformLocation(skyP, "uNight"), time: gl.getUniformLocation(skyP, "uTime"), cover: gl.getUniformLocation(skyP, "uCover"), gloom: gl.getUniformLocation(skyP, "uGloom"), flash: gl.getUniformLocation(skyP, "uFlash"), moonDir: gl.getUniformLocation(skyP, "uMoonDir"), aurora: gl.getUniformLocation(skyP, "uAurora"), second: gl.getUniformLocation(skyP, "uSecond") };
+  const watU = { mvp: gl.getUniformLocation(watP, "uMVP"), cam: gl.getUniformLocation(watP, "uCam"), camPos: gl.getUniformLocation(watP, "uCamPos"), sun: gl.getUniformLocation(watP, "uSun"), sunCol: gl.getUniformLocation(watP, "uSunCol"), hor: gl.getUniformLocation(watP, "uHor"), fog: gl.getUniformLocation(watP, "uFog"), fogNear: gl.getUniformLocation(watP, "uFogNear"), fogFar: gl.getUniformLocation(watP, "uFogFar"), time: gl.getUniformLocation(watP, "uTime"), cold: gl.getUniformLocation(watP, "uCold"), day: gl.getUniformLocation(watP, "uDay") };
   const aPos = gl.getAttribLocation(litP, "aPos"), aCol = gl.getAttribLocation(litP, "aCol"), aNor = gl.getAttribLocation(litP, "aNor");
   const aPosS = gl.getAttribLocation(skyP, "aPos");
-  const aPosW = gl.getAttribLocation(watP, "aPos"), aAuxW = gl.getAttribLocation(watP, "aAux");
+  const aPosW = gl.getAttribLocation(watP, "aPos"), aColW = gl.getAttribLocation(watP, "aCol"), aAuxW = gl.getAttribLocation(watP, "aAux");
+  const dummyTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, dummyTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+  function setLit(vpArr: Float32Array, eye: [number, number, number], sun: Col3, fog: Col3, near: number, far: number, tint: Col3, rim: Col3, now: number) {
+    gl.useProgram(litP);
+    gl.uniformMatrix4fv(litU.mvp, false, vpArr);
+    gl.uniformMatrix4fv(litU.model, false, m4.ident());
+    gl.uniform2f(litU.cam, eye[0], eye[2]);
+    gl.uniform3fv(litU.sun, sun);
+    gl.uniform3fv(litU.fog, fog);
+    gl.uniform1f(litU.fogNear, near);
+    gl.uniform1f(litU.fogFar, far);
+    gl.uniform3fv(litU.tint, tint);
+    gl.uniform3fv(litU.camPos, eye);
+    gl.uniform3fv(litU.rim, rim);
+    gl.uniform1f(litU.time, now);
+    gl.uniform3fv(litU.season, [0, 0, 0]);
+    gl.uniform1f(litU.shadowAmt, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, dummyTex);
+    gl.uniform1i(litU.shadowMap, 0);
+  }
   const dynBuf = mkBuf(400000), staBuf = gl.createBuffer(), terrBuf = gl.createBuffer();
   gl.enable(gl.DEPTH_TEST);
+  gl.disable(gl.CULL_FACE);
   gl.clearColor(0.02, 0.02, 0.03, 1);
 
   /* ——— state ——— */
@@ -1317,39 +1340,22 @@ export function buildWyrdfall(body: HTMLElement) {
   terrCount = world.terrain.length / 9;
   uploadStatic(world.lit);
   const watBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, watBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    -880, 0.35, -880, 0, 880, 0.35, -880, 0, 880, 0.35, 880, 0,
-    -880, 0.35, -880, 0, 880, 0.35, 880, 0, -880, 0.35, 880, 0,
-  ]), gl.STATIC_DRAW);
-  const invert4 = (out: number[], m: number[]): number[] => {
-    const a00 = m[0], a01 = m[1], a02 = m[2], a03 = m[3], a10 = m[4], a11 = m[5], a12 = m[6], a13 = m[7];
-    const a20 = m[8], a21 = m[9], a22 = m[10], a23 = m[11], a30 = m[12], a31 = m[13], a32 = m[14], a33 = m[15];
-    const b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10, b02 = a00 * a13 - a03 * a10;
-    const b03 = a01 * a12 - a02 * a11, b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12;
-    const b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30, b08 = a20 * a33 - a23 * a30;
-    const b09 = a21 * a32 - a22 * a31, b10 = a21 * a33 - a23 * a31, b11 = a22 * a33 - a23 * a32;
-    let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
-    if (!det) return out;
-    det = 1 / det;
-    out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
-    out[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
-    out[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
-    out[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
-    out[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
-    out[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
-    out[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
-    out[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
-    out[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
-    out[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
-    out[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
-    out[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
-    out[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
-    out[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
-    out[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
-    out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
-    return out;
-  };
+  { const wc: Col3 = [0.10, 0.17, 0.22];
+    const per: number[] = [];
+    for (const [x, z] of [[-880, -880], [880, -880], [880, 880], [-880, 880]] as Array<[number, number]>) per.push(x, 0.35, z, ...wc, 0.88, 0.4);
+    const flat: number[] = [];
+    for (const i of [0, 1, 2, 0, 2, 3]) flat.push(...per.slice(i * 8, i * 8 + 8));
+    gl.bindBuffer(gl.ARRAY_BUFFER, watBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(flat), gl.STATIC_DRAW); }
+  const skyBuf = gl.createBuffer();
+  let skyN = 0;
+  { const so: number[] = [];
+    octa(so, 0, 0, 0, 1500, 1500, 1500, [1, 1, 1]);
+    const sp: number[] = [];
+    for (let i = 0; i < so.length; i += 9) sp.push(so[i], so[i + 1], so[i + 2]);
+    skyN = sp.length / 3;
+    gl.bindBuffer(gl.ARRAY_BUFFER, skyBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sp), gl.STATIC_DRAW); }
   const panelsOpen = () => !dialogEl.hidden || !shopEl.hidden || !sheetEl.hidden || !mapEl.hidden || !menuEl.hidden || !deathEl.hidden;
   const playing = () => started && scene.kind !== "title" && deathEl.hidden;
   function lockLook() { if (playing() && !panelsOpen()) canvas.requestPointerLock?.(); }
@@ -1624,7 +1630,6 @@ export function buildWyrdfall(body: HTMLElement) {
   }
   /* ——— the render ——— */
   const dynArr: number[] = [];
-  const invVP = new Array(16).fill(0);
   function render(now: number, dt: number) {
     const w = wrap.clientWidth || 1024, h = wrap.clientHeight || 640;
     const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
@@ -1645,8 +1650,6 @@ export function buildWyrdfall(body: HTMLElement) {
     const dir: [number, number, number] = [-Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp];
     const eye: [number, number, number] = [camX, camY, camZ];
     const vpM = m4.mul(m4.persp(1.08, cw / ch, 0.1, 1700), m4.lookAt(eye, [eye[0] + dir[0], eye[1] + dir[1], eye[2] + dir[2]], [0, 1, 0]));
-    for (let i = 0; i < 16; i++) vp[i] = vpM[i];
-    invert4(invVP, vp);
     const hr = hourNow();
     const sunAng = ((hr - 6) / 12) * Math.PI;
     const sunDir: [number, number, number] = [Math.cos(sunAng) * 0.75, Math.sin(sunAng), 0.38];
@@ -1659,6 +1662,13 @@ export function buildWyrdfall(body: HTMLElement) {
       lerp(lerp(0.63, 0.42, sunset * 0.5), 0.05, night),
       lerp(lerp(0.68, 0.30, sunset * 0.5), 0.09, night),
     ];
+    const zen: Col3 = [lerp(0.30, 0.012, night), lerp(0.47, 0.018, night), lerp(0.68, 0.045, night)];
+    const hor: Col3 = [
+      lerp(lerp(0.74, 0.88, sunset * 0.6), 0.05, night),
+      lerp(lerp(0.78, 0.50, sunset * 0.6), 0.06, night),
+      lerp(lerp(0.82, 0.26, sunset * 0.6), 0.10, night),
+    ];
+    const sunCol: Col3 = [1.0, lerp(0.95, 0.55, sunset), lerp(0.85, 0.25, sunset)];
     gl.clearColor(fogCol[0] * 0.6, fogCol[1] * 0.6, fogCol[2] * 0.6, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const bindLit = (buf: WebGLBuffer | null) => {
@@ -1670,59 +1680,61 @@ export function buildWyrdfall(body: HTMLElement) {
     };
     if (!inDark) {
       gl.useProgram(skyP);
-      gl.uniformMatrix4fv(skyU.vp, false, invVP);
-      gl.uniform3f(skyU.sun, sunDir[0], sunDir[1], sunDir[2]);
+      gl.uniformMatrix4fv(skyU.vp, false, vpM);
+      gl.uniform3fv(skyU.zen, zen);
+      gl.uniform3fv(skyU.hor, hor);
+      gl.uniform3fv(skyU.sunDir, sunDir);
+      gl.uniform3fv(skyU.sunCol, sunCol);
       gl.uniform1f(skyU.night, night);
       gl.uniform1f(skyU.time, now);
-      gl.uniform3f(skyU.tint, 1, 1, 1);
-      gl.uniform1f(skyU.sunset, sunset);
-      gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]));
+      gl.uniform1f(skyU.cover, 0.28);
+      gl.uniform1f(skyU.gloom, 0.12);
+      gl.uniform1f(skyU.flash, 0);
+      gl.uniform3f(skyU.moonDir, -sunDir[0], Math.max(0.25, -sunDir[1]), -sunDir[2]);
+      gl.uniform1f(skyU.aurora, 0);
+      gl.uniform1f(skyU.second, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, skyBuf);
       gl.enableVertexAttribArray(aPosS);
       gl.vertexAttribPointer(aPosS, 3, gl.FLOAT, false, 0, 0);
       gl.disableVertexAttribArray(aCol); gl.disableVertexAttribArray(aNor);
       gl.depthMask(false);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.drawArrays(gl.TRIANGLES, 0, skyN);
       gl.depthMask(true);
     }
-    gl.useProgram(litP);
-    gl.uniformMatrix4fv(litU.vp, false, vp);
     if (inDark) {
-      gl.uniform3f(litU.sun, 0.35, 0.75, 0.25);
-      gl.uniform3f(litU.tint, ...(scene.kind === "dungeon" ? [0.52, 0.48, 0.46] : [0.66, 0.58, 0.52]) as Col3);
-      gl.uniform3f(litU.fog, scene.kind === "dungeon" ? 3.5 : 5, scene.kind === "dungeon" ? 30 : 36, 0);
-      gl.uniform1f(litU.amb, 0.5);
+      setLit(vpM, eye, [0.35, 0.75, 0.25], fogCol, scene.kind === "dungeon" ? 3.5 : 5, scene.kind === "dungeon" ? 30 : 36, scene.kind === "dungeon" ? [0.52, 0.48, 0.46] : [0.66, 0.58, 0.52], [0.30, 0.18, 0.08], now);
     } else {
       const sd: [number, number, number] = sunDir[1] < -0.05 ? [-sunDir[0] * 0.4, 0.55, -sunDir[2] * 0.4] : sunDir;
-      gl.uniform3f(litU.sun, sd[0], sd[1], sd[2]);
-      gl.uniform3f(litU.tint, 1, 1, 1);
-      gl.uniform3f(litU.fog, lerp(90, 26, night), lerp(780, 300, night), 0);
-      gl.uniform1f(litU.amb, lerp(0.36, 0.10, night));
+      setLit(vpM, eye, sd, fogCol, lerp(90, 26, night), lerp(780, 300, night), [1, 1, 1], [lerp(0.10, 0.42, sunset), 0.12, 0.08], now);
     }
-    gl.uniform3f(litU.cam, eye[0], eye[1], eye[2]);
-    gl.uniform3f(litU.fogCol, fogCol[0], fogCol[1], fogCol[2]);
-    gl.uniform1f(litU.time, now);
     if (!inDark) { bindLit(terrBuf); gl.drawArrays(gl.TRIANGLES, 0, terrCount); }
     bindLit(staBuf);
     gl.drawArrays(gl.TRIANGLES, 0, staCount);
     if (!inDark) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.useProgram(watP);
-      gl.uniformMatrix4fv(watU.vp, false, vp);
-      gl.uniform3f(watU.sun, sunDir[0], sunDir[1], sunDir[2]);
+      gl.uniformMatrix4fv(watU.mvp, false, vpM);
+      gl.uniform2f(watU.cam, eye[0], eye[2]);
+      gl.uniform3fv(watU.camPos, eye);
+      gl.uniform3fv(watU.sun, sunDir);
+      gl.uniform3fv(watU.sunCol, sunCol);
+      gl.uniform3fv(watU.hor, hor);
+      gl.uniform3fv(watU.fog, fogCol);
+      gl.uniform1f(watU.fogNear, lerp(90, 26, night));
+      gl.uniform1f(watU.fogFar, lerp(780, 300, night));
       gl.uniform1f(watU.time, now);
-      gl.uniform3f(watU.tint, 1, 1, 1);
-      gl.uniform1f(watU.night, night);
-      gl.uniform3f(watU.cam, eye[0], eye[1], eye[2]);
-      gl.uniform1f(watU.sunset, sunset);
-      gl.uniform4f(watU.aux, 0.10, 0.16, 0.20, 0.90);
+      gl.uniform1f(watU.cold, 0.35);
+      gl.uniform1f(watU.day, 1 - night);
       gl.bindBuffer(gl.ARRAY_BUFFER, watBuf);
-      gl.enableVertexAttribArray(aPosW); gl.enableVertexAttribArray(aAuxW);
-      gl.disableVertexAttribArray(aCol); gl.disableVertexAttribArray(aNor);
-      gl.vertexAttribPointer(aPosW, 3, gl.FLOAT, false, 16, 0);
-      gl.vertexAttribPointer(aAuxW, 1, gl.FLOAT, false, 16, 12);
+      gl.enableVertexAttribArray(aPosW); gl.enableVertexAttribArray(aColW); gl.enableVertexAttribArray(aAuxW);
+      gl.disableVertexAttribArray(aNor);
+      gl.vertexAttribPointer(aPosW, 3, gl.FLOAT, false, 32, 0);
+      gl.vertexAttribPointer(aColW, 3, gl.FLOAT, false, 32, 12);
+      gl.vertexAttribPointer(aAuxW, 2, gl.FLOAT, false, 32, 24);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.disable(gl.BLEND);
       gl.useProgram(litP);
-      gl.uniformMatrix4fv(litU.vp, false, vp);
     }
     /* the living */
     dynArr.length = 0;
@@ -1741,34 +1753,24 @@ export function buildWyrdfall(body: HTMLElement) {
     if (scene.kind === "interior" && scene.interior) for (const n of scene.interior.npcs) humanoid(dynArr, n.x, 0, n.z, n.yaw, Math.sin(now * 1.4 + n.x) * 0.06, n.robe, [0.3, 0.26, 0.2], [0.72, 0.56, 0.42], n.service === "guildm");
     for (const r of remains) octa(dynArr, r.x, r.y + 0.12, r.z, 0.72, 0.13, 0.72, r.col);
     for (const t of tracers) beam(dynArr, t.x, t.y, t.z, t.dx, t.dy, t.dz, t.len, 0.05, t.col);
+    if (playing() && !panelsOpen()) {
+      const fh: [number, number, number] = [-Math.sin(yaw), 0, -Math.cos(yaw)];
+      const rt: [number, number, number] = [Math.cos(yaw), 0, -Math.sin(yaw)];
+      const B: [number, number, number] = [eye[0] + rt[0] * 0.33 + fh[0] * 0.52, eye[1] - 0.30, eye[2] + rt[2] * 0.33 + fh[2] * 0.52];
+      const sp2 = swingT > 0 ? 1 - swingT / 0.40 : 0;
+      const raise = 0.95 - (swingT > 0 ? Math.sin(sp2 * Math.PI) * 1.75 : 0) + Math.sin(now * 1.7) * 0.012;
+      const bd: [number, number, number] = [fh[0] * Math.sin(raise), Math.cos(raise), fh[2] * Math.sin(raise)];
+      const steel: Col3 = sheet && sheet.weapon >= 3 ? [0.82, 0.84, 0.90] : sheet && sheet.weapon >= 2 ? [0.66, 0.68, 0.72] : [0.52, 0.52, 0.55];
+      beam(dynArr, B[0] + bd[0] * 0.36, B[1] + bd[1] * 0.36, B[2] + bd[2] * 0.36, bd[0], bd[1], bd[2], 0.68, 0.016, steel);
+      octa(dynArr, B[0] + bd[0] * 0.72, B[1] + bd[1] * 0.72, B[2] + bd[2] * 0.72, 0.028, 0.045, 0.028, steel);
+      beam(dynArr, B[0] + bd[0] * 0.03, B[1] + bd[1] * 0.03, B[2] + bd[2] * 0.03, rt[0], rt[1], rt[2], 0.17, 0.018, [0.55, 0.42, 0.16]);
+      beam(dynArr, B[0] - bd[0] * 0.05, B[1] - bd[1] * 0.05, B[2] - bd[2] * 0.05, bd[0], bd[1], bd[2], 0.13, 0.020, [0.16, 0.11, 0.07]);
+    }
     if (dynArr.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(dynArr));
       bindLit(dynBuf);
       gl.drawArrays(gl.TRIANGLES, 0, dynArr.length / 9);
-    }
-    /* the sword in hand */
-    if (playing() && !panelsOpen()) {
-      gl.clear(gl.DEPTH_BUFFER_BIT);
-      const ident = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-      gl.uniformMatrix4fv(litU.vp, false, ident);
-      gl.uniform3f(litU.sun, 0.4, 0.8, 0.3);
-      gl.uniform3f(litU.tint, 1.2, 1.2, 1.2);
-      gl.uniform3f(litU.fog, 900, 1000, 0);
-      gl.uniform1f(litU.amb, 0.6);
-      const vm: number[] = [];
-      const p = swingT > 0 ? 1 - swingT / 0.40 : 0;
-      const sw = Math.sin(p * Math.PI);
-      const bx = 0.52 - sw * 0.38, by = -0.46 + sw * 0.22 - (swingT > 0 ? 0 : Math.sin(now * 1.7) * 0.008);
-      const steel: Col3 = sheet && sheet.weapon >= 3 ? [0.82, 0.84, 0.90] : sheet && sheet.weapon >= 2 ? [0.66, 0.68, 0.72] : [0.52, 0.52, 0.55];
-      octa(vm, bx, by + 0.30, 0, 0.035, 0.33, 0.012, steel);
-      boxS(vm, bx, by - 0.06, 0, 0.20, 0.035, 0.05, [0.55, 0.42, 0.16]);
-      prism(vm, bx, by - 0.20, 0, 0.028, 0.024, 0.14, 6, [0.16, 0.11, 0.07]);
-      gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(vm));
-      bindLit(dynBuf);
-      gl.drawArrays(gl.TRIANGLES, 0, vm.length / 9);
-      gl.uniformMatrix4fv(litU.vp, false, vp);
     }
     /* the telling */
     if (sheet) {
