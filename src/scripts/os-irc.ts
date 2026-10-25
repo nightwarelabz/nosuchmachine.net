@@ -243,13 +243,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   nameBtn.title = "reset your name — let this one go and draw a fresh machine name";
   nameBtn.addEventListener("click", () => { resetName(); input.focus(); });
   selfBtns.append(awayBtn, nameBtn);
-  const guardLine = el("div", "os-relay-self-line", "");
-  const guardBtn = el("button", "os-btn small", "guardian off");
-  guardBtn.title = "GuardianAngel — the room's automated moderation: spam guards, link removal, escalation";
-  guardBtn.addEventListener("click", () => { setGuardian(!guardianOn); input.focus(); });
-  const guardBlock = el("div", "os-relay-guard");
-  guardBlock.append(el("div", "os-relay-users-h", "guardianangel"), guardLine, guardBtn);
-  selfEl.append(el("div", "os-relay-users-h", "you"), selfLine, selfBtns, guardBlock);
+  selfEl.append(el("div", "os-relay-users-h", "you"), selfLine, selfBtns);
   const usersEl = el("div", "");
   usersCol.append(selfEl, usersEl);
   view.append(targetsEl, main, usersCol);
@@ -275,7 +269,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const buffers = new Map<string, string[]>();
   const users = new Map<string, Set<string>>();
   const ops = new Map<string, Set<string>>();
-  let guardianOn = true;
 
   /* ————— presence + the kept roster —————
      Presence is real IRC: the client speaks AWAY to the network and
@@ -341,7 +334,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         return line;
       };
       const keptBuffers = Object.fromEntries([...buffers].filter(([t]) => !SERVICE_NICKS.has(t.toLowerCase())).map(([t, lines]) => [t, lines.map(scrub)]));
-      const data = { v: 2, nick: myNick, current, channels: [...joinedChans], buffers: keptBuffers, roster: Object.fromEntries([...roster].map(([c, m]) => [c, Object.fromEntries(m)])), away: manualAway, guardian: guardianOn };
+      const data = { v: 2, nick: myNick, current, channels: [...joinedChans], buffers: keptBuffers, roster: Object.fromEntries([...roster].map(([c, m]) => [c, Object.fromEntries(m)])), away: manualAway };
       let body = JSON.stringify(data);
       // A pathological log sheds its oldest lines before it sheds the room.
       let guard = 0;
@@ -354,7 +347,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   };
   const scheduleSave = () => { if (!saveTimer) saveTimer = setTimeout(saveLog, 250); };
   window.addEventListener("pagehide", () => { if (saveTimer) { clearTimeout(saveTimer); saveLog(); } });
-  const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]>; roster: Record<string, Record<string, { s: string; l: number }>>; away: string; guardian: boolean } | null => {
+  const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]>; roster: Record<string, Record<string, { s: string; l: number }>>; away: string } | null => {
     try {
       const raw = localStorage.getItem(skey(RELAY_LOG_KEY));
       if (!raw) return null;
@@ -385,7 +378,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         buffers: clean,
         roster: cleanRoster,
         away: typeof data.away === "string" ? data.away : "",
-        guardian: data.guardian !== false,
       };
     } catch { return null; }
   };
@@ -459,13 +451,19 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   };
   const renderUsers = () => {
     renderSelf();
-    renderGuardian();
     usersEl.textContent = "";
     const set = users.get(current);
     const meta = roster.get(current);
-    const live = set ? [...set].sort((a, b) => a.localeCompare(b)) : [];
+    const live = set ? [...set] : [];
+    /* GuardianAngel stands in the room as a member — in the member
+       list, like anyone else. It carries no panel, no status prose,
+       and no announcements of its own; it simply is here, and it
+       works. (If a wire by that name ever truly joins, the name is
+       already present and nothing doubles.) */
+    if (current.startsWith("#") && !live.some((u) => u.toLowerCase() === GUARDIAN_NICK.toLowerCase())) live.push(GUARDIAN_NICK);
+    live.sort((a, b) => a.localeCompare(b));
     usersEl.appendChild(el("div", "os-relay-users-h", `${live.length} on the wire`));
-    for (const u of live) usersEl.appendChild(userRow(u, u === myNick ? presence : (meta?.get(u)?.s || "here")));
+    for (const u of live) usersEl.appendChild(userRow(u, u === myNick ? presence : u === GUARDIAN_NICK ? "here" : (meta?.get(u)?.s || "here")));
     const kept = meta ? [...meta.entries()].filter(([n, m]) => m.s === "gone" && !(set && set.has(n))).sort((a, b) => b[1].l - a[1].l) : [];
     if (kept.length) {
       usersEl.appendChild(el("div", "os-relay-users-h", "kept — not in the room"));
@@ -474,25 +472,30 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   };
   const send = (raw: string) => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(raw + "\r\n"); };
 
-  /* ————— GuardianAngel — the room's automated moderation —————
-     A dynamic guard that rides this client and manages the room
-     within the authority this client actually holds:
-       · links from ordinary users are REMOVED from the line before
-         it is shown or kept (a link-only line is dropped whole);
+  /* ————— GuardianAngel —————
+     A standing member of the room, and nothing more is said about
+     it anywhere: no panel, no status prose, no announcements, and no
+     off switch — by the house's rulings it simply is here, in the
+     member list like anyone else, and it works in silence. What it
+     does, within the authority this client actually holds:
+       · links from ordinary users are cut out of the line before it
+         is shown or kept (a link-only line is dropped whole, and no
+         marker takes the link's place);
        · spam is measured, not vibes: the same line three times in
          thirty seconds, or six lines in eight, is a strike;
-       · strikes escalate — warn, then remove, then ban — and where
-         this client holds channel op, removal and ban are real wire
-         actions (KICK, then MODE +b + KICK, always under the
-         GuardianAngel name so every other Relay in the room knows
-         the removal was for cause and purges the spammer's lines
-         too). Without op, GuardianAngel still guards this view: the
+       · strikes accumulate silently and escalate — at the second,
+         removal; at the third, a ban — and where this client holds
+         channel op those are real wire actions (KICK, then MODE +b
+         + KICK), signed with the bare member name so every other
+         Relay in the room recognises the removal, purges the
+         offender's earlier lines too, and likewise says nothing.
+         Without op, the guard still guards this view: the
          offender's lines stop reaching it.
      House names, channel ops and the network's own voices are exempt
      — a guard that bites the house is a bug, not a feature. Classic
-     IRC cannot un-send a line from other clients; what GuardianAngel
-     deletes, it deletes from every Relay it can reach (its own log
-     directly, the room's via the op's kick) — and it says so plainly. */
+     IRC cannot un-send a line from other clients; what the guard
+     deletes, it deletes from every Relay it can reach. */
+  const GUARDIAN_NICK = "GuardianAngel";
   const LINK_RE = /\b(?:https?:\/\/|www\.)[^\s]+/gi;
   const guardState = new Map<string, { strikes: number; last: number; window: { t: number; text: string }[] }>();
   const selfIsOp = (chan: string) => ops.get(chan)?.has(myNick) ?? false;
@@ -513,25 +516,24 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     st.strikes += 1;
     st.last = now;
     guardState.set(key, st);
-    if (st.strikes === 1) { push(chan, `— GuardianAngel warned ${nick} (${why})`); return; }
+    /* Silence is the whole manner: no warning line, no removal
+       notice, no ban announcement. The actions are the message. */
     if (st.strikes === 2) {
-      if (selfIsOp(chan)) { send(`KICK ${chan} ${nick} :GuardianAngel: ${why} — second strike`); push(chan, `— GuardianAngel removed ${nick} from ${chan} (${why})`); purgeLines(chan, nick); }
-      else push(chan, `— GuardianAngel is hiding ${nick}'s lines here (${why}) — no op in this room to remove them`);
+      if (selfIsOp(chan)) { send(`KICK ${chan} ${nick} :${GUARDIAN_NICK}`); purgeLines(chan, nick); }
       return;
     }
-    if (selfIsOp(chan)) { send(`MODE ${chan} +b ${nick}!*@*`); send(`KICK ${chan} ${nick} :GuardianAngel: ${why} — banned`); push(chan, `— GuardianAngel banned ${nick} from ${chan} (${why})`); purgeLines(chan, nick); }
-    else push(chan, `— GuardianAngel keeps hiding ${nick} (${why})`);
+    if (st.strikes >= 3 && selfIsOp(chan)) { send(`MODE ${chan} +b ${nick}!*@*`); send(`KICK ${chan} ${nick} :${GUARDIAN_NICK}`); purgeLines(chan, nick); }
   };
   const guardianProcess = (chan: string, nick: string, text: string): { text: string | null; strikeWhy?: string } => {
-    if (!guardianOn || guardExempt(chan, nick)) return { text };
+    if (guardExempt(chan, nick)) return { text };
     const key = `${chan}|${nick.toLowerCase()}`;
     const now = Date.now();
     let st = guardState.get(key);
     if (!st) { st = { strikes: 0, last: now, window: [] }; guardState.set(key, st); }
     if (st.strikes >= 2 && !selfIsOp(chan)) return { text: null }; // locally muted: their lines stop here
     if (text.match(LINK_RE)) {
-      const out = text.replace(LINK_RE, "[link removed]").replace(/\s{2,}/g, " ").trim();
-      return { text: !out || out === "[link removed]" ? null : out, strikeWhy: "link posted" };
+      const out = text.replace(LINK_RE, "").replace(/\s{2,}/g, " ").trim();
+      return { text: out || null, strikeWhy: "link posted" };
     }
     const norm = text.toLowerCase().replace(/\s+/g, " ").trim();
     st.window = st.window.filter((w) => now - w.t < 30_000);
@@ -542,17 +544,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     if (recent >= 6) { st.window = []; return { text, strikeWhy: "flooding" }; }
     return { text };
   };
-  const setGuardian = (on: boolean) => {
-    guardianOn = on;
-    push(current.startsWith("#") ? current : "server", on ? "— GuardianAngel is watching the room — spam guards up, links removed, strikes escalate." : "— GuardianAngel stands down. The room is unguarded here.");
-    renderUsers();
-    scheduleSave();
-  };
-  const renderGuardian = () => {
-    guardLine.textContent = !guardianOn ? "standing down" : current.startsWith("#") ? (selfIsOp(current) ? "watching · op here — can remove" : "watching · view-only (no op here)") : "watching";
-    guardBtn.textContent = guardianOn ? "guardian off" : "guardian on";
-  };
-
   /* Presence moves on the wire as real IRC AWAY, so any client in the
      room — Relay or not — reads the state the panel shows. */
   const applyAwayWire = () => {
@@ -770,8 +761,10 @@ export function buildRelayApp(body: HTMLElement, os: any) {
           // A GuardianAngel removal (ours or another op's) purges the
           // removed user's lines from this log too — the deletion
           // reaches every Relay that hears the kick.
-          if (!(m.nick === myNick && /GuardianAngel/.test(reason))) push(chan, `— ${target} was removed by ${m.nick}${reason ? ` (${reason})` : ""}`);
-          if (guardianOn && /GuardianAngel/.test(reason)) purgeLines(chan, target);
+          /* A GuardianAngel-signed removal is never narrated — the
+             member acts, the room simply has one fewer offender. */
+          if (/^GuardianAngel$/.test(reason)) purgeLines(chan, target);
+          else push(chan, `— ${target} was removed by ${m.nick}${reason ? ` (${reason})` : ""}`);
         }
         if (chan === current) renderUsers();
         break;
@@ -906,7 +899,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       roster.set(chan, meta);
     }
     if (restored.away) { manualAway = restored.away; presence = "away"; awayMsg = restored.away; }
-    guardianOn = restored.guardian;
     pendingJoins = restored.channels.filter((c) => c !== HOUSE_CHANNEL);
     if (restored.current && buffers.has(restored.current)) current = restored.current;
     renderTargets();
@@ -960,11 +952,10 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         case "me": if (presence !== "here") setPresence("here"); send(`PRIVMSG ${current} :\x01ACTION ${arg}\x01`); push(current, `· ${myNick} ${arg}`); break;
         case "away": setPresence("away", arg || "away"); break;
         case "back": setPresence("here"); break;
-        case "guardian": if (arg === "off") setGuardian(false); else if (arg === "on") setGuardian(true); else push(current, guardianOn ? "— GuardianAngel is on — spam guards up, links removed, strikes escalate." : "— GuardianAngel is off."); break;
         case "nick": send(`NICK ${arg}`); break;
         case "topic": send(`TOPIC ${current} :${arg}`); break;
         case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); push("server", "— off the wire. The identity box is up if you want back in — any name, or none."); showIdentityBox(); break;
-        default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /guardian /topic /quit)`);
+        default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /topic /quit)`);
       }
       return;
     }
