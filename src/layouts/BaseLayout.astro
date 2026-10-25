@@ -1,14 +1,15 @@
 ---
 import "../styles/global.css";
 import "../styles/nightware.css";
-interface Props { title?: string; description?: string; bare?: boolean; }
+interface Props { title?: string; description?: string; bare?: boolean; canonicalPath?: string; }
 const {
   title = "BLACKSITE WEB — a working pentest bench in your browser",
   description = "BLACKSITE WEB by NIGHTWARE LABZ: the nightjar Blacksite bench, rebuilt for the web. DNS, TLS, HTTP security grading, connect checks, domain recon, JWT and certificate inspection, hashes, codecs, subnet math, and payloads. Public targets only. One knock, read, grade.",
   bare = false,
+  canonicalPath,
 } = Astro.props;
 const pageTitle = `${title} · NIGHTWARE LABZ`;
-const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site).toString();
 const isNotFound = Astro.url.pathname.replace(/\/$/, "") === "/404";
 const onBook = Astro.url.pathname.startsWith("/book/");
 ---

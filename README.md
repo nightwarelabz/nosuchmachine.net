@@ -72,7 +72,7 @@ npm run preview
 
 ## Update the Orange Book
 
-The hosted edition is pinned to Orange Book v0.26, snapshot October 2, 2026, from Orange revision [`4394a66201ff59d73bdd1dea38637bf9b7f37421`](https://github.com/chasebryan/orange/commit/4394a66201ff59d73bdd1dea38637bf9b7f37421). Builds use the committed manuscript and chapters without fetching upstream content, so the book remains available independently of GitHub.
+The hosted edition is pinned to Orange Book v0.27, snapshot October 5, 2026, from Orange revision [`1f555642dd8798b5a9f6329802af7e985d5b11e4`](https://github.com/nightwarelabz/orange/commit/1f555642dd8798b5a9f6329802af7e985d5b11e4). Builds use the committed manuscript and chapters without fetching upstream content, so the book remains available independently of GitHub.
 
 To import a newer edition from a local Orange checkout with a clean `docs/THE_ORANGE_BOOK.md`:
 

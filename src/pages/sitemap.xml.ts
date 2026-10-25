@@ -5,7 +5,6 @@ export const GET: APIRoute = ({ site }) => {
   const routes = [
     "/",
     "/bench/",
-    "/blacksite/",
     "/book/",
     ...book.chapters.map((chapter) => `/book/${chapter.slug}/`),
     ...projects.map((project) => `/projects/${project.slug}/`),
