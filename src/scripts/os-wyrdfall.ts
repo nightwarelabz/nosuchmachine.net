@@ -1,658 +1,830 @@
-/* ————————————————————————————————————————————————————————————————
-   WYRDFALL — a realm that keeps its own counsel.
-
-   Not a tribute and not a copy: a first-person realm of the
-   old school, raised from this house's own engine craft — the
-   Simulacrum's seeded land and true-shape geometry, Bloodbath's
-   arm and momentum — turned to a different purpose. A whole
-   province: a capital of guilds and temples, villages, roads,
-   barrows that go down further than they should. Make a
-   character, take work from the guilds, learn by doing, rest
-   to become. The realm does not scale to meet you and does
-   not care whether you are ready. That is the posture.
-   ———————————————————————————————————————————————————————————————— */
-import { mulberry32, m4, LIT_VS, LIT_FS, SKY_VS, SKY_FS, WATER_VS, WATER_FS, PTS_VS, PTS_FS } from "./os-simulacrum";
+/* Wyrdfall — a province that does not scale to meet you.
+   A full little RPG in the posture of the old province games: textured
+   timber towns, painted folk, dungeons lit by torchlight, and work for
+   anyone willing to walk the roads. Second building: a bespoke textured
+   engine, sprite actors, a dressed world, and a sound engine with
+   plucked strings in it. */
+import { m4 } from "./os-simulacrum";
+import { T, SPR, tileUV, makeAtlas } from "./os-wy-tex";
 
 type Col3 = [number, number, number];
-const el = (tag: string, cls: string, text?: string): HTMLElement => {
-  const n = document.createElement(tag);
-  n.className = cls;
-  if (text !== undefined) n.textContent = text;
-  return n;
-};
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const vrnd = mulberry32(0x77fa11);
+const hash2 = (x: number, z: number) => {
+  const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+};
+const vnoise = (x: number, z: number) => {
+  const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+  return lerp(lerp(hash2(xi, zi), hash2(xi + 1, zi), u), lerp(hash2(xi, zi + 1), hash2(xi + 1, zi + 1), u), v);
+};
+const fbm = (x: number, z: number) => vnoise(x, z) * 0.55 + vnoise(x * 2.13 + 7.7, z * 2.13 + 3.1) * 0.28 + vnoise(x * 4.7 + 13.7, z * 4.7 + 9.2) * 0.17;
 
-/* ————— the land: one province, the same for everyone ————— */
-const SEED = 0x99fd;
-const hash2 = (x: number, z: number): number => {
-  let h = Math.sin(x * 127.1 + z * 311.7 + 417.3) * 43758.5453;
-  return h - Math.floor(h);
-};
-const vnoise = (x: number, z: number): number => {
-  const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz;
-  const ux = fx * fx * (3 - 2 * fx), uz = fz * fz * (3 - 2 * fz);
-  return lerp(lerp(hash2(ix, iz), hash2(ix + 1, iz), ux), lerp(hash2(ix, iz + 1), hash2(ix + 1, iz + 1), ux), uz);
-};
-const fbm = (x: number, z: number, oct: number): number => {
-  let v = 0, a = 0.55, f = 1;
-  for (let i = 0; i < oct; i++) { v += a * vnoise(x * f, z * f); f *= 2.13; a *= 0.5; }
-  return v;
-};
-interface Town { id: string; name: string; x: number; z: number; r: number; base: number; capital?: boolean }
-const TOWNS: Town[] = [
-  { id: "thornwick", name: "Thornwick", x: 0, z: -120, r: 95, base: 6, capital: true },
-  { id: "millbrook", name: "Millbrook", x: -380, z: 260, r: 58, base: 9 },
-  { id: "cairnford", name: "Cairn Ford", x: 430, z: 330, r: 58, base: 11 },
+/* ——— the province's shape ——— */
+const WORLD_R = 880;
+const TOWNS = [
+  { name: "Thornwick", x: 0, z: -120, r: 105 },
+  { name: "Millbrook", x: -390, z: 265, r: 80 },
+  { name: "Cairn Ford", x: 435, z: 335, r: 80 },
 ];
-interface DungeonDef { id: string; name: string; x: number; z: number; seed: number; kind: string }
-const DUNGEONS: DungeonDef[] = [
-  { id: "barrow", name: "Barrow of the First King", x: 180, z: -420, seed: 1101, kind: "undead" },
-  { id: "vault", name: "The Sunken Vault", x: -520, z: -180, seed: 2202, kind: "vermin" },
-  { id: "hollow", name: "Witch Hollow", x: 560, z: 60, seed: 3303, kind: "cult" },
-  { id: "deep", name: "The Howling Deep", x: -140, z: 560, seed: 4404, kind: "undead" },
+const DUNGEONS = [
+  { name: "Barrow of the First King", x: 185, z: -430, kind: "undead" as const },
+  { name: "The Sunken Vault", x: -530, z: -185, kind: "vermin" as const },
+  { name: "Witch Hollow", x: 565, z: 65, kind: "cult" as const },
+  { name: "The Howling Deep", x: -145, z: 570, kind: "undead" as const },
 ];
-const townAt = (x: number, z: number): Town | null => {
-  for (const t of TOWNS) if (Math.hypot(x - t.x, z - t.z) < t.r) return t;
-  return null;
-};
 export function wyHeight(x: number, z: number): number {
   const d = Math.hypot(x, z);
-  let h = Math.pow(fbm(x * 0.004 + 3.1, z * 0.004 + 9.4, 4), 1.5) * 46 + fbm(x * 0.03 + 7.7, z * 0.03 + 1.2, 3) * 3.2 - 6;
-  h += clamp((d - 690) / 160, 0, 1) * 60;                                   // the province is walled by high country
-  const lake = Math.exp(-Math.pow(Math.hypot(x + 470, z + 330) / 150, 2)); // the mere, south-west
-  h = lerp(h, -3.5, clamp(lake * 1.4, 0, 1));
-  for (const t of TOWNS) {                                                  // town flats
+  let h = (fbm(x * 0.004 + 31.7, z * 0.004 + 11.2) - 0.42) * 95;
+  h += (fbm(x * 0.021 + 3.3, z * 0.021 + 8.8) - 0.5) * 7;
+  const rim = clamp((d - 660) / 190, 0, 1);
+  h = lerp(h, 120 + fbm(x * 0.01, z * 0.01) * 60, rim * rim);
+  const mere = clamp(1 - Math.hypot(x + 330, z - 330) / 260, 0, 1);
+  h = lerp(h, -7, mere * mere * 0.96);
+  for (const t of TOWNS) {
     const td = Math.hypot(x - t.x, z - t.z);
-    if (td < t.r + 60) h = lerp(t.base, h, clamp((td - t.r * 0.55) / (t.r * 0.75), 0, 1));
+    if (td < t.r + 40) h = lerp(6, h, clamp((td - t.r * 0.55) / (t.r * 0.45 + 40), 0, 1));
   }
-  for (const dg of DUNGEONS) {                                              // barrow mounds stand gentle
+  for (const dg of DUNGEONS) {
     const dd = Math.hypot(x - dg.x, z - dg.z);
-    if (dd < 26) h = lerp(h + 2.2, h, clamp((dd - 8) / 18, 0, 1));
+    if (dd < 46) h = lerp(Math.max(h, 9), h, clamp((dd - 20) / 26, 0, 1));
   }
   return h;
 }
-const slopeAt = (x: number, z: number): number => {
-  const e = 1.6;
-  return Math.max(Math.abs(wyHeight(x + e, z) - wyHeight(x - e, z)), Math.abs(wyHeight(x, z + e) - wyHeight(x, z - e))) / (2 * e);
-};
-/* roads: the old ways between the towns */
-const ROADS: Array<[number, number, number, number]> = [
-  [0, -120, -380, 260], [0, -120, 430, 330], [-380, 260, -140, 560],
-  [0, -120, 180, -420], [-380, 260, -520, -180], [430, 330, 560, 60],
-];
 const roadDist = (x: number, z: number): number => {
-  let best = 1e9;
-  for (const [ax, az, bx, bz] of ROADS) {
-    const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1;
+  let m = 1e9;
+  const seg = (ax: number, az: number, bx: number, bz: number) => {
+    const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz;
     const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1);
-    best = Math.min(best, Math.hypot(x - (ax + dx * t), z - (az + dz * t)));
-  }
-  return best;
-};
-
-/* ————— geometry: the house kit ————— */
-function tri(a: number[], p: number[], q: number[], r: number[], col: Col3) {
-  const ux = q[0] - p[0], uy = q[1] - p[1], uz = q[2] - p[2];
-  const vx = r[0] - p[0], vy = r[1] - p[1], vz = r[2] - p[2];
-  let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-  const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
-  a.push(...p, ...col, nx, ny, nz, ...q, ...col, nx, ny, nz, ...r, ...col, nx, ny, nz);
-}
-function prism(a: number[], x: number, y: number, z: number, rb: number, rt: number, h: number, sides: number, col: Col3, leanX = 0, leanZ = 0) {
-  const ring = (r: number, yy: number, lx: number, lz: number) => {
-    const pts: number[][] = [];
-    for (let k = 0; k < sides; k++) { const t = (k / sides) * Math.PI * 2; pts.push([x + lx + Math.cos(t) * r, yy, z + lz + Math.sin(t) * r]); }
-    return pts;
+    m = Math.min(m, Math.hypot(x - (ax + dx * t), z - (az + dz * t)));
   };
-  const bot = ring(rb, y, 0, 0), top = ring(rt, y + h, leanX, leanZ);
-  for (let k = 0; k < sides; k++) {
-    const k2 = (k + 1) % sides;
-    tri(a, bot[k], top[k], top[k2], col);
-    tri(a, bot[k], top[k2], bot[k2], col);
-    tri(a, [x, y, z], bot[k2], bot[k], col);
-    tri(a, [x + leanX, y + h, z + leanZ], top[k], top[k2], col);
-  }
-}
-function octa(a: number[], x: number, y: number, z: number, rx: number, ry: number, rz: number, col: Col3, twist = 0) {
-  const T: number[] = [x, y + ry, z], B: number[] = [x, y - ry, z];
-  const E: number[][] = [];
-  for (let k = 0; k < 4; k++) { const t = (k / 4) * Math.PI * 2 + twist; E.push([x + Math.cos(t) * rx, y, z + Math.sin(t) * rz]); }
-  for (let k = 0; k < 4; k++) {
-    const k2 = (k + 1) % 4;
-    tri(a, T, E[k], E[k2], col);
-    tri(a, B, E[k2], E[k], col);
-  }
-}
-function boxS(a: number[], x: number, y: number, z: number, w: number, h: number, d: number, col: Col3, rot = 0) {
-  const c = Math.cos(rot), s = Math.sin(rot);
-  const P = (lx: number, ly: number, lz: number): number[] => [x + lx * c - lz * s, y + ly, z + lx * s + lz * c];
-  const c000 = P(-w / 2, 0, -d / 2), c100 = P(w / 2, 0, -d / 2), c110 = P(w / 2, 0, d / 2), c010 = P(-w / 2, 0, d / 2);
-  const c001 = P(-w / 2, h, -d / 2), c101 = P(w / 2, h, -d / 2), c111 = P(w / 2, h, d / 2), c011 = P(-w / 2, h, d / 2);
-  tri(a, c000, c100, c110, col); tri(a, c000, c110, c010, col);
-  tri(a, c001, c111, c101, col); tri(a, c001, c011, c111, col);
-  tri(a, c000, c001, c101, col); tri(a, c000, c101, c100, col);
-  tri(a, c100, c101, c111, col); tri(a, c100, c111, c110, col);
-  tri(a, c110, c111, c011, col); tri(a, c110, c011, c010, col);
-  tri(a, c010, c011, c001, col); tri(a, c010, c001, c000, col);
-}
-function triR(a: number[], cx: number, cy: number, cz: number, sy: number, cyaw: number, p: number[], q: number[], r: number[], col: Col3) {
-  const R = (v: number[]): number[] => [cx + v[0] * cyaw + v[2] * sy, cy + v[1], cz - v[0] * sy + v[2] * cyaw];
-  tri(a, R(p), R(q), R(r), col);
-}
-function octaR(a: number[], cx: number, cy: number, cz: number, yaw: number, lx: number, ly: number, lz: number, rx: number, ry: number, rz: number, col: Col3) {
-  const sy = Math.sin(yaw), cyw = Math.cos(yaw);
-  const wx = cx + lx * cyw + lz * sy, wz = cz - lx * sy + lz * cyw;
-  octa(a, wx, cy + ly, wz, rx, ry, rz, col, yaw);
-}
-function prismR(a: number[], cx: number, cy: number, cz: number, yaw: number, lx: number, ly: number, lz: number, rb: number, rt: number, h: number, sides: number, col: Col3, leanF = 0) {
-  const sy = Math.sin(yaw), cyw = Math.cos(yaw);
-  const wx = cx + lx * cyw + lz * sy, wz = cz - lx * sy + lz * cyw;
-  prism(a, wx, cy + ly, wz, rb, rt, h, sides, col, leanF * sy, leanF * cyw);
-}
-function beam(a: number[], x: number, y: number, z: number, dx: number, dy: number, dz: number, len: number, r: number, col: Col3) {
-  const L = Math.hypot(dx, dy, dz) || 1; dx /= L; dy /= L; dz /= L;
-  let ux = 0, uy = 1, uz = 0;
-  if (Math.abs(dy) > 0.9) { ux = 1; uy = 0; uz = 0; }
-  let px2 = dy * uz - dz * uy, py2 = dz * ux - dx * uz, pz2 = dx * uy - dy * ux;
-  const pl = Math.hypot(px2, py2, pz2) || 1; px2 /= pl; py2 /= pl; pz2 /= pl;
-  const qx = dy * pz2 - dz * py2, qy = dz * px2 - dx * pz2, qz = dx * py2 - dy * px2;
-  const T: number[] = [x + dx * len / 2, y + dy * len / 2, z + dz * len / 2];
-  const B: number[] = [x - dx * len / 2, y - dy * len / 2, z - dz * len / 2];
-  const E: number[][] = [
-    [x + px2 * r, y + py2 * r, z + pz2 * r],
-    [x + qx * r, y + qy * r, z + qz * r],
-    [x - px2 * r, y - py2 * r, z - pz2 * r],
-    [x - qx * r, y - qy * r, z - qz * r],
-  ];
-  for (let k = 0; k < 4; k++) { const k2 = (k + 1) % 4; tri(a, T, E[k], E[k2], col); tri(a, B, E[k2], E[k], col); }
-}
-interface Solid { x: number; z: number; r: number }
-
-/* ————— the province, baked ————— */
-type BKind = "house" | "tavern" | "guildf" | "guildm" | "temple" | "shop";
-interface Building { town: string; kind: BKind; name: string; x: number; z: number; rot: number; w: number; d: number; h: number; doorX: number; doorZ: number }
-const KIND_NAME: Record<BKind, string> = {
-  house: "a house", tavern: "The Gilded Boar", guildf: "Hall of the Hearthguard", guildm: "House of the Umbral Covenant", temple: "Temple of the Listening God", shop: "Provisions & Sundries",
-};
-const KIND_SIGN: Record<BKind, Col3> = {
-  house: [0.4, 0.36, 0.3], tavern: [0.95, 0.62, 0.15], guildf: [0.75, 0.16, 0.10], guildm: [0.45, 0.30, 0.80], temple: [0.95, 0.85, 0.55], shop: [0.30, 0.65, 0.30],
-};
-function buildOverworld(): { terrain: Float32Array; lit: Float32Array; solids: Solid[]; buildings: Building[] } {
-  const rnd = mulberry32(SEED ^ 0x0dd5);
-  const tv: number[] = [], lit: number[] = [], solids: Solid[] = [], buildings: Building[] = [];
-  const N = 132, EXT = 1760, st = EXT / N;
-  const pal = (x: number, z: number, h: number, sl: number): Col3 => {
-    if (h < 0.45) return [0.52, 0.46, 0.33];
-    const rd = roadDist(x, z);
-    if (rd < 4.6) return [0.40, 0.32, 0.22];
-    if (rd < 10) return [0.36, 0.33, 0.19];
-    const t = townAt(x, z);
-    if (t) return [0.47, 0.41, 0.31];
-    if (sl > 0.52) return [0.40, 0.375, 0.35];
-    if (h > 30) return [0.55, 0.54, 0.52];
-    const moist = fbm(x * 0.008 + 21, z * 0.008 + 4, 3);
-    const v = 0.88 + hash2(Math.floor(x * 1.4), Math.floor(z * 1.4)) * 0.24;
-    return moist > 0.52 ? [0.135 * v, 0.27 * v, 0.105 * v] : [0.30 * v, 0.33 * v, 0.135 * v];
-  };
-  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
-    const x0 = -EXT / 2 + i * st, z0 = -EXT / 2 + j * st;
-    const quad: Array<[number, number, number, Col3]> = [];
-    for (const [di, dj] of [[0, 0], [1, 0], [1, 1], [0, 1]] as Array<[number, number]>) {
-      const x = x0 + di * st, z = z0 + dj * st, h = wyHeight(x, z);
-      quad.push([x, h, z, pal(x, z, h, slopeAt(x, z))]);
-    }
-    const [A, B, C, D] = quad;
-    const push = (P: [number, number, number, Col3], Q: [number, number, number, Col3], R: [number, number, number, Col3]) => {
-      const ux = Q[0] - P[0], uy = Q[1] - P[1], uz = Q[2] - P[2];
-      const vx = R[0] - P[0], vy = R[1] - P[1], vz = R[2] - P[2];
-      let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-      const l = Math.hypot(nx, ny, nz) || 1;
-      for (const V of [P, Q, R]) tv.push(V[0], V[1], V[2], V[3][0], V[3][1], V[3][2], nx / l, ny / l, nz / l);
-    };
-    push(A, B, C); push(A, C, D);
-  }
-  const building = (town: Town, kind: BKind, x: number, z: number, rot: number, w: number, d: number, h: number) => {
-    const gy = wyHeight(x, z) - 0.25;
-    const stone = kind === "guildf" || kind === "guildm" || kind === "temple";
-    const wall: Col3 = stone ? [0.44, 0.41, 0.39] : [0.60 + rnd() * 0.06, 0.53, 0.43];
-    const roof: Col3 = stone ? [0.28, 0.30, 0.37] : [0.44, 0.35, 0.19];
-    const timber: Col3 = [0.23, 0.16, 0.10];
-    const c = Math.cos(rot), s = Math.sin(rot);
-    const L = (lx: number, lz: number): [number, number] => [x + lx * c - lz * s, z + lx * s + lz * c];
-    /* walls: the front carries a door gap; the rest stand whole */
-    const wallSeg = (lx: number, lz: number, len: number, alongX: boolean, hh: number, y0 = 0) => {
-      const [wx, wz] = L(lx, lz);
-      if (alongX) boxS(lit, wx, gy + y0, wz, len, hh, 0.35, wall, rot);
-      else boxS(lit, wx, gy + y0, wz, 0.35, hh, len, wall, rot);
-    };
-    wallSeg(0, -d / 2, w, true, h);                                   // back
-    wallSeg(-w / 2, 0, d, false, h);                                  // left
-    wallSeg(w / 2, 0, d, false, h);                                   // right
-    const doorW = 1.3;
-    wallSeg(-(doorW / 2 + (w / 2 - doorW / 2) / 2), d / 2, w / 2 - doorW / 2, true, h);
-    wallSeg(doorW / 2 + (w / 2 - doorW / 2) / 2, d / 2, w / 2 - doorW / 2, true, h);
-    wallSeg(0, d / 2, doorW + 0.2, true, h - 2.3, 2.3);               // lintel
-    const [dx2, dz2] = L(0, d / 2 + 0.1);
-    boxS(lit, dx2, gy, dz2, doorW, 2.3, 0.14, [0.16, 0.11, 0.07], rot); // the door itself
-    /* timbers + a pyramid roof + a chimney */
-    for (const [cx2, cz2] of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]] as Array<[number, number]>) {
-      const [wx, wz] = L(cx2, cz2);
-      boxS(lit, wx, gy, wz, 0.3, h, 0.3, timber, rot);
-    }
-    prism(lit, x, gy + h - 0.1, z, Math.max(w, d) * 0.74, 0.06, h * 0.52, 4, roof);
-    if (kind === "house" || kind === "tavern") {
-      const [hx2, hz2] = L(w * 0.28, -d * 0.18);
-      boxS(lit, hx2, gy + h + h * 0.18, hz2, 0.55, 1.1, 0.55, wall, rot);
-    }
-    if (kind !== "house") {                                            // a sign, and its colour
-      const [sx2, sz2] = L(w / 2 + 0.7, d / 2 + 0.7);
-      prism(lit, sx2, gy, sz2, 0.07, 0.07, 2.6, 4, timber);
-      octa(lit, sx2, gy + 2.85, sz2, 0.30, 0.38, 0.30, KIND_SIGN[kind]);
-    }
-    const [doorX, doorZ] = L(0, d / 2 + 1.6);
-    buildings.push({ town: town.id, kind, name: KIND_NAME[kind], x, z, rot, w, d, h, doorX, doorZ });
-    solids.push({ x, z, r: Math.max(w, d) * 0.44 });
-  };
-  for (const t of TOWNS) {
-    const kinds: BKind[] = t.capital
-      ? ["guildf", "guildm", "temple", "shop", "tavern", "house", "house", "house", "house", "house", "house", "house", "house", "house"]
-      : t.id === "millbrook"
-        ? ["tavern", "shop", "house", "house", "house", "house", "house"]
-        : ["tavern", "temple", "house", "house", "house", "house", "house"];
-    const ringR = t.capital ? 52 : 34;
-    kinds.forEach((kind, i) => {
-      const a = (i / kinds.length) * Math.PI * 2 + rnd() * 0.22;
-      const rr = ringR + (rnd() - 0.5) * 10 + (i % 3) * 6;
-      const x = t.x + Math.cos(a) * rr, z = t.z + Math.sin(a) * rr;
-      const rot = Math.atan2(t.x - x, t.z - z);
-      const big = kind !== "house";
-      building(t, kind, x, z, rot, big ? 11 + rnd() * 3 : 7 + rnd() * 2.5, big ? 9.5 + rnd() * 2 : 6.5 + rnd() * 2, big ? 5.2 : 3.6 + rnd() * 0.8);
-    });
-    /* a well at the heart of every town */
-    const gy = wyHeight(t.x, t.z);
-    prism(lit, t.x, gy - 0.2, t.z, 1.15, 1.0, 0.9, 8, [0.42, 0.40, 0.38]);
-    prism(lit, t.x - 1.3, gy - 0.2, t.z, 0.09, 0.09, 2.2, 4, [0.23, 0.16, 0.10]);
-    prism(lit, t.x + 1.3, gy - 0.2, t.z, 0.09, 0.09, 2.2, 4, [0.23, 0.16, 0.10]);
-    boxS(lit, t.x, gy + 1.95, t.z, 3.1, 0.18, 0.5, [0.23, 0.16, 0.10]);
-    solids.push({ x: t.x, z: t.z, r: 1.5 });
-  }
-  /* dungeon mouths: a mound, a dark slab, two standing stones */
+  seg(TOWNS[0].x, TOWNS[0].z, TOWNS[1].x, TOWNS[1].z);
+  seg(TOWNS[0].x, TOWNS[0].z, TOWNS[2].x, TOWNS[2].z);
+  seg(TOWNS[1].x, TOWNS[1].z, TOWNS[2].x, TOWNS[2].z);
   for (const dg of DUNGEONS) {
-    const gy = wyHeight(dg.x, dg.z);
-    octa(lit, dg.x, gy + 0.4, dg.z, 7.5, 3.4, 7.5, [0.36, 0.33, 0.26]);
-    boxS(lit, dg.x, gy + 0.2, dg.z + 5.4, 2.4, 3.4, 0.5, [0.10, 0.09, 0.10]);
-    for (const sxn of [-1, 1]) {
-      prism(lit, dg.x + sxn * 2.6, gy, dg.z + 5.2, 0.32, 0.2, 3.1 + sxn * 0.2, 5, [0.45, 0.43, 0.40], sxn * 0.25, 0);
-      solids.push({ x: dg.x + sxn * 2.6, z: dg.z + 5.2, r: 0.55 });
-    }
-    solids.push({ x: dg.x, z: dg.z + 2.5, r: 4.6 });
+    let best = TOWNS[0], bd = 1e9;
+    for (const t of TOWNS) { const d = Math.hypot(dg.x - t.x, dg.z - t.z); if (d < bd) { bd = d; best = t; } }
+    seg(best.x, best.z, dg.x, dg.z);
   }
-  /* the wild: pines, broadleafs, rock, the odd old stone */
-  for (let i = 0; i < 750; i++) {
-    const x = (rnd() - 0.5) * 1560, z = (rnd() - 0.5) * 1560;
-    const h = wyHeight(x, z);
-    if (h < 0.6 || slopeAt(x, z) > 0.62) continue;
-    if (townAt(x, z)) continue;
-    if (roadDist(x, z) < 6.5) continue;
-    if (DUNGEONS.some((dg) => Math.hypot(x - dg.x, z - dg.z) < 14)) continue;
-    const roll = rnd();
-    if (roll < 0.52) {
-      const s = 0.8 + rnd() * 0.9, trunk: Col3 = [0.20, 0.14, 0.09], leaf: Col3 = [0.075, 0.16, 0.07];
-      prism(lit, x, h - 0.2, z, 0.16 * s, 0.11 * s, 2.6 * s, 6, trunk, (rnd() - 0.5) * 0.4);
-      octa(lit, x, h + 3.1 * s, z, 1.5 * s, 1.7 * s, 1.5 * s, leaf);
-      octa(lit, x, h + 4.4 * s, z, 1.05 * s, 1.3 * s, 1.05 * s, leaf);
-      octa(lit, x, h + 5.5 * s, z, 0.6 * s, 0.9 * s, 0.6 * s, leaf);
-      solids.push({ x, z, r: 0.42 * s });
-    } else if (roll < 0.78) {
-      const s = 0.8 + rnd() * 0.8, trunk: Col3 = [0.24, 0.17, 0.11], leaf: Col3 = [0.13, 0.24, 0.09];
-      prism(lit, x, h - 0.2, z, 0.20 * s, 0.13 * s, 2.0 * s, 6, trunk, (rnd() - 0.5) * 0.5);
-      octa(lit, x + 0.3, h + 2.6 * s, z, 1.6 * s, 1.2 * s, 1.6 * s, leaf);
-      octa(lit, x - 0.9 * s, h + 2.1 * s, z + 0.5, 1.1 * s, 0.9 * s, 1.1 * s, leaf);
-      octa(lit, x + 0.7 * s, h + 2.2 * s, z - 0.7 * s, 1.0 * s, 0.85 * s, 1.0 * s, leaf);
-      solids.push({ x, z, r: 0.45 * s });
-    } else if (roll < 0.94) {
-      const s = 0.5 + rnd() * 1.7;
-      octa(lit, x, h + 0.25 * s, z, s, 0.66 * s, s * (0.7 + rnd() * 0.5), [0.36, 0.34, 0.32], rnd() * 3);
-      solids.push({ x, z, r: 0.9 * s });
-    } else {
-      prism(lit, x, h - 0.3, z, 0.5, 0.34, 2.6 + rnd() * 1.6, 5, [0.42, 0.40, 0.37], (rnd() - 0.5) * 0.7, (rnd() - 0.5) * 0.7);
-      solids.push({ x, z, r: 0.6 });
-    }
+  return m;
+};
+const inTown = (x: number, z: number) => TOWNS.some((t) => Math.hypot(x - t.x, z - t.z) < t.r);
+
+/* ——— textured geometry: pos3, nor3, tint3, uv2 — 11 floats a vertex ——— */
+type V = number[];
+function tri(a: V, p1: number[], p2: number[], p3: number[], n: Col3, tint: Col3, tile: number, flip = false) {
+  const [u0, vB, u1, vT] = tileUV(tile);
+  const pts = flip ? [p1, p3, p2] : [p1, p2, p3];
+  const uvs: Array<[number, number]> = flip ? [[u0, vB], [u1, vT], [u1, vB]] : [[u0, vB], [u1, vB], [u0, vT]];
+  for (let i = 0; i < 3; i++) a.push(pts[i][0], pts[i][1], pts[i][2], n[0], n[1], n[2], tint[0], tint[1], tint[2], uvs[i][0], uvs[i][1]);
+}
+/* a wall quad from its bottom-left and bottom-right corners, rising h */
+function quad(a: V, bl: number[], br: number[], h: number, tint: Col3, tile: number) {
+  const dx = br[0] - bl[0], dz = br[2] - bl[2];
+  const L = Math.hypot(dx, dz) || 1;
+  const n: Col3 = [-dz / L, 0, dx / L];
+  const tl = [bl[0], bl[1] + h, bl[2]], tr = [br[0], br[1] + h, br[2]];
+  tri(a, bl, br, tl, n, tint, tile);
+  tri(a, br, tr, tl, n, tint, tile);
+}
+function flat(a: V, y: number, x1: number, z1: number, x2: number, z2: number, tint: Col3, tile: number, up = true) {
+  const n: Col3 = up ? [0, 1, 0] : [0, -1, 0];
+  tri(a, [x1, y, z1], [x2, y, z1], [x1, y, z2], n, tint, tile, !up);
+  tri(a, [x2, y, z1], [x2, y, z2], [x1, y, z2], n, tint, tile, !up);
+}
+function box(a: V, cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, tint: Col3, tile: number, topTile?: number) {
+  const x0 = cx - hx, x1 = cx + hx, y0 = cy - hy, y1 = cy + hy, z0 = cz - hz, z1 = cz + hz;
+  quad(a, [x0, y0, z1], [x1, y0, z1], hy * 2, tint, tile);
+  quad(a, [x1, y0, z0], [x0, y0, z0], hy * 2, tint, tile);
+  quad(a, [x1, y0, z1], [x1, y0, z0], hy * 2, tint, tile);
+  quad(a, [x0, y0, z0], [x0, y0, z1], hy * 2, tint, tile);
+  flat(a, y1, x0, z0, x1, z1, tint, topTile ?? tile);
+  flat(a, y0, x0, z0, x1, z1, tint, tile, false);
+}
+function boxR(a: V, cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, yaw: number, tint: Col3, tile: number) {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  const R = (lx: number, lz: number): [number, number] => [cx + lx * c - lz * s, cz + lx * s + lz * c];
+  const y0 = cy - hy, y1 = cy + hy;
+  const cnr = [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz]].map(([lx, lz]) => R(lx, lz));
+  for (let i = 0; i < 4; i++) {
+    const j = (i + 1) % 4;
+    quad(a, [cnr[i][0], y0, cnr[i][1]], [cnr[j][0], y0, cnr[j][1]], hy * 2, tint, tile);
   }
-  return { terrain: new Float32Array(tv), lit: new Float32Array(lit), solids, buildings };
+  const [ax, az] = cnr[0], [bx, bz] = cnr[1], [ex, ez] = cnr[2], [dx, dz] = cnr[3];
+  tri(a, [ax, y1, az], [bx, y1, bz], [dx, y1, dz], [0, 1, 0], tint, tile);
+  tri(a, [bx, y1, bz], [ex, y1, ez], [dx, y1, dz], [0, 1, 0], tint, tile);
+}
+/* a gabled roof: ridge along local X, spanning w × d, rising rh from cy */
+function gable(a: V, cx: number, cy: number, cz: number, w: number, d: number, rh: number, yaw: number, tint: Col3, tile: number, endTile: number) {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  const P = (lx: number, ly: number, lz: number): [number, number, number] => [cx + lx * c - lz * s, cy + ly, cz + lx * s + lz * c];
+  const hw = w / 2, hd = d / 2;
+  const nS: Col3 = [s * 0.55, 0.83, -c * 0.55];
+  const nN: Col3 = [-s * 0.55, 0.83, c * 0.55];
+  const eL = P(-hw, 0, -hd), eR = P(hw, 0, -hd), rL = P(-hw, rh, 0), rR = P(hw, rh, 0);
+  const eL2 = P(-hw, 0, hd), eR2 = P(hw, 0, hd);
+  tri(a, eL, eR, rL, nS, tint, tile); tri(a, eR, rR, rL, nS, tint, tile);
+  tri(a, eR2, eL2, rR, nN, tint, tile); tri(a, eL2, rL, rR, nN, tint, tile);
+  tri(a, eL2, rL, eL, [-c, 0, -s], tint, endTile);
+  tri(a, eR, rR, eR2, [c, 0, s], tint, endTile);
+}
+/* a cylindrical billboard pushed into a dynamic array */
+function bill(a: V, x: number, y: number, z: number, w: number, h: number, camX: number, camZ: number, tile: number, tint: Col3, yOff = 0) {
+  let dx = camX - x, dz = camZ - z;
+  const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+  const rx = -dz * (w / 2), rz = dx * (w / 2);
+  const [u0, vB, u1, vT] = tileUV(tile);
+  const n: Col3 = [dx, 0, dz];
+  const c1 = [x - rx, y + yOff, z - rz], c2 = [x + rx, y + yOff, z + rz];
+  const c3 = [x - rx, y + yOff + h, z - rz], c4 = [x + rx, y + yOff + h, z + rz];
+  const push = (p: number[], u: number, v: number) => a.push(p[0], p[1], p[2], n[0], n[1], n[2], tint[0], tint[1], tint[2], u, v);
+  push(c1, u0, vB); push(c2, u1, vB); push(c3, u0, vT);
+  push(c2, u1, vB); push(c4, u1, vT); push(c3, u0, vT);
+}
+function decal(a: V, x: number, y: number, z: number, w: number, h: number, yaw: number, tile: number, tint: Col3) {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  const [u0, vB, u1, vT] = tileUV(tile);
+  const P = (lx: number, lz: number): [number, number, number] => [x + lx * c - lz * s, y, z + lx * s + lz * c];
+  const p1 = P(-w / 2, -h / 2), p2 = P(w / 2, -h / 2), p3 = P(-w / 2, h / 2), p4 = P(w / 2, h / 2);
+  const push = (p: [number, number, number], u: number, v: number) => a.push(p[0], p[1], p[2], 0, 1, 0, tint[0], tint[1], tint[2], u, v);
+  push(p1, u0, vB); push(p2, u1, vB); push(p3, u0, vT);
+  push(p2, u1, vB); push(p4, u1, vT); push(p3, u0, vT);
 }
 
-/* ————— people, and the shape of a life ————— */
-type SkillId = "blade" | "destruction" | "restoration" | "athletics" | "lockpick" | "mercantile";
-const SKILL_NAME: Record<SkillId, string> = {
-  blade: "Blade", destruction: "Destruction", restoration: "Restoration", athletics: "Athletics", lockpick: "Lockpicking", mercantile: "Mercantile",
+/* ————————————————— the built world ————————————————— */
+const ROAD_SEGS: Array<[number, number, number, number]> = [
+  [TOWNS[0].x, TOWNS[0].z, TOWNS[1].x, TOWNS[1].z],
+  [TOWNS[0].x, TOWNS[0].z, TOWNS[2].x, TOWNS[2].z],
+  [TOWNS[1].x, TOWNS[1].z, TOWNS[2].x, TOWNS[2].z],
+];
+for (const dg of DUNGEONS) {
+  let best = TOWNS[0], bd = 1e9;
+  for (const t of TOWNS) { const d = Math.hypot(dg.x - t.x, dg.z - t.z); if (d < bd) { bd = d; best = t; } }
+  ROAD_SEGS.push([best.x, best.z, dg.x, dg.z]);
+}
+interface LightAnchor { x: number; y: number; z: number; range: number; col: Col3; flicker: boolean }
+interface BDef {
+  x: number; z: number; yaw: number; baseY: number; w: number; d: number;
+  floors: number; wall: number; upper: number; roof: number;
+  kind: string; name: string; doorX: number; doorZ: number;
+}
+const WIN_GLOW: V = [];           /* window quads, redrawn as glow at night */
+const WORLD_LIGHTS: LightAnchor[] = [];
+const BUILDINGS: BDef[] = [];
+
+function xform(dst: V, src: V, x: number, y: number, z: number, yaw: number) {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  for (let i = 0; i < src.length; i += 11) {
+    const px = src[i], py = src[i + 1], pz = src[i + 2];
+    dst.push(
+      x + px * c - pz * s, y + py, z + px * s + pz * c,
+      src[i + 3] * c - src[i + 5] * s, src[i + 4], src[i + 3] * s + src[i + 5] * c,
+      src[i + 6], src[i + 7], src[i + 8], src[i + 9], src[i + 10],
+    );
+  }
+}
+
+/* one house, local space: front faces +z, ground at y=0 */
+function buildHouse(local: V, glow: V, b: Omit<BDef, "x" | "z" | "yaw" | "baseY" | "doorX" | "doorZ">) {
+  const W: Col3 = [1, 1, 1];
+  const hw = b.w / 2, hd = b.d / 2;
+  box(local, 0, -0.3, 0, hw + 0.3, 0.8, hd + 0.3, [0.92, 0.92, 0.92], T.STONE_DARK);
+  box(local, 0, 0.5 + 1.6, 0, hw, 1.6, hd, W, b.wall);
+  const doorW = 1.35, doorH = 2.35;
+  quad(local, [-doorW / 2, 0.5, hd + 0.04], [doorW / 2, 0.5, hd + 0.04], doorH, W, T.DOOR);
+  flat(local, 0.52, -doorW / 2 - 0.3, hd + 0.05, doorW / 2 + 0.3, hd + 0.85, [0.9, 0.9, 0.9], T.STONE_DARK);
+  const win = (cx: number, cy: number, cz: number, ry: number) => {
+    const t: V = [];
+    quad(t, [-0.48, 0, 0], [0.48, 0, 0], 1.3, W, T.WINDOW);
+    xform(local, t, cx, cy, cz, ry);
+    const g2: V = [];
+    quad(g2, [-0.48, 0, 0], [0.48, 0, 0], 1.3, W, T.WINDOW);
+    xform(glow, g2, cx, cy, cz, ry);
+  };
+  win(-hw + 1.15, 1.55, hd + 0.045, 0);
+  win(hw - 1.15, 1.55, hd + 0.045, 0);
+  win(hw + 0.045, 1.55, 0, Math.PI / 2);
+  win(-hw - 0.045, 1.55, 0, -Math.PI / 2);
+  let topY = 0.5 + 3.2;
+  if (b.floors === 2) {
+    box(local, 0, topY + 0.14, 0, hw + 0.30, 0.14, hd + 0.30, [0.85, 0.8, 0.75], T.PLANK_H);
+    box(local, 0, topY + 0.28 + 1.35, 0, hw + 0.24, 1.35, hd + 0.24, W, b.upper);
+    win(-hw + 1.05, topY + 1.15, hd + 0.285, 0);
+    win(hw - 1.05, topY + 1.15, hd + 0.285, 0);
+    win(0, topY + 1.15, -hd - 0.285, Math.PI);
+    topY += 0.28 + 2.7;
+  }
+  gable(local, 0, topY + 0.02, 0, b.w + 1.5 + (b.floors === 2 ? 0.5 : 0), b.d + 1.5, 2.1 + b.w * 0.10, 0, W, b.roof, b.floors === 2 ? b.upper : b.wall);
+  box(local, hw * 0.45, topY + 1.55, 0, 0.34, 1.15, 0.34, [0.95, 0.95, 0.95], T.STONE_DARK);
+}
+
+const SERVICE_ART: Record<string, { npc: number; keeper: string; emblem: number }> = {
+  tavern: { npc: SPR.INNKEEP, keeper: "the innkeeper", emblem: T.EMB_TANKARD },
+  shop: { npc: SPR.MERCHANT, keeper: "the merchant", emblem: T.EMB_COIN },
+  guildf: { npc: SPR.GUILD, keeper: "the guildmaster", emblem: T.EMB_SWORD },
+  guildm: { npc: SPR.COVEN, keeper: "the covenmaster", emblem: T.EMB_MOON },
+  temple: { npc: SPR.PRIEST, keeper: "the priest", emblem: T.EMB_FLAME },
 };
-interface Item { name: string; val: number; kind: "junk" | "potion-h" | "potion-m" | "letter" | "relic" }
-interface Quest {
-  id: number; kind: "cull" | "fetch" | "deliver"; giver: string; text: string;
-  dungeon?: string; foe?: FoeKind; need: number; have: number; itemName?: string;
-  toTown?: string; toNpc?: string; reward: number; faction: string; done: boolean;
+const SERVICE_NAMES: Record<string, Record<string, string>> = {
+  tavern: { Thornwick: "The Gilded Boar", Millbrook: "The Miller's Rest", "Cairn Ford": "The Ford & Flagon" },
+  shop: { Thornwick: "Provisions & Sundries", Millbrook: "Millbrook Goods", "Cairn Ford": "Ford Trading" },
+  guildf: { Thornwick: "Hall of the Hearthguard", Millbrook: "Hearthguard Lodge", "Cairn Ford": "Hearthguard Post" },
+  guildm: { Thornwick: "House of the Umbral Covenant", Millbrook: "Umbral Cottage", "Cairn Ford": "Umbral Shrine" },
+  temple: { Thornwick: "Temple of the Listening God", Millbrook: "Chapel of the Listening God", "Cairn Ford": "Shrine of the Listening God" },
+};
+const KEEPERS: Record<string, string[]> = {
+  tavern: ["Berta", "Hob", "Sella"],
+  shop: ["Marcus", "Tilda", "Oren"],
+  guildf: ["Captain Yrsa", "Ser Brandt", "Ser Kol"],
+  guildm: ["Mother Vael", "Brother Odo", "Sister Mirel"],
+  temple: ["Father Anselm", "Mother Rue", "Father Cato"],
+};
+
+function buildTowns() {
+  const local: V = [], glowLocal: V = [];
+  for (let ti = 0; ti < TOWNS.length; ti++) {
+    const t = TOWNS[ti];
+    const services = ["tavern", "shop", "guildf", "guildm", "temple"];
+    const nHouses = ti === 0 ? 8 : 5;
+    const total = services.length + nHouses;
+    for (let i = 0; i < total; i++) {
+      const ang = (i / total) * Math.PI * 2 + ti * 0.7;
+      const rad = i < services.length ? t.r * 0.52 : t.r * (0.78 + (i % 3) * 0.06);
+      const x = t.x + Math.cos(ang) * rad, z = t.z + Math.sin(ang) * rad;
+      const yaw = Math.atan2(x - t.x, t.z - z);
+      const kind = i < services.length ? services[i] : "house";
+      const grand = kind === "temple" || kind === "guildf";
+      const b: BDef = {
+        x, z, yaw, baseY: Math.max(5.4, wyHeight(x, z)),
+        w: grand ? 11 : 6.5 + vrnd() * 3.5,
+        d: grand ? 10 : 6 + vrnd() * 3,
+        floors: kind === "house" ? (vrnd() < 0.45 ? 1 : 2) : 2,
+        wall: kind === "temple" ? T.MARBLE : kind === "guildf" || kind === "guildm" ? T.STONE : vrnd() < 0.5 ? T.TIMBER : T.STONE,
+        upper: kind === "temple" ? T.MARBLE : T.TIMBER,
+        roof: kind === "temple" ? T.SHINGLE : vrnd() < 0.4 ? T.THATCH : vrnd() < 0.5 ? T.ROOF_WOOD : T.SHINGLE,
+        kind,
+        name: kind === "house" ? "A barred house" : SERVICE_NAMES[kind][t.name],
+        doorX: 0, doorZ: 0,
+      };
+      const c = Math.cos(yaw), s = Math.sin(yaw);
+      b.doorX = x + (0 * c - (b.d / 2 + 1.1) * s) * -1;
+      b.doorZ = z + (0 * s + (b.d / 2 + 1.1) * c) * -1;
+      /* door stands on the front (+z local): world = R(yaw)·(0, d/2+1.1) + pos, R: (lx,lz)->(lx·c − lz·s, lx·s + lz·c) with the house's own convention */
+      b.doorX = x + (0 * c - (b.d / 2 + 1.1) * s);
+      b.doorZ = z + (0 * s + (b.d / 2 + 1.1) * c);
+      BUILDINGS.push(b);
+      local.length = 0; glowLocal.length = 0;
+      buildHouse(local, glowLocal, b);
+      if (kind === "guildf" || kind === "guildm") {
+        const bt: V = [];
+        quad(bt, [-0.55, 0, 0], [0.55, 0, 0], 1.9, [1, 1, 1], kind === "guildf" ? T.BANNER_G : T.BANNER_M);
+        xform(local, bt, -b.w / 2 + 1.1, 4.6, b.d / 2 + 0.32, 0);
+        const bt2: V = [];
+        quad(bt2, [-0.55, 0, 0], [0.55, 0, 0], 1.9, [1, 1, 1], kind === "guildf" ? T.BANNER_G : T.BANNER_M);
+        xform(local, bt2, b.w / 2 - 1.1, 4.6, b.d / 2 + 0.32, 0);
+      }
+      return2(local, glowLocal, b);
+    }
+    /* plaza: well, lamps, a market stall or two in the capital */
+    const wellL: V = [];
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      box(wellL, Math.cos(a) * 1.25, 0.45, Math.sin(a) * 1.25, 0.42, 0.45, 0.42, [0.95, 0.95, 0.95], T.STONE);
+    }
+    box(wellL, -1.5, 1.5, 0, 0.12, 1.5, 0.12, [1, 1, 1], T.PLANK_V);
+    box(wellL, 1.5, 1.5, 0, 0.12, 1.5, 0.12, [1, 1, 1], T.PLANK_V);
+    gable(wellL, 0, 2.9, 0, 3.6, 2.2, 0.8, Math.PI / 2, [1, 1, 1], T.ROOF_WOOD, T.PLANK_V);
+    xform(WORLD_STATIC, wellL, t.x + 6, 6, t.z + 4, 0.4);
+    for (let li = 0; li < 4; li++) {
+      const a = li * Math.PI / 2 + 0.78;
+      const lx = t.x + Math.cos(a) * t.r * 0.34, lz = t.z + Math.sin(a) * t.r * 0.34;
+      const lampL: V = [];
+      box(lampL, 0, 1.55, 0, 0.11, 1.55, 0.11, [0.7, 0.65, 0.6], T.PLANK_V);
+      box(lampL, 0, 3.25, 0, 0.30, 0.30, 0.30, [1.2, 1.05, 0.6], T.WINDOW);
+      xform(WORLD_STATIC, lampL, lx, 6, lz, a);
+      WORLD_LIGHTS.push({ x: lx, y: 9.3, z: lz, range: 21, col: [1.0, 0.72, 0.34], flicker: false });
+    }
+    if (ti === 0) {
+      for (let si = 0; si < 3; si++) {
+        const sx = t.x - 16 + si * 13, sz = t.z + 20;
+        const st: V = [];
+        for (const [px, pz] of [[-2.2, -1.4], [2.2, -1.4], [-2.2, 1.4], [2.2, 1.4]]) box(st, px, 1.1, pz, 0.09, 1.1, 0.09, [1, 1, 1], T.PLANK_V);
+        box(st, 0, 1.05, 0, 2.5, 0.09, 1.7, [1, 1, 1], T.PLANK_H);
+        box(st, -1.2, 0.55, 0.4, 0.55, 0.55, 0.55, [1, 1, 1], T.BARREL);
+        box(st, 1.1, 0.45, -0.3, 0.5, 0.45, 0.5, [0.95, 0.9, 0.8], T.CHEST);
+        box(st, 0.2, 0.35, 0.9, 0.42, 0.35, 0.42, [1.1, 0.9, 0.6], T.HAY);
+        const awn: V = [];
+        quad(awn, [-2.7, 2.9, 2.1], [2.7, 2.9, 2.1], 0.12, [1, 1, 1], T.PLANK_H);
+        tri(awn, [-2.7, 2.9, 2.1], [2.7, 2.9, 2.1], [-2.7, 2.25, -1.9], [0, 0.5, 0.86], [1, 1, 1], si % 2 ? T.BED : T.PLANK_H);
+        tri(awn, [2.7, 2.9, 2.1], [2.7, 2.25, -1.9], [-2.7, 2.25, -1.9], [0, 0.5, 0.86], [1, 1, 1], si % 2 ? T.BED : T.PLANK_H);
+        st.push(...awn);
+        xform(WORLD_STATIC, st, sx, 6, sz, si * 0.5 - 0.4);
+      }
+    }
+    /* service signs */
+    for (const b of BUILDINGS) {
+      if (b.kind === "house" || Math.hypot(b.x - t.x, b.z - t.z) > t.r) continue;
+      const art = SERVICE_ART[b.kind];
+      const sg: V = [];
+      box(sg, 0, 1.1, 0, 0.09, 1.1, 0.09, [1, 1, 1], T.PLANK_V);
+      quad(sg, [-0.5, 1.55, 0.1], [0.5, 1.55, 0.1], 1.0, [1, 1, 1], art.emblem);
+      quad(sg, [0.5, 1.55, 0.13], [-0.5, 1.55, 0.13], 1.0, [1, 1, 1], T.SIGN);
+      const sy = Math.atan2(b.doorX - b.x, b.doorZ - b.z);
+      void sy;
+      xform(WORLD_STATIC, sg, b.doorX, b.baseY, b.doorZ, b.yaw);
+    }
+  }
+  function return2(local: V, glow: V, b: BDef) {
+    xform(WORLD_STATIC, local, b.x, b.baseY, b.z, b.yaw);
+    xform(WIN_GLOW, glow, b.x, b.baseY, b.z, b.yaw);
+  }
 }
-interface Sheet {
-  name: string; arch: string; level: number;
-  skills: Record<SkillId, number>; uses: Record<SkillId, number>; gains: number;
-  hp: number; mp: number; gold: number; weapon: number;
-  rep: Record<string, number>; inv: Item[]; quests: Quest[];
+
+const WORLD_STATIC: V = [];
+const WORLD_CUTOUT: V = [];
+
+function buildTerrain() {
+  const N = 148, EXT = WORLD_R;
+  const H: number[][] = [];
+  for (let j = 0; j <= N; j++) {
+    H.push([]);
+    for (let i = 0; i <= N; i++) H[j].push(wyHeight(-EXT + (i / N) * EXT * 2, -EXT + (j / N) * EXT * 2));
+  }
+  const out: V = [];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const x0 = -EXT + (i / N) * EXT * 2, x1 = -EXT + ((i + 1) / N) * EXT * 2;
+    const z0 = -EXT + (j / N) * EXT * 2, z1 = -EXT + ((j + 1) / N) * EXT * 2;
+    const h00 = H[j][i], h10 = H[j][i + 1], h01 = H[j + 1][i], h11 = H[j + 1][i + 1];
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, ch = (h00 + h10 + h01 + h11) / 4;
+    const slope = Math.max(Math.abs(h10 - h00), Math.abs(h01 - h00)) / (x1 - x0);
+    let tile: number = T.GRASS;
+    const rd = roadDist(cx, cz);
+    if (ch < 0.7) tile = T.SAND;
+    else if (slope > 0.85) tile = T.CLIFF;
+    else if (slope > 0.42) tile = T.ROCK;
+    else if (fbm(cx * 0.01 + 51, cz * 0.01 + 3) > 0.58) tile = T.GRASS_DRY;
+    else if (fbm(cx * 0.008 + 91, cz * 0.008 + 47) > 0.62) tile = T.LEAFGROUND;
+    if (rd < 4.6 && ch >= 0.7) tile = T.DIRT;
+    const jit = 0.92 + hash2(i * 3.1, j * 7.7) * 0.16;
+    const tint: Col3 = [jit, jit, jit];
+    const nrm = (): Col3 => {
+      const nx = (h00 + h01 - h10 - h11) / (x1 - x0), nz = (h00 + h10 - h01 - h11) / (z1 - z0);
+      const v: Col3 = [nx * 0.5, 1, nz * 0.5];
+      const L = Math.hypot(v[0], v[1], v[2]) || 1;
+      return [v[0] / L, v[1] / L, v[2] / L];
+    };
+    const n = nrm();
+    tri(out, [x0, h00, z0], [x1, h10, z0], [x0, h01, z1], n, tint, tile);
+    tri(out, [x1, h10, z0], [x1, h11, z1], [x0, h01, z1], n, tint, tile);
+  }
+  /* town discs — a grid of setts with honest wear, never one stretched skin */
+  for (const t of TOWNS) {
+    const half = t.r * 0.92, cells = 20, step = (half * 2) / cells;
+    for (let gj = 0; gj < cells; gj++) for (let gi = 0; gi < cells; gi++) {
+      const gx = t.x - half + gi * step, gz = t.z - half + gj * step;
+      if (Math.hypot(gx + step / 2 - t.x, gz + step / 2 - t.z) > half) continue;
+      const worn = hash2(gi * 3.7 + t.x, gj * 9.1 + t.z);
+      const jt = 0.94 + worn * 0.1;
+      flat(out, 6.04, gx, gz, gx + step, gz + step, [jt, jt * 0.98, jt * 0.94], worn > 0.93 ? T.DIRT : T.COBBLE);
+    }
+  }
+  /* road ribbons */
+  for (const [ax, az, bx, bz] of ROAD_SEGS) {
+    const L = Math.hypot(bx - ax, bz - az), steps = Math.floor(L / 11);
+    const px = -(bz - az) / L, pz = (bx - ax) / L;
+    for (let sIdx = 0; sIdx < steps; sIdx++) {
+      const t0 = sIdx / steps, t1 = (sIdx + 1) / steps;
+      const cx0 = lerp(ax, bx, t0), cz0 = lerp(az, bz, t0), cx1 = lerp(ax, bx, t1), cz1 = lerp(az, bz, t1);
+      const w = 3.4;
+      const p1: [number, number, number] = [cx0 + px * w, wyHeight(cx0 + px * w, cz0 + pz * w) + 0.07, cz0 + pz * w];
+      const p2: [number, number, number] = [cx0 - px * w, wyHeight(cx0 - px * w, cz0 - pz * w) + 0.07, cz0 - pz * w];
+      const p3: [number, number, number] = [cx1 + px * w, wyHeight(cx1 + px * w, cz1 + pz * w) + 0.07, cz1 + pz * w];
+      const p4: [number, number, number] = [cx1 - px * w, wyHeight(cx1 - px * w, cz1 - pz * w) + 0.07, cz1 - pz * w];
+      tri(out, p1, p2, p3, [0, 1, 0], [1, 1, 1], T.ROAD);
+      tri(out, p2, p4, p3, [0, 1, 0], [1, 1, 1], T.ROAD);
+    }
+  }
+  /* Millbrook fields */
+  const fields: Array<[number, number, number, number, number]> = [
+    [-460, 190, 52, 34, 0.3], [-300, 320, 44, 30, -0.2], [370, 420, 48, 30, 0.9], [500, 250, 40, 28, 0.1],
+  ];
+  for (const [fx, fz, fw, fd, fy] of fields) {
+    const t2: V = [];
+    flat(t2, 0, -fw / 2, -fd / 2, fw / 2, fd / 2, [1.02, 1.0, 0.9], T.GRASS_DRY);
+    const y = wyHeight(fx, fz);
+    xform(out, t2, fx, y + 0.09, fz, fy);
+  }
+  for (let i = 0; i < out.length; i += 65536) WORLD_STATIC.push(...out.slice(i, i + 65536));
 }
-const WEAPONS = [
+
+function buildDressing() {
+  const S = WORLD_STATIC, C = WORLD_CUTOUT;
+  const clear = (x: number, z: number, r: number) => {
+    if (roadDist(x, z) < r + 4) return false;
+    for (const t of TOWNS) if (Math.hypot(x - t.x, z - t.z) < t.r + 18) return false;
+    return true;
+  };
+  /* trees — trunk and a crown of crossed foliage */
+  for (let i = 0; i < 460; i++) {
+    const x = (vrnd() * 2 - 1) * 830, z = (vrnd() * 2 - 1) * 830;
+    const h = wyHeight(x, z);
+    if (h < 1.2 || h > 78 || !clear(x, z, 3)) continue;
+    const pine = h > 30 || vrnd() < 0.3;
+    const th = pine ? 3.6 + vrnd() * 1.6 : 2.4 + vrnd() * 1.2;
+    box(S, x, h + th / 2 - 0.2, z, 0.26, th / 2, 0.26, [0.9, 0.85, 0.8], T.BARK);
+    const cw = pine ? 3.4 + vrnd() * 1.2 : 5.2 + vrnd() * 2.2;
+    const chh = pine ? 5.5 + vrnd() * 2 : 4.2 + vrnd() * 1.6;
+    const tint: Col3 = pine ? [0.55, 0.75, 0.5] : [0.95 + vrnd() * 0.2, 1, 0.9];
+    for (let k = 0; k < 3; k++) {
+      const t2: V = [];
+      quad(t2, [-cw / 2, 0, 0], [cw / 2, 0, 0], chh, tint, T.FOLIAGE);
+      quad(t2, [cw / 2, 0, 0], [-cw / 2, 0, 0], chh, tint, T.FOLIAGE);
+      xform(C, t2, x, h + th - 0.4, z, (k * Math.PI) / 3 + vrnd() * 0.4);
+    }
+  }
+  /* bushes, rocks, grass */
+  for (let i = 0; i < 240; i++) {
+    const x = (vrnd() * 2 - 1) * 830, z = (vrnd() * 2 - 1) * 830;
+    const h = wyHeight(x, z);
+    if (h < 0.9 || !clear(x, z, 2)) continue;
+    const t2: V = [];
+    const w = 1.6 + vrnd() * 1.6;
+    quad(t2, [-w / 2, 0, 0], [w / 2, 0, 0], w * 0.72, [0.9, 0.95, 0.85], T.FOLIAGE);
+    quad(t2, [w / 2, 0, 0], [-w / 2, 0, 0], w * 0.72, [0.9, 0.95, 0.85], T.FOLIAGE);
+    xform(C, t2, x, h - 0.05, z, vrnd() * 3);
+  }
+  for (let i = 0; i < 170; i++) {
+    const x = (vrnd() * 2 - 1) * 840, z = (vrnd() * 2 - 1) * 840;
+    const h = wyHeight(x, z);
+    if (h < 0.4 || !clear(x, z, 2)) continue;
+    const sc = 0.5 + vrnd() * 2.1;
+    boxR(S, x, h + sc * 0.2, z, sc, sc * 0.62, sc * 0.8, vrnd() * 3, [0.95, 0.93, 0.9], vrnd() < 0.3 ? T.MOSSY : T.ROCK);
+  }
+  for (let i = 0; i < 950; i++) {
+    const nearTown = vrnd() < 0.4;
+    const t = TOWNS[(vrnd() * 3) | 0];
+    const x = nearTown ? t.x + (vrnd() * 2 - 1) * (t.r + 60) : (vrnd() * 2 - 1) * 800;
+    const z = nearTown ? t.z + (vrnd() * 2 - 1) * (t.r + 60) : (vrnd() * 2 - 1) * 800;
+    const h = wyHeight(x, z);
+    if (h < 0.8 || roadDist(x, z) < 3.4) continue;
+    const t2: V = [];
+    const tile = vrnd() < 0.16 ? T.FLOWERS : T.TUFT;
+    const w = 1.1 + vrnd() * 0.9;
+    quad(t2, [-w / 2, 0, 0], [w / 2, 0, 0], w * 0.8, [1, 1, 1], tile);
+    quad(t2, [w / 2, 0, 0], [-w / 2, 0, 0], w * 0.8, [1, 1, 1], tile);
+    xform(C, t2, x, h - 0.03, z, vrnd() * 3);
+    const t3: V = [];
+    quad(t3, [0, 0, -w / 2], [0, 0, w / 2], w * 0.8, [1, 1, 1], tile);
+    quad(t3, [0, 0, w / 2], [0, 0, -w / 2], w * 0.8, [1, 1, 1], tile);
+    xform(C, t3, x, h - 0.03, z, 0);
+  }
+  /* roadside fences near the towns */
+  for (const [ax, az, bx, bz] of ROAD_SEGS) {
+    const L = Math.hypot(bx - ax, bz - az);
+    const px = -(bz - az) / L, pz = (bx - ax) / L;
+    for (let d = 14; d < L - 10; d += 4.2) {
+      const t = d / L, cx = lerp(ax, bx, t), cz = lerp(az, bz, t);
+      const nearT = TOWNS.some((tw) => Math.hypot(cx - tw.x, cz - tw.z) < tw.r + 95);
+      if (!nearT || vrnd() < 0.3) continue;
+      for (const side of [-1, 1]) {
+        const fx = cx + px * 5.6 * side, fz = cz + pz * 5.6 * side;
+        const fy = wyHeight(fx, fz);
+        if (fy < 0.7) continue;
+        box(S, fx, fy + 0.55, fz, 0.09, 0.55, 0.09, [0.9, 0.85, 0.8], T.PLANK_V);
+      }
+    }
+  }
+  /* ruins and the standing stones */
+  const ruin = (rx: number, rz: number, ry: number) => {
+    const t2: V = [];
+    quad(t2, [-4, 0, 0], [1, 0, 0], 2.6, [0.9, 0.9, 0.88], T.MOSSY);
+    quad(t2, [2.4, 0, 0], [4.4, 0, 0], 1.4, [0.9, 0.9, 0.88], T.MOSSY);
+    quad(t2, [-4, 0, 0], [-4, 0, 4], 1.8, [0.9, 0.9, 0.88], T.STONE_DARK);
+    box(t2, 0.5, 0.4, 2.5, 0.5, 0.4, 1.6, [0.9, 0.9, 0.88], T.STONE_DARK);
+    box(t2, -1.8, 0.35, 1.2, 1.1, 0.35, 0.5, [0.88, 0.88, 0.86], T.MOSSY);
+    xform(S, t2, rx, wyHeight(rx, rz), rz, ry);
+  };
+  ruin(300, -30, 0.7); ruin(-240, -330, 2.1); ruin(120, 420, 1.2);
+  for (const dg of DUNGEONS) ruin(dg.x + 26, dg.z + 14, vrnd() * 3);
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2;
+    const sx = 302 + Math.cos(a) * 11, sz = -32 + Math.sin(a) * 11;
+    boxR(S, sx, wyHeight(sx, sz) + 1.5, sz, 0.55, 1.6 + (i % 3) * 0.3, 0.4, a + 0.3, [0.92, 0.92, 0.9], T.ROCK);
+  }
+  /* dungeon mouths: a stone throat in the hillside, torches at the door */
+  for (const dg of DUNGEONS) {
+    const y = wyHeight(dg.x, dg.z);
+    const t2: V = [];
+    box(t2, 0, 1.9, 0, 2.6, 1.9, 0.6, [0.95, 0.95, 0.95], T.STONE_DARK);
+    quad(t2, [-1.05, 0, 0.62], [1.05, 0, 0.62], 2.6, [1, 1, 1], dg.kind === "undead" ? T.PORTCULLIS : T.BRICK);
+    box(t2, -2.2, 1.0, 0.8, 0.16, 1.0, 0.16, [0.9, 0.85, 0.8], T.PLANK_V);
+    box(t2, 2.2, 1.0, 0.8, 0.16, 1.0, 0.16, [0.9, 0.85, 0.8], T.PLANK_V);
+    const yawTo = Math.atan2(dg.x - TOWNS[0].x, TOWNS[0].z - dg.z);
+    xform(S, t2, dg.x, y, dg.z, yawTo);
+    const R2 = (lx: number, lz: number): [number, number] => [dg.x + lx * Math.cos(yawTo) - lz * Math.sin(yawTo), dg.z + lx * Math.sin(yawTo) + lz * Math.cos(yawTo)];
+    const [t1x, t1z] = R2(-2.2, 0.8), [t2x, t2z] = R2(2.2, 0.8);
+    WORLD_LIGHTS.push({ x: t1x, y: y + 2.2, z: t1z, range: 11, col: [1.0, 0.62, 0.25], flicker: true });
+    WORLD_LIGHTS.push({ x: t2x, y: y + 2.2, z: t2z, range: 11, col: [1.0, 0.62, 0.25], flicker: true });
+  }
+  /* the graveyard by Thornwick's temple */
+  const temple = BUILDINGS.find((b) => b.kind === "temple");
+  if (temple) {
+    for (let i = 0; i < 12; i++) {
+      const gx = temple.x + 14 + (i % 4) * 2.6, gz = temple.z + ((i / 4) | 0) * 3 - 3;
+      boxR(S, gx, 6.35, gz, 0.34, 0.5, 0.1, (hash2(i, 3) - 0.5) * 0.3, [0.9, 0.9, 0.88], T.STONE_DARK);
+    }
+  }
+}
+
+/* ————————————————— interiors & under-places ————————————————— */
+interface NpcDef { name: string; sprite: number; role: string; x: number; z: number; yaw: number; home?: BDef; town?: string }
+interface Flame { x: number; y: number; z: number; s: number }
+interface InteriorScene { geo: V; npcs: NpcDef[]; lights: LightAnchor[]; flames: Flame[] }
+
+function buildInterior(b: BDef): InteriorScene {
+  const a: V = [];
+  const W: Col3 = [1, 1, 1];
+  const floorTile = b.kind === "temple" ? T.MARBLE : b.kind === "guildf" ? T.FLAG : T.PLANK_H;
+  const wallTile = b.kind === "temple" ? T.STONE : b.kind === "guildf" || b.kind === "guildm" ? T.STONE_DARK : T.TIMBER;
+  flat(a, 0, -6, -5, 6, 5, W, floorTile);
+  flat(a, 3.4, -6, -5, 6, 5, [0.5, 0.45, 0.4], T.PLANK_H, false);
+  quad(a, [-6, 0, -5], [6, 0, -5], 3.4, W, wallTile);
+  quad(a, [6, 0, 5], [-6, 0, 5], 3.4, W, wallTile);
+  quad(a, [-6, 0, 5], [-6, 0, -5], 3.4, W, wallTile);
+  quad(a, [6, 0, -5], [6, 0, 5], 3.4, W, wallTile);
+  quad(a, [0.68, 0, 4.94], [-0.68, 0, 4.94], 2.35, W, T.DOOR);
+  for (const bx of [-3.6, 0, 3.6]) box(a, bx, 3.28, 0, 0.22, 0.14, 5, [0.8, 0.75, 0.7], T.PLANK_V);
+  const lights: LightAnchor[] = [{ x: 0, y: 2.7, z: 0.5, range: 17, col: [1.0, 0.78, 0.5], flicker: false }];
+  const flames: Flame[] = [];
+  const npcs: NpcDef[] = [];
+  const art = SERVICE_ART[b.kind];
+  const ti = TOWNS.findIndex((t) => t.name === (b.name && Object.values(SERVICE_NAMES).some((m) => m[t.name] === b.name) ? t.name : ""));
+  void ti;
+  const keeperName = (KEEPERS[b.kind] || ["The keeper"])[TOWNS.findIndex((t) => Math.hypot(b.x - t.x, b.z - t.z) < t.r + 30)] || "The keeper";
+  npcs.push({ name: keeperName, sprite: art.npc, role: "keeper", x: -0.8, z: -2.6, yaw: 0.2, home: b });
+  const table = (tx: number, tz: number) => {
+    box(a, tx, 0.78, tz, 0.95, 0.07, 0.6, W, T.TABLE);
+    box(a, tx, 0.38, tz, 0.09, 0.38, 0.09, W, T.PLANK_V);
+    box(a, tx - 1.25, 0.42, tz, 0.55, 0.09, 0.24, [0.9, 0.85, 0.8], T.PLANK_H);
+    box(a, tx + 1.25, 0.42, tz, 0.55, 0.09, 0.24, [0.9, 0.85, 0.8], T.PLANK_H);
+  };
+  if (b.kind === "tavern") {
+    box(a, 0, 0.8, -4.55, 1.25, 0.8, 0.42, W, T.STONE);
+    box(a, 0, 0.95, -4.2, 0.8, 0.5, 0.1, [0.16, 0.1, 0.06], T.BRICK);
+    box(a, 0, 1.85, -4.6, 0.5, 0.3, 0.35, W, T.STONE_DARK);
+    flames.push({ x: 0, y: 0.55, z: -4.15, s: 1.15 });
+    lights.push({ x: 0, y: 1.4, z: -3.9, range: 14, col: [1.0, 0.6, 0.24], flicker: true });
+    table(-3.2, 0.6); table(2.8, 1.4); table(0.4, -0.6);
+    box(a, 4.9, 0.55, -3.4, 0.5, 0.55, 0.5, W, T.BARREL);
+    box(a, 4.9, 1.6, -3.4, 0.45, 0.5, 0.45, W, T.BARREL);
+    box(a, -5.2, 0.9, 3.6, 0.75, 0.9, 1.9, W, T.BED);
+    npcs.push({ name: "A travelling pedlar", sprite: SPR.TOWNS_A, role: "patron", x: 2.8, z: 0.4, yaw: 2.6, home: b });
+  } else if (b.kind === "shop") {
+    box(a, 0, 0.95, -1.6, 3.1, 0.1, 0.55, W, T.PLANK_H);
+    box(a, 0, 0.45, -1.6, 3.1, 0.45, 0.5, [0.92, 0.9, 0.85], T.PLANK_V);
+    for (const sx of [-5.9, 5.9]) {
+      const sh: V = [];
+      quad(sh, [-1.9, 0, 0], [1.9, 0, 0], 1.7, W, T.BOOKS);
+      xform(a, sh, sx > 0 ? 5.94 : -5.94, 1.0, -1, sx > 0 ? Math.PI / 2 : -Math.PI / 2);
+    }
+    box(a, -4.6, 0.5, 2.8, 0.6, 0.5, 0.6, W, T.CHEST);
+    box(a, 4.4, 0.45, 3.4, 0.55, 0.45, 0.55, W, T.BARREL);
+    box(a, 3.4, 0.4, 3.6, 0.5, 0.4, 0.5, [1.05, 0.95, 0.7], T.HAY);
+    npcs[0].x = 0.9; npcs[0].z = -2.9;
+  } else if (b.kind === "guildf") {
+    const bn: V = [];
+    quad(bn, [-1.1, 0, 0], [1.1, 0, 0], 2.1, W, T.BANNER_G);
+    xform(a, bn, 0, 1.1, -4.94, 0);
+    table(0, 0.8);
+    box(a, -4.8, 1.0, -4.2, 1.1, 1.0, 0.25, [0.9, 0.88, 0.84], T.PLANK_V);
+    const em: V = [];
+    quad(em, [-0.6, 0, 0], [0.6, 0, 0], 1.2, W, T.EMB_SWORD);
+    xform(a, em, -4.8, 0.9, -3.9, 0);
+    flames.push({ x: -3.4, y: 1.15, z: -4.3, s: 0.6 }, { x: 3.4, y: 1.15, z: -4.3, s: 0.6 });
+    lights.push({ x: 0, y: 1.6, z: -4.0, range: 11, col: [1.0, 0.62, 0.25], flicker: true });
+  } else if (b.kind === "guildm") {
+    const bn: V = [];
+    quad(bn, [-1.1, 0, 0], [1.1, 0, 0], 2.1, W, T.BANNER_M);
+    xform(a, bn, 0, 1.1, -4.94, 0);
+    table(0, -0.8);
+    const bk: V = [];
+    quad(bk, [-1.9, 0, 0], [1.9, 0, 0], 1.7, W, T.BOOKS);
+    xform(a, bk, -5.94, 1.0, 0.5, -Math.PI / 2);
+    flames.push({ x: -0.5, y: 0.9, z: -0.8, s: 0.42 }, { x: 0.5, y: 0.9, z: -0.8, s: 0.42 });
+    lights.push({ x: 0, y: 1.4, z: -0.8, range: 9, col: [0.75, 0.6, 1.0], flicker: true });
+    npcs[0].z = -3.1;
+  } else if (b.kind === "temple") {
+    box(a, 0, 0.65, -3.9, 1.5, 0.65, 0.55, W, T.ALTAR);
+    for (const px of [-4.4, 4.4]) box(a, px, 1.7, -3.4, 0.42, 1.7, 0.42, W, T.MARBLE);
+    for (const rz of [-0.6, 1.2]) {
+      box(a, -2.2, 0.4, rz, 1.15, 0.08, 0.3, [0.92, 0.9, 0.86], T.PLANK_H);
+      box(a, 2.2, 0.4, rz, 1.15, 0.08, 0.3, [0.92, 0.9, 0.86], T.PLANK_H);
+    }
+    flames.push({ x: -1.1, y: 1.35, z: -3.9, s: 0.5 }, { x: 1.1, y: 1.35, z: -3.9, s: 0.5 });
+    lights.push({ x: 0, y: 1.8, z: -3.6, range: 12, col: [1.0, 0.8, 0.45], flicker: true });
+    npcs[0].x = 1.6; npcs[0].z = -2.9;
+  }
+  return { geo: a, npcs, lights, flames };
+}
+
+interface DungScene {
+  name: string; kind: string; geo: V; lights: LightAnchor[]; flames: Flame[];
+  chests: Array<{ x: number; z: number; opened: boolean; gold: number; quest: boolean }>;
+  spawns: Array<{ x: number; z: number; kind: FoeKind; boss: boolean }>;
+  startX: number; startZ: number; cells: Set<string>;
+}
+type FoeKind = "wolf" | "rat" | "skeleton" | "bandit" | "cultist";
+const FOES: Record<FoeKind, { name: string; sprite: number; w: number; h: number; hp: number; dmg: number; spd: number; reach: number }> = {
+  wolf: { name: "Wolf", sprite: SPR.WOLF, w: 1.6, h: 1.1, hp: 26, dmg: 7, spd: 3.5, reach: 1.5 },
+  rat: { name: "Barrow-rat", sprite: SPR.RAT, w: 1.0, h: 0.6, hp: 12, dmg: 4, spd: 3.1, reach: 1.1 },
+  skeleton: { name: "Skeleton", sprite: SPR.SKELETON, w: 1.15, h: 2.0, hp: 34, dmg: 9, spd: 2.3, reach: 1.7 },
+  bandit: { name: "Bandit", sprite: SPR.BANDIT, w: 1.15, h: 2.0, hp: 30, dmg: 8, spd: 2.7, reach: 1.7 },
+  cultist: { name: "Cultist", sprite: SPR.CULTIST, w: 1.15, h: 2.0, hp: 24, dmg: 10, spd: 2.4, reach: 1.7 },
+};
+function buildDungeon(di: number): DungScene {
+  const def = DUNGEONS[di];
+  const rnd = mulberry32(0xd06 + di * 977);
+  const GW = 11, CS = 9;
+  const cells = new Set<string>();
+  const key = (i: number, j: number) => `${i},${j}`;
+  let ci = 5, cj = 5;
+  cells.add(key(ci, cj));
+  const rooms: Array<[number, number]> = [[ci, cj]];
+  for (let s = 0; s < 90 && cells.size < 34; s++) {
+    const dir = (rnd() * 4) | 0;
+    ci = clamp(ci + [1, -1, 0, 0][dir], 1, GW - 2);
+    cj = clamp(cj + [0, 0, 1, -1][dir], 1, GW - 2);
+    if (!cells.has(key(ci, cj))) { cells.add(key(ci, cj)); rooms.push([ci, cj]); }
+  }
+  const wx = (i: number) => (i - 5) * CS, wz = (j: number) => (j - 5) * CS;
+  const a: V = [];
+  const W: Col3 = [1, 1, 1];
+  const wallAt = (i: number, j: number, side: number) => {
+    const x = wx(i), z = wz(j), h = CS / 2;
+    const tile = rnd() < 0.24 ? T.MOSSY : T.BRICK;
+    const tint: Col3 = [0.92 + rnd() * 0.14, 0.92 + rnd() * 0.1, 0.9 + rnd() * 0.1];
+    if (side === 0) quad(a, [x - h, 0, z - h], [x + h, 0, z - h], 3.3, tint, tile);
+    if (side === 1) quad(a, [x + h, 0, z + h], [x - h, 0, z + h], 3.3, tint, tile);
+    if (side === 2) quad(a, [x - h, 0, z + h], [x - h, 0, z - h], 3.3, tint, tile);
+    if (side === 3) quad(a, [x + h, 0, z - h], [x + h, 0, z + h], 3.3, tint, tile);
+  };
+  for (const k of cells) {
+    const [i, j] = k.split(",").map(Number);
+    const x = wx(i), z = wz(j), h = CS / 2;
+    const jt = 0.9 + rnd() * 0.18;
+    flat(a, 0, x - h, z - h, x + h, z + h, [jt, jt, jt], T.FLAG);
+    flat(a, 3.3, x - h, z - h, x + h, z + h, [0.42, 0.4, 0.38], T.BRICK, false);
+    if (!cells.has(key(i, j - 1))) wallAt(i, j, 0);
+    if (!cells.has(key(i, j + 1))) wallAt(i, j, 1);
+    if (!cells.has(key(i - 1, j))) wallAt(i, j, 2);
+    if (!cells.has(key(i + 1, j))) wallAt(i, j, 3);
+    if (rnd() < 0.3) decal(a, x + (rnd() * 4 - 2), 0.03, z + (rnd() * 4 - 2), 2.2, 1.6, rnd() * 3, T.ROCK, [0.5, 0.48, 0.45]);
+  }
+  quad(a, [wx(5) - 1.1, 0, wz(5) - CS / 2 + 0.1], [wx(5) + 1.1, 0, wz(5) - CS / 2 + 0.1], 2.7, W, T.PORTCULLIS);
+  const dist = (r: [number, number]) => Math.abs(r[0] - 5) + Math.abs(r[1] - 5);
+  const sorted = [...rooms].sort((p, q) => dist(q) - dist(p));
+  const chests = sorted.slice(0, 3).map((r, idx) => ({ x: wx(r[0]), z: wz(r[1]), opened: false, gold: 25 + ((rnd() * 55) | 0), quest: idx === 0 }));
+  for (const ch of chests) box(a, ch.x, 0.45, ch.z, 0.62, 0.45, 0.42, ch.quest ? [1.25, 1.1, 0.7] : W, T.CHEST);
+  const flames: Flame[] = [];
+  const lights: LightAnchor[] = [];
+  rooms.forEach((r, idx) => {
+    if (idx % 3 !== 1 && idx !== 0) return;
+    const x = wx(r[0]), z = wz(r[1]);
+    box(a, x + 3.4, 0.75, z + 3.4, 0.14, 0.75, 0.14, [0.85, 0.8, 0.75], T.PLANK_V);
+    flames.push({ x: x + 3.4, y: 1.5, z: z + 3.4, s: 0.85 });
+    lights.push({ x: x + 3.4, y: 2.1, z: z + 3.4, range: 14, col: [1.0, 0.6, 0.22], flicker: true });
+  });
+  const pool: FoeKind[] = def.kind === "undead" ? ["skeleton", "skeleton", "rat"] : def.kind === "vermin" ? ["rat", "rat", "wolf"] : ["cultist", "cultist", "skeleton"];
+  const spawns: DungScene["spawns"] = [];
+  rooms.forEach((r, idx) => {
+    if (idx === 0) return;
+    const n = idx === sorted.length - 1 ? 1 : (rnd() < 0.75 ? 1 : 2);
+    for (let k = 0; k < n; k++) {
+      spawns.push({ x: wx(r[0]) + (rnd() * 4 - 2), z: wz(r[1]) + (rnd() * 4 - 2), kind: pool[(rnd() * pool.length) | 0], boss: false });
+    }
+  });
+  const bossCell = sorted[0];
+  spawns.push({ x: wx(bossCell[0]), z: wz(bossCell[1]) - 2.2, kind: def.kind === "vermin" ? "wolf" : def.kind === "cult" ? "cultist" : "skeleton", boss: true });
+  return { name: def.name, kind: def.kind, geo: a, lights, flames, chests, spawns, startX: wx(5), startZ: wz(5) + 2.5, cells };
+}
+
+/* ————————————————— the game's data ————————————————— */
+interface Weapon { name: string; dmg: number; price: number }
+const WEAPONS: Weapon[] = [
   { name: "Rusty Iron Sword", dmg: 6, price: 0 },
   { name: "Iron Sword", dmg: 9, price: 80 },
   { name: "Steel Sword", dmg: 13, price: 230 },
   { name: "Silver Sword", dmg: 17, price: 520 },
 ];
-interface Arch { id: string; name: string; blurb: string; skills: Partial<Record<SkillId, number>>; hp: number; mp: number }
-const ARCHS: Arch[] = [
-  { id: "knight", name: "Knight", blurb: "Sworn steel. The road is a duty and the sword is how it is answered.", skills: { blade: 34, athletics: 26, restoration: 12 }, hp: 120, mp: 40 },
-  { id: "ranger", name: "Ranger", blurb: "The province is a text and you read it at a run — weather, track and sign.", skills: { blade: 26, athletics: 34, destruction: 16, lockpick: 14 }, hp: 102, mp: 62 },
-  { id: "sorcerer", name: "Sorcerer", blurb: "The Covenant's dropout or its heir — the fire answers either way.", skills: { destruction: 34, restoration: 26, blade: 10 }, hp: 82, mp: 140 },
-  { id: "rogue", name: "Rogue", blurb: "Every lock in the province is a question somebody hoped you'd never ask.", skills: { blade: 28, lockpick: 32, athletics: 24, mercantile: 16 }, hp: 95, mp: 56 },
-];
-const baseSkills = (): Record<SkillId, number> => ({ blade: 5, destruction: 5, restoration: 5, athletics: 5, lockpick: 5, mercantile: 5 });
-const maxHp = (c: Sheet): number => (ARCHS.find((a) => a.id === c.arch)?.hp ?? 100) + (c.level - 1) * 9;
-const maxMp = (c: Sheet): number => (ARCHS.find((a) => a.id === c.arch)?.mp ?? 60) + (c.level - 1) * 6;
-
-type FoeKind = "wolf" | "bandit" | "skeleton" | "rat" | "cultist";
-const FOE_NAME: Record<FoeKind, string> = { wolf: "wolf", bandit: "bandit", skeleton: "skeleton", rat: "barrow-rat", cultist: "hollow cultist" };
-const FOES: Record<FoeKind, { hp: number; dmg: number; speed: number; gold: [number, number]; loot?: string }> = {
-  wolf: { hp: 34, dmg: 7, speed: 5.6, gold: [0, 2], loot: "wolf pelt" },
-  bandit: { hp: 52, dmg: 9, speed: 3.9, gold: [6, 22], loot: "bandit's sash" },
-  skeleton: { hp: 46, dmg: 10, speed: 3.1, gold: [2, 12], loot: "grave goods" },
-  rat: { hp: 16, dmg: 4, speed: 4.6, gold: [0, 3], loot: "rat tail" },
-  cultist: { hp: 58, dmg: 11, speed: 3.6, gold:  [8, 26], loot: "hollow token" },
+type SkillId = "blade" | "destruction" | "restoration" | "athletics" | "lockpicking" | "mercantile";
+const SKILL_NAMES: Record<SkillId, string> = {
+  blade: "Blade", destruction: "Destruction", restoration: "Restoration",
+  athletics: "Athletics", lockpicking: "Lockpicking", mercantile: "Mercantile",
 };
-const FIRST = ["Aldric", "Berta", "Cassian", "Odile", "Fenwick", "Mabel", "Tomas", "Ysolt", "Garrick", "Hedda", "Osric", "Petra", "Wendell", "Sybil", "Ansel", "Runa", "Corin", "Maud", "Elias", "Verity"];
-const RUMORS = [
-  "They say the First King was buried sitting up, so he could watch the door.",
-  "Wolves on the Millbrook road again. The Hearthguard pays for quiet roads, if you take my meaning.",
-  "The mere gives back what it takes, but never in the same shape.",
-  "A bell rings under Witch Hollow on windless nights. Nobody winds it. Nobody could.",
-  "The Covenant pays well and asks nothing. That's what worries me.",
-  "Silver bites the dead harder than iron does. Ask any gravedigger — the ones still living.",
-  "If you must cross the high country, follow the old road-witches: grey stones, taller than you.",
-  "The Listening God answers everyone. Eventually. That's the whole of the doctrine and the whole of the problem.",
-  "Bandits keep to the roads at dusk. Cowards love an audience of travellers.",
-  "They dug too deep in the Howling Deep and then, politely, stopped digging.",
+interface Sheet {
+  name: string; cls: string; level: number;
+  hp: number; mp: number; gold: number; weapon: number;
+  skills: Record<SkillId, number>; gains: number;
+  rep: Record<string, number>;
+}
+interface Quest {
+  id: number; kind: "cull" | "fetch" | "deliver"; giver: string; faction: string;
+  dungeon: number; target: number; done: number; reward: number; destName?: string; destKind?: string;
+}
+const CLASS_SPR: Record<string, number> = { Knight: SPR.KNIGHT, Ranger: SPR.RANGER, Sorcerer: SPR.SORCERER, Rogue: SPR.ROGUE };
+const RUMOURS = [
+  "They say the First King was buried with his sword still warm.",
+  "Wolves grow bold on the Millbrook road after dark.",
+  "The Covenant pays well and asks nothing. That is the worrying part.",
+  "A fisher swears the Mere breathes on windless nights.",
+  "The standing stones east of here hum when no one listens.",
+  "Silver bites the dead harder than steel. Everyone knows it.",
+  "Do not sleep in the Howling Deep. Do not even blink there.",
 ];
 const GREET: Record<string, string[]> = {
-  innkeeper: ["Sit. The boar's honest and so is the ale.", "A bed, a bowl, or both — name it."],
-  guildmaster: ["The Hall keeps the province's roads walkable. There's work, if you're the working kind.", "Mind the braziers. State your business."],
-  covenmaster: ["You smell of weather and wanting. The Covenant can use both.", "Speak softly. The candles are listening on our behalf."],
-  priest: ["The God is listening. So, for the moment, am I.", "You carry your troubles loudly, traveller. Set them down."],
-  merchant: ["Everything's priced, friend. Even friendship, but I discount that.", "Come and see. Touching is free; leaving empty-handed costs you more."],
-  townsfolk: ["Fine weather for the road, if the road behaves.", "Mind the wolves if you're walking far.", "You're not from the province. It suits you anyway."],
+  keeper: ["Well met, traveller.", "You look road-worn. Sit a while.", "News from the road? No? Then I will make some up."],
+  patron: ["Mind the fire, it bites.", "I walked from Cairn Ford in two days. Two!", "Buy an honest drink and I will tell you a dishonest story."],
+  guard: ["Move along, citizen.", "The roads are watched. Mostly.", "Report trouble to the Hearthguard."],
+  wanderer: ["Fine weather for the road.", "Have you seen the stones east of Thornwick?", "I keep to the roads. Mostly."],
 };
-/* figures and beasts, drawn in the house geometry */
-function humanoid(a: number[], x: number, y: number, z: number, yaw: number, phase: number, robe: Col3, trim: Col3, skin: Col3, hood = false) {
-  const sy = Math.sin(yaw), cy = Math.cos(yaw);
-  const bob = Math.abs(Math.sin(phase)) * 0.05;
-  const sw = Math.sin(phase) * 0.30;
-  prismR(a, x, y + bob, z, yaw, 0, 0, 0, 0.36, 0.17, 1.02, 4, robe);
-  prismR(a, x, y + bob, z, yaw, 0, 0.98, 0, 0.205, 0.16, 0.42, 4, robe);
-  boxS(a, x, y + 1.24 + bob, z, 0.52, 0.10, 0.24, trim, yaw);
-  if (hood) prismR(a, x, y + bob, z, yaw, 0, 1.36, 0, 0.20, 0.05, 0.34, 5, robe);
-  octaR(a, x, y + bob, z, yaw, 0, 1.50, 0, 0.135, 0.16, 0.135, skin);
-  prismR(a, x, y + bob, z, yaw, -0.30, 0.86, 0.02, 0.055, 0.05, 0.52, 4, robe, sw * 0.5);
-  prismR(a, x, y + bob, z, yaw, 0.30, 0.86, 0.02, 0.055, 0.05, 0.52, 4, robe, -sw * 0.5);
-  prismR(a, x, y + bob, z, yaw, -0.13, -0.06, 0, 0.06, 0.05, 0.16, 4, robe, sw);
-  prismR(a, x, y + bob, z, yaw, 0.13, -0.06, 0, 0.06, 0.05, 0.16, 4, robe, -sw);
-}
-function beast(a: number[], x: number, y: number, z: number, yaw: number, phase: number, col: Col3, s: number) {
-  const sy = Math.sin(yaw), cy = Math.cos(yaw);
-  const bob = Math.abs(Math.sin(phase * 2)) * 0.04 * s;
-  const P = (lx: number, ly: number, lz: number): [number, number, number] => [x + lx * cy + lz * sy, y + ly, z - lx * sy + lz * cy];
-  const bodyB = P(0, 0.62 * s + bob, 0);
-  boxS(a, bodyB[0], bodyB[1], bodyB[2], 0.52 * s, 0.46 * s, 1.25 * s, col, yaw);
-  const head = P(0, 0.78 * s + bob, 0.78 * s);
-  octa(a, head[0], head[1], head[2], 0.20 * s, 0.19 * s, 0.30 * s, col);
-  const ear1 = P(-0.12 * s, 1.0 * s + bob, 0.68 * s), ear2 = P(0.12 * s, 1.0 * s + bob, 0.68 * s);
-  octa(a, ear1[0], ear1[1], ear1[2], 0.06 * s, 0.10 * s, 0.06 * s, col);
-  octa(a, ear2[0], ear2[1], ear2[2], 0.06 * s, 0.10 * s, 0.06 * s, col);
-  const tail = P(0, 0.74 * s + bob, -0.66 * s);
-  beam(a, tail[0], tail[1], tail[2], -sy * 0.3, 0.25, -cy * 0.3, 0.55 * s, 0.045 * s, col);
-  for (const [lx, lz] of [[-0.17, 0.42], [0.17, 0.42], [-0.17, -0.42], [0.17, -0.42]] as Array<[number, number]>) {
-    const sw = Math.sin(phase * 2 + (lx > 0 ? 0 : Math.PI) + (lz > 0 ? 0.6 : 0)) * 0.16 * s;
-    const leg = P(lx * s, 0, lz * s);
-    prism(a, leg[0], y, leg[2], 0.055 * s, 0.045 * s, 0.62 * s, 4, col, sw * sy, sw * cy);
-  }
-}
+const TOWNSFOLK_NAMES = ["Aldric", "Berta", "Cato", "Dunna", "Elowen", "Fenn", "Gisla", "Hob", "Ilsa", "Joren"];
 
-/* ————— interiors and the places below ————— */
-interface NpcDef { name: string; role: string; service: "inn" | "guildf" | "guildm" | "temple" | "shop" | null; x: number; z: number; yaw: number; robe: Col3 }
-interface Interior { lit: Float32Array; solids: Solid[]; npcs: NpcDef[]; name: string }
-const strSeed = (s: string): number => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
-const ROBES: Col3[] = [[0.42, 0.30, 0.18], [0.25, 0.28, 0.40], [0.36, 0.20, 0.22], [0.22, 0.32, 0.24], [0.40, 0.36, 0.28], [0.30, 0.22, 0.38]];
-function roomShell(lit: number[], W: number, D: number, wallCol: Col3, floorCol: Col3) {
-  boxS(lit, 0, -0.25, 0, W, 0.25, D, floorCol);
-  boxS(lit, 0, 3.4, 0, W, 0.25, D, [0.14, 0.11, 0.08]);
-  boxS(lit, 0, 0, -D / 2, W, 3.4, 0.35, wallCol);
-  boxS(lit, -W / 2, 0, 0, 0.35, 3.4, D, wallCol);
-  boxS(lit, W / 2, 0, 0, 0.35, 3.4, D, wallCol);
-  boxS(lit, -(1.1 + (W / 2 - 1.1) / 2), 0, D / 2, W / 2 - 1.1, 3.4, 0.35, wallCol);
-  boxS(lit, 1.1 + (W / 2 - 1.1) / 2, 0, D / 2, W / 2 - 1.1, 3.4, 0.35, wallCol);
-  boxS(lit, 0, 2.3, D / 2, 2.4, 1.1, 0.35, wallCol);
-  boxS(lit, 0, 0, D / 2 + 0.05, 2.0, 2.3, 0.12, [0.15, 0.10, 0.06]);
-}
-function buildInterior(b: Building): Interior {
-  const rnd = mulberry32(SEED ^ strSeed(b.town + ":" + b.kind + ":" + b.name));
-  const lit: number[] = [], solids: Solid[] = [], npcs: NpcDef[] = [];
-  const W = 17, D = 13;
-  const stone = b.kind === "guildf" || b.kind === "guildm" || b.kind === "temple";
-  roomShell(lit, W, D, stone ? [0.40, 0.37, 0.35] : [0.55, 0.48, 0.39], [0.34, 0.26, 0.18]);
-  solids.push({ x: 0, z: -D / 2, r: 0 }, { x: -W / 2, z: 0, r: 0 }, { x: W / 2, z: 0, r: 0 });
-  const wood: Col3 = [0.30, 0.20, 0.11], darkWood: Col3 = [0.20, 0.13, 0.07];
-  const furn = (x: number, z: number, w: number, h: number, d: number, col: Col3, r = 0) => { boxS(lit, x, 0, z, w, h, d, col, r); solids.push({ x, z, r: Math.max(w, d) * 0.42 }); };
-  const principal: Record<string, { role: string; service: NpcDef["service"] }> = {
-    tavern: { role: "innkeeper", service: "inn" }, shop: { role: "merchant", service: "shop" },
-    guildf: { role: "guildmaster", service: "guildf" }, guildm: { role: "covenmaster", service: "guildm" },
-    temple: { role: "priest", service: "temple" },
-  };
-  const p = principal[b.kind] || { role: "townsfolk", service: null };
-  if (b.kind === "tavern") {
-    furn(0, -3.4, 7.5, 1.05, 1.1, wood);
-    for (const [tx, tz] of [[-5, 1.5], [4.6, 2.2], [-3.4, 4.0]] as Array<[number, number]>) {
-      furn(tx, tz, 1.7, 0.12, 1.7, wood); prism(lit, tx, 0, tz, 0.09, 0.09, 0.78, 4, darkWood);
-      octa(lit, tx + 0.4, 0.95, tz + 0.2, 0.09, 0.12, 0.09, [0.75, 0.72, 0.6]);
-    }
-    boxS(lit, -W / 2 + 1.2, 0, -2, 1.6, 1.7, 3.2, [0.36, 0.33, 0.31]);
-    octa(lit, -W / 2 + 1.2, 1.1, -2, 0.4, 0.5, 0.4, [1.0, 0.45, 0.10]);
-    npcs.push({ name: FIRST[Math.floor(rnd() * FIRST.length)] + " the Keeper", role: p.role, service: p.service, x: 0, z: -4.6, yaw: 0, robe: [0.45, 0.32, 0.16] });
-    npcs.push({ name: FIRST[Math.floor(rnd() * FIRST.length)], role: "townsfolk", service: null, x: -5, z: 2.6, yaw: 2.4, robe: ROBES[Math.floor(rnd() * ROBES.length)] });
-  } else if (b.kind === "shop") {
-    furn(0, -3.2, 8, 1.0, 1.0, wood);
-    for (let i = 0; i < 3; i++) furn(-W / 2 + 1.0, -3 + i * 3, 0.7, 2.2, 2.2, darkWood);
-    for (let i = 0; i < 4; i++) octa(lit, -W / 2 + 1.0, 0.7 + (i % 2) * 0.8, -3.8 + Math.floor(i / 2) * 3 + (i % 2), 0.2, 0.2, 0.2, [0.55 + (i % 3) * 0.1, 0.4, 0.25]);
-    furn(5.4, 1.8, 1.1, 0.8, 1.1, wood); furn(6.4, 0.6, 0.9, 0.6, 0.9, darkWood);
-    npcs.push({ name: FIRST[Math.floor(rnd() * FIRST.length)] + " the Provisioner", role: p.role, service: p.service, x: 0, z: -4.4, yaw: 0, robe: [0.28, 0.40, 0.30] });
-  } else if (b.kind === "guildf") {
-    furn(0, -1.5, 6.5, 0.14, 1.6, wood); prism(lit, -1.4, 0, -1.5, 0.1, 0.1, 0.85, 4, darkWood); prism(lit, 1.4, 0, -1.5, 0.1, 0.1, 0.85, 4, darkWood);
-    for (const bx of [-5.6, 5.6]) { prism(lit, bx, 0, -4.4, 0.5, 0.36, 0.8, 6, [0.25, 0.23, 0.22]); octa(lit, bx, 1.25, -4.4, 0.32, 0.42, 0.32, [1.0, 0.42, 0.08]); solids.push({ x: bx, z: -4.4, r: 0.6 }); }
-    for (let i = 0; i < 3; i++) { const rx = -2 + i * 2; boxS(lit, rx, 1.1, -D / 2 + 0.5, 0.08, 1.7, 0.3, [0.55, 0.56, 0.6]); boxS(lit, rx, 2.0, -D / 2 + 0.5, 0.5, 0.08, 0.08, [0.3, 0.2, 0.11]); }
-    npcs.push({ name: "Guildmaster " + FIRST[Math.floor(rnd() * FIRST.length)], role: p.role, service: p.service, x: 0, z: -3.6, yaw: 0, robe: [0.42, 0.16, 0.12] });
-    npcs.push({ name: FIRST[Math.floor(rnd() * FIRST.length)], role: "townsfolk", service: null, x: 3.8, z: 1.4, yaw: -2.2, robe: ROBES[Math.floor(rnd() * ROBES.length)] });
-  } else if (b.kind === "guildm") {
-    furn(0, -3.4, 1.0, 1.15, 0.7, darkWood);
-    octa(lit, 0, 2.2, -3.4, 0.42, 0.62, 0.42, [0.52, 0.36, 0.95]);
-    prism(lit, 0, 0, -3.4, 0.08, 0.08, 1.5, 4, [0.2, 0.18, 0.24]);
-    for (let i = 0; i < 3; i++) furn(-W / 2 + 1.0, -3 + i * 3.2, 0.7, 2.4, 2.4, darkWood);
-    octa(lit, 5.8, 1.5, -4.2, 0.2, 0.3, 0.2, [0.52, 0.36, 0.95]);
-    npcs.push({ name: "Covenmaster " + FIRST[Math.floor(rnd() * FIRST.length)], role: p.role, service: p.service, x: 0, z: -4.8, yaw: 0, robe: [0.26, 0.18, 0.44] });
-    npcs.push({ name: FIRST[Math.floor(rnd() * FIRST.length)], role: "townsfolk", service: null, x: -4.6, z: 2.2, yaw: 1.1, robe: [0.22, 0.20, 0.34] });
-  } else if (b.kind === "temple") {
-    furn(0, -4.2, 3.2, 1.15, 1.0, [0.48, 0.45, 0.42]);
-    for (const cx2 of [-1.2, 1.2]) { prism(lit, cx2, 1.15, -4.2, 0.035, 0.035, 0.4, 4, [0.9, 0.85, 0.7]); octa(lit, cx2, 1.75, -4.2, 0.07, 0.12, 0.07, [1.0, 0.78, 0.35]); }
-    for (const pz of [0.6, 2.8]) for (const px of [-2.6, 2.6]) furn(px, pz, 3.4, 0.5, 0.5, wood);
-    octa(lit, 0, 2.6, -4.2, 0.16, 0.24, 0.16, [1.0, 0.85, 0.45]);
-    npcs.push({ name: "Listener " + FIRST[Math.floor(rnd() * FIRST.length)], role: p.role, service: p.service, x: 0, z: -3.0, yaw: 0, robe: [0.62, 0.58, 0.48] });
-  }
-  /* the perimeter is law: clamp the room with four fat invisible solids */
-  solids.push({ x: 0, z: D / 2 + 1.2, r: 1.2 }, { x: -W / 2 - 1.2, z: 0, r: 1.2 }, { x: W / 2 + 1.2, z: 0, r: 1.2 }, { x: 0, z: -D / 2 - 1.2, r: 1.2 });
-  return { lit: new Float32Array(lit), solids, npcs, name: b.name };
-}
-interface ChestDef { x: number; z: number; locked: boolean; quest: boolean; opened: boolean }
-interface DungeonRun { lit: Float32Array; solids: Solid[]; foes: Array<{ kind: FoeKind; x: number; z: number }>; chests: ChestDef[]; startX: number; startZ: number }
-function buildDungeon(def: DungeonDef, withQuestChest: boolean): DungeonRun {
-  const rnd = mulberry32(SEED ^ def.seed);
-  const lit: number[] = [], solids: Solid[] = [];
-  const CELL = 9, GW = 11, GH = 11;
-  const rooms = new Set<string>();
-  const key = (cx: number, cz: number) => cx + "," + cz;
-  let cx = 5, cz = 9;
-  rooms.add(key(cx, cz));
-  const startCx = cx, startCz = cz;
-  let steps = 15 + Math.floor(rnd() * 5);
-  while (steps-- > 0) {
-    const dir = Math.floor(rnd() * 4);
-    if (dir === 0) cx = Math.max(1, cx - 1); else if (dir === 1) cx = Math.min(GW - 2, cx + 1);
-    else if (dir === 2) cz = Math.max(1, cz - 1); else cz = Math.min(GH - 2, cz + 1);
-    rooms.add(key(cx, cz));
-  }
-  for (let i = 0; i < 4; i++) {
-    const all = [...rooms];
-    const [ax, az] = all[Math.floor(rnd() * all.length)].split(",").map(Number);
-    rooms.add(key(clamp(ax + (rnd() < 0.5 ? 1 : -1), 1, GW - 2), az));
-    rooms.add(key(ax, clamp(az + (rnd() < 0.5 ? 1 : -1), 1, GH - 2)));
-  }
-  const wallCol: Col3 = [0.315, 0.295, 0.285], floorCol: Col3 = [0.25, 0.23, 0.215];
-  const world = (c: number) => (c - 5) * CELL;
-  const roomList: Array<[number, number]> = [];
-  for (const k of rooms) {
-    const [rx, rz] = k.split(",").map(Number);
-    roomList.push([rx, rz]);
-    const x = world(rx), z = world(rz);
-    boxS(lit, x, -0.25, z, CELL, 0.25, CELL, floorCol);
-    boxS(lit, x, 4.0, z, CELL, 0.25, CELL, [0.13, 0.115, 0.105]);
-    const edges: Array<[number, number, boolean]> = [
-      [rx, rz - 1, false], [rx, rz + 1, false], [rx - 1, rz, true], [rx + 1, rz, true],
-    ];
-    edges.forEach(([nx, nz, vert], ei) => {
-      const open = rooms.has(key(nx, nz));
-      const ex = ei === 0 ? x : ei === 1 ? x : ei === 2 ? x - CELL / 2 : x + CELL / 2;
-      const ez = ei === 0 ? z - CELL / 2 : ei === 1 ? z + CELL / 2 : z;
-      if (!open) {
-        if (vert) { boxS(lit, ex, 0, ez, 0.4, 4.0, CELL, wallCol); solids.push({ x: ex, z: ez - 2.6, r: 1.5 }, { x: ex, z: ez, r: 1.5 }, { x: ex, z: ez + 2.6, r: 1.5 }); }
-        else { boxS(lit, ex, 0, ez, CELL, 4.0, 0.4, wallCol); solids.push({ x: ex - 2.6, z: ez, r: 1.5 }, { x: ex, z: ez, r: 1.5 }, { x: ex + 2.6, z: ez, r: 1.5 }); }
-      } else {
-        /* a doorway: two stubs and a lintel */
-        if (vert) {
-          boxS(lit, ex, 0, ez - 3.3, 0.4, 4.0, 2.4, wallCol); boxS(lit, ex, 0, ez + 3.3, 0.4, 4.0, 2.4, wallCol);
-          boxS(lit, ex, 2.5, ez, 0.4, 1.5, 4.4, wallCol);
-          solids.push({ x: ex, z: ez - 3.3, r: 1.3 }, { x: ex, z: ez + 3.3, r: 1.3 });
-        } else {
-          boxS(lit, ex - 3.3, 0, ez, 2.4, 4.0, 0.4, wallCol); boxS(lit, ex + 3.3, 0, ez, 2.4, 4.0, 0.4, wallCol);
-          boxS(lit, ex, 2.5, ez, 4.4, 1.5, 0.4, wallCol);
-          solids.push({ x: ex - 3.3, z: ez, r: 1.3 }, { x: ex + 3.3, z: ez, r: 1.3 });
-        }
-      }
-    });
-    if ((rx + rz) % 2 === 0) octa(lit, x + (rnd() - 0.5) * 4, 2.6, z + (rnd() - 0.5) * 4, 0.13, 0.2, 0.13, [1.0, 0.55, 0.16]);
-  }
-  /* chests in the far rooms, foes everywhere but home */
-  const byDist = roomList.map(([rx, rz]) => ({ rx, rz, d: Math.abs(rx - startCx) + Math.abs(rz - startCz) })).sort((a, b) => b.d - a.d);
-  const chests: ChestDef[] = [];
-  byDist.slice(0, 3).forEach((r, i) => {
-    const x = world(r.rx) + (rnd() - 0.5) * 4, z = world(r.rz) + (rnd() - 0.5) * 4;
-    boxS(lit, x, 0, z, 1.15, 0.62, 0.7, [0.30, 0.20, 0.11], rnd() * 3);
-    octa(lit, x, 0.72, z, 0.5, 0.16, 0.3, [0.22, 0.15, 0.08]);
-    solids.push({ x, z, r: 0.8 });
-    chests.push({ x, z, locked: rnd() < 0.5, quest: withQuestChest && i === 0, opened: false });
-  });
-  const foes: Array<{ kind: FoeKind; x: number; z: number }> = [];
-  const kindPool: FoeKind[] = def.kind === "undead" ? ["skeleton", "skeleton", "rat"] : def.kind === "vermin" ? ["rat", "rat", "skeleton"] : ["cultist", "cultist", "skeleton"];
-  for (const [rx, rz] of roomList) {
-    if (rx === startCx && rz === startCz) continue;
-    const n = 1 + (rnd() < 0.55 ? 1 : 0);
-    for (let i = 0; i < n; i++) foes.push({ kind: kindPool[Math.floor(rnd() * kindPool.length)], x: world(rx) + (rnd() - 0.5) * 5, z: world(rz) + (rnd() - 0.5) * 5 });
-  }
-  const sx = world(startCx), sz = world(startCz);
-  boxS(lit, sx, 0, sz + 3.2, 2.2, 3.2, 0.3, [0.08, 0.07, 0.09]);
-  octa(lit, sx, 2.0, sz + 3.0, 0.3, 0.45, 0.3, [0.55, 0.85, 0.95]);
-  solids.push({ x: sx - 2.2, z: sz + 3.2, r: 1.2 }, { x: sx + 2.2, z: sz + 3.2, r: 1.2 });
-  return { lit: new Float32Array(lit), solids, foes, chests, startX: sx, startZ: sz };
-}
-
-/* ————————————————————————————————————————————————————————————————
-   THE GAME
-   ———————————————————————————————————————————————————————————————— */
-const SAVE_KEY = "wyrdfall-save-v1";
-interface DynFoe { kind: FoeKind; x: number; z: number; hp: number; maxHp: number; yaw: number; phase: number; atkCd: number; flash: number; dead: boolean; home: string }
-interface Interact { x: number; z: number; label: string; run: () => void }
-export function buildWyrdfall(body: HTMLElement) {
-  const wrap = el("div", "os-wy-wrap");
+/* ————————————————— the game itself ————————————————— */
+export function buildWyrdfall(body: HTMLElement): void {
+  const wrap = document.createElement("div");
+  wrap.className = "os-wy-wrap";
   wrap.innerHTML = `
     <canvas class="os-wy-canvas"></canvas>
     <div class="os-wy-vig"></div>
     <div class="os-wy-hurt"></div>
-    <div class="os-wy-fade"></div>
-    <div class="os-sim-cross os-wy-cross"></div>
-    <div class="os-wy-hud">
+    <div class="os-wy-hud" hidden>
       <div class="os-wy-bars">
         <div class="os-wy-bar hp"><i></i></div>
         <div class="os-wy-bar mp"><i></i></div>
         <div class="os-wy-bar st"><i></i></div>
       </div>
-      <div class="os-wy-compass"><span class="os-wy-comp-strip"></span></div>
+      <div class="os-wy-compass"><div class="os-wy-compstrip">N ···· NE ···· E ···· SE ···· S ···· SW ···· W ···· NW ···· N ···· NE ···· E ···· SE ···· S ···· SW ···· W ···· NW ····&nbsp;</div></div>
       <div class="os-wy-clock"></div>
     </div>
-    <div class="os-wy-place"></div>
-    <div class="os-wy-prompt"></div>
-    <div class="os-wy-banner"></div>
-    <button class="os-sim-burger os-wy-burger" title="Menu (M)">&#8801;</button>
-    <div class="os-wy-menu" hidden>
-      <div class="os-sim-menu-title">WYRDFALL</div>
-      <button data-m="sound">sound · on</button>
-      <button data-m="iris">iris · auto</button>
-      <button data-m="input">input · mouse</button>
-      <button data-m="photo">photo · off</button>
-      <button data-m="save">save the realm</button>
-      <button data-m="sheet">character sheet</button>
-      <button data-m="map">the province map</button>
-      <button data-m="quit">leave the realm</button>
-      <div class="os-wy-record"></div>
-      <div class="os-sim-menu-keys">WASD walk &middot; mouse look &middot; click the world to take the mouse<br>
-      left button / space strike &middot; right button or Q cast bolt &middot; R mend &middot; E speak &amp; use &middot; shift run<br>
-      C sheet &middot; T rest &middot; M menu &amp; map &middot; the realm saves itself at every threshold</div>
-    </div>
+    <div class="os-wy-cross" hidden><span class="os-wy-dot"></span><span class="os-wy-interact"></span></div>
+    <div class="os-wy-place" hidden></div>
+    <div class="os-wy-toast" hidden></div>
+    <button class="os-wy-burger" aria-label="Menu">≡</button>
     <div class="os-wy-dialog" hidden>
-      <div class="os-wy-dialog-name"></div>
-      <div class="os-wy-dialog-line"></div>
-      <div class="os-wy-dialog-topics"></div>
+      <div class="os-wy-dname"></div>
+      <div class="os-wy-dtext"></div>
+      <div class="os-wy-dopts"></div>
     </div>
-    <div class="os-wy-shop" hidden>
-      <div class="os-wy-shop-title"></div>
-      <div class="os-wy-shop-list"></div>
-      <button class="os-wy-shop-close">done trading</button>
-    </div>
-    <div class="os-wy-sheet" hidden>
-      <div class="os-wy-sheet-body"></div>
-      <button class="os-wy-sheet-close">close</button>
-    </div>
-    <div class="os-wy-map" hidden>
-      <canvas class="os-wy-map-canvas" width="780" height="620"></canvas>
-      <div class="os-wy-map-note">click a known place to travel the old roads — time passes, and the roads are not always kind</div>
-      <button class="os-wy-map-close">close</button>
-    </div>
-    <div class="os-wy-title">
-      <div class="os-wy-title-name">WYRDFALL</div>
-      <div class="os-wy-title-sub">a province that does not scale to meet you</div>
-      <div class="os-wy-create">
-        <input class="os-wy-namein" type="text" maxlength="18" placeholder="your name, traveller" />
-        <div class="os-wy-archs"></div>
-        <div class="os-wy-title-btns">
-          <button class="os-wy-begin">enter the province</button>
-          <button class="os-wy-continue" hidden>continue the journey</button>
-        </div>
-        <div class="os-wy-title-note">a character is made once and kept on this machine; the realm remembers</div>
+    <div class="os-wy-create" hidden>
+      <div class="os-wy-title">WYRDFALL</div>
+      <div class="os-wy-subtitle">a province that does not scale to meet you</div>
+      <label class="os-wy-field">Name <input class="os-wy-name" maxlength="18" value="Wanderer"></label>
+      <div class="os-wy-classes"></div>
+      <div class="os-wy-create-btns">
+        <button class="os-wy-begin">Begin in Thornwick</button>
+        <button class="os-wy-continue" hidden>Continue — <span></span></button>
       </div>
     </div>
+    <div class="os-wy-panel os-wy-menu" hidden>
+      <div class="os-wy-panel-title">Wyrdfall</div>
+      <button data-m="resume">Return to the province</button>
+      <button data-m="sheet">Character sheet <span class="os-wy-key">C</span></button>
+      <button data-m="map">Map of the province <span class="os-wy-key">M</span></button>
+      <button data-m="save">Save</button>
+      <div class="os-wy-sect">Hands</div>
+      <div class="os-wy-optrow"><span>Input</span><span class="os-wy-seg"><button data-i="mouse">Mouse</button><button data-i="laptop">Laptop</button></span></div>
+      <div class="os-wy-optrow"><span>Look speed</span><input type="range" class="os-wy-sens" min="40" max="220" value="100"></div>
+      <div class="os-wy-optrow"><span>Head bob</span><button class="os-wy-tog" data-t="bob">On</button></div>
+      <div class="os-wy-sect">Senses</div>
+      <div class="os-wy-optrow"><span>Sound</span><button class="os-wy-tog" data-t="sound">On</button></div>
+      <div class="os-wy-optrow"><span>Sharpness</span><span class="os-wy-seg"><button data-d="0">Auto</button><button data-d="1">1×</button><button data-d="2">2×</button></span></div>
+      <button data-m="quit">Quit to desktop</button>
+    </div>
+    <div class="os-wy-panel os-wy-sheetp" hidden>
+      <div class="os-wy-panel-title">Character</div>
+      <div class="os-wy-sheetbody"></div>
+      <button data-m="resume">Close</button>
+    </div>
+    <div class="os-wy-panel os-wy-mapp" hidden>
+      <div class="os-wy-panel-title">The Province</div>
+      <canvas class="os-wy-map" width="460" height="460"></canvas>
+      <div class="os-wy-mapnote">Tap a marked place to hire a cart (6 gold, roads only).</div>
+      <button data-m="resume">Close</button>
+    </div>
     <div class="os-wy-death" hidden>
-      <div class="os-wy-death-line"></div>
-      <button class="os-wy-rise">rise at the temple</button>
+      <div class="os-wy-death-line">The province keeps what it kills.</div>
+      <button class="os-wy-rise">Rise at the temple</button>
     </div>
     <div class="os-wy-touch" style="display:none">
       <div class="os-wy-stick"><div class="os-wy-stick-dot"></div></div>
@@ -665,734 +837,124 @@ export function buildWyrdfall(body: HTMLElement) {
       </div>
     </div>`;
   body.appendChild(wrap);
-  const Q = <T extends Element = HTMLElement>(s: string): T => wrap.querySelector(s) as T;
+  const Q = <E extends Element = HTMLElement>(sel: string) => wrap.querySelector(sel) as E;
   const canvas = Q<HTMLCanvasElement>(".os-wy-canvas");
-  const hudEl = Q(".os-wy-hud"), hpBar = Q<HTMLElement>(".os-wy-bar.hp i"), mpBar = Q<HTMLElement>(".os-wy-bar.mp i"), stBar = Q<HTMLElement>(".os-wy-bar.st i");
-  const clockEl = Q(".os-wy-clock"), compStrip = Q(".os-wy-comp-strip"), placeEl = Q(".os-wy-place"), promptEl = Q(".os-wy-prompt");
-  const bannerEl = Q(".os-wy-banner"), crossEl = Q(".os-wy-cross"), hurtEl = Q(".os-wy-hurt"), fadeEl = Q(".os-wy-fade");
-  const menuEl = Q(".os-wy-menu"), dialogEl = Q(".os-wy-dialog"), shopEl = Q(".os-wy-shop"), sheetEl = Q(".os-wy-sheet"), mapEl = Q(".os-wy-map");
-  const titleEl = Q(".os-wy-title"), deathEl = Q(".os-wy-death");
-  compStrip.textContent = "· N ····· NE ····· E ····· SE ····· S ····· SW ····· W ····· NW · N ····· NE ····· E ····· SE ····· S ····· SW ····· W ····· NW ";
+  const hudEl = Q(".os-wy-hud"), crossEl = Q(".os-wy-cross"), interactEl = Q(".os-wy-interact");
+  const hpBar = Q(".os-wy-bar.hp i"), mpBar = Q(".os-wy-bar.mp i"), stBar = Q(".os-wy-bar.st i");
+  const clockEl = Q(".os-wy-clock"), compStrip = Q(".os-wy-compstrip");
+  const placeEl = Q(".os-wy-place"), toastEl = Q(".os-wy-toast"), hurtEl = Q(".os-wy-hurt");
+  const dialogEl = Q(".os-wy-dialog"), dName = Q(".os-wy-dname"), dText = Q(".os-wy-dtext"), dOpts = Q(".os-wy-dopts");
+  const createEl = Q(".os-wy-create"), nameInput = Q<HTMLInputElement>(".os-wy-name");
+  const classesEl = Q(".os-wy-classes"), continueBtn = Q<HTMLButtonElement>(".os-wy-continue");
+  const menuEl = Q(".os-wy-menu"), sheetEl = Q(".os-wy-sheetp"), mapEl2 = Q(".os-wy-mapp");
+  const sheetBody = Q(".os-wy-sheetbody"), deathEl = Q(".os-wy-death");
+  const touchEl = Q(".os-wy-touch"), useBtn = Q<HTMLButtonElement>(".os-wy-tbtn[data-t='use']");
 
-  /* ——— sound: a small kit, struck iron and gut string ——— */
-  let sndOn = true;
-  try { sndOn = localStorage.getItem("wyrdfall-sound") !== "off"; } catch { /* keep */ }
-  const audio = {
-    ctx: null as AudioContext | null,
-    ac(): AudioContext | null {
-      if (!sndOn) return null;
-      try {
-        if (!this.ctx) { const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext; if (!AC) return null; this.ctx = new AC(); }
-        if (this.ctx.state === "suspended") void this.ctx.resume();
-        return this.ctx;
-      } catch { return null; }
-    },
-    tone(f0: number, f1: number, dur: number, type: OscillatorType, gain: number, delay = 0) {
-      const ctx = this.ac(); if (!ctx) return;
-      const t = ctx.currentTime + delay;
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = type;
-      o.frequency.setValueAtTime(Math.max(24, f0), t);
-      o.frequency.exponentialRampToValueAtTime(Math.max(24, f1), t + dur);
-      g.gain.setValueAtTime(gain, t);
-      g.gain.exponentialRampToValueAtTime(0.0004, t + dur);
-      o.connect(g).connect(ctx.destination);
-      o.start(t); o.stop(t + dur + 0.02);
-    },
-    swing() { this.tone(900, 220, 0.11, "sawtooth", 0.03); },
-    hit() { this.tone(210, 80, 0.09, "square", 0.09); this.tone(1400, 900, 0.04, "triangle", 0.05); },
-    kill() { this.tone(160, 40, 0.28, "sawtooth", 0.10); this.tone(90, 30, 0.34, "triangle", 0.12, 0.03); },
-    hurt() { this.tone(130, 70, 0.16, "sawtooth", 0.10); },
-    bolt() { this.tone(1250, 300, 0.16, "sawtooth", 0.06); this.tone(2400, 800, 0.10, "triangle", 0.04); },
-    mend() { this.tone(520, 880, 0.3, "sine", 0.06); this.tone(660, 990, 0.3, "sine", 0.04, 0.07); },
-    coin() { this.tone(1560, 1560, 0.07, "square", 0.05); this.tone(2090, 2090, 0.14, "square", 0.05, 0.06); },
-    door() { this.tone(90, 55, 0.22, "triangle", 0.10); this.tone(300, 180, 0.08, "square", 0.03, 0.02); },
-    lock() { this.tone(700, 500, 0.05, "square", 0.07); this.tone(950, 700, 0.06, "square", 0.07, 0.09); },
-    quest() { this.tone(392, 392, 0.14, "triangle", 0.07); this.tone(523, 523, 0.14, "triangle", 0.07, 0.12); this.tone(659, 659, 0.24, "triangle", 0.07, 0.24); },
-    level() { this.tone(330, 330, 0.16, "triangle", 0.08); this.tone(415, 415, 0.16, "triangle", 0.08, 0.14); this.tone(494, 494, 0.16, "triangle", 0.08, 0.28); this.tone(659, 659, 0.4, "triangle", 0.09, 0.42); },
-    step(soft: boolean) { this.tone(soft ? 120 : 95, 60, 0.05, "triangle", soft ? 0.016 : 0.026); },
-  };
-
-  /* ——— GL ——— */
-  const gl = (canvas.getContext("webgl2", { antialias: false, alpha: false }) || canvas.getContext("webgl", { antialias: false, alpha: false })) as WebGLRenderingContext;
-  const XR = (gl.getExtension("OES_standard_derivatives") as { enable?: () => void } | null);
-  if (XR && XR.enable) XR.enable.call(gl);
-  const mkProg = (vsSrc: string, fsSrc: string) => {
-    const sh = (t: number, s: string) => { const h = gl.createShader(t)!; gl.shaderSource(h, s); gl.compileShader(h); return h; };
-    const p = gl.createProgram()!;
-    gl.attachShader(p, sh(gl.VERTEX_SHADER, vsSrc));
-    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fsSrc));
-    gl.linkProgram(p);
-    return p;
-  };
-  const mkBuf = (floats: number) => {
-    const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, floats * 4, gl.DYNAMIC_DRAW);
-    return b;
-  };
-  const litP = mkProg(LIT_VS, LIT_FS), skyP = mkProg(SKY_VS, SKY_FS), watP = mkProg(WATER_VS, WATER_FS);
-  const litU = { mvp: gl.getUniformLocation(litP, "uMVP"), model: gl.getUniformLocation(litP, "uModel"), cam: gl.getUniformLocation(litP, "uCam"), sun: gl.getUniformLocation(litP, "uSun"), fog: gl.getUniformLocation(litP, "uFog"), fogNear: gl.getUniformLocation(litP, "uFogNear"), fogFar: gl.getUniformLocation(litP, "uFogFar"), tint: gl.getUniformLocation(litP, "uTint"), camPos: gl.getUniformLocation(litP, "uCamPos"), rim: gl.getUniformLocation(litP, "uRim"), time: gl.getUniformLocation(litP, "uTime"), season: gl.getUniformLocation(litP, "uSeason"), shadowAmt: gl.getUniformLocation(litP, "uShadowAmt"), shadowMap: gl.getUniformLocation(litP, "uShadowMap") };
-  const skyU = { vp: gl.getUniformLocation(skyP, "uVP"), zen: gl.getUniformLocation(skyP, "uZen"), hor: gl.getUniformLocation(skyP, "uHor"), sunDir: gl.getUniformLocation(skyP, "uSunDir"), sunCol: gl.getUniformLocation(skyP, "uSunCol"), night: gl.getUniformLocation(skyP, "uNight"), time: gl.getUniformLocation(skyP, "uTime"), cover: gl.getUniformLocation(skyP, "uCover"), gloom: gl.getUniformLocation(skyP, "uGloom"), flash: gl.getUniformLocation(skyP, "uFlash"), moonDir: gl.getUniformLocation(skyP, "uMoonDir"), aurora: gl.getUniformLocation(skyP, "uAurora"), second: gl.getUniformLocation(skyP, "uSecond") };
-  const watU = { mvp: gl.getUniformLocation(watP, "uMVP"), cam: gl.getUniformLocation(watP, "uCam"), camPos: gl.getUniformLocation(watP, "uCamPos"), sun: gl.getUniformLocation(watP, "uSun"), sunCol: gl.getUniformLocation(watP, "uSunCol"), hor: gl.getUniformLocation(watP, "uHor"), fog: gl.getUniformLocation(watP, "uFog"), fogNear: gl.getUniformLocation(watP, "uFogNear"), fogFar: gl.getUniformLocation(watP, "uFogFar"), time: gl.getUniformLocation(watP, "uTime"), cold: gl.getUniformLocation(watP, "uCold"), day: gl.getUniformLocation(watP, "uDay") };
-  const aPos = gl.getAttribLocation(litP, "aPos"), aCol = gl.getAttribLocation(litP, "aCol"), aNor = gl.getAttribLocation(litP, "aNor");
-  const aPosS = gl.getAttribLocation(skyP, "aPos");
-  const aPosW = gl.getAttribLocation(watP, "aPos"), aColW = gl.getAttribLocation(watP, "aCol"), aAuxW = gl.getAttribLocation(watP, "aAux");
-  const dummyTex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, dummyTex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
-  function setLit(vpArr: Float32Array, eye: [number, number, number], sun: Col3, fog: Col3, near: number, far: number, tint: Col3, rim: Col3, now: number) {
-    gl.useProgram(litP);
-    gl.uniformMatrix4fv(litU.mvp, false, vpArr);
-    gl.uniformMatrix4fv(litU.model, false, m4.ident());
-    gl.uniform2f(litU.cam, eye[0], eye[2]);
-    gl.uniform3fv(litU.sun, sun);
-    gl.uniform3fv(litU.fog, fog);
-    gl.uniform1f(litU.fogNear, near);
-    gl.uniform1f(litU.fogFar, far);
-    gl.uniform3fv(litU.tint, tint);
-    gl.uniform3fv(litU.camPos, eye);
-    gl.uniform3fv(litU.rim, rim);
-    gl.uniform1f(litU.time, now);
-    gl.uniform3fv(litU.season, [0, 0, 0]);
-    gl.uniform1f(litU.shadowAmt, 0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, dummyTex);
-    gl.uniform1i(litU.shadowMap, 0);
-  }
-  const dynBuf = mkBuf(400000), staBuf = gl.createBuffer(), terrBuf = gl.createBuffer();
-  gl.enable(gl.DEPTH_TEST);
-  gl.disable(gl.CULL_FACE);
-  gl.clearColor(0.02, 0.02, 0.03, 1);
+  /* ——— settings ——— */
+  interface Cfg { mode: "mouse" | "laptop"; sens: number; bob: boolean; sound: boolean; dpr: number }
+  const cfg: Cfg = (() => {
+    try {
+      const raw = localStorage.getItem("wyrdfall-cfg");
+      if (raw) return { mode: "mouse", sens: 1, bob: true, sound: true, dpr: 0, ...JSON.parse(raw) };
+    } catch { /* fresh */ }
+    return { mode: "mouse", sens: 1, bob: true, sound: true, dpr: 0 };
+  })();
+  const saveCfg = () => { try { localStorage.setItem("wyrdfall-cfg", JSON.stringify(cfg)); } catch { /* private */ } };
 
   /* ——— state ——— */
-  let irisOn = true, photoOn = false, laptop = false, dprCap = 1.5, frameMs = 16, quality = 0;
-  try {
-    irisOn = localStorage.getItem("wyrdfall-iris") !== "off";
-    photoOn = localStorage.getItem("wyrdfall-photo") === "on";
-    laptop = localStorage.getItem("wyrdfall-input") === "laptop";
-  } catch { /* keep */ }
-  const world = buildOverworld();
-  const scene = { kind: "title" as "title" | "overworld" | "interior" | "dungeon", building: null as Building | null, interior: null as Interior | null, dungeon: null as DungeonRun | null, dungeonDef: null as DungeonDef | null };
+  type Scene =
+    | { kind: "title" }
+    | { kind: "overworld" }
+    | { kind: "interior"; b: BDef; scene: InteriorScene }
+    | { kind: "dungeon"; di: number; scene: DungScene };
+  let scene: Scene = { kind: "title" };
   let sheet: Sheet | null = null;
-  let timeMin = 8 * 60;                       // day one, eight in the morning
-  let px = 0, pz = -60, pyaw = 0, ppitch = 0, vy = 0, groundY = wyHeight(0, -60), grounded = true;
-  let stamina = 100, swingT = 0, swingHitDone = true, hurtT = 0, stepAcc = 0, placeName = "", placeT = 0;
-  let foes: DynFoe[] = [], remains: Array<{ x: number; z: number; y: number; col: Col3; ttl: number }> = [];
-  let tracers: Array<{ x: number; y: number; z: number; dx: number; dy: number; dz: number; len: number; col: Col3; ttl: number }> = [];
-  let wanderers: Array<{ npc: NpcDef; x: number; z: number; tx: number; tz: number; yaw: number; phase: number; wait: number }> = [];
+  let started = false, dead = false;
+  let px = 0, pz = -40, pyaw = 0, ppitch = 0, tYaw = 0, tPitch = 0;
+  let vx = 0, vz = 0, vy = 0, groundY = 6, jumpOff = 0, grounded = true;
+  let eyeY = 8, bobPhase = 0, landDip = 0, stepAcc = 0;
+  let gameMin = 8 * 60, dayCount = 1;
+  let stamina = 100, swingT = 0, castCd = 0, hurtT = 0, shake = 0, hitStop = 0;
   let discovered = new Set<string>();
-  let spawnT = 4, saveT = 30, ambushWarned = false;
-  const interiorCache = new Map<string, Interior>();
-  const getInterior = (b: Building): Interior => {
-    const k = b.town + ":" + b.kind + ":" + Math.round(b.x) + ":" + Math.round(b.z);
-    let i = interiorCache.get(k);
-    if (!i) { i = buildInterior(b); interiorCache.set(k, i); }
-    return i;
-  };
-  const keys: Record<string, boolean> = {};
-  let locked = false, started = false;
-  const proj = new Array(16).fill(0), view = new Array(16).fill(0), vp = new Array(16).fill(0);
-  const isNight = () => { const h = (timeMin % 1440) / 60; return h < 5.2 || h > 20.6; };
-  const hourNow = () => (timeMin % 1440) / 60;
-  const dayNow = () => Math.floor(timeMin / 1440) + 1;
-
-  /* ——— the realm's small magics: word, memory, thresholds ——— */
-  const FACTION_OF: Record<string, string> = { guildf: "the Hearthguard", guildm: "the Umbral Covenant", temple: "the Listening God" };
-  const SKILL_OF: Record<string, SkillId> = { guildf: "blade", guildm: "destruction", temple: "restoration" };
-  let bannerTimer: ReturnType<typeof setTimeout> | null = null;
-  let levelReady = false, pendingHit = -1, athAcc = 0, curInteract: Interact | null = null;
-  let returnX = 0, returnZ = -40, dlgNpc: NpcDef | null = null, pendingOffer: Quest | null = null;
-  const banner = (text: string, ms = 3400) => {
-    bannerEl.textContent = text;
-    bannerEl.classList.add("show");
-    if (bannerTimer) clearTimeout(bannerTimer);
-    bannerTimer = setTimeout(() => bannerEl.classList.remove("show"), ms);
-  };
-  const setPlace = (name: string) => {
-    if (name === placeName) return;
-    placeName = name; placeT = 5;
-    placeEl.textContent = name;
-    placeEl.classList.add("show");
-  };
-  const townName = (id: string): string => TOWNS.find((t) => t.id === id)?.name || "the wilds";
-  function skillUse(id: SkillId, n = 1) {
-    if (!sheet) return;
-    sheet.uses[id] += n;
-    const need = 8 + sheet.skills[id] * 0.35;
-    if (sheet.uses[id] >= need && sheet.skills[id] < 100) {
-      sheet.uses[id] = 0;
-      sheet.skills[id]++;
-      sheet.gains++;
-      banner(`${SKILL_NAME[id]} rises to ${sheet.skills[id]}.`);
-      audio.quest();
-      if (sheet.gains >= 5 && !levelReady) {
-        levelReady = true;
-        banner("You have grown in the doing. Rest — an inn bed, or T under the sky — and meditate on it.", 5200);
-      }
-    }
-  }
-  function saveGame() {
-    if (!sheet || !started) return;
-    try {
-      const inWorld = scene.kind === "overworld";
-      localStorage.setItem(SAVE_KEY, JSON.stringify({
-        sheet, timeMin, discovered: [...discovered],
-        px: inWorld ? px : returnX, pz: inWorld ? pz : returnZ, pyaw,
-      }));
-    } catch { /* the realm forgets, this once */ }
-  }
-  function fadeThrough(fn: () => void) {
-    fadeEl.style.opacity = "1";
-    window.setTimeout(() => { fn(); fadeEl.style.opacity = "0"; }, 270);
-  }
-  /* ——— thresholds ——— */
-  function enterBuilding(b: Building) {
-    audio.door();
-    fadeThrough(() => {
-      returnX = px; returnZ = pz;
-      scene.kind = "interior"; scene.building = b; scene.interior = getInterior(b);
-      px = 0; pz = 3.2; pyaw = 0; vy = 0; groundY = 0; foes = [];
-      uploadStatic(scene.interior.lit);
-      setPlace(`${b.name} — ${townName(b.town)}`);
-      saveGame();
-    });
-  }
-  function leaveBuilding() {
-    const b = scene.building; if (!b) return;
-    audio.door();
-    fadeThrough(() => {
-      scene.kind = "overworld"; scene.building = null; scene.interior = null;
-      px = b.doorX; pz = b.doorZ; pyaw = Math.atan2(-(b.doorX - b.x), -(b.doorZ - b.z));
-      groundY = wyHeight(px, pz);
-      setPlace(townName(b.town));
-      saveGame();
-    });
-  }
-  function enterDungeon(def: DungeonDef) {
-    audio.door();
-    fadeThrough(() => {
-      returnX = px; returnZ = pz;
-      const fetchHere = sheet?.quests.some((q) => q.kind === "fetch" && q.dungeon === def.id && q.have < q.need);
-      scene.kind = "dungeon"; scene.dungeonDef = def;
-      scene.dungeon = buildDungeon(def, !!fetchHere);
-      px = scene.dungeon.startX; pz = scene.dungeon.startZ; pyaw = 0; vy = 0; groundY = 0;
-      foes = scene.dungeon.foes.map((f) => ({ kind: f.kind, x: f.x, z: f.z, hp: FOES[f.kind].hp, maxHp: FOES[f.kind].hp, yaw: Math.random() * 6.3, phase: Math.random() * 6, atkCd: 0, flash: 0, dead: false, home: def.id }));
-      uploadStatic(scene.dungeon.lit);
-      discovered.add(def.id);
-      setPlace(def.name);
-      banner("The dark below keeps its own hours.");
-      saveGame();
-    });
-  }
-  function exitDungeon() {
-    const def = scene.dungeonDef; if (!def) return;
-    audio.door();
-    fadeThrough(() => {
-      scene.kind = "overworld"; scene.dungeon = null; scene.dungeonDef = null;
-      px = def.x; pz = def.z + 9.5; pyaw = 0; foes = [];
-      groundY = wyHeight(px, pz);
-      setPlace("the wilds");
-      saveGame();
-    });
-  }
-  /* ——— rest, and what rest makes of you ——— */
-  function doRest(hours: number, safe: boolean) {
-    if (!sheet) return;
-    if (foes.some((f) => !f.dead && Math.hypot(f.x - px, f.z - pz) < 20)) { banner("You cannot rest with enemies near."); return; }
-    fadeThrough(() => {
-      timeMin += hours * 60;
-      sheet!.hp = maxHp(sheet!); sheet!.mp = maxMp(sheet!); stamina = 100;
-      if (levelReady) {
-        levelReady = false;
-        sheet!.level++; sheet!.gains = 0;
-        sheet!.hp = maxHp(sheet!); sheet!.mp = maxMp(sheet!);
-        audio.level();
-        banner(`You wake stronger than you lay down. Level ${sheet!.level}.`, 4600);
-      } else banner("You rest. The world goes on without asking.");
-      if (!safe && Math.random() < 0.25) {
-        for (let i = 0; i < 2; i++) spawnFoe(isNight() ? "skeleton" : "wolf", px + 13 + Math.random() * 4, pz + (Math.random() - 0.5) * 10);
-        banner("Something found you in the dark.", 4200);
-      }
-      saveGame();
-    });
-  }
-  /* ——— foes ——— */
-  function spawnFoe(kind: FoeKind, x: number, z: number) {
-    foes.push({ kind, x, z, hp: FOES[kind].hp, maxHp: FOES[kind].hp, yaw: Math.random() * 6.3, phase: Math.random() * 6, atkCd: 0, flash: 0, dead: false, home: "" });
-  }
-  function damageFoe(f: DynFoe, dmg: number, skill: SkillId) {
-    f.hp -= dmg; f.flash = 0.18;
-    audio.hit();
-    if (f.hp <= 0 && !f.dead) {
-      f.dead = true;
-      audio.kill();
-      const st = FOES[f.kind];
-      const gold = st.gold[0] + Math.floor(Math.random() * (st.gold[1] - st.gold[0] + 1));
-      let msg = `The ${FOE_NAME[f.kind]} falls.`;
-      if (sheet) {
-        if (gold > 0) { sheet.gold += gold; msg += ` ${gold} gold.`; }
-        if (st.loot && Math.random() < 0.45) { sheet.inv.push({ name: st.loot, val: 4 + Math.floor(Math.random() * 10), kind: "junk" }); msg += ` You take a ${st.loot}.`; }
-        for (const q of sheet.quests) {
-          if (q.kind === "cull" && !q.done && q.dungeon === (scene.dungeonDef?.id || "") && q.foe === f.kind && q.have < q.need) {
-            q.have++;
-            if (q.have >= q.need) { q.done = true; audio.quest(); banner("The work is done. Return, and be paid."); }
-          }
-        }
-      }
-      remains.push({ x: f.x, z: f.z, y: scene.kind === "overworld" ? wyHeight(f.x, f.z) : 0, col: f.kind === "skeleton" ? [0.62, 0.60, 0.54] : [0.30, 0.16, 0.12], ttl: 26 });
-      banner(msg);
-      skillUse(skill, 2);
-    }
-  }
-  function hurtPlayer(dmg: number) {
-    if (!sheet || hurtT > 0.25) return;
-    sheet.hp -= dmg;
-    hurtT = 0.55;
-    audio.hurt();
-    if (sheet.hp <= 0) {
-      sheet.hp = 0;
-      document.exitPointerLock?.();
-      Q(".os-wy-death-line").textContent = `You fall — ${placeName || "in the wilds"}. The province keeps what it kills, but the Temple keeps you.`;
-      deathEl.hidden = false;
-    }
-  }
-  function swingStart() {
-    if (!sheet || swingT > 0 || stamina < 4) return;
-    swingT = 0.40; swingHitDone = false; pendingHit = 0.11; stamina = Math.max(0, stamina - 5);
-    audio.swing();
-  }
-  function swingResolve() {
-    const fx = -Math.sin(pyaw), fz = -Math.cos(pyaw);
-    for (const f of foes) {
-      if (f.dead) continue;
-      const dx = f.x - px, dz = f.z - pz, d = Math.hypot(dx, dz);
-      if (d > 2.5) continue;
-      if ((dx * fx + dz * fz) / (d || 1) < 0.42) continue;
-      damageFoe(f, WEAPONS[sheet!.weapon].dmg + sheet!.skills.blade * 0.22 + Math.random() * 4, "blade");
-    }
-  }
-  function castBolt() {
-    if (!sheet) return;
-    if (sheet.mp < 12) { banner("The fire will not come. No magicka."); return; }
-    sheet.mp -= 12;
-    audio.bolt();
-    const cp = Math.cos(ppitch), dir: [number, number, number] = [-Math.sin(pyaw) * cp, Math.sin(ppitch), -Math.cos(pyaw) * cp];
-    const eye: [number, number, number] = [px, groundY + 1.58, pz];
-    let best: DynFoe | null = null, bestT = 64;
-    for (const f of foes) {
-      if (f.dead) continue;
-      const rx = f.x - eye[0], ry = (scene.kind === "overworld" ? wyHeight(f.x, f.z) : 0) + 1.0 - eye[1], rz = f.z - eye[2];
-      const t = rx * dir[0] + ry * dir[1] + rz * dir[2];
-      if (t < 0 || t > bestT) continue;
-      const qx = rx - dir[0] * t, qy = ry - dir[1] * t, qz = rz - dir[2] * t;
-      if (qx * qx + qy * qy + qz * qz < 1.25) { best = f; bestT = t; }
-    }
-    tracers.push({ x: eye[0], y: eye[1], z: eye[2], dx: dir[0], dy: dir[1], dz: dir[2], len: best ? bestT : 46, col: [0.72, 0.52, 1.0], ttl: 0.07 });
-    if (best) damageFoe(best, 9 + sheet.skills.destruction * 0.34 + Math.random() * 5, "destruction");
-  }
-  function castHeal() {
-    if (!sheet) return;
-    if (sheet.mp < 15) { banner("The mending will not come. No magicka."); return; }
-    if (sheet.hp >= maxHp(sheet)) { banner("You are whole already."); return; }
-    sheet.mp -= 15;
-    sheet.hp = Math.min(maxHp(sheet), sheet.hp + 20 + sheet.skills.restoration * 0.35);
-    audio.mend();
-    skillUse("restoration");
-  }
-  /* ——— chests ——— */
-  function openChest(c: ChestDef) {
-    if (!sheet || !scene.dungeon) return;
-    if (c.locked) {
-      const roll = Math.random() * 100;
-      if (roll < 22 + sheet.skills.lockpick * 0.55) {
-        c.locked = false;
-        audio.lock();
-        banner("The lock gives, sweet as a confession.");
-        skillUse("lockpick", 2);
-      } else {
-        audio.lock();
-        banner(`The lock holds. (Lockpicking ${sheet.skills.lockpick})`);
-        return;
-      }
-    }
-    c.opened = true;
-    if (c.quest) {
-      const q = sheet.quests.find((q2) => q2.kind === "fetch" && q2.dungeon === scene.dungeonDef?.id && !q2.done);
-      if (q) {
-        q.have = q.need; q.done = true;
-        sheet.inv.push({ name: q.itemName || "the thing sought", val: 0, kind: "relic" });
-        audio.quest();
-        banner(`You found ${q.itemName}. Carry it back.`, 4200);
-        return;
-      }
-    }
-    const gold = 14 + Math.floor(Math.random() * 48);
-    sheet.gold += gold;
-    audio.coin();
-    let msg = `The chest yields ${gold} gold.`;
-    if (Math.random() < 0.5) { sheet.inv.push({ name: "draught of mending", val: 25, kind: "potion-h" }); msg += " And a draught of mending."; }
-    banner(msg);
-  }
-
-  /* ——— work, and the working of it ——— */
+  let quests: Quest[] = [];
   let questSeq = 1;
-  const FETCH_ITEMS: Record<string, string> = { barrow: "the First King's signet ring", vault: "the vault-keeper's ledger", hollow: "the hollow bell", deep: "a saint's fingerbone" };
-  const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] || c));
-  function genQuest(factionKey: string, giverName: string): Quest {
-    const rnd = mulberry32((Date.now() & 0xfffff) ^ (questSeq * 7919) ^ 0x9e37);
-    questSeq++;
-    const reward = 50 + Math.floor(rnd() * 70) + (sheet?.level || 1) * 12;
-    if (factionKey === "inn") {
-      const others = TOWNS.filter((t) => t.id !== scene.building?.town);
-      const dest = others[Math.floor(rnd() * others.length)];
-      const tb = world.buildings.find((b) => b.town === dest.id && b.kind === "tavern")!;
-      const keeper = getInterior(tb).npcs[0];
-      return { id: questSeq, kind: "deliver", giver: giverName, text: `A sealed letter for ${keeper.name}, keeper of the tavern at ${dest.name}. Roads are roads — carry it there yourself. ${reward} gold when it is in their hands.`, toTown: dest.id, toNpc: keeper.name, need: 1, have: 0, reward, faction: "the road", done: false };
-    }
-    const dg = DUNGEONS[Math.floor(rnd() * DUNGEONS.length)];
-    const faction = FACTION_OF[factionKey];
-    if (rnd() < 0.5) {
-      const foe: FoeKind = dg.kind === "undead" ? "skeleton" : dg.kind === "vermin" ? "rat" : "cultist";
-      const need = 3 + Math.floor(rnd() * 3);
-      return { id: questSeq, kind: "cull", giver: giverName, text: `${dg.name} stirs again. Go down and lay ${need} ${FOE_NAME[foe]}s back to rest. ${reward} gold, and ${faction} will know your name.`, dungeon: dg.id, foe, need, have: 0, reward, faction, done: false };
-    }
-    return { id: questSeq, kind: "fetch", giver: giverName, text: `Something was left in ${dg.name} that should not stay there: ${FETCH_ITEMS[dg.id]}. It will lie in a chest, in the deep rooms. Bring it back to ${faction}. ${reward} gold.`, dungeon: dg.id, itemName: FETCH_ITEMS[dg.id], need: 1, have: 0, reward, faction, done: false };
-  }
-  /* ——— conversation ——— */
-  const dlgName = Q(".os-wy-dialog-name"), dlgLine = Q(".os-wy-dialog-line"), dlgTopics = Q(".os-wy-dialog-topics");
-  function setTopics(list: Array<[string, () => void]>) {
-    dlgTopics.replaceChildren();
-    for (const [label, fn] of list) {
-      const b = el("button", "os-wy-topic", label);
-      b.addEventListener("click", fn);
-      dlgTopics.appendChild(b);
-    }
-  }
-  function openDialogue(npc: NpcDef) {
-    dlgNpc = npc; pendingOffer = null;
-    document.exitPointerLock?.();
-    dialogEl.hidden = false;
-    dlgName.textContent = `${npc.name} — ${npc.role}`;
-    const g = GREET[npc.role] || GREET.townsfolk;
-    dlgLine.textContent = g[Math.floor(Math.random() * g.length)];
-    baseTopics();
-  }
-  function closeDialogue() { dialogEl.hidden = true; dlgNpc = null; pendingOffer = null; }
-  function baseTopics() {
-    const npc = dlgNpc; if (!npc || !sheet) return;
-    const list: Array<[string, () => void]> = [];
-    const dq = sheet.quests.find((q) => q.kind === "deliver" && q.toNpc === npc.name && scene.building?.town === q.toTown);
-    if (dq) list.push(["Deliver the sealed letter", () => {
-      sheet!.gold += dq.reward;
-      sheet!.inv = sheet!.inv.filter((i) => i.kind !== "letter");
-      sheet!.quests = sheet!.quests.filter((q) => q !== dq);
-      audio.quest(); audio.coin();
-      dlgLine.textContent = `"For me? ... Well. The road provides, and so do you. ${dq.reward} gold, as agreed with the sender."`;
-      banner(`Delivered. ${dq.reward} gold.`);
-      baseTopics();
-    }]);
-    if (npc.service && FACTION_OF[npc.service]) {
-      const faction = FACTION_OF[npc.service];
-      for (const q of sheet.quests.filter((q2) => q2.done && q2.faction === faction)) {
-        list.push(["Turn in — the work is done", () => {
-          sheet!.gold += q.reward;
-          sheet!.rep[faction] = (sheet!.rep[faction] || 0) + 1;
-          if (q.kind === "fetch") sheet!.inv = sheet!.inv.filter((i) => !(i.kind === "relic" && i.name === q.itemName));
-          sheet!.quests = sheet!.quests.filter((q2) => q2 !== q);
-          audio.quest(); audio.coin();
-          dlgLine.textContent = `"It is done, then. ${faction} pays its debts — ${q.reward} gold, and your name is spoken warmer here now."`;
-          baseTopics();
-        }]);
-      }
-    }
-    list.push(["Rumour", () => {
-      dlgLine.textContent = RUMORS[Math.floor(Math.random() * RUMORS.length)];
-      if (Math.random() < 0.4) {
-        const un = DUNGEONS.filter((d) => !discovered.has(d.id));
-        if (un.length) { const d = un[Math.floor(Math.random() * un.length)]; discovered.add(d.id); banner(`Marked on your map: ${d.name}.`); }
-      }
-    }]);
-    if (npc.service === "inn") {
-      list.push(["A bed for the night — 10 gold", () => {
-        if (sheet!.gold < 10) { dlgLine.textContent = `"No coin, no mattress, friend. The floor of the province is free."`; return; }
-        sheet!.gold -= 10; closeDialogue(); doRest(8, true);
-      }]);
-      list.push(["A hot meal — 4 gold", () => {
-        if (sheet!.gold < 4) { dlgLine.textContent = `"Come back with coin."`; return; }
-        sheet!.gold -= 4; sheet!.hp = Math.min(maxHp(sheet!), sheet!.hp + Math.ceil(maxHp(sheet!) * 0.35)); audio.coin();
-        dlgLine.textContent = `"Eat. You look like the road has been chewing on you."`;
-      }]);
-      list.push(["Ask for work", () => offerWork("inn")]);
-    }
-    if (npc.service && FACTION_OF[npc.service]) {
-      const sk = SKILL_OF[npc.service];
-      list.push(["Ask for work", () => offerWork(npc.service!)]);
-      list.push([`Train ${SKILL_NAME[sk]} — 35 gold`, () => {
-        if (!sheet || sheet.gold < 35) { dlgLine.textContent = `"Training is cheaper than dying, but it is not free."`; return; }
-        if (sheet.skills[sk] >= 100) { dlgLine.textContent = `"There is nothing left here to teach you."`; return; }
-        sheet.gold -= 35; sheet.skills[sk]++; sheet.gains++; audio.coin();
-        if (sheet.gains >= 5 && !levelReady) { levelReady = true; banner("You have grown in the doing. Rest and meditate on it.", 4600); }
-        dlgLine.textContent = `"Again. And again. That is the whole of the teaching." (${SKILL_NAME[sk]} is now ${sheet.skills[sk]}.)`;
-        baseTopics();
-      }]);
-      if (npc.service === "temple") list.push(["A blessing", () => { sheet!.hp = maxHp(sheet!); audio.mend(); dlgLine.textContent = `"The God heard that. Go on, then — louder this time." (Fully mended.)`; }]);
-    }
-    if (npc.service === "shop") list.push(["Trade", () => { closeDialogue(); openShop(); }]);
-    list.push(["Farewell", () => closeDialogue()]);
-    setTopics(list);
-  }
-  function offerWork(factionKey: string) {
-    const npc = dlgNpc; if (!npc || !sheet) return;
-    if (sheet.quests.length >= 3) { dlgLine.textContent = `"Your hands are full — three works at once is a feast already. Finish something."`; return; }
-    pendingOffer = genQuest(factionKey, npc.name);
-    dlgLine.textContent = pendingOffer.text;
-    setTopics([
-      ["Take the work", () => {
-        const q = pendingOffer!; pendingOffer = null;
-        sheet!.quests.push(q);
-        if (q.kind === "deliver") sheet!.inv.push({ name: "a sealed letter", val: 0, kind: "letter" });
-        if (q.dungeon) discovered.add(q.dungeon);
-        audio.quest();
-        banner("Work taken. It is written on your sheet — C.");
-        dlgLine.textContent = `"Then it is yours. Do not make a liar of me."`;
-        baseTopics();
-      }],
-      ["Not for me", () => { pendingOffer = null; dlgLine.textContent = `"As you like. The work will keep — it always does."`; baseTopics(); }],
-    ]);
-  }
-  /* ——— trade ——— */
-  const shopTitle = Q(".os-wy-shop-title"), shopList = Q(".os-wy-shop-list");
-  function openShop() { document.exitPointerLock?.(); shopEl.hidden = false; renderShop(); }
-  function renderShop() {
-    if (!sheet) return;
-    const merc = sheet.skills.mercantile;
-    const buyMul = 1 - merc * 0.003, sellMul = 0.55 + merc * 0.004;
-    shopTitle.textContent = `Provisions & Sundries — your gold: ${sheet.gold}`;
-    shopList.replaceChildren();
-    const row = (label: string, price: string, btnLabel: string, fn: (() => void) | null) => {
-      const r = el("div", "os-wy-shop-row");
-      r.append(el("span", "os-wy-shop-item", label), el("span", "os-wy-shop-price", price));
-      const b = el("button", "os-wy-shop-btn", btnLabel) as HTMLButtonElement;
-      if (!fn) b.disabled = true; else b.addEventListener("click", fn);
-      r.appendChild(b); shopList.appendChild(r);
-    };
-    for (let i = 1; i < WEAPONS.length; i++) {
-      const w = WEAPONS[i], price = Math.round(w.price * buyMul), owned = sheet.weapon >= i;
-      row(`${w.name} — ${w.dmg} bite`, owned ? "carried" : `${price} gold`, owned ? "—" : "buy", owned ? null : () => {
-        if (sheet!.gold < price) { banner("Not enough gold."); return; }
-        sheet!.gold -= price; sheet!.weapon = i; audio.coin(); skillUse("mercantile", 0.6); banner(`${w.name} is yours.`); renderShop();
-      });
-    }
-    const ph = Math.round(25 * buyMul), pm = Math.round(22 * buyMul);
-    row("Draught of mending — restores health", `${ph} gold`, "buy", () => { if (sheet!.gold < ph) { banner("Not enough gold."); return; } sheet!.gold -= ph; sheet!.inv.push({ name: "draught of mending", val: 25, kind: "potion-h" }); audio.coin(); skillUse("mercantile", 0.4); renderShop(); });
-    row("Draught of starwater — restores magicka", `${pm} gold`, "buy", () => { if (sheet!.gold < pm) { banner("Not enough gold."); return; } sheet!.gold -= pm; sheet!.inv.push({ name: "draught of starwater", val: 22, kind: "potion-m" }); audio.coin(); skillUse("mercantile", 0.4); renderShop(); });
-    for (const it of [...sheet.inv]) {
-      if (it.kind === "letter" || it.kind === "relic") continue;
-      const price = Math.max(1, Math.round(it.val * sellMul));
-      row(it.name, `${price} gold`, "sell", () => { sheet!.gold += price; sheet!.inv.splice(sheet!.inv.indexOf(it), 1); audio.coin(); skillUse("mercantile", 0.6); renderShop(); });
-    }
-  }
-  Q(".os-wy-shop-close").addEventListener("click", () => { shopEl.hidden = true; });
-  /* ——— the sheet ——— */
-  const sheetBody = Q(".os-wy-sheet-body");
-  function openSheet() {
-    if (!sheet) return;
-    document.exitPointerLock?.();
-    sheetEl.hidden = false;
-    const h = Math.floor(hourNow()), m = Math.floor((hourNow() % 1) * 60);
-    const when = `Day ${dayNow()} — ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    const skills = (Object.keys(SKILL_NAME) as SkillId[]).map((k) => `<div class="os-wy-sk"><span>${SKILL_NAME[k]}</span><b>${sheet!.skills[k]}</b></div>`).join("");
-    const reps = Object.entries(sheet.rep).filter(([, v]) => v !== 0).map(([k, v]) => `<div class="os-wy-sk"><span>${k}</span><b>${v > 0 ? "+" : ""}${v}</b></div>`).join("") || `<div class="os-wy-dim">no faction knows your name yet</div>`;
-    const quests = sheet.quests.length ? sheet.quests.map((q) => `<div class="os-wy-q">${q.text}<span>${q.kind === "cull" ? ` — ${q.have}/${q.need} laid to rest${q.done ? "; return for your reward" : ""}` : q.kind === "fetch" ? (q.done ? " — carried; return it" : " — not yet found") : " — undelivered"}</span></div>`).join("") : `<div class="os-wy-dim">no work taken — the guild halls and the inn keep the province's errands</div>`;
-    const inv = sheet.inv.length ? sheet.inv.map((it, i) => `<div class="os-wy-sk"><span>${it.name}</span>${it.kind === "potion-h" || it.kind === "potion-m" ? `<button class="os-wy-use" data-i="${i}">drink</button>` : ""}</div>`).join("") : `<div class="os-wy-dim">your pack is empty but for road-dust</div>`;
-    sheetBody.innerHTML = `
-      <div class="os-wy-sheet-name">${esc(sheet.name)} — ${ARCHS.find((a) => a.id === sheet!.arch)?.name} · level ${sheet.level}</div>
-      <div class="os-wy-dim">${when} · ${sheet.gold} gold · ${WEAPONS[sheet.weapon].name} in hand${levelReady ? " · you should rest and meditate" : ""}</div>
-      <div class="os-wy-sheet-h">the shape of you</div><div class="os-wy-grid">${skills}</div>
-      <div class="os-wy-sheet-h">who knows your name</div>${reps}
-      <div class="os-wy-sheet-h">work on your hands</div>${quests}
-      <div class="os-wy-sheet-h">the pack</div>${inv}`;
-    sheetBody.querySelectorAll<HTMLButtonElement>(".os-wy-use").forEach((b) => b.addEventListener("click", () => {
-      const it = sheet!.inv[Number(b.dataset.i)];
-      if (!it) return;
-      if (it.kind === "potion-h") sheet!.hp = Math.min(maxHp(sheet!), sheet!.hp + 45);
-      if (it.kind === "potion-m") sheet!.mp = Math.min(maxMp(sheet!), sheet!.mp + 40);
-      sheet!.inv.splice(sheet!.inv.indexOf(it), 1);
-      audio.mend();
-      openSheet();
-    }));
-  }
-  Q(".os-wy-sheet-close").addEventListener("click", () => { sheetEl.hidden = true; });
-  /* ——— the map, and the old roads ——— */
-  const mapCanvas = Q<HTMLCanvasElement>(".os-wy-map-canvas");
-  let mapTargets: Array<{ x: number; y: number; run: () => void }> = [];
-  function openMap() {
-    document.exitPointerLock?.();
-    mapEl.hidden = false;
-    const ctx = mapCanvas.getContext("2d"); if (!ctx) return;
-    const W = 780, H = 620;
-    const sx = (x: number) => ((x + 880) / 1760) * (W - 40) + 20;
-    const sz = (z: number) => ((z + 880) / 1760) * (H - 40) + 20;
-    ctx.fillStyle = "#0b0d12"; ctx.fillRect(0, 0, W, H);
-    for (let x = -860; x < 880; x += 22) for (let z = -860; z < 880; z += 22) {
-      const h = wyHeight(x, z);
-      ctx.fillStyle = h < 0.4 ? "#1d3346" : h > 30 ? "#5a5c60" : h > 14 ? "#3d4a2c" : "#2c4423";
-      ctx.fillRect(sx(x), sz(z), 5, 5);
-    }
-    ctx.strokeStyle = "rgba(190,160,100,0.5)"; ctx.lineWidth = 2; ctx.beginPath();
-    for (const [ax, az, bx, bz] of ROADS) { ctx.moveTo(sx(ax), sz(az)); ctx.lineTo(sx(bx), sz(bz)); }
-    ctx.stroke();
-    mapTargets = [];
-    ctx.font = "13px Georgia, serif"; ctx.textAlign = "left";
-    for (const t of TOWNS) {
-      ctx.fillStyle = "#e8c87a";
-      ctx.beginPath(); ctx.arc(sx(t.x), sz(t.z), 5, 0, 7); ctx.fill();
-      ctx.fillText(t.name, sx(t.x) + 9, sz(t.z) + 4);
-      mapTargets.push({ x: sx(t.x), y: sz(t.z), run: () => travelTo("town", t.id) });
-    }
-    for (const d of DUNGEONS) {
-      if (!discovered.has(d.id)) continue;
-      const X = sx(d.x), Y = sz(d.z);
-      ctx.fillStyle = "#b48ae0";
-      ctx.beginPath(); ctx.moveTo(X, Y - 6); ctx.lineTo(X + 5, Y); ctx.lineTo(X, Y + 6); ctx.lineTo(X - 5, Y); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#cdb4e8";
-      ctx.fillText(d.name, X + 9, Y + 4);
-      mapTargets.push({ x: X, y: Y, run: () => travelTo("dungeon", d.id) });
-    }
-    ctx.fillStyle = "#f2ede2";
-    ctx.beginPath(); ctx.arc(sx(px), sz(pz), 4, 0, 7); ctx.fill();
-    ctx.fillText("you", sx(px) + 8, sz(pz) + 4);
-  }
-  function travelTo(kind: string, id: string) {
-    let tx = 0, tz = 0, name = "";
-    if (kind === "town") { const t = TOWNS.find((t2) => t2.id === id)!; tx = t.x; tz = t.z + t.r * 0.72; name = t.name; }
-    else { const d = DUNGEONS.find((d2) => d2.id === id)!; tx = d.x; tz = d.z + 9.5; name = d.name; }
-    const dist = Math.hypot(tx - px, tz - pz);
-    const cart = !!sheet && sheet.gold >= 6 && dist > 120;
-    const hours = Math.max(1, Math.round(dist / (cart ? 95 : 45)));
-    if (cart && sheet) sheet.gold -= 6;
-    mapEl.hidden = true;
-    fadeThrough(() => {
-      timeMin += hours * 60;
-      scene.kind = "overworld"; scene.building = null; scene.interior = null; scene.dungeon = null; scene.dungeonDef = null;
-      px = tx; pz = tz; pyaw = 0; foes = [];
-      groundY = wyHeight(px, pz);
-      setPlace(name);
-      banner(`${name} — after ${hours} hour${hours > 1 ? "s" : ""} on the old roads${cart ? ", six gold lighter for the cart" : ""}.`);
-      if (isNight() && Math.random() < 0.3) { spawnFoe("bandit", px + 10, pz + 6); spawnFoe("bandit", px - 9, pz + 9); banner("The road exacts its toll — bandits!"); }
-      saveGame();
-    });
-  }
-  mapCanvas.addEventListener("click", (e) => {
-    const r = mapCanvas.getBoundingClientRect();
-    const mx = (e.clientX - r.left) * (780 / r.width), my = (e.clientY - r.top) * (620 / r.height);
-    let best: { run: () => void } | null = null, bd = 22;
-    for (const t of mapTargets) { const d = Math.hypot(t.x - mx, t.y - my); if (d < bd) { bd = d; best = t; } }
-    best?.run();
-  });
-  Q(".os-wy-map-close").addEventListener("click", () => { mapEl.hidden = true; });
-  /* ——— townsfolk abroad, and the doors of the world ——— */
-  function buildWanderers() {
-    const rnd = mulberry32(SEED ^ 0xbeef);
-    wanderers = [];
-    for (const t of TOWNS) {
-      for (let i = 0; i < 3; i++) {
-        const a = rnd() * Math.PI * 2, rr = 12 + rnd() * t.r * 0.45;
-        const x = t.x + Math.cos(a) * rr, z = t.z + Math.sin(a) * rr;
-        wanderers.push({
-          npc: { name: FIRST[Math.floor(rnd() * FIRST.length)], role: "townsfolk", service: null, x: 0, z: 0, yaw: 0, robe: ROBES[Math.floor(rnd() * ROBES.length)] },
-          x, z, tx: x, tz: z, yaw: rnd() * 6.3, phase: rnd() * 6, wait: rnd() * 4,
-        });
-      }
-    }
-  }
-  function currentInteracts(): Interact[] {
-    const list: Interact[] = [];
-    if (scene.kind === "overworld") {
-      for (const b of world.buildings) {
-        list.push({ x: b.doorX, z: b.doorZ, label: b.kind === "house" ? "Knock — a house" : "Enter — " + b.name, run: () => {
-          if (b.kind === "house") { audio.door(); banner("Barred, and no answer but the wind."); return; }
-          enterBuilding(b);
-        } });
-      }
-      for (const d of DUNGEONS) list.push({ x: d.x, z: d.z + 6.8, label: "Descend — " + d.name, run: () => enterDungeon(d) });
-      for (const w of wanderers) list.push({ x: w.x, z: w.z, label: "Speak — " + w.npc.name, run: () => openDialogue(w.npc) });
-    } else if (scene.kind === "interior" && scene.interior) {
-      for (const n of scene.interior.npcs) list.push({ x: n.x, z: n.z, label: "Speak — " + n.name, run: () => openDialogue(n) });
-      list.push({ x: 0, z: 5.4, label: "Leave", run: leaveBuilding });
-    } else if (scene.kind === "dungeon" && scene.dungeon) {
-      for (const c of scene.dungeon.chests) if (!c.opened) list.push({ x: c.x, z: c.z, label: c.locked ? "A locked chest" : "Open the chest", run: () => openChest(c) });
-      list.push({ x: scene.dungeon.startX, z: scene.dungeon.startZ + 3.2, label: "Climb out", run: exitDungeon });
-    }
-    return list;
-  }
+  let returnPos: { x: number; z: number; yaw: number } | null = null;
+  let lastPlace = "", placeT = 0, toastT = 0;
+  let menuOpen = false, dlgOpen = false;
+  let selClass = "Knight";
+  let spellLight = 0;
+  const maxHp = (s: Sheet) => 46 + s.level * 6 + (s.cls === "Knight" ? 14 : s.cls === "Rogue" ? 4 : 0);
+  const maxMp = (s: Sheet) => 26 + s.level * 4 + (s.cls === "Sorcerer" ? 16 : s.cls === "Rogue" ? 0 : 6);
+  const hourNow = () => gameMin / 60;
+  const playing = () => started && !dead && scene.kind !== "title";
 
-  /* ——— buffers, hands, and the turning of the world ——— */
-  let staCount = 0, terrCount = 0, phase = 0, jumpOff = 0;
-  function uploadStatic(a: Float32Array) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, staBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW);
-    staCount = a.length / 9;
+  interface DynFoe {
+    kind: FoeKind; x: number; z: number; y: number; yaw: number; hp: number; max: number;
+    phase: number; flash: number; atkCd: number; dead: boolean; boss: boolean;
+    vx: number; vz: number; boltCd: number; name: string;
   }
-  gl.bindBuffer(gl.ARRAY_BUFFER, terrBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, world.terrain, gl.STATIC_DRAW);
-  terrCount = world.terrain.length / 9;
-  uploadStatic(world.lit);
-  const watBuf = gl.createBuffer();
-  { const wc: Col3 = [0.10, 0.17, 0.22];
-    const per: number[] = [];
-    for (const [x, z] of [[-880, -880], [880, -880], [880, 880], [-880, 880]] as Array<[number, number]>) per.push(x, 0.35, z, ...wc, 0.88, 0.4);
-    const flat: number[] = [];
-    for (const i of [0, 1, 2, 0, 2, 3]) flat.push(...per.slice(i * 8, i * 8 + 8));
-    gl.bindBuffer(gl.ARRAY_BUFFER, watBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(flat), gl.STATIC_DRAW); }
-  const skyBuf = gl.createBuffer();
-  let skyN = 0;
-  { const so: number[] = [];
-    octa(so, 0, 0, 0, 1500, 1500, 1500, [1, 1, 1]);
-    const sp: number[] = [];
-    for (let i = 0; i < so.length; i += 9) sp.push(so[i], so[i + 1], so[i + 2]);
-    skyN = sp.length / 3;
-    gl.bindBuffer(gl.ARRAY_BUFFER, skyBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sp), gl.STATIC_DRAW); }
-  const panelsOpen = () => !dialogEl.hidden || !shopEl.hidden || !sheetEl.hidden || !mapEl.hidden || !menuEl.hidden || !deathEl.hidden;
-  const playing = () => started && scene.kind !== "title" && deathEl.hidden;
-  function lockLook() { if (playing() && !panelsOpen()) canvas.requestPointerLock?.(); }
-  canvas.addEventListener("click", () => { if (!locked) lockLook(); });
-  document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
+  let foes: DynFoe[] = [];
+  interface Wanderer { npc: NpcDef; x: number; z: number; yaw: number; tx: number; tz: number; wait: number; phase: number }
+  let wanderers: Wanderer[] = [];
+  interface Remain { x: number; y: number; z: number; yaw: number; sprite: number; w: number }
+  let remains: Remain[] = [];
+  interface Tracer { x: number; y: number; z: number; dx: number; dy: number; dz: number; len: number; hostile: boolean; dmg: number }
+  let tracers: Tracer[] = [];
+  interface ChestState { di: number; idx: number }
+  let openedChests: ChestState[] = [];
+
+  let curInteract: { label: string; run: () => void } | null = null;
+  let ambushCd = 0, spawnCd = 0, autosaveT = 0;
+
+  /* ——— input ——— */
+  const keys: Record<string, boolean> = {};
+  let locked = false;
+  const onKey = (down: boolean) => (e: KeyboardEvent) => {
+    if (!wrap.isConnected) return;
+    keys[e.code] = down;
+    if (!down) return;
+    if (e.code === "KeyC" && playing() && !dlgOpen) { togglePanel(sheetEl); }
+    if (e.code === "KeyM" && playing() && !dlgOpen) { togglePanel(mapEl2); drawMap(); }
+    if (cfg.mode === "laptop" && playing() && !panelsOpen()) {
+      if (e.code === "Space") { swingStart(); e.preventDefault(); }
+      if (e.code === "KeyF" && grounded) { vy = 8.6; grounded = false; }
+    }
+  };
+  /* keys live on the window, not the wrap: the wrap is never focused, and a
+     focused button hides when its panel closes — wrap-scoped keys died
+     the moment a game began. (Convicted by the headless drive, 2026-10-25.) */
+  const onKeyDown = onKey(true), onKeyUp = onKey(false);
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  document.addEventListener("pointerlockchange", () => {
+    locked = document.pointerLockElement === canvas;
+    if (!locked && playing() && cfg.mode === "mouse" && !dlgOpen && menuEl.hidden && sheetEl.hidden && mapEl2.hidden) openPanel(menuEl);
+  });
+  canvas.addEventListener("click", () => {
+    if (playing() && cfg.mode === "mouse" && !locked && !panelsOpen()) canvas.requestPointerLock();
+  });
   wrap.addEventListener("mousemove", (e) => {
-    if (!locked) return;
-    pyaw -= e.movementX * 0.0021;
-    ppitch = clamp(ppitch - e.movementY * 0.0021, -1.35, 1.35);
+    if (!locked || !playing() || panelsOpen()) return;
+    tYaw -= e.movementX * 0.0021 * cfg.sens;
+    tPitch = clamp(tPitch - e.movementY * 0.0021 * cfg.sens, -1.35, 1.35);
   });
   wrap.addEventListener("mousedown", (e) => {
-    if (!playing() || panelsOpen() || !locked) return;
-    if (e.button === 0 && !laptop) swingStart();
+    if (!locked || !playing() || panelsOpen()) return;
+    if (e.button === 0) swingStart();
     if (e.button === 2) castBolt();
   });
   wrap.addEventListener("contextmenu", (e) => e.preventDefault());
-  wrap.addEventListener("keydown", (e) => {
-    if ((e.target as HTMLElement).tagName === "INPUT") return;
-    keys[e.code] = true;
-    if (!playing()) return;
-    if (e.code === "KeyM") { toggleMenu(); return; }
-    if (panelsOpen()) {
-      if (e.code === "Escape") { closeDialogue(); shopEl.hidden = true; sheetEl.hidden = true; mapEl.hidden = true; menuEl.hidden = true; }
-      return;
-    }
+  const onActKey = (e: KeyboardEvent) => {
+    if (!wrap.isConnected || !playing() || panelsOpen()) return;
     if (e.code === "KeyE") curInteract?.run();
-    if (e.code === "KeyC") openSheet();
-    if (e.code === "KeyT") { if (scene.kind === "overworld") doRest(8, false); else if (scene.kind === "dungeon") doRest(6, false); else banner("Not here. Beds are for inns."); }
+    if (cfg.mode === "mouse") {
+      if (e.code === "Space" && grounded) { vy = 8.6; grounded = false; e.preventDefault(); }
+      if (e.code === "KeyF") castBolt();
+    }
     if (e.code === "KeyR") castHeal();
-    if (e.code === "KeyQ") castBolt();
-    if (e.code === "Space") { e.preventDefault(); if (laptop) swingStart(); else if (grounded) { vy = 8.2; grounded = false; } }
-    if (e.code === "KeyF") { if (laptop) { if (grounded) { vy = 8.2; grounded = false; } } else castBolt(); }
-  });
-  wrap.addEventListener("keyup", (e) => { keys[e.code] = false; });
-  /* ——— touch hands: a stick to walk, a drag to look, buttons to act ——— */
-  const touchEl = Q(".os-wy-touch");
-  const useBtn = Q<HTMLButtonElement>(".os-wy-tbtn[data-t='use']");
+  };
+  window.addEventListener("keydown", onActKey);
+  /* touch hands */
   const isTouchDev = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   touchEl.style.display = isTouchDev ? "block" : "none";
   const touch = { on: false, f: 0, r: 0, id: -1, cx: 0, cy: 0, lookId: -1, lx: 0, ly: 0 };
@@ -1411,12 +973,12 @@ export function buildWyrdfall(body: HTMLElement) {
   wrap.addEventListener("touchmove", (e) => {
     for (const t of Array.from(e.changedTouches)) {
       if (t.identifier === touch.id) {
-        const dx = clamp((t.clientX - touch.cx) / 44, -1, 1), dy = clamp((t.clientY - touch.cy) / 44, -1, 1);
+        const dx = clamp((t.clientX - touch.cx) / 52, -1, 1), dy = clamp((t.clientY - touch.cy) / 52, -1, 1);
         touch.r = dx; touch.f = -dy;
-        stickDot.style.transform = `translate(${dx * 30}px, ${dy * 30}px)`;
+        stickDot.style.transform = `translate(${dx * 36}px, ${dy * 36}px)`;
       } else if (t.identifier === touch.lookId) {
-        pyaw -= (t.clientX - touch.lx) * 0.0052;
-        ppitch = clamp(ppitch - (t.clientY - touch.ly) * 0.0052, -1.35, 1.35);
+        tYaw -= (t.clientX - touch.lx) * 0.0046 * cfg.sens;
+        tPitch = clamp(tPitch - (t.clientY - touch.ly) * 0.0046 * cfg.sens, -1.35, 1.35);
         touch.lx = t.clientX; touch.ly = t.clientY;
       }
     }
@@ -1438,374 +1000,1713 @@ export function buildWyrdfall(body: HTMLElement) {
       if (t === "atk") swingStart();
       if (t === "cast") castBolt();
       if (t === "mend") castHeal();
-      if (t === "jump" && grounded) { vy = 8.2; grounded = false; }
+      if (t === "jump" && grounded) { vy = 8.6; grounded = false; }
     }, { passive: false });
   });
-  /* ——— the glass menu ——— */
-  const menuBtns = menuEl.querySelectorAll<HTMLButtonElement>("button[data-m]");
-  function syncMenu() {
-    menuBtns.forEach((b) => {
-      const m = b.dataset.m;
-      if (m === "sound") b.textContent = `sound · ${sndOn ? "on" : "off"}`;
-      if (m === "iris") b.textContent = `iris · ${irisOn ? "auto" : "off"}`;
-      if (m === "input") b.textContent = `input · ${laptop ? "laptop" : "mouse"}`;
-      if (m === "photo") b.textContent = `photo · ${photoOn ? "on" : "off"}`;
-    });
-    Q(".os-wy-record").textContent = sheet ? `${sheet.name} — level ${sheet.level} · ${sheet.gold} gold · day ${dayNow()}` : "";
+  function panelsOpen() { return menuOpen || dlgOpen || !sheetEl.hidden || !mapEl2.hidden; }
+  function openPanel(p: HTMLElement) {
+    menuEl.hidden = p !== menuEl; sheetEl.hidden = p !== sheetEl; mapEl2.hidden = p !== mapEl2;
+    menuOpen = p === menuEl;
+    if (document.pointerLockElement) document.exitPointerLock();
   }
-  function toggleMenu() { menuEl.hidden = !menuEl.hidden; if (!menuEl.hidden) { document.exitPointerLock?.(); syncMenu(); } }
-  Q(".os-wy-burger").addEventListener("click", () => { if (started) toggleMenu(); });
-  menuBtns.forEach((b) => b.addEventListener("click", () => {
-    const m = b.dataset.m;
-    if (m === "sound") { sndOn = !sndOn; try { localStorage.setItem("wyrdfall-sound", sndOn ? "on" : "off"); } catch { /* keep */ } }
-    if (m === "iris") { irisOn = !irisOn; if (!irisOn) { quality = 0; dprCap = 1.5; } try { localStorage.setItem("wyrdfall-iris", irisOn ? "on" : "off"); } catch { /* keep */ } }
-    if (m === "input") { laptop = !laptop; try { localStorage.setItem("wyrdfall-input", laptop ? "laptop" : "mouse"); } catch { /* keep */ } banner(laptop ? "Laptop hands: space strikes, E speaks and uses, F leaps, the pad turns your head. Click the world to take the view." : "Mouse hands: click to take the view. Left button strikes, right casts."); }
-    if (m === "photo") { photoOn = !photoOn; try { localStorage.setItem("wyrdfall-photo", photoOn ? "on" : "off"); } catch { /* keep */ } }
-    if (m === "save") { saveGame(); banner("The realm remembers."); }
-    if (m === "sheet") { menuEl.hidden = true; openSheet(); return; }
-    if (m === "map") { menuEl.hidden = true; openMap(); return; }
-    if (m === "quit") { saveGame(); started = false; scene.kind = "title"; menuEl.hidden = true; titleEl.hidden = false; document.exitPointerLock?.(); return; }
-    syncMenu();
-  }));
-  /* ——— the making of a traveller ——— */
-  const archWrap = Q(".os-wy-archs");
-  let chosenArch = ARCHS[0];
-  for (const a of ARCHS) {
-    const b = el("button", "os-wy-arch" + (a === chosenArch ? " sel" : ""));
-    b.innerHTML = `<b>${a.name}</b><span>${a.blurb}</span><i>${Object.entries(a.skills).map(([k, v]) => `${SKILL_NAME[k as SkillId]} ${v}`).join(" · ")}</i>`;
-    b.addEventListener("click", () => { chosenArch = a; archWrap.querySelectorAll(".os-wy-arch").forEach((x) => x.classList.remove("sel")); b.classList.add("sel"); });
-    archWrap.appendChild(b);
+  function closePanels() {
+    menuEl.hidden = sheetEl.hidden = mapEl2.hidden = true;
+    menuOpen = false;
   }
-  let savedRaw: string | null = null;
-  try { savedRaw = localStorage.getItem(SAVE_KEY); } catch { /* none */ }
-  const contBtn = Q<HTMLButtonElement>(".os-wy-continue");
-  if (savedRaw) contBtn.hidden = false;
-  function beginGame(fromSave: boolean) {
-    if (fromSave && savedRaw) {
+  function togglePanel(p: HTMLElement) {
+    if (p.hidden) { openPanel(p); if (p === sheetEl) fillSheet(); if (p === mapEl2) drawMap(); }
+    else closePanels();
+  }
+  Q(".os-wy-burger").addEventListener("click", () => { if (playing()) togglePanel(menuEl); });
+
+  /* ————————————————— the sound engine —————————————————
+     Plucked strings (Karplus-Strong), a living ambience, and honest
+     weight in the sword arm. Generative, place-aware, never a loop. */
+  const audio = (() => {
+    let ac: AudioContext | null = null;
+    let master: GainNode, musicBus: GainNode, sfxBus: GainNode, ambBus: GainNode;
+    let noiseBuf: AudioBuffer;
+    let droneOsc: OscillatorNode[] = [], droneGain: GainNode;
+    let windGain: GainNode, windSrc: AudioBufferSourceNode;
+    const pluckCache = new Map<number, AudioBuffer>();
+    let seqNext = 0, seqStep = 0, startedAt = 0;
+    let birdT = 3, cricketT = 0, fireT = 0.4;
+    const DORIAN = [0, 2, 3, 5, 7, 9, 10, 12, 14, 15];
+    const ROOTS = [0, 3, 10, 5];
+    let melDeg = 4;
+    const freqOf = (semi: number) => 146.83 * Math.pow(2, semi / 12);
+
+    function ensure(): boolean {
+      if (ac) { if (ac.state === "suspended") void ac.resume(); return true; }
       try {
-        const d = JSON.parse(savedRaw) as { sheet: Sheet; timeMin: number; px: number; pz: number; pyaw: number; discovered: string[] };
-        sheet = d.sheet; timeMin = d.timeMin || 480; px = d.px ?? 0; pz = d.pz ?? -40; pyaw = d.pyaw ?? 0;
-        discovered = new Set(d.discovered || []);
-      } catch { sheet = null; }
+        ac = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      } catch { return false; }
+      master = ac.createGain(); master.gain.value = cfg.sound ? 0.9 : 0; master.connect(ac.destination);
+      musicBus = ac.createGain(); musicBus.gain.value = 0.42; musicBus.connect(master);
+      sfxBus = ac.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
+      ambBus = ac.createGain(); ambBus.gain.value = 0.8; ambBus.connect(master);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      /* wind: looped noise through a wandering band */
+      windSrc = ac.createBufferSource(); windSrc.buffer = noiseBuf; windSrc.loop = true;
+      const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 480; bp.Q.value = 0.6;
+      windGain = ac.createGain(); windGain.gain.value = 0.0;
+      const lfo = ac.createOscillator(); lfo.frequency.value = 0.07;
+      const lfoG = ac.createGain(); lfoG.gain.value = 0.012;
+      lfo.connect(lfoG); lfoG.connect(windGain.gain);
+      windSrc.connect(bp); bp.connect(windGain); windGain.connect(ambBus);
+      windSrc.start(); lfo.start();
+      /* the deep drone, for under-places and dark roads */
+      droneGain = ac.createGain(); droneGain.gain.value = 0; droneGain.connect(ambBus);
+      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 220; lp.connect(droneGain);
+      for (const f of [73.42, 110.0]) {
+        const o = ac.createOscillator(); o.type = "sine"; o.frequency.value = f;
+        o.connect(lp); o.start(); droneOsc.push(o);
+      }
+      startedAt = ac.currentTime;
+      seqNext = ac.currentTime + 0.1;
+      return true;
     }
-    if (!sheet) {
-      const nameIn = Q<HTMLInputElement>(".os-wy-namein");
-      const skills = baseSkills();
-      Object.assign(skills, chosenArch.skills);
-      sheet = {
-        name: (nameIn.value || "").trim() || "Traveller", arch: chosenArch.id, level: 1,
-        skills, uses: { blade: 0, destruction: 0, restoration: 0, athletics: 0, lockpick: 0, mercantile: 0 }, gains: 0,
-        hp: 0, mp: 0, gold: 60, weapon: 0,
-        rep: { "the Hearthguard": 0, "the Umbral Covenant": 0, "the Listening God": 0 },
-        inv: [{ name: "draught of mending", val: 25, kind: "potion-h" }], quests: [],
+    function pluckBuffer(freq: number): AudioBuffer {
+      const key = Math.round(freq * 10);
+      const hit = pluckCache.get(key);
+      if (hit) return hit;
+      const sr = ac!.sampleRate, len = Math.floor(sr * 1.1);
+      const buf = ac!.createBuffer(1, len, sr);
+      const out = buf.getChannelData(0);
+      const N = Math.max(2, Math.round(sr / freq));
+      const ring = new Float32Array(N);
+      for (let i = 0; i < N; i++) ring[i] = Math.random() * 2 - 1;
+      let idx = 0;
+      for (let i = 0; i < len; i++) {
+        const cur = ring[idx];
+        out[i] = cur;
+        ring[idx] = (cur + ring[(idx + 1) % N]) * 0.5 * 0.996;
+        idx = (idx + 1) % N;
+      }
+      pluckCache.set(key, buf);
+      return buf;
+    }
+    function pluck(freq: number, when: number, vol: number, dest?: AudioNode) {
+      if (!ac) return;
+      const src = ac.createBufferSource(); src.buffer = pluckBuffer(freq);
+      const g = ac.createGain(); g.gain.value = vol;
+      src.connect(g); g.connect(dest ?? musicBus);
+      src.start(when);
+    }
+    function noise(when: number, dur: number, filterType: BiquadFilterType, f0: number, f1: number, vol: number, dest?: AudioNode) {
+      if (!ac) return;
+      const src = ac.createBufferSource(); src.buffer = noiseBuf;
+      src.playbackRate.value = 0.7 + Math.random() * 0.6;
+      const fl = ac.createBiquadFilter(); fl.type = filterType;
+      fl.frequency.setValueAtTime(f0, when);
+      fl.frequency.exponentialRampToValueAtTime(Math.max(30, f1), when + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol, when);
+      g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+      src.connect(fl); fl.connect(g); g.connect(dest ?? sfxBus);
+      src.start(when, Math.random() * 1.2); src.stop(when + dur + 0.05);
+    }
+    function tone(when: number, dur: number, type: OscillatorType, f0: number, f1: number, vol: number, dest?: AudioNode) {
+      if (!ac) return;
+      const o = ac.createOscillator(); o.type = type;
+      o.frequency.setValueAtTime(f0, when);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), when + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol, when);
+      g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+      o.connect(g); g.connect(dest ?? sfxBus);
+      o.start(when); o.stop(when + dur + 0.05);
+    }
+    type Place = "town" | "wilds" | "tavern" | "temple" | "dungeon" | "guild";
+    function update(dt: number, place: Place, night: boolean, indoors: boolean) {
+      if (!ac) return;
+      const t = ac.currentTime;
+      /* ambience levels */
+      const windTarget = indoors ? 0.004 : place === "dungeon" ? 0.0 : 0.028 + (night ? 0.008 : 0);
+      windGain.gain.setTargetAtTime(windTarget, t, 0.8);
+      const droneTarget = place === "dungeon" ? 0.055 : night && !indoors ? 0.016 : 0.0;
+      droneGain.gain.setTargetAtTime(droneTarget, t, 1.2);
+      /* birds by day, crickets by night, fire indoors */
+      birdT -= dt;
+      if (birdT < 0) {
+        birdT = 1.5 + Math.random() * 5;
+        if (!night && !indoors && place !== "dungeon") {
+          const f = 2300 + Math.random() * 900;
+          tone(t, 0.09, "sine", f, f * 1.3, 0.016, ambBus);
+          tone(t + 0.13, 0.07, "sine", f * 1.1, f * 0.9, 0.012, ambBus);
+        }
+      }
+      cricketT -= dt;
+      if (cricketT < 0) {
+        cricketT = 0.9 + Math.random() * 1.4;
+        if (night && !indoors && place !== "dungeon") {
+          for (let i = 0; i < 3; i++) tone(t + i * 0.07, 0.04, "sine", 4300, 4300, 0.006, ambBus);
+        }
+      }
+      fireT -= dt;
+      if (fireT < 0) {
+        fireT = 0.08 + Math.random() * 0.5;
+        if (place === "tavern" || place === "temple" || place === "guild") noise(t, 0.03, "highpass", 2000, 3000, 0.02 + Math.random() * 0.03, ambBus);
+      }
+      /* the plucked sequencer */
+      const stepDur = place === "tavern" ? 0.30 : place === "dungeon" ? 0.85 : place === "temple" ? 0.62 : 0.44;
+      while (seqNext < t + 0.3) {
+        const bar = Math.floor(seqStep / 8) % 4;
+        const root = ROOTS[bar];
+        const inBar = seqStep % 8;
+        if (inBar === 0) pluck(freqOf(root - 12), seqNext, place === "dungeon" ? 0.16 : 0.11);
+        if (place === "tavern" && inBar === 4) {
+          pluck(freqOf(root - 12), seqNext, 0.10);
+          pluck(freqOf(root - 12 + 7), seqNext + 0.05, 0.07);
+          pluck(freqOf(root - 12 + 12), seqNext + 0.1, 0.06);
+        }
+        const restP = place === "dungeon" ? 0.72 : place === "wilds" && night ? 0.55 : 0.30;
+        if (Math.random() > restP) {
+          melDeg = clamp(melDeg + [-2, -1, -1, 0, 1, 1, 2, 3][(Math.random() * 8) | 0], 0, DORIAN.length - 1);
+          const f = freqOf(root + DORIAN[melDeg] + 12);
+          pluck(f, seqNext, place === "temple" ? 0.075 : 0.095);
+          if (place === "temple" && Math.random() < 0.3) pluck(f * 2, seqNext + stepDur * 0.5, 0.03);
+        }
+        seqNext += stepDur;
+        seqStep++;
+      }
+    }
+    return {
+      ensure,
+      update,
+      setSound(on: boolean) { if (ac && master) master.gain.setTargetAtTime(on ? 0.9 : 0, ac.currentTime, 0.1); },
+      swing() { if (ac) noise(ac.currentTime, 0.13, "bandpass", 1100, 280, 0.16); },
+      hitFlesh() { if (!ac) return; const t = ac.currentTime; tone(t, 0.12, "sine", 170, 55, 0.30); noise(t, 0.07, "lowpass", 900, 300, 0.18); },
+      hitBone() { if (!ac) return; const t = ac.currentTime; noise(t, 0.05, "highpass", 2400, 3200, 0.16); tone(t, 0.06, "square", 620, 300, 0.05); },
+      die(kind: string) {
+        if (!ac) return; const t = ac.currentTime;
+        if (kind === "skeleton") { for (let i = 0; i < 4; i++) noise(t + i * 0.06, 0.04, "highpass", 2600, 3400, 0.12); }
+        else if (kind === "wolf" || kind === "rat") tone(t, 0.3, "sawtooth", 300, 60, 0.10);
+        else tone(t, 0.35, "sawtooth", 220, 50, 0.12);
+      },
+      growl(kind: string) {
+        if (!ac) return; const t = ac.currentTime;
+        if (kind === "wolf") { tone(t, 0.5, "sawtooth", 85, 55, 0.14); noise(t, 0.4, "lowpass", 500, 200, 0.08); }
+        else if (kind === "skeleton") noise(t, 0.12, "highpass", 2000, 2800, 0.10);
+        else if (kind === "cultist") tone(t, 0.4, "triangle", 140, 180, 0.10);
+        else if (kind === "rat") tone(t, 0.15, "square", 900, 1400, 0.05);
+        else tone(t, 0.3, "sawtooth", 130, 90, 0.09);
+      },
+      cast() { if (!ac) return; const t = ac.currentTime; tone(t, 0.2, "sawtooth", 920, 130, 0.10); noise(t, 0.16, "highpass", 3000, 900, 0.06); },
+      heal() { if (!ac) return; const t = ac.currentTime; [523, 659, 784].forEach((f, i) => tone(t + i * 0.07, 0.22, "sine", f, f, 0.07)); },
+      coin() { if (!ac) return; const t = ac.currentTime; tone(t, 0.07, "sine", 1318, 1318, 0.10); tone(t + 0.06, 0.12, "sine", 1760, 1760, 0.09); },
+      door() { if (ac) tone(ac.currentTime, 0.28, "sawtooth", 95, 55, 0.05); },
+      chest() { if (!ac) return; const t = ac.currentTime; noise(t, 0.06, "lowpass", 700, 300, 0.2); tone(t + 0.08, 0.1, "sine", 1318, 1560, 0.07); },
+      levelUp() { if (!ac) return; const t = ac.currentTime; [0, 4, 7, 12].forEach((d, i) => pluck(freqOf(d + 12), t + i * 0.09, 0.16, sfxBus)); },
+      questDone() { if (!ac) return; const t = ac.currentTime; pluck(freqOf(7 + 12), t, 0.14, sfxBus); pluck(freqOf(12 + 12), t + 0.11, 0.14, sfxBus); },
+      hurt() { if (!ac) return; const t = ac.currentTime; tone(t, 0.14, "sawtooth", 130, 70, 0.16); noise(t, 0.08, "lowpass", 800, 300, 0.10); },
+      step(surface: string, run: boolean) {
+        if (!ac) return; const t = ac.currentTime;
+        const f = surface === "stone" ? 1500 : surface === "wood" ? 750 : surface === "water" ? 500 : 420;
+        noise(t, surface === "water" ? 0.16 : 0.07, "lowpass", f, f * 0.5, run ? 0.075 : 0.05);
+      },
+      splash() { if (ac) noise(ac.currentTime, 0.3, "lowpass", 700, 250, 0.12); },
+      shutdown() {
+        if (!ac) return;
+        try { windSrc?.stop(); } catch { /* already */ }
+        for (const o of droneOsc) { try { o.stop(); } catch { /* already */ } }
+        droneOsc = [];
+        const c = ac; ac = null;
+        void c.close();
+      },
+    };
+  })();
+
+  /* ————————————————— helpers, save, scenes ————————————————— */
+  function toast(msg: string, ms = 2600) {
+    toastEl.textContent = msg;
+    toastEl.hidden = false;
+    toastT = ms / 1000;
+  }
+  function banner(place: string) {
+    if (place === lastPlace) return;
+    lastPlace = place;
+    placeEl.textContent = place;
+    placeEl.hidden = false;
+    placeT = 3.2;
+  }
+  function gainSkill(id: SkillId, amt = 1) {
+    if (!sheet) return;
+    sheet.skills[id] = Math.min(100, sheet.skills[id] + amt);
+    sheet.gains += amt;
+  }
+  const SAVE_KEY = "wyrdfall-save-v2";
+  function saveGame() {
+    if (!sheet) return;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        sheet, quests, questSeq, px, pz, pyaw, gameMin, dayCount,
+        discovered: [...discovered], openedChests,
+      }));
+    } catch { /* private mode */ }
+  }
+  function loadSave(): boolean {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw) as {
+        sheet: Sheet; quests: Quest[]; questSeq: number; px: number; pz: number; pyaw: number;
+        gameMin: number; dayCount: number; discovered: string[]; openedChests: ChestState[];
       };
-      sheet.hp = maxHp(sheet); sheet.mp = maxMp(sheet);
-      px = 0; pz = -40; pyaw = 0; timeMin = 8 * 60; discovered = new Set();
-    }
-    started = true;
-    scene.kind = "overworld";
-    groundY = wyHeight(px, pz);
-    buildWanderers();
-    titleEl.hidden = true;
-    const t = townAt(px, pz);
-    setPlace(t ? t.name : "the wilds");
-    banner(fromSave ? `Welcome back, ${sheet.name}. It is day ${dayNow()}.` : "The province is yours to walk. The guild halls keep its work, if you want it.", 4600);
+      sheet = d.sheet; quests = d.quests || []; questSeq = d.questSeq || 1;
+      px = d.px; pz = d.pz; pyaw = d.pyaw; tYaw = pyaw;
+      gameMin = d.gameMin; dayCount = d.dayCount;
+      discovered = new Set(d.discovered || []);
+      openedChests = d.openedChests || [];
+      return true;
+    } catch { return false; }
+  }
+  function hasSave(): boolean {
+    try { return !!localStorage.getItem(SAVE_KEY); } catch { return false; }
+  }
+
+  let sceneLights: LightAnchor[] = WORLD_LIGHTS;
+  let sceneFlames: Flame[] = [];
+  let uploadScene: (() => void) | null = null;
+  function setSceneLights(l: LightAnchor[], f: Flame[]) { sceneLights = l; sceneFlames = f; }
+
+  function makeFoe(kind: FoeKind, x: number, z: number, boss: boolean): DynFoe {
+    const base = FOES[kind];
+    const y = scene.kind === "overworld" ? wyHeight(x, z) : 0;
+    const hp = Math.round(base.hp * (boss ? 2.3 : 1) * (1 + ((sheet?.level || 1) - 1) * 0.06));
+    return {
+      kind, x, z, y, yaw: vrnd() * 6.28, hp, max: hp, phase: vrnd() * 6, flash: 0,
+      atkCd: 0, dead: false, boss, vx: 0, vz: 0, boltCd: 1.5 + vrnd() * 2,
+      name: boss ? (kind === "wolf" ? "The Broodmother" : kind === "cultist" ? "The High Celebrant" : kind === "skeleton" ? "The First King's Remnant" : base.name) : base.name,
+    };
+  }
+  function enterBuilding(b: BDef) {
+    returnPos = { x: b.doorX, z: b.doorZ, yaw: pyaw };
+    const sc = buildInterior(b);
+    scene = { kind: "interior", b, scene: sc };
+    px = 0; pz = 3.6; tYaw = 0; pyaw = 0;
+    foes = [];
+    setSceneLights(sc.lights, sc.flames);
+    uploadScene?.();
+    banner(b.name);
+    audio.door();
     saveGame();
   }
-  Q(".os-wy-begin").addEventListener("click", () => beginGame(false));
-  contBtn.addEventListener("click", () => beginGame(true));
+  function exitBuilding() {
+    if (!returnPos) return;
+    scene = { kind: "overworld" };
+    px = returnPos.x; pz = returnPos.z;
+    setSceneLights(WORLD_LIGHTS, []);
+    uploadScene?.();
+    audio.door();
+    spawnWanderers();
+    saveGame();
+  }
+  function enterDungeon(di: number) {
+    const def = DUNGEONS[di];
+    returnPos = { x: px, z: pz, yaw: pyaw };
+    const sc = buildDungeon(di);
+    for (const c of openedChests) if (c.di === di && sc.chests[c.idx]) sc.chests[c.idx].opened = true;
+    scene = { kind: "dungeon", di, scene: sc };
+    discovered.add(def.name);
+    px = sc.startX; pz = sc.startZ; tYaw = Math.PI; pyaw = Math.PI;
+    foes = sc.spawns.map((s) => makeFoe(s.kind, s.x, s.z, s.boss));
+    setSceneLights(sc.lights, sc.flames);
+    uploadScene?.();
+    banner(def.name);
+    saveGame();
+  }
+  function exitDungeon() {
+    if (!returnPos) return;
+    scene = { kind: "overworld" };
+    px = returnPos.x; pz = returnPos.z;
+    foes = [];
+    setSceneLights(WORLD_LIGHTS, []);
+    uploadScene?.();
+    spawnWanderers();
+    saveGame();
+  }
+  function spawnWanderers() {
+    wanderers = [];
+    let ni = 0;
+    for (const t of TOWNS) {
+      for (let i = 0; i < 3; i++) {
+        const npc: NpcDef = {
+          name: TOWNSFOLK_NAMES[ni++ % TOWNSFOLK_NAMES.length],
+          sprite: [SPR.TOWNS_A, SPR.TOWNS_B, SPR.TOWNS_C][i % 3],
+          role: "wanderer", x: t.x, z: t.z, yaw: 0, town: t.name,
+        };
+        wanderers.push({
+          npc, x: t.x + (vrnd() * 40 - 20), z: t.z + (vrnd() * 40 - 20), yaw: vrnd() * 6.28,
+          tx: t.x, tz: t.z, wait: vrnd() * 3, phase: vrnd() * 6,
+        });
+      }
+      for (let i = 0; i < 2; i++) {
+        const gx = t.x + (i === 0 ? -8 : 9), gz = t.z + (i === 0 ? 12 : -10);
+        wanderers.push({
+          npc: { name: "Hearthguard", sprite: SPR.GUARD, role: "guard", x: gx, z: gz, yaw: 0, town: t.name },
+          x: gx, z: gz, yaw: i * 2.2, tx: gx, tz: gz, wait: 9999, phase: 0,
+        });
+      }
+    }
+  }
+
+  /* ————————————————— dialogue & trade ————————————————— */
+  let dlgNpc: NpcDef | null = null;
+  function openDialog(npc: NpcDef, text: string, opts: Array<{ label: string; run: () => void }>) {
+    dlgNpc = npc;
+    dlgOpen = true;
+    dName.textContent = npc.name;
+    dText.textContent = text;
+    dOpts.innerHTML = "";
+    for (const o of opts) {
+      const b = document.createElement("button");
+      b.textContent = o.label;
+      b.addEventListener("click", o.run);
+      dOpts.appendChild(b);
+    }
+    dialogEl.hidden = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    audio.ensure();
+  }
+  function closeDialog() {
+    dlgOpen = false;
+    dlgNpc = null;
+    dialogEl.hidden = true;
+  }
+  function say(text: string, opts: Array<{ label: string; run: () => void }>) {
+    dText.textContent = text;
+    dOpts.innerHTML = "";
+    for (const o of opts) {
+      const b = document.createElement("button");
+      b.textContent = o.label;
+      b.addEventListener("click", o.run);
+      dOpts.appendChild(b);
+    }
+  }
+  const leaveOpt = () => ({ label: "Leave", run: () => closeDialog() });
+  function rumourLine(): string {
+    return RUMOURS[(Math.random() * RUMOURS.length) | 0];
+  }
+  function applyRest(hours: number, label: string) {
+    if (!sheet) return;
+    gameMin += hours * 60;
+    while (gameMin >= 1440) { gameMin -= 1440; dayCount++; }
+    if (sheet.gains >= 5) {
+      sheet.level++;
+      sheet.gains = 0;
+      sheet.hp = maxHp(sheet); sheet.mp = maxMp(sheet);
+      audio.levelUp();
+      toast(`${label} You wake stronger — level ${sheet.level}.`);
+    } else {
+      sheet.hp = maxHp(sheet); sheet.mp = maxMp(sheet);
+      toast(label);
+    }
+    stamina = 100;
+    saveGame();
+  }
+  const townNameOf = (npc: NpcDef): string | undefined =>
+    npc.town || (npc.home ? TOWNS.find((t) => Math.hypot(npc.home!.x - t.x, npc.home!.z - t.z) < t.r + 30)?.name : undefined);
+  function giveQuest(npc: NpcDef) {
+    if (!sheet) return;
+    if (quests.length >= 3) { say("You carry enough burdens already. Finish one, then return.", [leaveOpt()]); return; }
+    const faction = npc.home?.kind || "tavern";
+    const roll = Math.random();
+    if (faction === "tavern" || roll < 0.25) {
+      const others = TOWNS.filter((t) => t.name !== townNameOf(npc));
+      const dest = others[(Math.random() * others.length) | 0];
+      const q: Quest = { id: questSeq++, kind: "deliver", giver: npc.name, faction, dungeon: -1, target: 1, done: 0, reward: 45 + sheet.level * 6, destName: dest.name, destKind: "tavern" };
+      quests.push(q);
+      say(`Take this sealed letter to the innkeeper of ${dest.name}. Do not break the seal. ${q.reward} gold on your return.`, [leaveOpt()]);
+    } else {
+      const di = (Math.random() * DUNGEONS.length) | 0;
+      const fetch = Math.random() < 0.45;
+      const q: Quest = {
+        id: questSeq++, kind: fetch ? "fetch" : "cull", giver: npc.name, faction, dungeon: di,
+        target: fetch ? 1 : 4 + sheet.level, done: 0, reward: (fetch ? 130 : 85) + sheet.level * 12,
+      };
+      quests.push(q);
+      say(fetch
+        ? `${DUNGEONS[di].name} holds a reliquary in its deepest chest. Bring it to me — ${q.reward} gold, and the faction will remember.`
+        : `${DUNGEONS[di].name} breeds trouble. Cull ${q.target} of its denizens and return — ${q.reward} gold.`, [leaveOpt()]);
+    }
+    saveGame();
+  }
+  function talkTo(npc: NpcDef) {
+    if (!sheet) return;
+    audio.ensure();
+    /* deliver turn-in: any tavern keeper in the destination town */
+    if (npc.role === "keeper" && npc.home?.kind === "tavern") {
+      const q = quests.find((qq) => qq.kind === "deliver" && qq.destName === townNameOf(npc));
+      if (q) {
+        quests = quests.filter((qq) => qq !== q);
+        sheet.gold += q.reward;
+        sheet.rep.tavern = (sheet.rep.tavern || 0) + 2;
+        audio.questDone(); audio.coin();
+        openDialog(npc, `The seal is unbroken. Word travels fast — your ${q.reward} gold, and our thanks.`, [leaveOpt()]);
+        saveGame();
+        return;
+      }
+    }
+    /* quest turn-in with the giver's faction */
+    if (npc.role === "keeper" && npc.home) {
+      const q = quests.find((qq) => qq.faction === npc.home!.kind && qq.done >= qq.target);
+      if (q) {
+        quests = quests.filter((qq) => qq !== q);
+        sheet.gold += q.reward;
+        sheet.rep[q.faction] = (sheet.rep[q.faction] || 0) + 3;
+        gainSkill("mercantile", 1);
+        audio.questDone(); audio.coin();
+        openDialog(npc, `It is done, then. The province breathes easier. Your ${q.reward} gold — spend it loudly.`, [leaveOpt()]);
+        saveGame();
+        return;
+      }
+    }
+    if (npc.role !== "keeper" || !npc.home) {
+      const lines = GREET[npc.role] || GREET.wanderer;
+      openDialog(npc, Math.random() < 0.45 ? rumourLine() : lines[(Math.random() * lines.length) | 0], [leaveOpt()]);
+      return;
+    }
+    const kind = npc.home.kind;
+    const opts: Array<{ label: string; run: () => void }> = [];
+    const greet = GREET.keeper[(Math.random() * GREET.keeper.length) | 0];
+    if (kind === "tavern") {
+      opts.push({ label: "A bed for the night — 10 gold", run: () => {
+        if (sheet!.gold < 10) { say("No coin, no pillow. The stable is free and honest.", [leaveOpt()]); return; }
+        sheet!.gold -= 10; closeDialog(); applyRest(9, "You sleep the sleep of the road-worn.");
+      } });
+      opts.push({ label: "A hot meal — 4 gold", run: () => {
+        if (sheet!.gold < 4) { say("The pot is not a charity, friend.", [leaveOpt()]); return; }
+        sheet!.gold -= 4; sheet!.hp = Math.min(maxHp(sheet!), sheet!.hp + maxHp(sheet!) * 0.45); stamina = 100; audio.coin();
+        say("Broth, bread, and something that was probably a turnip. You feel human again.", [leaveOpt()]);
+      } });
+    }
+    if (kind === "shop") {
+      opts.push({ label: "Trade", run: () => shopMenu(npc) });
+    }
+    if (kind === "temple") {
+      opts.push({ label: "Blessing — the God listens freely", run: () => {
+        sheet!.hp = maxHp(sheet!); sheet!.mp = maxMp(sheet!); audio.heal();
+        say("A quiet settles over you, like snow deciding not to fall. You are whole.", [leaveOpt()]);
+      } });
+      opts.push({ label: "Commune until dawn", run: () => {
+        closeDialog();
+        const toDawn = gameMin < 420 ? 420 - gameMin : 1440 - gameMin + 420;
+        applyRest(toDawn / 60, "You kneel until the light changes.");
+      } });
+    }
+    if (kind === "guildf" || kind === "guildm") {
+      const skills: SkillId[] = kind === "guildf" ? ["blade", "athletics"] : ["destruction", "restoration"];
+      for (const sk of skills) {
+        opts.push({ label: `Train ${SKILL_NAMES[sk]} — 35 gold`, run: () => {
+          if (sheet!.gold < 35) { say("Training is cheaper than funerals, but not free.", [leaveOpt()]); return; }
+          sheet!.gold -= 35; gainSkill(sk, 4); audio.coin();
+          say(`Hours of drills you will feel tomorrow. ${SKILL_NAMES[sk]} is now ${sheet!.skills[sk]}.`, [leaveOpt()]);
+          saveGame();
+        } });
+      }
+    }
+    opts.push({ label: "Work — what needs doing?", run: () => giveQuest(npc) });
+    opts.push({ label: "Rumours", run: () => say(rumourLine(), [{ label: "Another", run: () => say(rumourLine(), [leaveOpt()]) }, leaveOpt()]) });
+    opts.push(leaveOpt());
+    openDialog(npc, greet, opts);
+  }
+  function shopMenu(npc: NpcDef) {
+    if (!sheet) return;
+    const s = sheet;
+    const opts: Array<{ label: string; run: () => void }> = [];
+    const next = WEAPONS[s.weapon + 1];
+    if (next) {
+      const price = Math.round(next.price * (1 - s.skills.mercantile * 0.003));
+      opts.push({ label: `${next.name} — ${price} gold`, run: () => {
+        if (s.gold < price) { say("Fine steel, empty purse. A classic pairing.", [leaveOpt()]); return; }
+        s.gold -= price; s.weapon++; audio.coin();
+        say(`The ${next.name} settles into your hand like it was waiting.`, [leaveOpt()]);
+        saveGame();
+      } });
+    }
+    const draughtPrice = Math.round(25 * (1 - s.skills.mercantile * 0.003));
+    opts.push({ label: `Healing draught — ${draughtPrice} gold`, run: () => {
+      if (s.gold < draughtPrice) { say("Potions are not poured on credit.", [leaveOpt()]); return; }
+      if (s.hp >= maxHp(s)) { say("You are unwounded. Save your coin for when you are not.", [leaveOpt()]); return; }
+      s.gold -= draughtPrice; s.hp = maxHp(s); audio.coin(); audio.heal();
+      say("Warm as a hearth. The wounds close like shy doors.", [leaveOpt()]);
+    } });
+    opts.push(leaveOpt());
+    say("What catches your eye? Mind the steel — it bites the curious.", opts);
+    void npc;
+  }
+
+  /* ————————————————— combat & the step ————————————————— */
+  let swingHitDone = true;
+  function swingStart() {
+    if (!playing() || swingT > 0.12 || panelsOpen()) return;
+    swingT = 0.34;
+    swingHitDone = false;
+    audio.ensure(); audio.swing();
+  }
+  function resolveSwing() {
+    if (!sheet) return;
+    const dmgBase = WEAPONS[sheet.weapon].dmg + sheet.level * 0.7 + sheet.skills.blade * 0.13;
+    const fx = -Math.sin(pyaw), fz = -Math.cos(pyaw);
+    let best: DynFoe | null = null, bestD = 2.45;
+    for (const f of foes) {
+      if (f.dead) continue;
+      const dx = f.x - px, dz = f.z - pz, d = Math.hypot(dx, dz);
+      if (d > bestD) continue;
+      if (d > 0.9 && (dx * fx + dz * fz) / (d || 1) < 0.15) continue;
+      best = f; bestD = d;
+    }
+    if (!best) return;
+    const crit = Math.random() < 0.1;
+    const dmg = Math.round(dmgBase * (crit ? 1.6 : 1) * (0.9 + Math.random() * 0.2));
+    hurtFoe(best, dmg, fx, fz, crit ? 7 : 4.5);
+    gainSkill("blade", 1);
+  }
+  function hurtFoe(f: DynFoe, dmg: number, kx: number, kz: number, force: number) {
+    f.hp -= dmg;
+    f.flash = 1;
+    f.vx += kx * force; f.vz += kz * force;
+    hitStop = Math.max(hitStop, 0.045);
+    if (f.kind === "skeleton") audio.hitBone(); else audio.hitFlesh();
+    if (f.hp <= 0 && !f.dead) killFoe(f);
+    else if (Math.random() < 0.5) audio.growl(f.kind);
+  }
+  function killFoe(f: DynFoe) {
+    if (!sheet) return;
+    f.dead = true;
+    audio.die(f.kind);
+    remains.push({ x: f.x, y: f.y, z: f.z, yaw: f.yaw, sprite: SPR.CORPSE, w: FOES[f.kind].w + 0.5 });
+    const loot = 2 + ((Math.random() * 6) | 0) + (f.boss ? 40 : 0);
+    sheet.gold += loot;
+    toast(`${f.name} falls. You take ${loot} gold from the still-warm purse.`);
+    if (scene.kind === "dungeon") {
+      for (const q of quests) {
+        if (q.kind === "cull" && q.dungeon === scene.di && q.done < q.target) {
+          q.done++;
+          if (q.done >= q.target) toast("The cull is complete — return for your reward.");
+        }
+      }
+    }
+    saveGame();
+  }
+  function castBolt() {
+    if (!sheet || !playing() || castCd > 0 || panelsOpen()) return;
+    const cost = 6;
+    if (sheet.mp < cost) { toast("The magicka is not there."); return; }
+    sheet.mp -= cost;
+    castCd = 0.45;
+    spellLight = 0.25;
+    audio.ensure(); audio.cast();
+    const cp = Math.cos(ppitch);
+    const dir: [number, number, number] = [-Math.sin(pyaw) * cp, Math.sin(ppitch), -Math.cos(pyaw) * cp];
+    tracers.push({
+      x: px + dir[0] * 0.5, y: eyeY + dir[1] * 0.5, z: pz + dir[2] * 0.5,
+      dx: dir[0], dy: dir[1], dz: dir[2], len: 34, hostile: false, dmg: 8 + sheet.skills.destruction * 0.3 + sheet.level,
+    });
+  }
+  function castHeal() {
+    if (!sheet || !playing() || panelsOpen()) return;
+    const cost = 8;
+    if (sheet.mp < cost) { toast("The magicka is not there."); return; }
+    if (sheet.hp >= maxHp(sheet)) return;
+    sheet.mp -= cost;
+    const amt = Math.round(12 + sheet.skills.restoration * 0.5);
+    sheet.hp = Math.min(maxHp(sheet), sheet.hp + amt);
+    gainSkill("restoration", 1);
+    audio.ensure(); audio.heal();
+    toast(`Warmth knits you — ${amt} health restored.`);
+  }
+  function hurtPlayer(dmg: number, fromX: number, fromZ: number) {
+    if (!sheet || dead) return;
+    sheet.hp -= dmg;
+    hurtT = 1; shake = Math.max(shake, 0.16);
+    const dx = px - fromX, dz = pz - fromZ, L = Math.hypot(dx, dz) || 1;
+    vx += (dx / L) * 3.2; vz += (dz / L) * 3.2;
+    audio.hurt();
+    if (sheet.hp <= 0) {
+      sheet.hp = 0;
+      dead = true;
+      deathEl.hidden = false;
+      if (document.pointerLockElement) document.exitPointerLock();
+    }
+  }
   Q(".os-wy-rise").addEventListener("click", () => {
     if (!sheet) return;
-    deathEl.hidden = true;
-    sheet.gold = Math.floor(sheet.gold * 0.9);
+    const lost = Math.floor(sheet.gold * 0.1);
+    sheet.gold -= lost;
     sheet.hp = maxHp(sheet); sheet.mp = maxMp(sheet);
-    const temple = world.buildings.find((b) => b.town === "thornwick" && b.kind === "temple")!;
-    fadeThrough(() => {
-      scene.kind = "overworld"; scene.building = null; scene.interior = null; scene.dungeon = null; scene.dungeonDef = null; foes = [];
-      px = temple.doorX; pz = temple.doorZ; pyaw = 0;
-      groundY = wyHeight(px, pz);
-      timeMin += 6 * 60;
-      setPlace("the Temple of the Listening God");
-      banner("You wake on temple stone, a tithe lighter. The God listened.");
+    scene = { kind: "overworld" };
+    const temple = BUILDINGS.find((b) => b.kind === "temple");
+    px = temple ? temple.doorX : 0; pz = temple ? temple.doorZ : -40;
+    foes = [];
+    setSceneLights(WORLD_LIGHTS, []);
+    uploadScene?.();
+    spawnWanderers();
+    dead = false;
+    deathEl.hidden = true;
+    gameMin += 360; if (gameMin >= 1440) { gameMin -= 1440; dayCount++; }
+    toast(`You wake on cold temple stone. The province kept ${lost} gold of yours.`);
+    saveGame();
+  });
+
+  let restCd = 0;
+  function tryRestWilds() {
+    if (!sheet || scene.kind === "interior") return;
+    for (const f of foes) if (!f.dead && Math.hypot(f.x - px, f.z - pz) < 15) { toast("Enemies nearby — the ground stays cold."); return; }
+    if (Math.random() < 0.25) {
+      applyRest(3, "Something finds you in the dark.");
+      for (let i = 0; i < 2; i++) {
+        const a = vrnd() * 6.28;
+        foes.push(makeFoe(hourNow() > 18 || hourNow() < 5 ? "skeleton" : "wolf", px + Math.cos(a) * 9, pz + Math.sin(a) * 9, false));
+      }
+      toast("Ambush — up, up!");
+    } else {
+      applyRest(6, "You sleep badly on honest ground, and wake anyway.");
+    }
+    restCd = 2;
+  }
+
+  function collide(nx: number, nz: number): [number, number] {
+    if (scene.kind === "overworld") {
+      for (const b of BUILDINGS) {
+        const dx = nx - b.x, dz = nz - b.z;
+        if (Math.abs(dx) > b.w / 2 + 3 || Math.abs(dz) > b.d / 2 + 3) continue;
+        const c = Math.cos(-b.yaw), s = Math.sin(-b.yaw);
+        let lx = dx * c - dz * s, lz = dx * s + dz * c;
+        const ex = b.w / 2 + 0.38, ez = b.d / 2 + 0.38;
+        if (Math.abs(lx) < ex && Math.abs(lz) < ez) {
+          const pushX = ex - Math.abs(lx), pushZ = ez - Math.abs(lz);
+          if (pushX < pushZ) lx = Math.sign(lx || 1) * ex; else lz = Math.sign(lz || 1) * ez;
+          const c2 = Math.cos(b.yaw), s2 = Math.sin(b.yaw);
+          nx = b.x + lx * c2 - lz * s2;
+          nz = b.z + lx * s2 + lz * c2;
+        }
+      }
+      const rr = Math.hypot(nx, nz);
+      if (rr > WORLD_R - 30) { nx *= (WORLD_R - 30) / rr; nz *= (WORLD_R - 30) / rr; }
+    } else if (scene.kind === "interior") {
+      nx = clamp(nx, -5.5, 5.5); nz = clamp(nz, -4.5, 4.5);
+    } else if (scene.kind === "dungeon") {
+      const sc = scene.scene;
+      const cellOf = (x: number, z: number) => `${Math.round(x / 9) + 5},${Math.round(z / 9) + 5}`;
+      const ok = (x: number, z: number) => {
+        for (const [ox, oz] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) {
+          if (!sc.cells.has(cellOf(x + ox, z + oz))) return false;
+        }
+        return true;
+      };
+      if (ok(nx, nz)) return [nx, nz];
+      if (ok(nx, pz)) return [nx, pz];
+      if (ok(px, nz)) return [px, nz];
+      return [px, pz];
+    }
+    return [nx, nz];
+  }
+
+  function computeInteract() {
+    curInteract = null;
+    if (!playing() || panelsOpen()) return;
+    if (scene.kind === "interior") {
+      const sc = scene.scene;
+      for (const n of sc.npcs) {
+        if (Math.hypot(n.x - px, n.z - pz) < 2.5) {
+          curInteract = { label: `Speak — ${n.name}`, run: () => talkTo(n) };
+          return;
+        }
+      }
+      if (Math.hypot(px - 0, pz - 4.4) < 1.7) {
+        curInteract = { label: `Leave — ${scene.b.name}`, run: () => exitBuilding() };
+      }
+      return;
+    }
+    if (scene.kind === "dungeon") {
+      const sc = scene.scene;
+      for (const ch of sc.chests) {
+        if (!ch.opened && Math.hypot(ch.x - px, ch.z - pz) < 2.3) {
+          curInteract = { label: "Open the chest", run: () => {
+            ch.opened = true;
+            openedChests.push({ di: (scene as { di: number }).di, idx: sc.chests.indexOf(ch) });
+            sheet!.gold += ch.gold;
+            audio.chest(); audio.coin();
+            if (ch.quest) {
+              for (const q of quests) if (q.kind === "fetch" && q.dungeon === (scene as { di: number }).di) q.done = q.target;
+              toast(`Inside: ${ch.gold} gold — and the reliquary, heavier than it looks.`);
+            } else {
+              toast(`Inside: ${ch.gold} gold, and the smell of old rain.`);
+            }
+            saveGame();
+          } };
+          return;
+        }
+      }
+      if (Math.hypot(px - sc.startX, pz - (sc.startZ - 7)) < 2.6) {
+        curInteract = { label: `Climb out — ${sc.name}`, run: () => exitDungeon() };
+      }
+      return;
+    }
+    /* overworld */
+    for (const b of BUILDINGS) {
+      if (Math.hypot(b.doorX - px, b.doorZ - pz) < 2.7) {
+        if (b.kind === "house") curInteract = { label: b.name, run: () => toast("Barred fast. Whoever lives here values their quiet.") };
+        else curInteract = { label: `Enter — ${b.name}`, run: () => enterBuilding(b) };
+        return;
+      }
+    }
+    for (let di = 0; di < DUNGEONS.length; di++) {
+      const dg = DUNGEONS[di];
+      if (Math.hypot(dg.x - px, dg.z - pz) < 4.2) {
+        curInteract = { label: `Descend — ${dg.name}`, run: () => enterDungeon(di) };
+        return;
+      }
+    }
+    for (const w of wanderers) {
+      if (Math.hypot(w.x - px, w.z - pz) < 2.5) {
+        curInteract = { label: `Speak — ${w.npc.name}`, run: () => talkTo({ ...w.npc, x: w.x, z: w.z }) };
+        return;
+      }
+    }
+  }
+
+  function step(dt: number) {
+    if (!sheet) return;
+    castCd = Math.max(0, castCd - dt);
+    swingT = Math.max(0, swingT - dt);
+    if (!swingHitDone && swingT < 0.17) { resolveSwing(); swingHitDone = true; }
+    spellLight = Math.max(0, spellLight - dt);
+    restCd = Math.max(0, restCd - dt);
+    ambushCd = Math.max(0, ambushCd - dt);
+    if (keys.KeyT && restCd <= 0 && playing() && !panelsOpen()) tryRestWilds();
+    /* the clock */
+    gameMin += dt * 2;
+    if (gameMin >= 1440) { gameMin -= 1440; dayCount++; }
+    /* input direction */
+    const fAmt = ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0);
+    const rAmt = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
+    const fIn = touch.on ? touch.f : fAmt, rIn = touch.on ? touch.r : rAmt;
+    const moving = fIn !== 0 || rIn !== 0;
+    const wantSprint = (!!(keys.ShiftLeft || keys.ShiftRight) || (touch.on && Math.hypot(touch.f, touch.r) > 0.95)) && stamina > 2 && moving;
+    if (scene.kind === "overworld") groundY = wyHeight(px, pz);
+    else groundY = 0;
+    const inWater = scene.kind === "overworld" && groundY < 0.35;
+    let speed = wantSprint ? 7.3 : 4.6;
+    if (inWater) speed *= 0.55;
+    if (moving && wantSprint) {
+      stamina = Math.max(0, stamina - 13 * dt);
+      if (Math.random() < dt * 0.14) gainSkill("athletics", 1);
+    } else {
+      stamina = Math.min(100, stamina + (moving ? 7 : 12) * dt);
+    }
+    const sy = Math.sin(pyaw), cy = Math.cos(pyaw);
+    let wx = -sy * fIn + cy * rIn, wz = -cy * fIn - sy * rIn;
+    const wl = Math.hypot(wx, wz);
+    if (wl > 0) { wx /= wl; wz /= wl; }
+    const mag = Math.min(1, wl);
+    const accel = grounded ? 11 : 2.2;
+    vx = lerp(vx, wx * speed * mag, Math.min(1, accel * dt));
+    vz = lerp(vz, wz * speed * mag, Math.min(1, accel * dt));
+    if (!grounded) {
+      vy -= 22 * dt;
+      jumpOff += vy * dt;
+      if (jumpOff <= 0) {
+        jumpOff = 0; grounded = true;
+        landDip = clamp(-vy * 0.011, 0.03, 0.13);
+        if (vy < -13) audio.step("stone", false);
+        vy = 0;
+      }
+    }
+    let nx = px + vx * dt, nz = pz + vz * dt;
+    [nx, nz] = collide(nx, nz);
+    px = nx; pz = nz;
+    const hSpeed = Math.hypot(vx, vz);
+    if (grounded && hSpeed > 0.6) {
+      bobPhase += dt * hSpeed * 1.55;
+      stepAcc += hSpeed * dt;
+      if (stepAcc > 2.3) {
+        stepAcc = 0;
+        const surface = inWater ? "water" : scene.kind !== "overworld" ? (scene.kind === "dungeon" || (scene.kind === "interior" && scene.b.kind === "guildf") ? "stone" : "wood") : inTown(px, pz) ? "stone" : roadDist(px, pz) < 4.5 ? "grass" : "grass";
+        audio.step(surface, wantSprint);
+      }
+    }
+    landDip = Math.max(0, landDip - dt * 0.55);
+    /* camera */
+    pyaw += (tYaw - pyaw) * Math.min(1, dt * 30);
+    ppitch += (tPitch - ppitch) * Math.min(1, dt * 30);
+    const targetEye = groundY + jumpOff + 1.62 + (cfg.bob && grounded ? Math.sin(bobPhase * 2) * 0.034 : 0) - landDip;
+    eyeY += (targetEye - eyeY) * Math.min(1, dt * 14);
+    /* foes */
+    const frozen = hitStop > 0;
+    hitStop = Math.max(0, hitStop - dt);
+    for (const f of foes) {
+      if (f.dead) continue;
+      f.flash = Math.max(0, f.flash - dt * 5);
+      f.x += f.vx * dt; f.z += f.vz * dt;
+      f.vx *= Math.max(0, 1 - dt * 7); f.vz *= Math.max(0, 1 - dt * 7);
+      if (frozen) continue;
+      f.y = scene.kind === "overworld" ? wyHeight(f.x, f.z) : 0;
+      const dx = px - f.x, dz = pz - f.z, d = Math.hypot(dx, dz);
+      const base = FOES[f.kind];
+      const aggro = scene.kind === "dungeon" ? 17 : (hourNow() > 19 || hourNow() < 5.5 ? 24 : 19);
+      if (d < aggro && d > 0.01) {
+        f.yaw = Math.atan2(dx, dz);
+        if (d > base.reach) {
+          const sp = base.spd * (f.boss ? 0.92 : 1);
+          let mx = (dx / d) * sp, mz = (dz / d) * sp;
+          for (const o of foes) {
+            if (o === f || o.dead) continue;
+            const ox = f.x - o.x, oz = f.z - o.z, od = Math.hypot(ox, oz);
+            if (od > 0.01 && od < 1.1) { mx += (ox / od) * 1.6; mz += (oz / od) * 1.6; }
+          }
+          f.x += mx * dt; f.z += mz * dt;
+          f.phase += dt * base.spd * 1.9;
+        } else {
+          f.atkCd -= dt;
+          if (f.atkCd <= 0) {
+            f.atkCd = 0.95;
+            hurtPlayer(Math.max(1, Math.round(base.dmg * (f.boss ? 1.5 : 1) - sheet.level * 0.12)), f.x, f.z);
+          }
+        }
+        if (f.kind === "cultist") {
+          f.boltCd -= dt;
+          if (f.boltCd <= 0 && d > 4.5 && d < 17) {
+            f.boltCd = 2.8;
+            const bd: [number, number, number] = [dx / d, (eyeY - (f.y + 1.4)) / d, dz / d];
+            tracers.push({ x: f.x, y: f.y + 1.4, z: f.z, dx: bd[0], dy: bd[1], dz: bd[2], len: 22, hostile: true, dmg: base.dmg });
+            audio.cast();
+          }
+        }
+      } else {
+        f.phase += dt * 0.7;
+        f.x += Math.sin(f.yaw) * 0.24 * dt;
+        f.z += Math.cos(f.yaw) * 0.24 * dt;
+        if (Math.random() < dt * 0.14) f.yaw += (Math.random() - 0.5) * 1.6;
+      }
+    }
+    /* projectiles */
+    for (let i = tracers.length - 1; i >= 0; i--) {
+      const t = tracers[i];
+      const spd = 30;
+      t.x += t.dx * spd * dt; t.y += t.dy * spd * dt; t.z += t.dz * spd * dt;
+      t.len -= spd * dt;
+      let kill = t.len <= 0;
+      if (t.hostile) {
+        if (Math.hypot(t.x - px, t.z - pz) < 0.85 && Math.abs(t.y - eyeY) < 1.3) {
+          hurtPlayer(t.dmg, t.x - t.dx, t.z - t.dz);
+          kill = true;
+        }
+      } else {
+        for (const f of foes) {
+          if (f.dead) continue;
+          const fh = FOES[f.kind].h;
+          if (Math.hypot(t.x - f.x, t.z - f.z) < 0.95 && t.y > f.y - 0.2 && t.y < f.y + fh + 0.3) {
+            hurtFoe(f, Math.round(t.dmg * (0.9 + Math.random() * 0.2)), t.dx, t.dz, 3);
+            gainSkill("destruction", 1);
+            kill = true;
+            break;
+          }
+        }
+      }
+      if (kill) tracers.splice(i, 1);
+    }
+    /* wanderers */
+    if (scene.kind === "overworld") {
+      for (const w of wanderers) {
+        if (w.npc.role === "guard") continue;
+        const t = TOWNS.find((tt) => tt.name === w.npc.town);
+        if (!t) continue;
+        const dx = w.tx - w.x, dz = w.tz - w.z, d = Math.hypot(dx, dz);
+        if (w.wait > 0) { w.wait -= dt; continue; }
+        if (d < 1.2) {
+          w.wait = 2 + vrnd() * 5;
+          w.tx = t.x + (vrnd() * 2 - 1) * t.r * 0.72;
+          w.tz = t.z + (vrnd() * 2 - 1) * t.r * 0.72;
+        } else {
+          w.yaw = Math.atan2(dx, dz);
+          w.x += (dx / d) * 1.12 * dt;
+          w.z += (dz / d) * 1.12 * dt;
+          w.phase += dt * 3.4;
+        }
+      }
+      /* the wilds provide */
+      spawnCd -= dt;
+      const wildFoes = foes.filter((f) => !f.dead).length;
+      if (spawnCd <= 0 && wildFoes < 4 && !inTown(px, pz)) {
+        spawnCd = 3.5;
+        if (Math.random() < 0.55) {
+          const a = vrnd() * Math.PI * 2, dist = 27 + vrnd() * 13;
+          const sx = px + Math.cos(a) * dist, sz = pz + Math.sin(a) * dist;
+          if (wyHeight(sx, sz) > 0.6 && Math.hypot(sx, sz) < WORLD_R - 60) {
+            const night = hourNow() > 18.5 || hourNow() < 5.5;
+            const kind: FoeKind = roadDist(sx, sz) < 5 ? "bandit" : night ? (Math.random() < 0.5 ? "skeleton" : "wolf") : "wolf";
+            foes.push(makeFoe(kind, sx, sz, false));
+          }
+        }
+      }
+      for (let i = foes.length - 1; i >= 0; i--) {
+        if (!foes[i].dead && Math.hypot(foes[i].x - px, foes[i].z - pz) > 95) foes.splice(i, 1);
+      }
+      /* place banners + discovery */
+      let place = "The Wilds";
+      for (const t of TOWNS) if (Math.hypot(px - t.x, pz - t.z) < t.r) { place = t.name; discovered.add(t.name); }
+      for (const dg of DUNGEONS) if (Math.hypot(px - dg.x, pz - dg.z) < 30) { place = dg.name; discovered.add(dg.name); }
+      if (wyHeight(px, pz) < 0.4) place = "The Mere";
+      banner(place);
+    }
+    computeInteract();
+    hurtT = Math.max(0, hurtT - dt * 1.6);
+    shake = Math.max(0, shake - dt * 0.5);
+    autosaveT += dt;
+    if (autosaveT > 45) { autosaveT = 0; saveGame(); }
+  }
+
+  /* ————————————————— creation, menu, sheet, map ————————————————— */
+  const atlasCv = makeAtlas();
+  const CLASS_INFO: Record<string, { prime: SkillId; second?: SkillId; blurb: string }> = {
+    Knight: { prime: "blade", blurb: "Steel and patience. The road respects both." },
+    Ranger: { prime: "athletics", second: "blade", blurb: "Fast over rough country, quiet in it." },
+    Sorcerer: { prime: "destruction", second: "restoration", blurb: "The province's old arguments, settled loudly." },
+    Rogue: { prime: "lockpicking", second: "mercantile", blurb: "Every lock is a question. So is every price." },
+  };
+  for (const cls of Object.keys(CLASS_INFO)) {
+    const card = document.createElement("button");
+    card.className = "os-wy-class" + (cls === selClass ? " sel" : "");
+    const cv = document.createElement("canvas");
+    cv.width = 64; cv.height = 64;
+    const g2 = cv.getContext("2d")!;
+    g2.imageSmoothingEnabled = false;
+    const cell = CLASS_SPR[cls];
+    g2.drawImage(atlasCv, (cell % 16) * 128, Math.floor(cell / 16) * 128, 128, 128, 0, 0, 64, 64);
+    const label = document.createElement("span");
+    label.innerHTML = `<b>${cls}</b><small>${CLASS_INFO[cls].blurb}</small>`;
+    card.appendChild(cv); card.appendChild(label);
+    card.addEventListener("click", () => {
+      selClass = cls;
+      classesEl.querySelectorAll(".os-wy-class").forEach((c) => c.classList.toggle("sel", c === card));
+      audio.ensure();
+    });
+    classesEl.appendChild(card);
+  }
+  if (hasSave()) {
+    continueBtn.hidden = false;
+    try {
+      const d = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}") as { sheet?: Sheet };
+      if (d.sheet) continueBtn.querySelector("span")!.textContent = `${d.sheet.name}, level ${d.sheet.level} ${d.sheet.cls}`;
+    } catch { /* unreadable save */ }
+  }
+  function beginGame(fresh: boolean) {
+    audio.ensure();
+    if (fresh) {
+      const info = CLASS_INFO[selClass];
+      const skills: Record<SkillId, number> = { blade: 5, destruction: 5, restoration: 5, athletics: 5, lockpicking: 5, mercantile: 5 };
+      skills[info.prime] += 10;
+      if (info.second) skills[info.second] += 6;
+      sheet = {
+        name: (nameInput.value || "Wanderer").trim() || "Wanderer", cls: selClass, level: 1,
+        hp: 0, mp: 0, gold: 60, weapon: 0, skills, gains: 0, rep: {},
+      };
+      sheet.hp = maxHp(sheet); sheet.mp = maxMp(sheet);
+      px = 14; pz = -92; pyaw = 0.47; tYaw = 0.47;
+      gameMin = 8 * 60; dayCount = 1;
+      quests = []; discovered = new Set(["Thornwick"]); openedChests = [];
+      foes = []; remains = [];
       saveGame();
+    } else {
+      if (!loadSave()) return;
+    }
+    started = true;
+    scene = { kind: "overworld" };
+    setSceneLights(WORLD_LIGHTS, []);
+    uploadScene?.();
+    spawnWanderers();
+    createEl.hidden = true;
+    hudEl.hidden = false;
+    crossEl.hidden = false;
+    banner("Thornwick");
+    toast(fresh ? "The province is not expecting you. That is its mistake." : "The province remembers you.");
+  }
+  Q(".os-wy-begin").addEventListener("click", () => beginGame(true));
+  continueBtn.addEventListener("click", () => beginGame(false));
+
+  /* menu wiring */
+  menuEl.querySelectorAll<HTMLButtonElement>("[data-m]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const m = b.dataset.m;
+      if (m === "resume") { closePanels(); if (cfg.mode === "mouse" && playing()) canvas.requestPointerLock(); }
+      if (m === "sheet") { openPanel(sheetEl); fillSheet(); }
+      if (m === "map") { openPanel(mapEl2); drawMap(); }
+      if (m === "save") { saveGame(); toast("The province, committed to memory."); }
+      if (m === "quit") {
+        saveGame();
+        audio.shutdown();
+        wrap.dispatchEvent(new CustomEvent("wyrdfall-quit", { bubbles: true }));
+        const host = wrap.closest(".os-win-body") as HTMLElement | null;
+        if (host) host.innerHTML = "";
+        wrap.remove();
+      }
     });
   });
-  /* ——— the step ——— */
-  let eyeY = wyHeight(0, -40) + 1.62;
-  function step(dt: number) {
-    if (scene.kind === "title" || !sheet) return;
-    timeMin += dt * 2;
-    const paused = panelsOpen();
-    if (!paused) {
-      const fAmt = ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0);
-      const rAmt = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
-      const fIn = touch.on ? touch.f : fAmt, rIn = touch.on ? touch.r : rAmt;
-      const moving = fIn !== 0 || rIn !== 0;
-      const sprint = (!!(keys.ShiftLeft || keys.ShiftRight) || (touch.on && Math.hypot(touch.f, touch.r) > 0.95)) && stamina > 2 && moving;
-      if (sprint) { stamina = Math.max(0, stamina - 11 * dt); athAcc += dt; if (athAcc > 4) { athAcc = 0; skillUse("athletics", 0.4); } }
-      else stamina = Math.min(100, stamina + (moving ? 5 : 9) * dt);
-      if (moving) {
-        let sp = sprint ? 6.9 : 4.3;
-        if (scene.kind === "overworld" && groundY < 0.35) sp *= 0.55;
-        const sy = Math.sin(pyaw), cy = Math.cos(pyaw);
-        let wx = -sy * fIn + cy * rIn, wz = -cy * fIn - sy * rIn;
-        const wl = Math.hypot(wx, wz) || 1;
-        sp *= Math.min(1, wl); wx /= wl; wz /= wl;
-        px += wx * sp * dt; pz += wz * sp * dt;
-        stepAcc += sp * dt;
-        if (stepAcc > 2.1 && grounded) { stepAcc = 0; audio.step(scene.kind !== "overworld"); }
-        phase += dt * sp * 1.9;
-      }
-      const solids = scene.kind === "overworld" ? world.solids : scene.kind === "interior" ? scene.interior!.solids : scene.dungeon!.solids;
-      for (const s of solids) {
-        if (s.r <= 0) continue;
-        const dx = px - s.x, dz = pz - s.z, d2 = dx * dx + dz * dz, rr = s.r + 0.42;
-        if (d2 < rr * rr && d2 > 0.0001) { const d = Math.sqrt(d2); px = s.x + (dx / d) * rr; pz = s.z + (dz / d) * rr; }
-      }
-      if (scene.kind === "overworld") { px = clamp(px, -862, 862); pz = clamp(pz, -862, 862); }
-      if (scene.kind === "interior") { px = clamp(px, -7.6, 7.6); pz = clamp(pz, -5.6, 5.9); }
-      const target = scene.kind === "overworld" ? wyHeight(px, pz) : 0;
-      if (!grounded) { vy -= 22 * dt; jumpOff += vy * dt; if (jumpOff <= 0) { jumpOff = 0; vy = 0; grounded = true; } }
-      groundY = target;
-      if (swingT > 0) { swingT -= dt; if (pendingHit > 0) { pendingHit -= dt; if (pendingHit <= 0 && !swingHitDone) { swingHitDone = true; swingResolve(); } } }
-      if (hurtT > 0) hurtT -= dt;
-      for (const f of foes) {
-        if (f.dead) continue;
-        if (f.flash > 0) f.flash -= dt;
-        f.atkCd -= dt;
-        const dx = px - f.x, dz = pz - f.z, d = Math.hypot(dx, dz);
-        const fGround = scene.kind === "overworld" ? wyHeight(f.x, f.z) : 0;
-        if (d < 30 && Math.abs(fGround - groundY) < 3.5) {
-          f.yaw = Math.atan2(-dx, -dz);
-          if (d > 1.85) {
-            const st = FOES[f.kind];
-            f.x += (dx / d) * st.speed * dt; f.z += (dz / d) * st.speed * dt;
-            f.phase += dt * st.speed * 2.0;
-          } else if (f.atkCd <= 0) { f.atkCd = 0.95; hurtPlayer(FOES[f.kind].dmg * (0.8 + Math.random() * 0.5)); }
-        }
-      }
-      foes = foes.filter((f) => !f.dead);
-      for (const r of remains) r.ttl -= dt;
-      remains = remains.filter((r) => r.ttl > 0);
-      for (const t of tracers) t.ttl -= dt;
-      tracers = tracers.filter((t) => t.ttl > 0);
-      if (scene.kind === "overworld") {
-        for (const w of wanderers) {
-          w.wait -= dt;
-          const dx = w.tx - w.x, dz = w.tz - w.z, d = Math.hypot(dx, dz);
-          if (w.wait <= 0) {
-            if (d < 0.6) {
-              const t = townAt(w.x, w.z) || TOWNS[0];
-              const a = Math.random() * 6.3, rr = 8 + Math.random() * t.r * 0.5;
-              w.tx = t.x + Math.cos(a) * rr; w.tz = t.z + Math.sin(a) * rr; w.wait = 2 + Math.random() * 5;
-            } else { w.yaw = Math.atan2(-dx, -dz); w.x += (dx / d) * 1.15 * dt; w.z += (dz / d) * 1.15 * dt; w.phase += dt * 4.4; }
-          }
-        }
-        spawnT -= dt;
-        if (spawnT <= 0) {
-          spawnT = 5;
-          if (!townAt(px, pz) && foes.length < 6 && Math.random() < 0.5) {
-            const a = Math.random() * 6.3, d = 52 + Math.random() * 26;
-            const sx2 = clamp(px + Math.cos(a) * d, -850, 850), sz2 = clamp(pz + Math.sin(a) * d, -850, 850);
-            if (!townAt(sx2, sz2) && wyHeight(sx2, sz2) > 0.5) {
-              const kind: FoeKind = isNight() ? (Math.random() < 0.5 ? "skeleton" : "wolf") : roadDist(sx2, sz2) < 9 ? "bandit" : "wolf";
-              spawnFoe(kind, sx2, sz2);
-            }
-          }
-        }
-        for (const d of DUNGEONS) if (!discovered.has(d.id) && Math.hypot(px - d.x, pz - d.z) < 60) { discovered.add(d.id); banner(`A mound, a dark door, standing stones — ${d.name}.`); }
-        const t = townAt(px, pz);
-        const nearDg = DUNGEONS.find((d) => Math.hypot(px - d.x, pz - d.z) < 30);
-        setPlace(t ? t.name : nearDg ? nearDg.name : wyHeight(px, pz) < 0.4 ? "the Mere" : "the wilds");
-      }
-      curInteract = null;
-      let bd = 3.1;
-      for (const it of currentInteracts()) { const d = Math.hypot(it.x - px, it.z - pz); if (d < bd) { bd = d; curInteract = it; } }
-      saveT -= dt;
-      if (saveT <= 0) { saveT = 45; saveGame(); }
-    }
-    promptEl.textContent = curInteract ? `E — ${curInteract.label}` : "";
-    promptEl.style.opacity = curInteract ? "1" : "0";
-    if (placeT > 0) { placeT -= dt; if (placeT <= 0) placeEl.classList.remove("show"); }
+  sheetEl.querySelector<HTMLButtonElement>("[data-m='resume']")!.addEventListener("click", () => closePanels());
+  mapEl2.querySelector<HTMLButtonElement>("[data-m='resume']")!.addEventListener("click", () => closePanels());
+  const syncMenu = () => {
+    menuEl.querySelectorAll<HTMLButtonElement>("[data-i]").forEach((b) => b.classList.toggle("sel", b.dataset.i === cfg.mode));
+    menuEl.querySelectorAll<HTMLButtonElement>("[data-d]").forEach((b) => b.classList.toggle("sel", Number(b.dataset.d) === cfg.dpr));
+    const sens = Q<HTMLInputElement>(".os-wy-sens");
+    sens.value = String(Math.round(cfg.sens * 100));
+    menuEl.querySelectorAll<HTMLButtonElement>(".os-wy-tog").forEach((b) => {
+      const on = b.dataset.t === "bob" ? cfg.bob : cfg.sound;
+      b.textContent = on ? "On" : "Off";
+      b.classList.toggle("sel", on);
+    });
+  };
+  menuEl.querySelectorAll<HTMLButtonElement>("[data-i]").forEach((b) => b.addEventListener("click", () => { cfg.mode = b.dataset.i as Cfg["mode"]; saveCfg(); syncMenu(); }));
+  menuEl.querySelectorAll<HTMLButtonElement>("[data-d]").forEach((b) => b.addEventListener("click", () => { cfg.dpr = Number(b.dataset.d); saveCfg(); syncMenu(); }));
+  Q<HTMLInputElement>(".os-wy-sens").addEventListener("input", (e) => { cfg.sens = Number((e.target as HTMLInputElement).value) / 100; saveCfg(); });
+  menuEl.querySelectorAll<HTMLButtonElement>(".os-wy-tog").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.t === "bob") cfg.bob = !cfg.bob;
+    if (b.dataset.t === "sound") { cfg.sound = !cfg.sound; audio.setSound(cfg.sound); }
+    saveCfg(); syncMenu();
+  }));
+  syncMenu();
+
+  function fillSheet() {
+    if (!sheet) return;
+    const s = sheet;
+    const skillRows = (Object.keys(SKILL_NAMES) as SkillId[]).map((k) =>
+      `<div class="os-wy-skill"><span>${SKILL_NAMES[k]}</span><span class="os-wy-sbar"><i style="width:${s.skills[k]}%"></i></span><b>${s.skills[k]}</b></div>`).join("");
+    const repRows = Object.entries(s.rep).filter(([, v]) => v > 0).map(([k, v]) => {
+      const names: Record<string, string> = { guildf: "Hearthguard", guildm: "Umbral Covenant", tavern: "Innkeepers", temple: "The Listening God", shop: "Merchants" };
+      return `<div>${names[k] || k} — standing ${v}</div>`;
+    }).join("");
+    const questRows = quests.length
+      ? quests.map((q) => `<div class="os-wy-qrow">${q.kind === "cull" ? `Cull in ${DUNGEONS[q.dungeon].name} — ${q.done}/${q.target}` : q.kind === "fetch" ? `Reliquary from ${DUNGEONS[q.dungeon].name} — ${q.done >= q.target ? "recovered" : "waiting in the deep"}` : `Letter to ${q.destName} — ${q.done >= q.target ? "delivered" : "sealed"}`} <em>(${q.giver})</em></div>`).join("")
+      : "<div>No work carried. Guilds and innkeepers always have some.</div>";
+    sheetBody.innerHTML = `
+      <div class="os-wy-shead"><b>${s.name}</b> — level ${s.level} ${s.cls}</div>
+      <div>Health ${Math.ceil(s.hp)} / ${maxHp(s)} · Magicka ${Math.floor(s.mp)} / ${maxMp(s)} · Gold ${s.gold}</div>
+      <div>Weapon — ${WEAPONS[s.weapon].name}</div>
+      <div class="os-wy-sect">Skills — they rise by use; five gains make a level at rest</div>
+      ${skillRows}
+      <div class="os-wy-sect">Standing</div>
+      ${repRows || "<div>Unknown, everywhere. A clean slate.</div>"}
+      <div class="os-wy-sect">Work carried</div>
+      ${questRows}`;
   }
-  /* ——— the render ——— */
-  const dynArr: number[] = [];
-  function render(now: number, dt: number) {
+
+  const mapCanvas = Q<HTMLCanvasElement>(".os-wy-map");
+  function drawMap() {
+    const ctx = mapCanvas.getContext("2d");
+    if (!ctx) return;
+    const S = mapCanvas.width;
+    const W2 = (x: number) => (x / (WORLD_R * 2) + 0.5) * S;
+    ctx.fillStyle = "#221a12";
+    ctx.fillRect(0, 0, S, S);
+    ctx.strokeStyle = "rgba(201,162,39,0.5)";
+    ctx.beginPath();
+    for (const [ax, az, bx, bz] of ROAD_SEGS) { ctx.moveTo(W2(ax), W2(az)); ctx.lineTo(W2(bx), W2(bz)); }
+    ctx.stroke();
+    ctx.fillStyle = "#2c4a63";
+    ctx.beginPath();
+    ctx.ellipse(W2(-330), W2(330), 60, 50, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#c9a227";
+    ctx.font = "12px Georgia, serif";
+    ctx.textAlign = "center";
+    for (const t of TOWNS) {
+      if (!discovered.has(t.name) && t.name !== "Thornwick") continue;
+      ctx.beginPath(); ctx.arc(W2(t.x), W2(t.z), 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillText(t.name, W2(t.x), W2(t.z) - 8);
+    }
+    ctx.fillStyle = "#b4584e";
+    for (const dg of DUNGEONS) {
+      if (!discovered.has(dg.name)) continue;
+      ctx.fillRect(W2(dg.x) - 3, W2(dg.z) - 3, 6, 6);
+      ctx.fillText(dg.name, W2(dg.x), W2(dg.z) - 8);
+    }
+    ctx.fillStyle = "#f2ead2";
+    ctx.save();
+    ctx.translate(W2(px), W2(pz));
+    ctx.rotate(-pyaw);
+    ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(4.5, 5); ctx.lineTo(-4.5, 5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  mapCanvas.addEventListener("click", (e) => {
+    if (!sheet) return;
+    const rect = mapCanvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width * mapCanvas.width;
+    const mz = (e.clientY - rect.top) / rect.height * mapCanvas.height;
+    const wx2 = (mx / mapCanvas.width - 0.5) * WORLD_R * 2;
+    const wz2 = (mz / mapCanvas.height - 0.5) * WORLD_R * 2;
+    for (const t of TOWNS) {
+      if (Math.hypot(wx2 - t.x, wz2 - t.z) > 46) continue;
+      if (!discovered.has(t.name)) { toast("You have not walked there yet. Carts serve known roads."); return; }
+      const dist = Math.hypot(px - t.x, pz - t.z);
+      if (dist < 120) { toast("You could walk that before the driver hitches up."); return; }
+      if (sheet.gold < 6) { toast("The cart costs 6 gold. The road costs nothing but time."); return; }
+      sheet.gold -= 6;
+      px = t.x + 14; pz = t.z + 18;
+      foes = [];
+      closePanels();
+      const night = hourNow() > 19 || hourNow() < 5;
+      if (night && Math.random() < 0.4) {
+        for (let i = 0; i < 2; i++) { const a = vrnd() * 6.28; foes.push(makeFoe("bandit", px + Math.cos(a) * 10, pz + Math.sin(a) * 10, false)); }
+        toast(`The cart reaches ${t.name} — but the road took its toll. Bandits!`);
+      } else {
+        toast(`The cart rattles into ${t.name} by ${night ? "lantern light" : "daylight"}.`);
+      }
+      audio.coin();
+      saveGame();
+      return;
+    }
+  });
+
+  /* ————————————————— the textured engine ————————————————— */
+  const gl = (canvas.getContext("webgl2", { antialias: false, alpha: false }) || canvas.getContext("webgl", { antialias: false, alpha: false })) as WebGLRenderingContext;
+  function mkProg(vs: string, fs: string): WebGLProgram {
+    const sh = (type: number, src: string) => {
+      const s = gl.createShader(type)!;
+      gl.shaderSource(s, src); gl.compileShader(s);
+      return s;
+    };
+    const p = gl.createProgram()!;
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    return p;
+  }
+  const LIT_VS = `
+    attribute vec3 aPos; attribute vec3 aNor; attribute vec3 aCol; attribute vec2 aUV;
+    uniform mat4 uMVP; uniform vec3 uCamPos;
+    varying vec3 vCol; varying vec3 vNor; varying vec2 vUV; varying vec3 vWP; varying float vDist;
+    void main() {
+      vCol = aCol; vNor = aNor; vUV = aUV; vWP = aPos;
+      gl_Position = uMVP * vec4(aPos, 1.0);
+      vDist = distance(aPos.xz, uCamPos.xz);
+    }`;
+  const LIT_FS = `
+    precision mediump float;
+    varying vec3 vCol; varying vec3 vNor; varying vec2 vUV; varying vec3 vWP; varying float vDist;
+    uniform sampler2D uAtlas;
+    uniform vec3 uSunDir; uniform vec3 uSunCol; uniform vec3 uAmbSky; uniform vec3 uAmbGnd;
+    uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar;
+    uniform float uAlphaTest; uniform float uEmiss;
+    uniform vec4 uPL[6]; uniform vec3 uPLCol[6];
+    void main() {
+      vec4 tex = texture2D(uAtlas, vUV);
+      if (tex.a < uAlphaTest) discard;
+      vec3 n = normalize(vNor);
+      float wrap = clamp((dot(n, uSunDir) + 0.45) / 1.45, 0.0, 1.0);
+      vec3 amb = mix(uAmbGnd, uAmbSky, n.y * 0.5 + 0.5);
+      vec3 col = tex.rgb * vCol * (amb + uSunCol * wrap);
+      for (int i = 0; i < 6; i++) {
+        vec3 Ld = uPL[i].xyz - vWP;
+        float dist = length(Ld);
+        float att = clamp(1.0 - dist / max(uPL[i].w, 0.01), 0.0, 1.0);
+        if (att > 0.001) {
+          float pd = max(dot(n, Ld / max(dist, 0.001)), 0.0);
+          col += tex.rgb * vCol * uPLCol[i] * (att * att) * (0.30 + 0.70 * pd);
+        }
+      }
+      col += tex.rgb * vCol * uEmiss;
+      float f = smoothstep(uFogNear, uFogFar, vDist);
+      col = mix(col, uFogColor, f);
+      gl_FragColor = vec4(col, tex.a);
+    }`;
+  const SKY_VS = `
+    attribute vec3 aPos;
+    uniform mat4 uVP;
+    varying vec3 vDir;
+    void main() { vDir = aPos; vec4 p = uVP * vec4(aPos, 1.0); gl_Position = p.xyww; }`;
+  const SKY_FS = `
+    precision highp float;
+    varying vec3 vDir;
+    uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uSunDir; uniform vec3 uSunCol;
+    uniform vec3 uMoonDir; uniform float uNight; uniform float uTime;
+    void main() {
+      vec3 d = normalize(vDir);
+      float h = max(d.y, 0.0);
+      vec3 col = mix(uHor, uZen, pow(h, 0.58));
+      float sd = max(dot(d, uSunDir), 0.0);
+      col += uSunCol * (pow(sd, 240.0) * 1.4 + pow(sd, 20.0) * 0.32);
+      float md = dot(d, uMoonDir);
+      col = mix(col, vec3(0.87, 0.88, 0.82), smoothstep(0.99965, 0.99985, md) * uNight);
+      col += vec3(0.5, 0.55, 0.65) * pow(max(md, 0.0), 300.0) * 0.5 * uNight;
+      if (uNight > 0.02 && d.y > 0.01) {
+        vec3 sp = floor(d * 230.0);
+        vec3 p3 = fract(sp * 0.1031);
+        p3 += dot(p3, p3.zyx + 31.32);
+        float hsh = fract((p3.x + p3.y) * p3.z);
+        float star = step(0.9978, hsh) * uNight * smoothstep(0.01, 0.3, d.y);
+        float tw = 0.7 + 0.3 * sin(uTime * 2.2 + hsh * 44.0);
+        col += vec3(0.85, 0.9, 1.0) * star * tw;
+      }
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+  const WAT_VS = `
+    attribute vec3 aPos;
+    uniform mat4 uMVP; uniform vec2 uCam;
+    varying vec3 vW; varying float vDist;
+    void main() { vW = aPos; gl_Position = uMVP * vec4(aPos, 1.0); vDist = distance(aPos.xz, uCam); }`;
+  const WAT_FS = `
+    precision mediump float;
+    varying vec3 vW; varying float vDist;
+    uniform vec3 uSunDir; uniform vec3 uSunCol; uniform vec3 uHor; uniform vec3 uCamPos;
+    uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uTime; uniform float uDay;
+    void main() {
+      vec2 p = vW.xz;
+      float w1 = sin(p.x * 0.5 + uTime * 1.15) + sin(p.y * 0.43 - uTime * 0.85);
+      float w2 = sin((p.x + p.y) * 0.19 + uTime * 0.5);
+      vec3 n = normalize(vec3(w1 * 0.07 + w2 * 0.03, 1.0, w1 * 0.05 - w2 * 0.05));
+      vec3 view = normalize(uCamPos - vW);
+      float fres = pow(1.0 - max(view.y, 0.0), 2.0);
+      vec3 deep = mix(vec3(0.012, 0.03, 0.045), vec3(0.05, 0.11, 0.14), uDay);
+      vec3 c = mix(deep, uHor, fres * 0.6);
+      vec3 hv = normalize(view + uSunDir);
+      c += uSunCol * pow(max(dot(n, hv), 0.0), 70.0) * 0.7;
+      float f = smoothstep(uFogNear, uFogFar, vDist);
+      c = mix(c, uFog, f);
+      gl_FragColor = vec4(c, 0.88);
+    }`;
+  const litP = mkProg(LIT_VS, LIT_FS), skyP = mkProg(SKY_VS, SKY_FS), watP = mkProg(WAT_VS, WAT_FS);
+  const LU = {
+    mvp: gl.getUniformLocation(litP, "uMVP"), camPos: gl.getUniformLocation(litP, "uCamPos"),
+    sunDir: gl.getUniformLocation(litP, "uSunDir"), sunCol: gl.getUniformLocation(litP, "uSunCol"),
+    ambSky: gl.getUniformLocation(litP, "uAmbSky"), ambGnd: gl.getUniformLocation(litP, "uAmbGnd"),
+    fogColor: gl.getUniformLocation(litP, "uFogColor"), fogNear: gl.getUniformLocation(litP, "uFogNear"), fogFar: gl.getUniformLocation(litP, "uFogFar"),
+    alphaTest: gl.getUniformLocation(litP, "uAlphaTest"), emiss: gl.getUniformLocation(litP, "uEmiss"),
+    atlas: gl.getUniformLocation(litP, "uAtlas"), pl: gl.getUniformLocation(litP, "uPL"), plCol: gl.getUniformLocation(litP, "uPLCol"),
+  };
+  const SU = {
+    vp: gl.getUniformLocation(skyP, "uVP"), zen: gl.getUniformLocation(skyP, "uZen"), hor: gl.getUniformLocation(skyP, "uHor"),
+    sunDir: gl.getUniformLocation(skyP, "uSunDir"), sunCol: gl.getUniformLocation(skyP, "uSunCol"),
+    moonDir: gl.getUniformLocation(skyP, "uMoonDir"), night: gl.getUniformLocation(skyP, "uNight"), time: gl.getUniformLocation(skyP, "uTime"),
+  };
+  const WU = {
+    mvp: gl.getUniformLocation(watP, "uMVP"), cam: gl.getUniformLocation(watP, "uCam"), camPos: gl.getUniformLocation(watP, "uCamPos"),
+    sunDir: gl.getUniformLocation(watP, "uSunDir"), sunCol: gl.getUniformLocation(watP, "uSunCol"), hor: gl.getUniformLocation(watP, "uHor"),
+    fog: gl.getUniformLocation(watP, "uFog"), fogNear: gl.getUniformLocation(watP, "uFogNear"), fogFar: gl.getUniformLocation(watP, "uFogFar"),
+    time: gl.getUniformLocation(watP, "uTime"), day: gl.getUniformLocation(watP, "uDay"),
+  };
+  const aPos = gl.getAttribLocation(litP, "aPos"), aNor = gl.getAttribLocation(litP, "aNor"), aCol = gl.getAttribLocation(litP, "aCol"), aUV = gl.getAttribLocation(litP, "aUV");
+  const aPosS = gl.getAttribLocation(skyP, "aPos");
+  const aPosW = gl.getAttribLocation(watP, "aPos");
+  /* the atlas, bound once */
+  const atlasTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCv);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  const mkDyn = (floats: number) => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, floats * 4, gl.DYNAMIC_DRAW);
+    return b;
+  };
+  const dynBuf = mkDyn(520000), staBuf = gl.createBuffer(), cutBuf = gl.createBuffer(), gloBuf = gl.createBuffer();
+  let staCount = 0, cutCount = 0, gloCount = 0;
+  const skyBuf = gl.createBuffer();
+  {
+    const R = 1500;
+    const pts: number[] = [];
+    const verts: Array<[number, number, number]> = [[R, 0, 0], [-R, 0, 0], [0, R, 0], [0, -R, 0], [0, 0, R], [0, 0, -R]];
+    const faces = [[2, 4, 0], [2, 0, 5], [2, 5, 1], [2, 1, 4], [3, 0, 4], [3, 5, 0], [3, 1, 5], [3, 4, 1]];
+    for (const f of faces) for (const vi of f) pts.push(...verts[vi]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, skyBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
+  }
+  const watBuf2 = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, watBuf2);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -880, 0.35, -880, 880, 0.35, -880, -880, 0.35, 880,
+    880, 0.35, -880, 880, 0.35, 880, -880, 0.35, 880,
+  ]), gl.STATIC_DRAW);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+  gl.disable(gl.CULL_FACE);
+  const upBuf = (buf: WebGLBuffer | null, arr: V) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+    return arr.length / 11;
+  };
+  uploadScene = () => {
+    if (scene.kind === "interior") {
+      staCount = upBuf(staBuf, scene.scene.geo);
+      cutCount = upBuf(cutBuf, []);
+      gloCount = upBuf(gloBuf, []);
+    } else if (scene.kind === "dungeon") {
+      staCount = upBuf(staBuf, scene.scene.geo);
+      cutCount = upBuf(cutBuf, []);
+      gloCount = upBuf(gloBuf, []);
+    } else {
+      staCount = upBuf(staBuf, WORLD_STATIC);
+      cutCount = upBuf(cutBuf, WORLD_CUTOUT);
+      gloCount = upBuf(gloBuf, WIN_GLOW);
+    }
+  };
+  const bindLit = (buf: WebGLBuffer | null) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aNor); gl.enableVertexAttribArray(aCol); gl.enableVertexAttribArray(aUV);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 44, 0);
+    gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, 44, 12);
+    gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 44, 24);
+    gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, 44, 36);
+  };
+  const plPos = new Float32Array(24), plColA = new Float32Array(18);
+  function fillLights(camX: number, camY: number, camZ: number, now: number, nightF: number) {
+    const cand: Array<{ a: LightAnchor; d: number }> = [];
+    if (scene.kind !== "overworld") cand.push({ a: { x: camX, y: camY + 0.3, z: camZ, range: 8.5, col: [1.0, 0.8, 0.55], flicker: true }, d: -1 });
+    for (const a of sceneLights) {
+      const d = (a.x - camX) ** 2 + (a.z - camZ) ** 2;
+      if (d < 3600) cand.push({ a, d });
+    }
+    cand.sort((p, q) => p.d - q.d);
+    for (let i = 0; i < 6; i++) {
+      if (i < cand.length) {
+        const a = cand[i].a;
+        let inten = a.flicker ? 0.82 + 0.33 * vnoise(now * 7, i * 17.3) : 1;
+        if (scene.kind === "overworld" && !a.flicker) inten *= (0.12 + nightF * 0.95) * 1.7;
+        plPos[i * 4] = a.x; plPos[i * 4 + 1] = a.y; plPos[i * 4 + 2] = a.z; plPos[i * 4 + 3] = a.range;
+        plColA[i * 3] = a.col[0] * inten; plColA[i * 3 + 1] = a.col[1] * inten; plColA[i * 3 + 2] = a.col[2] * inten;
+      } else if (i === cand.length && spellLight > 0) {
+        plPos[i * 4] = camX; plPos[i * 4 + 1] = camY + 0.4; plPos[i * 4 + 2] = camZ; plPos[i * 4 + 3] = 13;
+        plColA[i * 3] = 0.65 * spellLight * 3; plColA[i * 3 + 1] = 0.5 * spellLight * 3; plColA[i * 3 + 2] = 1.0 * spellLight * 3;
+      } else {
+        plPos[i * 4 + 3] = 0;
+        plColA[i * 3] = plColA[i * 3 + 1] = plColA[i * 3 + 2] = 0;
+      }
+    }
+    gl.uniform4fv(LU.pl, plPos);
+    gl.uniform3fv(LU.plCol, plColA);
+  }
+
+  const dynCut: V = [], dynBlend: V = [], dynAdd: V = [];
+  let lastAudioPlace = "";
+  function render(now: number) {
     const w = wrap.clientWidth || 1024, h = wrap.clientHeight || 640;
-    const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
-    const cw = Math.max(2, Math.round(w * dpr)), ch = Math.max(2, Math.round(h * dpr));
-    if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
-    gl.viewport(0, 0, cw, ch);
-    let camX = px, camZ = pz, yaw = pyaw, pitch = ppitch;
-    const targetEye = scene.kind === "title"
-      ? wyHeight(Math.cos(now * 0.021) * 135, -120 + Math.sin(now * 0.021) * 135) + 30
-      : groundY + jumpOff + 1.62 + Math.sin(phase * 2) * (grounded && (keys.KeyW || keys.KeyS || keys.KeyA || keys.KeyD) ? 0.028 : 0);
-    eyeY += (targetEye - eyeY) * Math.min(1, dt * 13);
-    let camY = eyeY;
+    const dprSel = cfg.dpr === 0 ? Math.min(window.devicePixelRatio || 1, 2) : cfg.dpr;
+    const cw = Math.max(2, Math.round(w * dprSel)), chh = Math.max(2, Math.round(h * dprSel));
+    if (canvas.width !== cw || canvas.height !== chh) { canvas.width = cw; canvas.height = chh; }
+    gl.viewport(0, 0, cw, chh);
+    let camX = px, camY = eyeY, camZ = pz, yaw = pyaw, pitch = ppitch;
     if (scene.kind === "title") {
-      camX = Math.cos(now * 0.021) * 135; camZ = -120 + Math.sin(now * 0.021) * 135; camY = targetEye;
-      yaw = Math.atan2(-(0 - camX), -(-120 - camZ)); pitch = -0.30;
+      const a = now * 0.02;
+      camX = Math.cos(a) * 118; camZ = -120 + Math.sin(a) * 118;
+      camY = wyHeight(camX, camZ) + 27;
+      yaw = Math.atan2(-(0 - camX), -(-120 - camZ));
+      pitch = -0.26;
+    }
+    if (shake > 0) {
+      camX += Math.sin(now * 43) * shake * 0.05;
+      camY += Math.sin(now * 51 + 2) * shake * 0.05;
     }
     const cp = Math.cos(pitch);
     const dir: [number, number, number] = [-Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp];
     const eye: [number, number, number] = [camX, camY, camZ];
-    const vpM = m4.mul(m4.persp(1.08, cw / ch, 0.1, 1700), m4.lookAt(eye, [eye[0] + dir[0], eye[1] + dir[1], eye[2] + dir[2]], [0, 1, 0]));
+    const vpM = m4.mul(m4.persp(1.09, cw / chh, 0.1, 2400), m4.lookAt(eye, [eye[0] + dir[0], eye[1] + dir[1], eye[2] + dir[2]], [0, 1, 0]));
     const hr = hourNow();
     const sunAng = ((hr - 6) / 12) * Math.PI;
-    const sunDir: [number, number, number] = [Math.cos(sunAng) * 0.75, Math.sin(sunAng), 0.38];
-    const sl = Math.hypot(sunDir[0], sunDir[1], sunDir[2]) || 1; sunDir[0] /= sl; sunDir[1] /= sl; sunDir[2] /= sl;
-    const night = clamp(0.25 - sunDir[1] * 2.0, 0, 1);
+    const sunDir: [number, number, number] = [Math.cos(sunAng) * 0.72, Math.sin(sunAng), 0.38];
+    const sl = Math.hypot(...sunDir) || 1;
+    sunDir[0] /= sl; sunDir[1] /= sl; sunDir[2] /= sl;
+    const night = clamp(0.28 - sunDir[1] * 2.1, 0, 1);
     const sunset = clamp(1 - Math.abs(sunDir[1]) * 2.6, 0, 1);
-    const inDark = scene.kind !== "overworld";
-    const fogCol: Col3 = inDark ? [0.05, 0.04, 0.035] : [
-      lerp(lerp(0.58, 0.66, sunset * 0.5), 0.04, night),
-      lerp(lerp(0.63, 0.42, sunset * 0.5), 0.05, night),
-      lerp(lerp(0.68, 0.30, sunset * 0.5), 0.09, night),
-    ];
-    const zen: Col3 = [lerp(0.30, 0.012, night), lerp(0.47, 0.018, night), lerp(0.68, 0.045, night)];
-    const hor: Col3 = [
-      lerp(lerp(0.74, 0.88, sunset * 0.6), 0.05, night),
-      lerp(lerp(0.78, 0.50, sunset * 0.6), 0.06, night),
-      lerp(lerp(0.82, 0.26, sunset * 0.6), 0.10, night),
-    ];
-    const sunCol: Col3 = [1.0, lerp(0.95, 0.55, sunset), lerp(0.85, 0.25, sunset)];
-    gl.clearColor(fogCol[0] * 0.6, fogCol[1] * 0.6, fogCol[2] * 0.6, 1);
+    const inDark = scene.kind === "interior" || scene.kind === "dungeon";
+    const dayF = 1 - night;
+    let sunCol: Col3, ambSky: Col3, ambGnd: Col3, fogCol: Col3, fogNear: number, fogFar: number, litSun: Col3;
+    if (scene.kind === "dungeon") {
+      litSun = [0.3, 0.5, 0.2]; sunCol = [0.05, 0.045, 0.04];
+      ambSky = [0.235, 0.21, 0.18]; ambGnd = [0.125, 0.11, 0.095];
+      fogCol = [0.028, 0.024, 0.02]; fogNear = 3; fogFar = 31;
+    } else if (scene.kind === "interior") {
+      litSun = [0.35, 0.7, 0.3]; sunCol = [0.30, 0.26, 0.20];
+      ambSky = [0.52, 0.46, 0.38]; ambGnd = [0.30, 0.25, 0.20];
+      fogCol = [0.05, 0.04, 0.033]; fogNear = 6; fogFar = 42;
+    } else {
+      litSun = sunDir[1] < -0.04 ? [-sunDir[0] * 0.4, 0.55, -sunDir[2] * 0.4] : sunDir;
+      const elev = clamp(sunDir[1] * 1.6, 0, 1);
+      if (night > 0.55) {
+        const ml = Math.hypot(litSun[0], litSun[1], litSun[2]) || 1;
+        litSun = [litSun[0] / ml, litSun[1] / ml, litSun[2] / ml];
+        sunCol = [0.30, 0.36, 0.50];
+      } else {
+        sunCol = [lerp(0.16, 1.06, elev) * lerp(1, 0.3, night), lerp(0.2, 0.97, elev) * lerp(1, 0.32, night), lerp(0.3, 0.84, elev) * lerp(1, 0.4, night)];
+      }
+      if (sunset > 0.3 && night < 0.6) { sunCol[0] *= 1.12; sunCol[1] *= 0.82; sunCol[2] *= 0.62; }
+      ambSky = [lerp(0.44, 0.105, night), lerp(0.48, 0.12, night), lerp(0.55, 0.175, night)];
+      ambGnd = [lerp(0.30, 0.05, night), lerp(0.27, 0.052, night), lerp(0.22, 0.065, night)];
+      fogCol = [
+        lerp(lerp(0.56, 0.72, sunset * 0.5), 0.035, night),
+        lerp(lerp(0.62, 0.44, sunset * 0.5), 0.045, night),
+        lerp(lerp(0.68, 0.30, sunset * 0.5), 0.085, night),
+      ];
+      fogNear = lerp(95, 26, night); fogFar = lerp(820, 310, night);
+    }
+    gl.clearColor(fogCol[0], fogCol[1], fogCol[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    const bindLit = (buf: WebGLBuffer | null) => {
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-      gl.enableVertexAttribArray(aPos); gl.enableVertexAttribArray(aCol); gl.enableVertexAttribArray(aNor);
-      gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 36, 0);
-      gl.vertexAttribPointer(aCol, 3, gl.FLOAT, false, 36, 12);
-      gl.vertexAttribPointer(aNor, 3, gl.FLOAT, false, 36, 24);
-    };
+    /* sky */
     if (!inDark) {
+      const zen: Col3 = [lerp(0.26, 0.010, night), lerp(0.44, 0.016, night), lerp(0.68, 0.05, night)];
+      const hor: Col3 = [
+        lerp(lerp(0.72, 0.90, sunset * 0.6), 0.05, night),
+        lerp(lerp(0.77, 0.50, sunset * 0.6), 0.06, night),
+        lerp(lerp(0.82, 0.26, sunset * 0.6), 0.105, night),
+      ];
+      const skySunCol: Col3 = [1.0 * dayF + 0.1, lerp(0.93, 0.5, sunset) * dayF + 0.05, lerp(0.82, 0.22, sunset) * dayF + 0.02];
       gl.useProgram(skyP);
-      gl.uniformMatrix4fv(skyU.vp, false, vpM);
-      gl.uniform3fv(skyU.zen, zen);
-      gl.uniform3fv(skyU.hor, hor);
-      gl.uniform3fv(skyU.sunDir, sunDir);
-      gl.uniform3fv(skyU.sunCol, sunCol);
-      gl.uniform1f(skyU.night, night);
-      gl.uniform1f(skyU.time, now);
-      gl.uniform1f(skyU.cover, 0.28);
-      gl.uniform1f(skyU.gloom, 0.12);
-      gl.uniform1f(skyU.flash, 0);
-      gl.uniform3f(skyU.moonDir, -sunDir[0], Math.max(0.25, -sunDir[1]), -sunDir[2]);
-      gl.uniform1f(skyU.aurora, 0);
-      gl.uniform1f(skyU.second, 0);
+      gl.uniformMatrix4fv(SU.vp, false, vpM);
+      gl.uniform3fv(SU.zen, zen);
+      gl.uniform3fv(SU.hor, hor);
+      gl.uniform3fv(SU.sunDir, sunDir);
+      gl.uniform3fv(SU.sunCol, skySunCol);
+      gl.uniform3f(SU.moonDir, -sunDir[0], Math.max(0.18, -sunDir[1]), -sunDir[2]);
+      gl.uniform1f(SU.night, night);
+      gl.uniform1f(SU.time, now);
       gl.bindBuffer(gl.ARRAY_BUFFER, skyBuf);
       gl.enableVertexAttribArray(aPosS);
       gl.vertexAttribPointer(aPosS, 3, gl.FLOAT, false, 0, 0);
-      gl.disableVertexAttribArray(aCol); gl.disableVertexAttribArray(aNor);
+      gl.disableVertexAttribArray(aNor); gl.disableVertexAttribArray(aCol); gl.disableVertexAttribArray(aUV);
       gl.depthMask(false);
-      gl.drawArrays(gl.TRIANGLES, 0, skyN);
+      gl.drawArrays(gl.TRIANGLES, 0, 24);
       gl.depthMask(true);
     }
-    if (inDark) {
-      setLit(vpM, eye, [0.35, 0.75, 0.25], fogCol, scene.kind === "dungeon" ? 3.5 : 5, scene.kind === "dungeon" ? 30 : 36, scene.kind === "dungeon" ? [0.52, 0.48, 0.46] : [0.66, 0.58, 0.52], [0.30, 0.18, 0.08], now);
-    } else {
-      const sd: [number, number, number] = sunDir[1] < -0.05 ? [-sunDir[0] * 0.4, 0.55, -sunDir[2] * 0.4] : sunDir;
-      setLit(vpM, eye, sd, fogCol, lerp(90, 26, night), lerp(780, 300, night), [1, 1, 1], [lerp(0.10, 0.42, sunset), 0.12, 0.08], now);
-    }
-    if (!inDark) { bindLit(terrBuf); gl.drawArrays(gl.TRIANGLES, 0, terrCount); }
+    /* the lit world */
+    gl.useProgram(litP);
+    gl.uniformMatrix4fv(LU.mvp, false, vpM);
+    gl.uniform3fv(LU.camPos, eye);
+    gl.uniform3fv(LU.sunDir, litSun);
+    gl.uniform3fv(LU.sunCol, sunCol);
+    gl.uniform3fv(LU.ambSky, ambSky);
+    gl.uniform3fv(LU.ambGnd, ambGnd);
+    gl.uniform3fv(LU.fogColor, fogCol);
+    gl.uniform1f(LU.fogNear, fogNear);
+    gl.uniform1f(LU.fogFar, fogFar);
+    gl.uniform1i(LU.atlas, 0);
+    fillLights(camX, camY, camZ, now, night);
+    gl.uniform1f(LU.alphaTest, 0.0);
+    gl.uniform1f(LU.emiss, 0.0);
     bindLit(staBuf);
     gl.drawArrays(gl.TRIANGLES, 0, staCount);
+    gl.uniform1f(LU.alphaTest, 0.42);
+    bindLit(cutBuf);
+    gl.drawArrays(gl.TRIANGLES, 0, cutCount);
+    if (!inDark && night > 0.04 && gloCount > 0) {
+      gl.uniform1f(LU.alphaTest, 0.0);
+      gl.uniform1f(LU.emiss, night * 0.95);
+      bindLit(gloBuf);
+      gl.drawArrays(gl.TRIANGLES, 0, gloCount);
+      gl.uniform1f(LU.emiss, 0.0);
+    }
+    /* water */
     if (!inDark) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.useProgram(watP);
-      gl.uniformMatrix4fv(watU.mvp, false, vpM);
-      gl.uniform2f(watU.cam, eye[0], eye[2]);
-      gl.uniform3fv(watU.camPos, eye);
-      gl.uniform3fv(watU.sun, sunDir);
-      gl.uniform3fv(watU.sunCol, sunCol);
-      gl.uniform3fv(watU.hor, hor);
-      gl.uniform3fv(watU.fog, fogCol);
-      gl.uniform1f(watU.fogNear, lerp(90, 26, night));
-      gl.uniform1f(watU.fogFar, lerp(780, 300, night));
-      gl.uniform1f(watU.time, now);
-      gl.uniform1f(watU.cold, 0.35);
-      gl.uniform1f(watU.day, 1 - night);
-      gl.bindBuffer(gl.ARRAY_BUFFER, watBuf);
-      gl.enableVertexAttribArray(aPosW); gl.enableVertexAttribArray(aColW); gl.enableVertexAttribArray(aAuxW);
-      gl.disableVertexAttribArray(aNor);
-      gl.vertexAttribPointer(aPosW, 3, gl.FLOAT, false, 32, 0);
-      gl.vertexAttribPointer(aColW, 3, gl.FLOAT, false, 32, 12);
-      gl.vertexAttribPointer(aAuxW, 2, gl.FLOAT, false, 32, 24);
+      gl.uniformMatrix4fv(WU.mvp, false, vpM);
+      gl.uniform2f(WU.cam, camX, camZ);
+      gl.uniform3fv(WU.camPos, eye);
+      gl.uniform3fv(WU.sunDir, litSun);
+      gl.uniform3fv(WU.sunCol, sunCol);
+      gl.uniform3fv(WU.hor, fogCol);
+      gl.uniform3fv(WU.fog, fogCol);
+      gl.uniform1f(WU.fogNear, fogNear);
+      gl.uniform1f(WU.fogFar, fogFar);
+      gl.uniform1f(WU.time, now);
+      gl.uniform1f(WU.day, dayF);
+      gl.bindBuffer(gl.ARRAY_BUFFER, watBuf2);
+      gl.enableVertexAttribArray(aPosW);
+      gl.vertexAttribPointer(aPosW, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.disable(gl.BLEND);
       gl.useProgram(litP);
+      gl.uniformMatrix4fv(LU.mvp, false, vpM);
     }
-    /* the living */
-    dynArr.length = 0;
-    const gAt = (x: number, z: number) => (scene.kind === "overworld" ? wyHeight(x, z) : 0);
-    const flashMix = (c: Col3, f: DynFoe): Col3 => f.flash > 0 ? [lerp(c[0], 1, 0.6), lerp(c[1], 0.25, 0.6), lerp(c[2], 0.2, 0.6)] : c;
+    /* ——— the living, assembled ——— */
+    dynCut.length = 0; dynBlend.length = 0; dynAdd.length = 0;
+    const frameOf = (moving: boolean, phase: number) => (moving ? [0, 1, 0, 2][Math.floor(phase * 1.7) % 4] : 0);
+    const actorBill = (x: number, y: number, z: number, w: number, h: number, sprite: number, moving: boolean, phase: number, tint: Col3) => {
+      if (Math.hypot(x - camX, z - camZ) > 110) return;
+      bill(dynCut, x, y, z, w, h, camX, camZ, sprite + frameOf(moving, phase), tint);
+    };
+    if (scene.kind === "overworld") {
+      for (const w of wanderers) {
+        const wy = wyHeight(w.x, w.z);
+        const moving = w.wait <= 0 && w.npc.role !== "guard";
+        actorBill(w.x, wy, w.z, 1.18, 2.02, w.npc.sprite, moving, w.phase, [1, 1, 1]);
+      }
+      /* chimney smoke */
+      for (const b of BUILDINGS) {
+        const dx = b.x - camX, dz = b.z - camZ;
+        if (dx * dx + dz * dz > 11000) continue;
+        const topY = b.baseY + (b.floors === 2 ? 6.68 : 3.7) + 2.75;
+        const lx = b.w * 0.225;
+        const cxw = b.x + lx * Math.cos(b.yaw), czw = b.z + lx * Math.sin(b.yaw);
+        for (let k = 0; k < 2; k++) {
+          const ph = (now * 0.07 + hash2(b.x, b.z) + k * 0.5) % 1;
+          bill(dynBlend, cxw + ph * 2.2, topY + ph * 7.5, czw, 1.2 + ph * 2.8, 1.2 + ph * 2.8, camX, camZ, T.SMOKE, [0.82, 0.82, 0.83]);
+        }
+      }
+      /* clouds */
+      for (let i = 0; i < 8; i++) {
+        const cx2 = ((i * 397 + now * 0.7) % 1600) - 800;
+        const cz2 = ((i * 613) % 1300) - 650;
+        bill(dynBlend, cx2, 152 + (i % 4) * 11, cz2, 150 + (i % 3) * 60, 26 + (i % 3) * 8, camX, camZ, T.CLOUD, [1.18, 1.18, 1.22]);
+      }
+    }
+    if (scene.kind === "interior") {
+      for (const n of scene.scene.npcs) actorBill(n.x, 0, n.z, 1.18, 2.02, n.sprite, false, 0, [1, 1, 1]);
+    }
     for (const f of foes) {
       if (f.dead) continue;
-      const y = gAt(f.x, f.z), ry = f.yaw + Math.PI;
-      if (f.kind === "wolf") beast(dynArr, f.x, y, f.z, ry, f.phase, flashMix([0.34, 0.32, 0.31], f), 1.15);
-      else if (f.kind === "rat") beast(dynArr, f.x, y, f.z, ry, f.phase, flashMix([0.30, 0.24, 0.19], f), 0.42);
-      else if (f.kind === "skeleton") humanoid(dynArr, f.x, y, f.z, ry, f.phase, flashMix([0.66, 0.63, 0.55], f), [0.20, 0.18, 0.16], [0.78, 0.75, 0.66]);
-      else if (f.kind === "bandit") humanoid(dynArr, f.x, y, f.z, ry, f.phase, flashMix([0.36, 0.26, 0.16], f), [0.50, 0.14, 0.10], [0.72, 0.55, 0.40]);
-      else humanoid(dynArr, f.x, y, f.z, ry, f.phase, flashMix([0.16, 0.13, 0.22], f), [0.45, 0.30, 0.80], [0.70, 0.60, 0.50], true);
+      const base = FOES[f.kind];
+      const sc = f.boss ? 1.32 : 1;
+      const tint: Col3 = f.flash > 0 ? [1 + f.flash * 1.3, 1 - f.flash * 0.55, 1 - f.flash * 0.55] : [1, 1, 1];
+      actorBill(f.x, f.y, f.z, base.w * sc, base.h * sc, base.sprite, Math.hypot(f.vx, f.vz) > 0.4 || f.phase > 0, f.phase, tint);
     }
-    if (scene.kind === "overworld") for (const w of wanderers) humanoid(dynArr, w.x, wyHeight(w.x, w.z), w.z, w.yaw + Math.PI, w.phase, w.npc.robe, [0.3, 0.26, 0.2], [0.72, 0.56, 0.42]);
-    if (scene.kind === "interior" && scene.interior) for (const n of scene.interior.npcs) humanoid(dynArr, n.x, 0, n.z, n.yaw, Math.sin(now * 1.4 + n.x) * 0.06, n.robe, [0.3, 0.26, 0.2], [0.72, 0.56, 0.42], n.service === "guildm");
-    for (const r of remains) octa(dynArr, r.x, r.y + 0.12, r.z, 0.72, 0.13, 0.72, r.col);
-    for (const t of tracers) beam(dynArr, t.x, t.y, t.z, t.dx, t.dy, t.dz, t.len, 0.05, t.col);
-    if (playing() && !panelsOpen()) {
-      const fh: [number, number, number] = [-Math.sin(yaw), 0, -Math.cos(yaw)];
-      const rt: [number, number, number] = [Math.cos(yaw), 0, -Math.sin(yaw)];
-      const B: [number, number, number] = [eye[0] + rt[0] * 0.33 + fh[0] * 0.52, eye[1] - 0.30, eye[2] + rt[2] * 0.33 + fh[2] * 0.52];
-      const sp2 = swingT > 0 ? 1 - swingT / 0.40 : 0;
-      const raise = 0.95 - (swingT > 0 ? Math.sin(sp2 * Math.PI) * 1.75 : 0) + Math.sin(now * 1.7) * 0.012;
-      const bd: [number, number, number] = [fh[0] * Math.sin(raise), Math.cos(raise), fh[2] * Math.sin(raise)];
-      const steel: Col3 = sheet && sheet.weapon >= 3 ? [0.82, 0.84, 0.90] : sheet && sheet.weapon >= 2 ? [0.66, 0.68, 0.72] : [0.52, 0.52, 0.55];
-      beam(dynArr, B[0] + bd[0] * 0.36, B[1] + bd[1] * 0.36, B[2] + bd[2] * 0.36, bd[0], bd[1], bd[2], 0.68, 0.016, steel);
-      octa(dynArr, B[0] + bd[0] * 0.72, B[1] + bd[1] * 0.72, B[2] + bd[2] * 0.72, 0.028, 0.045, 0.028, steel);
-      beam(dynArr, B[0] + bd[0] * 0.03, B[1] + bd[1] * 0.03, B[2] + bd[2] * 0.03, rt[0], rt[1], rt[2], 0.17, 0.018, [0.55, 0.42, 0.16]);
-      beam(dynArr, B[0] - bd[0] * 0.05, B[1] - bd[1] * 0.05, B[2] - bd[2] * 0.05, bd[0], bd[1], bd[2], 0.13, 0.020, [0.16, 0.11, 0.07]);
+    for (const r of remains) {
+      if (Math.hypot(r.x - camX, r.z - camZ) > 110) continue;
+      decal(dynCut, r.x, r.y + 0.06, r.z, r.w, r.w * 0.86, r.yaw, r.sprite, [0.9, 0.88, 0.86]);
     }
-    if (dynArr.length) {
+    for (const t of tracers) {
+      bill(dynAdd, t.x, t.y, t.z, 0.6, 0.6, camX, camZ, T.SPARK, t.hostile ? [1.5, 0.55, 0.45] : [1.2, 1.0, 1.6]);
+    }
+    for (const fl of sceneFlames) {
+      const fs = fl.s * (0.92 + 0.16 * Math.sin(now * 11 + fl.x * 3 + fl.z));
+      bill(dynAdd, fl.x, fl.y, fl.z, 0.62 * fs, 0.85 * fs, camX, camZ, T.FLAME, [1.35, 1.1, 0.8]);
+    }
+    if (scene.kind === "overworld" && night > 0.05) {
+      for (const a of WORLD_LIGHTS) {
+        if (a.flicker || Math.hypot(a.x - camX, a.z - camZ) > 60) continue;
+        bill(dynAdd, a.x, a.y - 0.1, a.z, 0.85, 0.85, camX, camZ, T.FLAME, [1.2 * night, 0.95 * night, 0.6 * night]);
+      }
+    }
+    /* dynamic draws */
+    gl.uniform1f(LU.alphaTest, 0.42);
+    if (dynCut.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
-      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(dynArr));
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(dynCut));
       bindLit(dynBuf);
-      gl.drawArrays(gl.TRIANGLES, 0, dynArr.length / 9);
+      gl.drawArrays(gl.TRIANGLES, 0, dynCut.length / 11);
     }
-    /* the telling */
-    if (sheet) {
+    gl.enable(gl.BLEND);
+    gl.depthMask(false);
+    if (dynBlend.length) {
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniform1f(LU.alphaTest, 0.02);
+      gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(dynBlend));
+      bindLit(dynBuf);
+      gl.drawArrays(gl.TRIANGLES, 0, dynBlend.length / 11);
+    }
+    if (dynAdd.length) {
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.uniform1f(LU.alphaTest, 0.02);
+      gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(dynAdd));
+      bindLit(dynBuf);
+      gl.drawArrays(gl.TRIANGLES, 0, dynAdd.length / 11);
+    }
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    /* the sword in hand */
+    if (playing() && !panelsOpen() && !dlgOpen) {
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      const ident = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      gl.uniformMatrix4fv(LU.mvp, false, ident);
+      gl.uniform3f(LU.camPos, 0, 0, 0);
+      gl.uniform3f(LU.sunDir, 0.3, 0.8, 0.4);
+      const vmK = inDark ? 0.8 : 1 - night * 0.45;
+      gl.uniform3f(LU.sunCol, 0.5 * vmK, 0.48 * vmK, 0.44 * vmK);
+      gl.uniform3f(LU.ambSky, 0.62 * vmK, 0.60 * vmK, 0.57 * vmK);
+      gl.uniform3f(LU.ambGnd, 0.5 * vmK, 0.48 * vmK, 0.45 * vmK);
+      gl.uniform1f(LU.fogFar, 1e6);
+      gl.uniform1f(LU.alphaTest, 0.4);
+      const vm: V = [];
+      const p = swingT > 0 ? 1 - swingT / 0.34 : 0;
+      const sw = Math.sin(p * Math.PI);
+      const asp = chh / Math.max(1, cw);
+      const cxp = (0.68 - sw * 0.30) * asp, cyp = -0.64 + sw * 0.16 + Math.sin(bobPhase * 2) * 0.006;
+      const ang = -0.42 - sw * 1.30 + Math.sin(now * 1.3) * 0.015;
+      const hw2 = 0.185 * asp, hh2 = 0.36;
+      const ca = Math.cos(ang), sa = Math.sin(ang);
+      const steel: Col3 = sheet && sheet.weapon >= 3 ? [1.18, 1.18, 1.24] : sheet && sheet.weapon >= 2 ? [1.02, 1.02, 1.05] : [0.88, 0.78, 0.68];
+      const [u0, vB, u1, vT] = tileUV(T.SWORD);
+      const corner = (lx: number, ly: number, u: number, v: number) => {
+        vm.push(cxp + (lx * ca - ly * sa), cyp + (lx * sa + ly * ca), 0, 0, 0, 1, steel[0], steel[1], steel[2], u, v);
+      };
+      corner(-hw2, -hh2, u0, vB); corner(hw2, -hh2, u1, vB); corner(-hw2, hh2, u0, vT);
+      corner(hw2, -hh2, u1, vB); corner(hw2, hh2, u1, vT); corner(-hw2, hh2, u0, vT);
+      if (castCd > 0.28) {
+        const k = (castCd - 0.28) / 0.17;
+        const [su0, svB, su1, svT] = tileUV(T.SPARK);
+        const sx2 = -0.52 * asp, sy2 = -0.42, ss = 0.17 * k + 0.05;
+        const sc2: Col3 = [1.3 * k, 1.1 * k, 1.7 * k];
+        const push2 = (x: number, y: number, u: number, v: number) => vm.push(x, y, 0, 0, 0, 1, sc2[0], sc2[1], sc2[2], u, v);
+        push2(sx2 - ss, sy2 - ss, su0, svB); push2(sx2 + ss, sy2 - ss, su1, svB); push2(sx2 - ss, sy2 + ss, su0, svT);
+        push2(sx2 + ss, sy2 - ss, su1, svB); push2(sx2 + ss, sy2 + ss, su1, svT); push2(sx2 - ss, sy2 + ss, su0, svT);
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, dynBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(vm));
+      bindLit(dynBuf);
+      gl.drawArrays(gl.TRIANGLES, 0, vm.length / 11);
+    }
+    /* ——— the telling ——— */
+    if (sheet && started) {
       hpBar.style.width = `${clamp((sheet.hp / maxHp(sheet)) * 100, 0, 100)}%`;
       mpBar.style.width = `${clamp((sheet.mp / maxMp(sheet)) * 100, 0, 100)}%`;
       stBar.style.width = `${stamina}%`;
       const hh = Math.floor(hourNow()), mm = Math.floor((hourNow() % 1) * 60);
-      clockEl.textContent = `Day ${dayNow()} · ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")} · ${sheet.gold} gold`;
-      const frac = ((pyaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+      clockEl.textContent = `Day ${dayCount} · ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")} · ${sheet.gold} gold`;
+      const frac = (((pyaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2);
       compStrip.style.transform = `translateX(${-frac * 50}%)`;
     }
-    hurtEl.style.opacity = String(clamp(hurtT, 0, 0.55));
+    hurtEl.style.opacity = String(clamp(hurtT * 0.6, 0, 0.6));
     touchEl.style.visibility = isTouchDev && started && !panelsOpen() && scene.kind !== "title" ? "visible" : "hidden";
     if (isTouchDev) useBtn.textContent = curInteract ? (curInteract.label.split("—")[0] || "use").trim() : "use";
-    const chromeOff = photoOn && locked;
-    hudEl.style.visibility = started && !chromeOff ? "visible" : "hidden";
-    Q<HTMLElement>(".os-wy-burger").style.visibility = started && !chromeOff ? "visible" : "hidden";
-    crossEl.style.opacity = locked && !panelsOpen() && started ? "1" : "0";
-    placeEl.style.visibility = chromeOff ? "hidden" : "visible";
-  }
-  let last = performance.now();
-  function frame(nowMs: number) {
-    requestAnimationFrame(frame);
-    if (!body.isConnected) { wrap.remove(); return; }
-    const dt = Math.min(0.05, (nowMs - last) / 1000 || 0.016);
-    last = nowMs;
-    const t0 = performance.now();
-    if (started) step(dt);
-    render(nowMs / 1000, dt);
-    const ft = performance.now() - t0;
-    frameMs = frameMs * 0.95 + ft * 0.05;
-    if (irisOn) {
-      if (frameMs > 21 && quality < 3) { quality++; dprCap = [1.5, 1.25, 1.0, 0.8][quality]; }
-      else if (frameMs < 11 && quality > 0) { quality--; dprCap = [1.5, 1.25, 1.0, 0.8][quality]; }
+    interactEl.textContent = curInteract && playing() && !panelsOpen() ? (isTouchDev ? "" : curInteract.label + (cfg.mode === "mouse" ? "  ·  E" : "")) : "";
+    crossEl.hidden = !(playing() && !panelsOpen());
+    /* audio place */
+    if (started && !dead) {
+      const place = scene.kind === "dungeon" ? "dungeon" : scene.kind === "interior" ? (scene.b.kind === "tavern" ? "tavern" : scene.b.kind === "temple" ? "temple" : scene.b.kind === "guildf" || scene.b.kind === "guildm" ? "guild" : "town") : inTown(px, pz) ? "town" : "wilds";
+      if (place !== lastAudioPlace) { lastAudioPlace = place; }
+      audio.update(1 / 60, place as "town" | "wilds" | "tavern" | "temple" | "dungeon" | "guild", night > 0.5, scene.kind === "interior");
     }
   }
-  requestAnimationFrame(frame);
+
+  /* ——— the frame ——— */
+  let raf = 0, lastT = performance.now() / 1000;
+  const frame = () => {
+    raf = requestAnimationFrame(frame);
+    const now = performance.now() / 1000;
+    let dt = Math.min(0.05, now - lastT);
+    lastT = now;
+    if (started && !dead && !panelsOpen() && !dlgOpen) step(dt);
+    else if (dlgOpen) { /* the world holds its breath */ }
+    if (placeT > 0) { placeT -= dt; if (placeT <= 0) placeEl.hidden = true; }
+    if (toastT > 0) { toastT -= dt; if (toastT <= 0) toastEl.hidden = true; }
+    render(now);
+    void dt;
+  };
+  buildTerrain();
+  buildTowns();
+  buildDressing();
+  uploadScene();
+  spawnWanderers();
+  createEl.hidden = false;
+  frame();
+  const obs = new MutationObserver(() => {
+    if (!wrap.isConnected) {
+      cancelAnimationFrame(raf);
+      audio.shutdown();
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("keydown", onActKey);
+      obs.disconnect();
+    }
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
 }
