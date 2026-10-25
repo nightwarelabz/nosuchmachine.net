@@ -155,6 +155,13 @@ assert.ok(ircSrc.includes('skey(RELAY_LOG_KEY)') && ircSrc.includes('"blacksite-
 assert.ok(ircSrc.includes('removeItem(skey("blacksite-relay-v1"))'), "Relay must destroy the retired v1 log key on sight — the board wipe that starts the room clean");
 assert.ok(ircSrc.includes("const restored = loadLog();"), "Relay must restore its kept log before reconnecting");
 assert.ok(ircSrc.includes("forgetBtn"), "Relay must offer the forget button that wipes the kept log");
+// The history divider is retired (Chase, 2026-10-25): restored words
+// and replayed memory stand in the chat with no separator prose. The
+// divider's copy must never come back — its head phrase is absent from
+// the source outright, and copies older builds saved into kept logs are
+// filtered on load (matched on the tail, the one fragment kept as data).
+assert.ok(!ircSrc.includes("kept from before"), "Relay must not draw or carry the retired history divider — restored lines stand unannounced");
+assert.ok(ircSrc.includes("DEAD_DIVIDER_TAIL"), "Relay must filter divider copies already saved in kept logs on load");
 // The pinned dev note (Chase, 2026-10-25): a topic-of-the-day bar at the
 // top of the chat carrying the current developer message, verbatim.
 assert.ok(ircSrc.includes("os-relay-note"), "Relay must render the pinned dev note bar");
