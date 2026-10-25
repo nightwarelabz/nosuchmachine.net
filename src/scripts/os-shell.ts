@@ -125,7 +125,7 @@ const MACRO_KEY = skey("blacksite-macros-v1");
 const SET_KEY = skey("blacksite-settings-v1");
 const AEGIS_KEY = skey("blacksite-aegis-v1");
 
-/* ————— AEGIS — the room's immune system —————
+/* ————— AEGIS —————
    Ransomware against this OS meets three facts it did not expect:
    (1) the room snapshots itself — boot, every five minutes, and the
    instant anything smells wrong — so mass encryption has a past to
@@ -156,7 +156,7 @@ export class BlacksiteOS {
   ownOps = 0;
   private persistFailed = false;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
-  theme = "violent-redteam";
+  theme = "redteam";
   wallpaper = "mare";
   journal: Array<{ at: string; text: string }> = [];
   tomatoes: string[] = [];
@@ -390,7 +390,8 @@ export class BlacksiteOS {
       const macros = localStorage.getItem(MACRO_KEY);
       if (macros) this.macros = new Map(Object.entries(JSON.parse(macros)));
       const settings = localStorage.getItem(SET_KEY);
-      if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; if (s.theme) this.theme = s.theme; if (s.wallpaper) this.wallpaper = s.wallpaper; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
+      // theme renamed 2026-10-25: a stored "violent-redteam" reads as "redteam"
+      if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; if (s.theme) this.theme = s.theme === "violent-redteam" ? "redteam" : s.theme; if (s.wallpaper) this.wallpaper = s.wallpaper; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
     } catch { if (!this.files.size) this.seed(); }
     if (!this.files.size) this.seed();
     this.aegisLoad();

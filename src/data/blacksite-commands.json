@@ -15,25 +15,25 @@
   "section": "the house",
   "cmd": "fastfetch",
   "verb": "fastfetch",
-  "desc": "the machine's calling card"
+  "desc": "machine info card"
  },
  {
   "section": "the house",
   "cmd": "diagnose",
   "verb": "diagnose",
-  "desc": "put the whole house through its paces — engines, kernel, containment drills"
+  "desc": "the full self-test — engines, kernel, containment drills"
  },
  {
   "section": "the house",
   "cmd": "limits",
   "verb": "limits",
-  "desc": "what this room honestly cannot do — the true limits, named"
+  "desc": "what this room cannot do, named"
  },
  {
   "section": "the house",
   "cmd": "neofetch",
   "verb": "neofetch",
-  "desc": "the same card, under a crescent moon"
+  "desc": "machine info card, crescent-moon mark"
  },
  {
   "section": "the house",
@@ -159,7 +159,7 @@
   "section": "the house",
   "cmd": "skelli <words>",
   "verb": "skelli",
-  "desc": "ask her — she answers in her room"
+  "desc": "ask her"
  },
  {
   "section": "the house",
@@ -375,7 +375,7 @@
   "section": "pentest bench",
   "cmd": "relay",
   "verb": "relay",
-  "desc": "the house wire — Relay, a real IRC client (house channel #nosuchmachine on OFTC)"
+  "desc": "open relaychat"
  },
  {
   "section": "pentest bench",
@@ -2241,19 +2241,19 @@
   "section": "editors",
   "cmd": "vim [file]",
   "verb": "vim",
-  "desc": "the modal church — :help inside"
+  "desc": "modal editor — :help inside"
  },
  {
   "section": "editors",
   "cmd": "emacs [file]",
   "verb": "emacs",
-  "desc": "the chord church — M-x help inside"
+  "desc": "editor — M-x help inside"
  },
  {
   "section": "editors",
   "cmd": "nano [file]",
   "verb": "nano",
-  "desc": "the plain church — ^G lists its keys"
+  "desc": "editor — ^G lists its keys"
  },
  {
   "section": "editors",

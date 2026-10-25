@@ -514,7 +514,7 @@ function registerEngines() {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "ssh", arg: ctx.args[0] } }));
     return "the SSH window opens on the desk — the fingerprint must be trusted there before any password moves, and the session's cryptography never leaves this tab.";
   });
-  verb("relay", "EDGE", "relay — open Relay, the house wire: a real IRC client in the room (OFTC, Libera.Chat, hackint; the house channel is #nosuchmachine)", async (ctx) => {
+  verb("relay", "EDGE", "relay — open relaychat (IRC: OFTC, Libera.Chat, hackint; house channel #nosuchmachine)", async (ctx) => {
     const refusal = ctx.os.gate("active"); if (refusal) return refusal;
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "relay" } }));
     return "Relay opens on the desk already standing in #nosuchmachine on OFTC — no account, no registration; you arrive wearing a machine name (machine1A, machine2D, on without end) and /nick renames you.";
@@ -531,7 +531,7 @@ function registerEngines() {
     const { VERBS } = await import("./os-shell");
     return VERBS.get("wolf3d")!.run(ctx);
   });
-  verb("orc", "LIVE", "orc [url] — open ORC, the house browser: our version of LibreWolf, wrapped to install anywhere and carry its own engine", async (ctx) => {
+  verb("orc", "LIVE", "orc [url] — open orc: our version of LibreWolf, wrapped to install anywhere and carry its own engine", async (ctx) => {
     document.dispatchEvent(new CustomEvent("blacksite:openapp", { detail: { app: "orc", arg: ctx.args[0] || "" } }));
     return "ORC — opens on the desk: a preview pane here (pages that refuse framing stay blank; that refusal is theirs), and a standalone browser of its own outside: install orc and nosuchmachine.net and everything else run on the same Gecko everywhere. Browser-neutral, no telemetry, no sponsored anything.";
   });
@@ -629,7 +629,7 @@ async function runJs(ctx: Ctx, source: string): Promise<string> {
 }
 
 function registerSelfTests() {
-  verb("diagnose", "LIVE", "diagnose — the whole house through its paces", async (ctx) => {
+  verb("diagnose", "LIVE", "diagnose — the full self-test", async (ctx) => {
     const checks: Array<[string, boolean, string]> = [];
     checks.push(["kernel (shell parses)", typeof ctx.os.norm === "function", ""]);
     try { localStorage.setItem("bs-probe", "1"); localStorage.removeItem("bs-probe"); checks.push(["files persist (localStorage)", true, ""]); } catch { checks.push(["files persist (localStorage)", false, "storage blocked — the room is volatile"]); }

@@ -4,10 +4,10 @@ import "../styles/os.css";
 ---
 <BaseLayout
   bare={true}
-  title="BLACKSITE OS — the nightjar console, as an operating system for the web"
+  title="BLACKSITE OS"
   description="BLACKSITE OS by NIGHTWARE LABZ: the full nightjar Blacksite console ported to the web — a windowed OS with a real shell, virtual filesystem, Python and JavaScript engines, vim-mannered editor, and the 427-command pentest bench. One knock, read, grade. Public targets only."
 >
-  <div class="os-root" id="os-root" data-theme="violent-redteam">
+  <div class="os-root" id="os-root" data-theme="redteam">
     <span id="bottle" hidden></span>
     <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">BLACKSITE OS — the nightjar console as a web operating system</h1>
     <div class="os-boot" id="os-boot" aria-hidden="true">
@@ -19,7 +19,6 @@ import "../styles/os.css";
       <div class="os-icons" id="os-icons"></div>
       <div class="os-desktop-brand" aria-hidden="true">
         <span>BLACKSITE OS</span>
-        <small>one knock · read · grade</small>
       </div>
     </main>
     <footer class="os-taskbar">
@@ -34,7 +33,7 @@ import "../styles/os.css";
   </div>
   <section aria-label="About BLACKSITE OS" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap">
     <h2>BLACKSITE OS — the nightjar pentest bench as a web operating system</h2>
-    <p>BLACKSITE OS by NIGHTWARE LABZ is a windowed operating system that runs entirely in a browser tab: a real shell over a persistent virtual filesystem, 427 commands, eight programming engines (Python, JavaScript, Lua, SQLite, Scheme, Brainfuck, WebAssembly, CHIP-8), git and SSH clients built in, Relay — a built-in IRC client whose house channel is #nosuchmachine on OFTC — and the Daylight Bottle age-encrypted message desk. Doctrine: one knock, read, grade. Public targets only.</p>
+    <p>BLACKSITE OS by NIGHTWARE LABZ is a windowed operating system that runs entirely in a browser tab: a real shell over a persistent virtual filesystem, 427 commands, eight programming engines (Python, JavaScript, Lua, SQLite, Scheme, Brainfuck, WebAssembly, CHIP-8), git and SSH clients built in, relaychat (a built-in IRC client whose house channel is #nosuchmachine on OFTC), and the Daylight Bottle age-encrypted message desk. Doctrine: one knock, read, grade. Public targets only.</p>
     <p>The companion <a href="/bench/">BLACKSITE WEB bench suite</a> runs DNS lookups, TLS inspection, HTTP security grading, TCP connect checks, domain recon, email security grading, JWT and certificate inspection, hashing, codecs, and subnet math directly in the browser. Read the <a href="/book/">Orange Book</a> — a programming book about building a cryptographic language — and browse <a href="/projects/orange/">NIGHTWARE LABZ projects</a> including nightjar, the native iOS and macOS network instrument this site ports.</p>
   </section>
   <noscript><p style="padding:1rem">BLACKSITE OS needs JavaScript to boot its desktop. The <a href="/bench/">bench suite</a>, the <a href="/book/">Orange Book</a>, and the <a href="/projects/orange/">project pages</a> work without it.</p></noscript>

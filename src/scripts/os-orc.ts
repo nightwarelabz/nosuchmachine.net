@@ -1,4 +1,4 @@
-/* orc — the house browser, as a room of the OS.
+/* orc, as a room of the OS.
  *
  * orc proper is a standalone, installable browser: our own version of
  * LibreWolf (Gecko engine, MPL-2.0) wrapped in the Nightware wraparound
@@ -31,7 +31,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   const hero = el("div", "os-orc-hero");
   const face = document.createElement("img");
   face.src = "/orc/orc-256.png";
-  face.alt = "orc — the pixel orc, orc's mark";
+  face.alt = "orc";
   const heroText = el("div");
   heroText.append(el("h3", "", "ORC"));
   hero.append(face, heroText);

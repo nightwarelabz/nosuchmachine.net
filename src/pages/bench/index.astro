@@ -5,7 +5,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
 ---
 <BaseLayout
   bare={true}
-  title="BLACKSITE WEB — a working pentest bench in your browser"
+  title="BLACKSITE WEB"
   description="BLACKSITE WEB by NIGHTWARE LABZ: the nightjar Blacksite bench, rebuilt for the web. DNS, TLS, HTTP security grading, connect checks, domain recon, JWT and certificate inspection, hashes, codecs, subnet math, payloads, and a mirror that shows you what sites see. Public targets only. One knock, read, grade."
 >
   <div class="bs">
@@ -13,7 +13,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
     <header class="bs-topbar">
       <a class="bs-brand" href="/bench/" aria-label="BLACKSITE WEB bench, home">
         <img src="/brand/nightware/nightjar-icon.png" alt="" width="34" height="34" />
-        <span><span class="bs-name">BLACKSITE <em>WEB</em></span><small>NIGHTWARE LABZ · THE nightjar BENCH, ON THE WEB</small></span>
+        <span><span class="bs-name">BLACKSITE <em>WEB</em></span></span>
       </a>
       <span class="bs-edge-chip" id="edge-chip" role="status">EDGE …</span>
       <nav class="bs-top-links" aria-label="Lab">
@@ -61,7 +61,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         <section class="panel" id="panel-overview" aria-labelledby="ov-title">
           <div class="bs-hero">
             <div class="bs-hero-copy">
-              <p class="bs-kicker">NOSUCHMACHINE.NET / BLACKSITE WEB</p>
               <h1 id="ov-title">The bench is<br />the <em>website</em> now.</h1>
               <p class="bs-hero-sub">A working pentest bench in your browser — and an entire operating system one click past it.</p>
               <div class="bs-stats">
@@ -75,7 +74,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
             <div class="bs-hero-art" aria-hidden="true">
               <span class="bs-orbit"></span>
               <img src="/brand/nightware/nightjar-icon.png" alt="" width="300" height="300" />
-              <span class="bs-hero-tag">NIGHTWARE LABZ · EST. MMXXVI</span>
             </div>
           </div>
           <p class="bs-sub">This used to be a brochure for <a href={nightjarRepo}>nightjar</a>, the native network instrument for iPhone and Mac. Brochures don't pentest anything — so the site became the tool. Everything nightjar's Blacksite bench does from a phone, rebuilt for the browser, plus everything a browser and an edge network can honestly do. Set a target above and run the battery, or pick a tool. Need the native app? Build nightjar from source with Xcode on iPhone or Mac (iOS signing/provisioning applies) — <a href={`${nightjarRepo}/releases`}>releases</a> · <a href={`${nightjarRepo}#get-started`}>get started</a>.</p>
@@ -97,12 +95,12 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
             <button class="bs-toolcard" data-goto="payload" type="button"><span class="bs-tag">LOCAL</span><strong>Payload Bench</strong><span>The Send-tab habit, on the web: bytes in any encoding, out in every encoding, with CRC32, entropy, and SHA-256.</span></button>
           </div>
           <div class="bs-card" style="border-color:#8f1d24">
-            <h3>▸_ BLACKSITE OS — the entire console, as an operating system</h3>
+            <h3>▸_ BLACKSITE OS</h3>
             <p>The bench above is the toolkit. <strong><a href="/">BLACKSITE OS</a></strong> is the house it lives in: a windowed operating system in this tab — a real shell over a persistent virtual filesystem, the full 427-command Blacksite roster (every command live, edge-powered, or honestly named a limit), Python and JavaScript engines that run your programs, a vim-mannered editor, a process board, a gauntlet that tests the room itself, EMCON gating, themes, and generated wallpapers. It is the nightjar console, ported.</p>
             <p><a class="bs-btn" href="/" style="display:inline-block;text-decoration:none">BOOT BLACKSITE OS ▸</a></p>
           </div>
           <div class="bs-card" style="border-color:#8f1d24">
-            <h3><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:-2px" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg> Daylight Bottle — plugged into the OS</h3>
+            <h3><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="vertical-align:-2px" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg> Daylight Bottle</h3>
             <p>Chase's age-encrypted message-in-a-bottle service (<a href="https://bottle.nosuchmachine.net">bottle.nosuchmachine.net</a>) now lives inside BLACKSITE OS: mint or load an age identity, seal bottles to keyring recipients, drop ciphertext at the service, and fetch and open your inbox — same wire protocol (<code>nsm.daylight-bottle.*.v1</code>), same crypto library, bottles sealed here open there and vice versa. Plaintext and private identities never leave the browser; the service stores ciphertext and public metadata only.</p>
             <p><a class="bs-btn" href="/#bottle" style="display:inline-block;text-decoration:none">OPEN THE BOTTLE DESK ▸</a></p>
           </div>
@@ -113,7 +111,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-dns" aria-labelledby="dns-title" hidden>
-          <p class="bs-kicker">NETWORK / VIA EDGE</p>
           <h2 class="bs-h" id="dns-title">DNS</h2>
           <p class="bs-sub">One question, three independent resolvers. Disagreement between them is the finding: split-horizon DNS, stale caches, and lame delegations all show up as a row that doesn't match.</p>
           <form class="bs-form">
@@ -128,7 +125,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-tls" aria-labelledby="tls-title" hidden>
-          <p class="bs-kicker">NETWORK / VIA EDGE</p>
           <h2 class="bs-h" id="tls-title">TLS Inspector</h2>
           <p class="bs-sub">A hand-rolled ClientHello flies from the edge and the certificate flight is parsed byte by byte — the chain exactly as a client receives it, not as a database remembers it. TLS 1.3 encrypts its Certificate message; when that happens the inspector says so instead of inventing a chain.</p>
           <form class="bs-form">
@@ -142,8 +138,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-http" aria-labelledby="http-title" hidden>
-          <p class="bs-kicker">NETWORK / VIA EDGE</p>
-          <h2 class="bs-h" id="http-title">HTTP Audit — the EAZY battery, web edition</h2>
+          <h2 class="bs-h" id="http-title">HTTP Audit</h2>
           <p class="bs-sub">One GET per redirect hop (each hop re-checked against the public-target guard), then everything graded: security headers scored A–F, every cookie's flags read, a foreign-Origin CORS probe, and a fingerprint from what the server volunteers.</p>
           <form class="bs-form">
             <div class="bs-field wide"><label for="http-url">URL</label><input id="http-url" type="text" autocomplete="off" spellcheck="false" placeholder="https://example.com/" /></div>
@@ -155,7 +150,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-ports" aria-labelledby="tcp-title" hidden>
-          <p class="bs-kicker">NETWORK / VIA EDGE</p>
           <h2 class="bs-h" id="tcp-title">Connect Check</h2>
           <p class="bs-sub">nightjar's connect scan, from the edge: a full TCP connection either opens, is refused, or times out. No stealth claims — a connect is a knock, and the other side's logs will show it. Results are from a Cloudflare point of presence; a port can read differently from your network.</p>
           <form class="bs-form">
@@ -169,7 +163,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-recon" aria-labelledby="recon-title" hidden>
-          <p class="bs-kicker">NETWORK / PUBLIC LEDGERS</p>
           <h2 class="bs-h" id="recon-title">Domain Recon</h2>
           <p class="bs-sub">Before touching a target, read what it already published. Registration (RDAP), every name it ever put on a certificate (Certificate Transparency via crt.sh), and its well-known public files — assembled into one picture.</p>
           <form class="bs-form">
@@ -182,8 +175,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-mail" aria-labelledby="mail-title" hidden>
-          <p class="bs-kicker">NETWORK / VIA EDGE</p>
-          <h2 class="bs-h" id="mail-title">Email Security — SPF · DMARC · DKIM · MTA-STS</h2>
+          <h2 class="bs-h" id="mail-title">Email Security</h2>
           <p class="bs-sub">Can anyone send mail as this domain? The anti-spoofing ledgers answer: SPF says who may send, DMARC says what to do with fakes, DKIM signs, MTA-STS enforces encrypted delivery. Graded like the EAZY battery grades them.</p>
           <form class="bs-form">
             <div class="bs-field"><label for="mail-domain">DOMAIN</label><input id="mail-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
@@ -194,8 +186,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-subs" aria-labelledby="subs-title" hidden>
-          <p class="bs-kicker">NETWORK / VIA EDGE</p>
-          <h2 class="bs-h" id="subs-title">Subdomain Census — Certificate Transparency</h2>
+          <h2 class="bs-h" id="subs-title">Subdomain Census</h2>
           <p class="bs-sub">Every certificate ever issued for a domain is public, and each one names its hosts. This reads the ledger and lists them all — the attack surface the domain itself published.</p>
           <form class="bs-form">
             <div class="bs-field"><label for="subs-domain">DOMAIN</label><input id="subs-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" /></div>
@@ -206,7 +197,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-jwt" aria-labelledby="jwt-title" hidden>
-          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
           <h2 class="bs-h" id="jwt-title">JWT Inspector</h2>
           <p class="bs-sub">Decode the token, read its claims against the clock, red-flag the classic verifier traps (alg=none, kid traversal, remote key URLs, no expiry), and — for HMAC tokens — verify the signature against a secret you supply. Tokens can be credentials: this tool runs locally precisely so you can paste one safely.</p>
           <form class="bs-form">
@@ -219,8 +209,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-vault" aria-labelledby="vault-title" hidden>
-          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
-          <h2 class="bs-h" id="vault-title">Vault — hashes, seals, passwords</h2>
+          <h2 class="bs-h" id="vault-title">Vault</h2>
           <div class="bs-card">
             <h3>Hash lab</h3>
             <form class="bs-form">
@@ -258,7 +247,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-codecs" aria-labelledby="codec-title" hidden>
-          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
           <h2 class="bs-h" id="codec-title">Codecs + Regex</h2>
           <div class="bs-card">
             <h3>Convert</h3>
@@ -283,7 +271,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-subnet" aria-labelledby="subnet-title" hidden>
-          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
           <h2 class="bs-h" id="subnet-title">Subnet Math</h2>
           <p class="bs-sub">The arithmetic under every scope document. The class field tells you which space an address lives in — and the private, loopback, and link-local classes are exactly the ones this bench's edge probes refuse to touch.</p>
           <form class="bs-form">
@@ -295,7 +282,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-cert" aria-labelledby="cert-title" hidden>
-          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
           <h2 class="bs-h" id="cert-title">Certificate Decoder</h2>
           <p class="bs-sub">Paste a certificate — PEM, base64 DER, or hex — and read it with a hand-rolled ASN.1 parser. The local twin of the TLS Inspector, for certs you already hold.</p>
           <form class="bs-form">
@@ -307,8 +293,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-pqc" aria-labelledby="pqc-title" hidden>
-          <p class="bs-kicker">LOCAL LAB / IN-BROWSER — THE SNOOT FRONT DOOR</p>
-          <h2 class="bs-h" id="pqc-title">PQC Scanner — find the classical crypto before a quantum does</h2>
+          <h2 class="bs-h" id="pqc-title">PQC Scanner</h2>
           <p class="bs-sub">Paste a config, an SSH banner, a TLS report, a code fragment — anything with cryptography in it. The scanner (a web cut of <a href="https://github.com/nightwarelabz/snoot">snoot</a>) flags classical algorithms and names the NIST post-quantum replacement for each. Harvest-now-decrypt-later is the threat: ciphertext recorded today opens the day a capable quantum machine exists.</p>
           <form class="bs-form">
             <div class="bs-field wide"><label for="pqc-input">TEXT TO SCAN</label><textarea id="pqc-input" spellcheck="false" placeholder="e.g. output of ssh -Q key, an sshd_config, a TLS cipher list, an openssl s_client transcript…"></textarea></div>
@@ -320,7 +305,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-payload" aria-labelledby="payload-title" hidden>
-          <p class="bs-kicker">LOCAL / NEVER LEAVES THE BROWSER</p>
           <h2 class="bs-h" id="payload-title">Payload Bench</h2>
           <p class="bs-sub">Build the bytes before you send them anywhere: enter text, hex, or base64 and get every representation back with length, CRC32, entropy, and SHA-256 — the same discipline as nightjar's Send tab, where you see both sides of an exchange before it happens.</p>
           <form class="bs-form">
@@ -333,8 +317,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-mirror" aria-labelledby="mirror-title" hidden>
-          <p class="bs-kicker">SELF-AUDIT / KNOW YOUR OWN EXPOSURE</p>
-          <h2 class="bs-h" id="mirror-title">Mirror — pentest yourself first</h2>
+          <h2 class="bs-h" id="mirror-title">Mirror</h2>
           <p class="bs-sub">Every probe on this bench can be turned around. This is your own EMCON picture: what this server saw, what your browser volunteers, what WebRTC hands to any page, and what the radios around you are offering.</p>
           <div class="bs-card">
             <h3>Edge echo</h3>
@@ -355,7 +338,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
             <pre class="bs-out" id="fingerprint-out"></pre>
           </div>
           <div class="bs-card">
-            <h3>Bluetooth — the listening post, in a page</h3>
+            <h3>Bluetooth</h3>
             <p>Web Bluetooth (Chrome/Edge) can ask a nearby BLE device what it is and what services it offers — read-only here, nothing is ever written. nightjar's native listening post does this passively and continuously; a web page gets one polite question at a time.</p>
             <div class="bs-btnrow"><button class="bs-btn" id="ble-run" type="button">ASK A DEVICE</button></div>
             <pre class="bs-out" id="ble-out"></pre>
@@ -363,7 +346,6 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
         </section>
 
         <section class="panel" id="panel-report" aria-labelledby="report-title" hidden>
-          <p class="bs-kicker">SESSION / DELIVERIES</p>
           <h2 class="bs-h" id="report-title">Report</h2>
           <p class="bs-sub">Every probe you run lands here, in order. Export it as JSON or Markdown before you close the page — the bench keeps nothing server-side, mirroring nightjar's rule that the evidence belongs to the operator.</p>
           <div class="bs-btnrow" style="margin-bottom:1rem">
@@ -379,7 +361,7 @@ const nightjarRepo = "https://github.com/nightwarelabz/nightjar";
     <footer class="bs-foot">
       <span>BLACKSITE WEB · NIGHTWARE LABZ</span>
       <span>Doctrine: one knock, read, grade. Public targets only.</span>
-      <a href={nightjarRepo}>nightjar — the native instrument ↗</a>
+      <a href={nightjarRepo}>nightjar ↗</a>
       <a href="/book/">The Orange Book</a>
       <a href="https://github.com/nightwarelabz/nosuchmachine.net">Site source ↗</a>
       <span>© {new Date().getUTCFullYear()} Chase Bryan</span>
