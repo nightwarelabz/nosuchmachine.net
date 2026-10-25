@@ -3878,7 +3878,7 @@ export function buildSimulacrum(body: HTMLElement) {
       for (const so of worldSolids) pushOut(so.x, so.z, so.r, so.top);
     }
     checkDiscoveries();
-    { const hk = `${ccx},${ccz}`; if (Math.abs(ccx) <= 3 && Math.abs(ccz) <= 3 && !deeds.chunks.includes(hk)) { deeds.chunks.push(hk); saveDeeds(); } }
+    { const hcx = Math.floor(px / CHUNK), hcz = Math.floor(pz / CHUNK), hk = `${hcx},${hcz}`; if (Math.abs(hcx) <= 3 && Math.abs(hcz) <= 3 && !deeds.chunks.includes(hk)) { deeds.chunks.push(hk); saveDeeds(); } }
     hSpeedNow = Math.hypot(vx, vz);
     const hSpeed = hSpeedNow;
     if (flying) {
