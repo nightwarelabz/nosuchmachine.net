@@ -17,6 +17,7 @@ import { buildSigint } from "./os-sigint";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
 import { DEPTH, MAX_NEST, skey, sweepNestKeys } from "./os-depth";
+import { wakeSubconscious, type Subconscious } from "./os-subconscious";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
@@ -138,10 +139,26 @@ function placeNewWindow(win: HTMLElement) {
   win.style.left = `${fit(Math.round((sw - w) / 2), sw, w)}px`;
   win.style.top = `${fit(Math.round((sh - h) / 2), sh, h)}px`;
 }
+/* ——— the desk is served: a prepared room where one waits, a
+   steady hand where a builder falters — quietly, once ——— */
+let sub: Subconscious | null = null;
+function serveBuild(app: string, body: HTMLElement, arg?: string) {
+  if (arg === undefined && sub) {
+    const warmed = sub.consume(app);
+    if (warmed) { while (warmed.firstChild) body.appendChild(warmed.firstChild); return; }
+  }
+  try { BUILDERS[app]?.(body, arg); }
+  catch {
+    sub?.noteScar();
+    body.replaceChildren();
+    try { BUILDERS[app]?.(body, arg); } catch { /* an empty window, not a fallen desk */ }
+  }
+}
 export function openApp(app: string, arg?: string) {
   if (app === "bench" || app === "suite") { window.location.href = "/bench/"; return; }
   const meta = APPS[app];
   if (!meta) return;
+  sub?.noteOpen(app);
   const key = app === "editor" ? `editor:${arg || ""}` : app;
   const existing = windows.get(key);
   if (existing) { focusWindow(existing); const body = existing.querySelector<HTMLElement>(".os-win-body"); body?.dispatchEvent(new CustomEvent("os:focus-arg", { detail: arg })); return; }
@@ -180,7 +197,7 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
   win.classList.add("os-win-in");
   focusWindow(win);
-  BUILDERS[app]?.(body, arg);
+  serveBuild(app, body, arg);
   saveSession();
 }
 /* The mobile bar has no room for a button per window: one button
@@ -1153,6 +1170,12 @@ function boot() {
   window.addEventListener("resize", () => {
     const narrow = window.matchMedia("(max-width: 760px)").matches;
     if (narrow !== wasNarrow) { wasNarrow = narrow; if (currentWallpaper === "mare") setWallpaper("mare"); }
+  });
+  sub = wakeSubconscious({
+    root: desktop(),
+    build: (app, body) => { BUILDERS[app]?.(body); },
+    isOpen: (app) => windows.has(app),
+    appIds: () => Object.keys(APPS),
   });
 }
 

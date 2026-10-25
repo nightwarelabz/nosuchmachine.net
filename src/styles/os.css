@@ -530,3 +530,4 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-bb-tfire { right: 20px; bottom: 100px; width: 66px; height: 66px; }
 .os-bb-thook { right: 104px; bottom: 34px; width: 56px; height: 56px; }
 .os-bb-tjump { right: 30px; bottom: 184px; width: 52px; height: 52px; }
+.os-subcache { position: fixed; left: -100000px; top: 0; width: 920px; height: 640px; visibility: hidden; pointer-events: none; overflow: hidden; }
