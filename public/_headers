@@ -20,6 +20,11 @@
   ! Cache-Control
   Cache-Control: no-store
 
+# The live-update stamp: never cached, or no client would ever see a
+# newer build named in it.
+/version.json
+  Cache-Control: no-store
+
 # BLACKSITE OS is a machine for running the visitor's own programs in
 # their own browser (Skulpt Python, the JS engine room). That is eval by
 # design — scoped to the OS subtree only; every other page keeps the

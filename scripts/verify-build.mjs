@@ -108,6 +108,13 @@ for (const asset of ["orc/orc-64.png", "orc/orc-128.png", "orc/orc-256.png"]) {
   assert.ok(fs.existsSync(path.join(root, asset)), `Missing orc icon asset: ${asset}`);
 }
 assert.ok(astroJs.includes("orc-64.png"), "OS bundle must carry the orc face icon");
+// Live update: the build stamp must name the OS chunk this build made,
+// and the bundle must carry the watcher that polls it.
+const versionStamp = JSON.parse(fs.readFileSync(path.join(root, "version.json"), "utf8"));
+assert.ok(/^os\.[A-Za-z0-9_-]+\.js$/.test(versionStamp.chunk || ""), "version.json must name the OS chunk this build produced");
+assert.ok(fs.existsSync(path.join(root, "_astro", versionStamp.chunk)), "version.json chunk must exist in _astro");
+assert.ok(astroJs.includes("BLACKSITE has been updated"), "OS bundle must carry the update watcher");
+assert.ok(astroJs.includes("/version.json"), "OS bundle must poll /version.json");
 assert.ok(astroJs.includes("credentialless"), "orc preview frame must be credentialless (the OS page's COEP require-corp blocks plain cross-origin frames)");
 assert.ok(!astroJs.includes("Orchestration"), "ORC is never expanded in public copy (Chase: the expansion is for internal records)");
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");

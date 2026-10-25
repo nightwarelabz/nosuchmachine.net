@@ -1,8 +1,38 @@
 import { defineConfig } from "astro/config";
 import { satteri } from "@astrojs/markdown-satteri";
 import { bookTableHastPlugin } from "./src/lib/book-table-hast.mjs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/* Live-service stamp: after every build, dist/version.json names the OS
+   chunk this build produced (found the same way a probe finds it: the
+   homepage's script shim imports it). The running OS polls that stamp —
+   served no-store — and reloads itself onto a newer build, so no visitor
+   sits on a stale BLACKSITE. See startUpdateWatch in src/scripts/os.ts.
+   A stamp that cannot be read stays null, and null means silence. */
+const stampVersion = {
+  name: "stamp-version",
+  hooks: {
+    "astro:build:done": ({ dir }) => {
+      const distDir = fileURLToPath(dir);
+      let chunk = null;
+      try {
+        const html = readFileSync(join(distDir, "index.html"), "utf8");
+        const refs = [...html.matchAll(/(?:src|href)="\/_astro\/([^"]+\.js)"/g)].map((m) => m[1]);
+        for (const ref of refs) {
+          const src = readFileSync(join(distDir, "_astro", ref), "utf8");
+          const hit = src.match(/os\.[A-Za-z0-9_-]+\.js/);
+          if (hit) { chunk = hit[0]; break; }
+        }
+      } catch { /* the stamp stays null and every client stays silent */ }
+      writeFileSync(join(distDir, "version.json"), JSON.stringify({ chunk, built: new Date().toISOString() }) + "\n");
+    },
+  },
+};
 
 export default defineConfig({
+  integrations: [stampVersion],
   site: "https://nosuchmachine.net",
   trailingSlash: "always",
   build: {

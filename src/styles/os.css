@@ -44,6 +44,7 @@
   transition: opacity 0.6s ease;
 }
 .os-boot.done { opacity: 0; pointer-events: none; }
+.os-update-bar { position: fixed; top: 0.6rem; left: 50%; transform: translateX(-50%); z-index: 9999; background: rgba(12, 10, 14, 0.93); border: 1px solid rgba(255, 84, 112, 0.55); color: #f3e9e2; font: 0.8rem/1.4 ui-monospace, Menlo, monospace; padding: 0.5rem 0.9rem; border-radius: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); pointer-events: none; white-space: nowrap; }
 .os-boot img { animation: os-boot-glow 2.6s ease-in-out infinite; }
 .os-boot-name { letter-spacing: 0.36em; font-weight: 800; font-size: 1.35rem; }
 .os-boot-name em { font-style: normal; color: var(--os-accent); text-shadow: 0 0 22px var(--os-accent-soft); }
