@@ -1003,7 +1003,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     if (restored.current && buffers.has(restored.current)) current = restored.current;
     renderTargets();
     renderLines();
-    push(current, "— kept from before: everything above was said earlier. The wire picks up below.");
   }
 
   /* No box, no form: Relay opens already standing in the house channel,
