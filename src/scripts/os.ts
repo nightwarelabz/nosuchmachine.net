@@ -13,6 +13,7 @@ import { buildWolf3d } from "./os-wolf3d";
 import { buildOrc } from "./os-orc";
 import { buildSimulacrum } from "./os-simulacrum";
 import { buildBloodbath } from "./os-bloodbath";
+import { buildWyrdfall } from "./os-wyrdfall";
 import { buildSigint } from "./os-sigint";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
@@ -75,6 +76,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   orc: { title: "orc — the house browser", icon: "orc" },
   simulacrum: { title: "Simulacrum — a generated world", icon: "simulacrum" },
   bloodbath: { title: "Bloodbath — the other world", icon: "bloodbath" },
+  wyrdfall: { title: "Wyrdfall", icon: "wyrdfall" },
   sigint: { title: "SIGINT Bench — the wide ear", icon: "sigint" },
 };
 
@@ -1000,6 +1002,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   orc: buildOrc,
   simulacrum: buildSimulacrum,
   bloodbath: buildBloodbath,
+  wyrdfall: buildWyrdfall,
   sigint: buildSigint,
 };
 
@@ -1112,7 +1115,7 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "terminal", "Terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["bloodbath", "bloodbath", "Bloodbath"], ["files", "files", "Files"], ["editor", "editor", "Editor"],
+    ["terminal", "terminal", "Terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["bloodbath", "bloodbath", "Bloodbath"], ["wyrdfall", "wyrdfall", "Wyrdfall"], ["files", "files", "Files"], ["editor", "editor", "Editor"],
     ["processes", "processes", "Processes"], ["gauntlet", "gauntlet", "Gauntlet"], ["journal", "journal", "Journal"],
     ["help", "help", "Help — 427"], ["settings", "settings", "Settings"], ["bottle", "bottle", "Daylight Bottle"], ["system", "system", "System"],
     ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["sigint", "sigint", "SIGINT"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
