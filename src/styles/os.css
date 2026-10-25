@@ -312,7 +312,6 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-relay-dot[data-state="gone"] { background: transparent; border: 1px solid #69707d; width: 5px; height: 5px; }
 .os-relay-user.gone { opacity: 0.45; }
 .os-relay-state { color: var(--os-dim, #9fb0c3); font-size: 0.66rem; margin-left: 0.35rem; }
-.os-relay-guard { display: flex; flex-direction: column; gap: 0.4rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.55rem; margin-top: 0.15rem; }
 .os-relay-user { padding: 0.1rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 760px) {
   .os-task-link { display: inline-block; font-size: 0.68rem; padding: 0.3rem 0.35rem; }
