@@ -1190,12 +1190,41 @@ export function buildSimulacrum(body: HTMLElement) {
   );
   menu.append(menuRow, el("div", "os-sim-menu-h", "the gifts"), powers, el("div", "os-sim-menu-h", "the keys"), menuKeys);
   stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, menuBtn, menu);
+  /* the front door and the making: a start screen over an unmade
+     world, and a loading veil for the one full making */
+  const startScr = el("div", "os-sim-start");
+  const startName = el("div", "os-sim-start-name", "simulacrum");
+  const startSub = el("div", "os-sim-start-sub", "a generated world");
+  const startWorld = el("div", "os-sim-start-world", "");
+  const startBegin = el("button", "os-btn os-sim-start-begin", "begin");
+  const startNote = el("div", "os-sim-start-note", "for now, the simulacrum is recommended only for Chrome browser");
+  startScr.append(startName, startSub, startWorld, startBegin, startNote);
+  const loadScr = el("div", "os-sim-load");
+  const loadName = el("div", "os-sim-load-name", "");
+  const loadPhase = el("div", "os-sim-load-phase", "raising the land");
+  const loadBar = el("div", "os-sim-load-bar");
+  const loadFill = el("div", "os-sim-load-fill");
+  loadBar.append(loadFill);
+  const loadPct = el("div", "os-sim-load-pct", "0%");
+  loadScr.append(loadName, loadPhase, loadBar, loadPct);
+  loadScr.style.display = "none";
+  stage.append(startScr, loadScr);
+  /* the full making happens once per warm spec + world; the seed is
+     read straight from storage here because the world's own seed
+     variable is not loaded until further down the construction */
+  const WARM_SPEC = "2";
+  let warmFullPending = true;
+  try {
+    const storedSeed = Number(localStorage.getItem(skey("simulacrum-seed")) || "0");
+    warmFullPending = localStorage.getItem(skey("simulacrum-warm")) !== `${WARM_SPEC}:${storedSeed}`;
+  } catch { warmFullPending = true; }
+  if (warmFullPending) titleScr.classList.add("held");
   wrap.append(stage);
   wrap.classList.add("chrome-on");
   body.appendChild(wrap);
 
   const gl = canvas.getContext("webgl", { antialias: true, preserveDrawingBuffer: true }) as WebGLRenderingContext | null;
-  if (!gl) { titleName.textContent = "the simulacrum"; titleMood.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; titleEnter.textContent = ""; titleKeys.textContent = ""; return; }
+  if (!gl) { titleName.textContent = "the simulacrum"; titleMood.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; titleEnter.textContent = ""; titleKeys.textContent = ""; startBegin.style.display = "none"; startWorld.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; return; }
 
   const program = (vs: string, fs: string) => {
     const sh = (type: number, src: string) => {
@@ -1360,6 +1389,8 @@ export function buildSimulacrum(body: HTMLElement) {
     const sm = seasonMoods();
     titleMood.textContent = sm.length && Math.abs(seed) % 5 < 2 ? sm[Math.abs(seed) % sm.length] : moodLines[Math.abs(seed) % moodLines.length];
     titleEnter.textContent = `click to enter ${wName.toLowerCase()}`;
+    startWorld.textContent = `${wName.toLowerCase()} · seed ${seed}`;
+    loadName.textContent = wName;
   };
   /* the commons state is declared HERE, above the label that
      names it: refreshLabel runs during construction, long
@@ -2486,7 +2517,42 @@ export function buildSimulacrum(body: HTMLElement) {
   const spawn = () => { px = 8; pz = 8; py = height(px, pz) + 26; yaw = 0.7; pitch = -0.16; vx = 0; vz = 0; vy = 0; };
   spawn();
 
+  /* the making: begin starts the world's processes; until the
+     wanted field stands complete the world cannot be taken. The
+     full loading screen belongs to the first making of a world —
+     after that, the world wakes behind its title instead */
+  let begun = false;
+  let worldReady = false;
+  let warming = false;
+  let warmFrames = 0;
+  const finishWarm = () => {
+    warming = false;
+    worldReady = true;
+    titleScr.classList.remove("held", "waiting");
+    titleKeys.textContent = "the opening · tab — starlight · 1 — blink · q — stormcall · x — bloom · b";
+    if (warmFullPending) {
+      try { localStorage.setItem(skey("simulacrum-warm"), `${WARM_SPEC}:${seed}`); } catch { /* private mode */ }
+      loadScr.classList.add("done");
+      window.setTimeout(() => loadScr.remove(), 950);
+    }
+  };
+  startBegin.addEventListener("click", () => {
+    if (begun) return;
+    begun = true;
+    if (!audio.live) audio.start();
+    audio.kick();
+    startScr.classList.add("taken");
+    window.setTimeout(() => startScr.remove(), 1250);
+    warming = true;
+    warmFrames = 0;
+    if (warmFullPending) loadScr.style.display = "flex";
+    else {
+      titleScr.classList.add("waiting");
+      titleKeys.textContent = "the world is waking";
+    }
+  });
   const takeWorld = () => {
+    if (!worldReady) return;
     touched = true;
     titleScr.classList.add("taken");
     if (!audio.live) { audio.start(); audio.ui("take"); }
@@ -2676,7 +2742,7 @@ export function buildSimulacrum(body: HTMLElement) {
   ];
   for (const [label, keyHint, fn] of powerDefs) {
     const b = el("button", "os-btn os-sim-power", `${label} · ${keyHint}`);
-    b.addEventListener("click", () => { if (!audio.live) audio.start(); audio.kick(); touched = true; titleScr.classList.add("taken"); setMenu(false); fn(); });
+    b.addEventListener("click", () => { if (!worldReady) return; if (!audio.live) audio.start(); audio.kick(); touched = true; titleScr.classList.add("taken"); setMenu(false); fn(); });
     powers.append(b);
   }
   let chromeTimer = 6;
@@ -3001,7 +3067,7 @@ export function buildSimulacrum(body: HTMLElement) {
     xr.isSessionSupported("immersive-vr").then((ok) => { if (!ok) xrBtn.style.display = "none"; }).catch(() => { xrBtn.style.display = "none"; });
   } else xrBtn.style.display = "none";
   xrBtn.addEventListener("click", async () => {
-    if (!xr) return;
+    if (!xr || !worldReady) return;
     try {
       xrSession = await xr.requestSession("immersive-vr", { requiredFeatures: ["local-floor"] });
       await xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
@@ -3689,12 +3755,33 @@ export function buildSimulacrum(body: HTMLElement) {
       }
       if (Math.random() < dt * 0.05 && sunDir(dayT)[1] > 0.1) audio.chirp();
     }
-    /* chunks */
+    /* chunks — while the world is being made for the first time the
+       budget is a slice of each frame, not two chunks: the whole
+       wanted field stands before the world may be taken */
     const ccx = Math.floor(px / CHUNK), ccz = Math.floor(pz / CHUNK);
     let built = 0;
-    for (let i = -viewRadius; i <= viewRadius && built < 2; i++) for (let j = -viewRadius; j <= viewRadius && built < 2; j++) {
+    const buildCap = warming ? 96 : 2;
+    const buildT0 = performance.now();
+    buildLoop:
+    for (let i = -viewRadius; i <= viewRadius && built < buildCap; i++) for (let j = -viewRadius; j <= viewRadius && built < buildCap; j++) {
       const k = keyOf(ccx + i, ccz + j);
-      if (!chunks.has(k)) { chunks.set(k, buildChunk(ccx + i, ccz + j)); built++; }
+      if (!chunks.has(k)) {
+        chunks.set(k, buildChunk(ccx + i, ccz + j)); built++;
+        if (warming && performance.now() - buildT0 > 14) break buildLoop;
+      }
+    }
+    if (warming) {
+      let missing = 0;
+      for (let i = -viewRadius; i <= viewRadius; i++) for (let j = -viewRadius; j <= viewRadius; j++) if (!chunks.has(keyOf(ccx + i, ccz + j))) missing++;
+      const total = (viewRadius * 2 + 1) * (viewRadius * 2 + 1);
+      if (warmFullPending) {
+        const pct = Math.round(100 * (total - missing) / total);
+        loadFill.style.width = `${pct}%`;
+        loadPct.textContent = `${pct}%`;
+        loadPhase.textContent = missing > 0 ? `raising the land — ${total - missing} of ${total}` : "first light";
+      }
+      if (missing === 0) { warmFrames++; if (warmFrames >= 5) finishWarm(); }
+      else warmFrames = 0;
     }
     for (const [k, ch] of chunks) {
       const [cx, cz] = k.split(",").map(Number);
@@ -3739,6 +3826,7 @@ export function buildSimulacrum(body: HTMLElement) {
       audio.dispose();
       return;
     }
+    if (!begun) { requestAnimationFrame(frame); return; }
     step();
     if (!(xrSession && xrRef)) {
       /* the viewport is stated, never inherited: some engines keep the
