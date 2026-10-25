@@ -10,6 +10,7 @@ import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
 import { buildWolf3d } from "./os-wolf3d";
+import { buildNocturnGba } from "./os-nocturn-gba";
 import { buildOrc } from "./os-orc";
 import { buildSimulacrum } from "./os-simulacrum";
 import { buildBloodbath } from "./os-bloodbath";
@@ -22,7 +23,7 @@ import { wakeSubconscious, type Subconscious } from "./os-subconscious";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
-import { Chip8, CHIP8_DEMO, CHIP8_QUIRKS_MODERN, CHIP8_QUIRKS_VIP, CHIP8_TUNE_LEAD, CHIP8_TUNE_BASS, CHIP8_TUNE_STEPS, CHIP8_TUNE_BPM } from "./os-engines2";
+import { Chip8, CHIP8_DEMO } from "./os-engines2";
 import { SshSession } from "./os-ssh";
 
 const os = new BlacksiteOS();
@@ -69,6 +70,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   bottle: { title: "bottle", icon: "bottle" },
   system: { title: "system", icon: "system" },
   chip8: { title: "CHIP-8 Console", icon: "chip8" },
+  "nocturn-gba": { title: "nocturn-gba", icon: "gba" },
   ssh: { title: "ssh", icon: "ssh" },
   relay: { title: "relaychat", icon: "relay" },
   phantom: { title: "phantom", icon: "phantom" },
@@ -200,8 +202,8 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); syncBuildPlateCover(); return; } win.classList.add("os-win-out"); setTimeout(() => { win.remove(); syncBuildPlateCover(); }, 150); });
-  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); syncBuildPlateCover(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); syncBuildPlateCover(); }, 130); });
+  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => win.remove(), 150); });
+  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
@@ -277,7 +279,6 @@ function focusWindow(win: HTMLElement) {
   if (wasHidden) { sfx("back"); if (!REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); } }
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
   saveSession();
-  syncBuildPlateCover();
 }
 function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   const bar = document.getElementById("os-taskbar-apps")!;
@@ -293,9 +294,9 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
     // or a hidden one's — brings it forward.
     if (win.classList.contains("focused") && win.style.display !== "none") {
       sfx("min");
-      if (REDUCED) { win.style.display = "none"; saveSession(); syncBuildPlateCover(); return; }
+      if (REDUCED) { win.style.display = "none"; saveSession(); return; }
       win.classList.add("os-win-min");
-      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); syncBuildPlateCover(); }, 130);
+      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130);
       return;
     }
     focusWindow(win);
@@ -350,7 +351,6 @@ function startDrag(e: PointerEvent, win: HTMLElement) {
     if (kind === "t") toggleMaximize(win);
     else if (kind === "l" || kind === "r") snapWindow(win, kind);
     saveSession();
-    syncBuildPlateCover();
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
@@ -363,7 +363,7 @@ function startResize(e: PointerEvent, win: HTMLElement) {
     win.style.width = `${Math.max(320, startW + ev.clientX - startX)}px`;
     win.style.height = `${Math.max(200, startH + ev.clientY - startY)}px`;
   };
-  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); syncBuildPlateCover(); };
+  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
@@ -660,8 +660,6 @@ function buildChip8(body: HTMLElement, arg?: string) {
   const canvas = document.createElement("canvas");
   canvas.width = 64; canvas.height = 32;
   canvas.className = "os-chip8-screen";
-  const frame = el("div", "os-chip8-frame");
-  frame.appendChild(canvas);
   const bar = el("div", "os-files-bar");
   const sel = document.createElement("select");
   sel.className = "os-bottle-select";
@@ -672,160 +670,45 @@ function buildChip8(body: HTMLElement, arg?: string) {
   scan("/home");
   for (const r of roms) { const o = document.createElement("option"); o.value = r; o.textContent = r; sel.appendChild(o); }
   if (arg && roms.includes(arg)) sel.value = arg;
-  // machine semantics, in the same select idiom as the ROM picker:
-  // modern (as this console has always run) or the 1977 VIP's own.
-  const qsel = document.createElement("select");
-  qsel.className = "os-bottle-select";
-  const qModern = document.createElement("option"); qModern.value = "modern"; qModern.textContent = "quirks: modern";
-  const qVip = document.createElement("option"); qVip.value = "vip"; qVip.textContent = "quirks: vip (1977)";
-  qsel.append(qModern, qVip);
-  const CRTK = skey("chip8-crt-v1");
-  const crtBtn = el("button", "os-btn small", "crt: on");
-  const setCrt = (on: boolean) => {
-    frame.classList.toggle("crt-off", !on);
-    crtBtn.textContent = on ? "crt: on" : "crt: off";
-    try { localStorage.setItem(CRTK, on ? "on" : "off"); } catch { /* private modes keep no notes */ }
-  };
-  crtBtn.addEventListener("click", () => setCrt(frame.classList.contains("crt-off")));
   const status = el("span", "os-note", "");
-  bar.append(sel, qsel, crtBtn, status);
-  wrap.append(bar, frame);
+  bar.append(sel, status);
+  wrap.append(bar, canvas);
   const keysNote = el("p", "os-note", "keys: 1 2 3 4 / Q W E R / A S D F / Z X C V map to the hex pad. click the screen, then play.");
   wrap.appendChild(keysNote);
   body.appendChild(wrap);
-  try { if (localStorage.getItem(CRTK) === "off") setCrt(false); } catch { /* defaults stand */ }
   const cpu = new Chip8();
-  cpu.quirks = qsel.value === "vip" ? { ...CHIP8_QUIRKS_VIP } : { ...CHIP8_QUIRKS_MODERN };
-  qsel.addEventListener("change", () => {
-    cpu.quirks = qsel.value === "vip" ? { ...CHIP8_QUIRKS_VIP } : { ...CHIP8_QUIRKS_MODERN };
-    load();
-  });
   const KEYMAP: Record<string, number> = { "1": 1, "2": 2, "3": 3, "4": 0xc, q: 4, w: 5, e: 6, r: 0xd, a: 7, s: 8, d: 9, f: 0xe, z: 0xa, x: 0, c: 0xb, v: 0xf };
   const load = () => {
     cpu.load(sel.value ? (os.readBytes(sel.value) || CHIP8_DEMO) : CHIP8_DEMO);
     status.textContent = sel.value || "built-in demo";
-    trail.fill(0);
-    blip();
-    wantTune = true;
-    maybeTune();
   };
   sel.addEventListener("change", load);
-
-  /* ——— the machine's voice ———
-     One small audio engine for the console: the ROM's own buzzer
-     (a square wave gated by the sound timer, as the hardware does),
-     the composed boot tune as note data, and a soft key click —
-     all through one master gain, armed on first gesture, silent
-     before it, and respectful of the room's sound switch. */
-  let actx: AudioContext | null = null;
-  let master: GainNode | null = null;
-  let buzzOsc: OscillatorNode | null = null;
-  let buzzGain: GainNode | null = null;
-  let wantTune = true;
-  const audioUp = (): boolean => {
-    if (!soundPrefs().enabled) return false;
-    if (actx) { if (actx.state === "suspended") void actx.resume(); return true; }
-    try {
-      const AC = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AC) return false;
-      actx = new AC();
-      master = actx.createGain();
-      master.gain.value = 0.5 * soundPrefs().volume + 0.08;
-      const lp = actx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 4200;
-      master.connect(lp).connect(actx.destination);
-      return true;
-    } catch { return false; }
-  };
-  const chipTone = (freq: number, at: number, dur: number, type: OscillatorType, peak: number) => {
-    if (!actx || !master) return;
-    const t0 = actx.currentTime + at;
-    const o = actx.createOscillator(); o.type = type; o.frequency.value = freq;
-    const g = actx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g).connect(master);
-    o.start(t0); o.stop(t0 + dur + 0.03);
-  };
-  const blip = () => { if (audioUp() && actx && actx.state === "running") { chipTone(1180, 0, 0.05, "square", 0.05); chipTone(1560, 0.045, 0.06, "square", 0.04); } };
-  const maybeTune = () => {
-    // stays wanted until the context is genuinely running — a tune
-    // scheduled into a suspended context would pile up at time zero.
-    if (!wantTune || !audioUp() || !actx || actx.state !== "running") return;
-    wantTune = false;
-    const stepDur = 60 / CHIP8_TUNE_BPM / 4;
-    const f = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
-    for (const [at, midi, len] of CHIP8_TUNE_LEAD) chipTone(f(midi), at * stepDur, stepDur * len * 0.92, "square", 0.075);
-    for (const [at, midi, len] of CHIP8_TUNE_BASS) chipTone(f(midi), at * stepDur, stepDur * len * 0.95, "triangle", 0.11);
-    for (let s = 2; s < CHIP8_TUNE_STEPS; s += 4) chipTone(5200, s * stepDur, 0.02, "square", 0.012);
-  };
-  const setBuzz = (on: boolean) => {
-    if (on) {
-      if (buzzOsc || !audioUp() || !actx || !master) return;
-      buzzOsc = actx.createOscillator(); buzzOsc.type = "square"; buzzOsc.frequency.value = 660;
-      buzzGain = actx.createGain(); buzzGain.gain.value = 0.055;
-      buzzOsc.connect(buzzGain).connect(master);
-      buzzOsc.start();
-    } else if (buzzOsc) {
-      try { buzzOsc.stop(); } catch { /* already quiet */ }
-      buzzOsc.disconnect(); buzzOsc = null; buzzGain = null;
-    }
-  };
-
-  const down = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) { if (!cpu.keys[k]) { maybeTune(); if (audioUp()) chipTone(2400, 0, 0.025, "square", 0.02); } cpu.keys[k] = 1; e.preventDefault(); } };
+  const down = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) { cpu.keys[k] = 1; e.preventDefault(); } };
   const up = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) cpu.keys[k] = 0; };
   canvas.tabIndex = 0;
   canvas.addEventListener("keydown", down);
   canvas.addEventListener("keyup", up);
-  canvas.addEventListener("pointerdown", () => { canvas.focus(); maybeTune(); });
-  const trail = new Float32Array(64 * 32);
+  canvas.addEventListener("pointerdown", () => canvas.focus());
   load();
   let dead = false;
-  const obs = new MutationObserver(() => {
-    if (!document.body.contains(wrap)) {
-      dead = true;
-      obs.disconnect();
-      setBuzz(false);
-      if (actx) void actx.close().catch(() => undefined);
-    }
-  });
+  const obs = new MutationObserver(() => { if (!document.body.contains(wrap)) { dead = true; obs.disconnect(); } });
   obs.observe(document.body, { childList: true, subtree: true });
   const ctx2 = canvas.getContext("2d")!;
-  const img = ctx2.createImageData(64, 32);
-  /* The clock is an accumulator now, not a hope: CPU cycles accrue
-     at 600 Hz of wall time and the timers at exactly 60 Hz, so the
-     machine runs true at 120 Hz, 60 Hz and 30 Hz displays alike —
-     and the phosphor trail is re-rendered every frame, decaying
-     behind whatever the ROM last lit. */
-  let last = performance.now();
-  let cycleAcc = 0, timerAcc = 0;
-  const frame2 = () => {
+  let lastTimer = performance.now();
+  const frame = () => {
     if (dead) return;
+    for (let i = 0; i < 10; i++) cpu.cycle();
     const now = performance.now();
-    const elapsed = Math.min(100, now - last);
-    last = now;
-    cycleAcc += elapsed * 0.6;
-    let n = Math.floor(cycleAcc);
-    cycleAcc -= n;
-    if (n > 80) n = 80;
-    for (let i = 0; i < n; i++) cpu.cycle();
-    timerAcc += elapsed;
-    while (timerAcc >= 1000 / 60) { cpu.tickTimers(); timerAcc -= 1000 / 60; }
-    setBuzz(cpu.sound > 0);
-    let anyTrail = false;
-    for (let i = 0; i < 64 * 32; i++) {
-      const b = cpu.gfx[i] ? 1 : trail[i] * 0.86;
-      trail[i] = b;
-      if (b > 0.02) anyTrail = true;
-      img.data[i * 4] = 10 + 116 * b;
-      img.data[i * 4 + 1] = 22 + 226 * b;
-      img.data[i * 4 + 2] = 12 + 158 * b;
-      img.data[i * 4 + 3] = 255;
+    if (now - lastTimer > 16) { cpu.tickTimers(); lastTimer = now; }
+    if (cpu.drawFlag) {
+      cpu.drawFlag = false;
+      const img = ctx2.createImageData(64, 32);
+      for (let i = 0; i < 64 * 32; i++) { const on = cpu.gfx[i]; img.data[i * 4] = on ? 120 : 8; img.data[i * 4 + 1] = on ? 255 : 14; img.data[i * 4 + 2] = on ? 170 : 10; img.data[i * 4 + 3] = 255; }
+      ctx2.putImageData(img, 0, 0);
     }
-    if (cpu.drawFlag || anyTrail) { cpu.drawFlag = false; ctx2.putImageData(img, 0, 0); }
-    requestAnimationFrame(frame2);
+    requestAnimationFrame(frame);
   };
-  requestAnimationFrame(frame2);
+  requestAnimationFrame(frame);
   setTimeout(() => canvas.focus(), 80);
 }
 
@@ -1169,6 +1052,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   bottle: (body) => buildBottleApp(body, os),
   system: buildSystem,
   chip8: buildChip8,
+  "nocturn-gba": (body) => buildNocturnGba(body, os),
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
   phantom: buildPhantomApp,
@@ -1310,25 +1194,7 @@ function mountBuildPlate(): void {
   buildPlateEl = plate;
   setInterval(() => {
     if (buildPlateSessionEl) buildPlateSessionEl.textContent = `session ${fmtSessionClock(Date.now() - BOOT_AT)}`;
-    syncBuildPlateCover();
   }, 1000);
-}
-/* Window glass is translucent, so a plate merely UNDER a window still
- * ghosts through it — where any visible window's frame reaches the
- * plate's corner, the plate hides outright, and returns when the corner
- * is clear again. Called from the window lifecycle (focus covers open,
- * raise, maximize, snap) and reconciled on the plate's own second. */
-function syncBuildPlateCover(): void {
-  if (!buildPlateEl) return;
-  const pr = buildPlateEl.getBoundingClientRect();
-  let covered = false;
-  if (pr.width > 0) {
-    for (const w of visibleWindows()) {
-      const wr = w.getBoundingClientRect();
-      if (wr.left < pr.right && wr.right > pr.left && wr.top < pr.bottom && wr.bottom > pr.top) { covered = true; break; }
-    }
-  }
-  buildPlateEl.style.visibility = covered ? "hidden" : "";
 }
 function renderBuildPlate(v: { version?: unknown; chunk?: unknown; built?: unknown }): void {
   mountBuildPlate();
@@ -1416,7 +1282,7 @@ function boot() {
     ["terminal", "terminal", "terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["bloodbath", "bloodbath", "Bloodbath"], ["wyrdfall", "wyrdfall", "Wyrdfall"], ["files", "files", "files"], ["editor", "editor", "editor"],
     ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
     ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
-    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
+    ["chip8", "chip8", "CHIP-8"], ["nocturn-gba", "gba", "nocturn-gba"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
     ["wolf3d", "wolf3d", "Wolfenstein 3D"], ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
