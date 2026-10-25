@@ -202,8 +202,8 @@ export function openApp(app: string, arg?: string) {
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); syncBuildPlateCover(); return; } win.classList.add("os-win-out"); setTimeout(() => { win.remove(); syncBuildPlateCover(); }, 150); });
-  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); syncBuildPlateCover(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); syncBuildPlateCover(); }, 130); });
+  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => { win.remove(); }, 150); });
+  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
@@ -282,7 +282,7 @@ function focusWindow(win: HTMLElement) {
   if (wasHidden) { sfx("back"); if (!REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); } }
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
   saveSession();
-  syncBuildPlateCover();
+  
 }
 function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   const bar = document.getElementById("os-taskbar-apps")!;
@@ -298,9 +298,9 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
     // or a hidden one's — brings it forward.
     if (win.classList.contains("focused") && win.style.display !== "none") {
       sfx("min");
-      if (REDUCED) { win.style.display = "none"; saveSession(); syncBuildPlateCover(); return; }
+      if (REDUCED) { win.style.display = "none"; saveSession(); return; }
       win.classList.add("os-win-min");
-      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); syncBuildPlateCover(); }, 130);
+      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130);
       return;
     }
     focusWindow(win);
@@ -355,7 +355,7 @@ function startDrag(e: PointerEvent, win: HTMLElement) {
     if (kind === "t") toggleMaximize(win);
     else if (kind === "l" || kind === "r") snapWindow(win, kind);
     saveSession();
-    syncBuildPlateCover();
+    
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
@@ -368,7 +368,7 @@ function startResize(e: PointerEvent, win: HTMLElement) {
     win.style.width = `${Math.max(320, startW + ev.clientX - startX)}px`;
     win.style.height = `${Math.max(200, startH + ev.clientY - startY)}px`;
   };
-  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); syncBuildPlateCover(); };
+  const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); saveSession(); };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up);
 }
@@ -1174,66 +1174,6 @@ function ownChunk(): string {
   return CHUNK_RE.test(mine) ? mine : "";
 }
 
-/* ————— the build plate —————
-   Bare text on the desktop, top-right: which build this is, when it was
-   built, and how long this session has been up. No box, no border, no
-   pointer — it is there to be read, never clicked. It renders at once
-   with the running chunk and the session clock; the version and built
-   lines fill in from the update watcher's own /version.json reads, so
-   the plate never fetches anything itself. */
-let buildPlateEl: HTMLElement | null = null;
-let buildPlateSessionEl: HTMLElement | null = null;
-function fmtSessionClock(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
-}
-function mountBuildPlate(): void {
-  if (buildPlateEl) return;
-  const plate = el("div", "os-build-plate");
-  plate.setAttribute("aria-hidden", "true");
-  const mine = ownChunk();
-  if (mine) plate.append(el("div", "", `build ${mine}`));
-  buildPlateSessionEl = el("div", "", `session ${fmtSessionClock(Date.now() - BOOT_AT)}`);
-  plate.append(buildPlateSessionEl);
-  desktop().appendChild(plate);
-  buildPlateEl = plate;
-  setInterval(() => {
-    if (buildPlateSessionEl) buildPlateSessionEl.textContent = `session ${fmtSessionClock(Date.now() - BOOT_AT)}`;
-    syncBuildPlateCover();
-  }, 1000);
-}
-/* Window glass is translucent, so a plate merely UNDER a window still
- * ghosts through it — where any visible window's frame reaches the
- * plate's corner, the plate hides outright, and returns when the corner
- * is clear again. Called from the window lifecycle (focus covers open,
- * raise, maximize, snap) and reconciled on the plate's own second. */
-function syncBuildPlateCover(): void {
-  if (!buildPlateEl) return;
-  const pr = buildPlateEl.getBoundingClientRect();
-  let covered = false;
-  if (pr.width > 0) {
-    for (const w of visibleWindows()) {
-      const wr = w.getBoundingClientRect();
-      if (wr.left < pr.right && wr.right > pr.left && wr.top < pr.bottom && wr.bottom > pr.top) { covered = true; break; }
-    }
-  }
-  buildPlateEl.style.visibility = covered ? "hidden" : "";
-}
-function renderBuildPlate(v: { version?: unknown; chunk?: unknown; built?: unknown }): void {
-  mountBuildPlate();
-  if (!buildPlateEl || !buildPlateSessionEl) return;
-  buildPlateEl.replaceChildren();
-  if (typeof v.version === "string" && v.version) buildPlateEl.append(el("div", "", `version ${v.version}`));
-  if (typeof v.chunk === "string" && v.chunk) buildPlateEl.append(el("div", "", `build ${v.chunk}`));
-  if (typeof v.built === "string" && v.built) {
-    const d = new Date(v.built);
-    if (!Number.isNaN(d.getTime())) buildPlateEl.append(el("div", "", `built ${d.toISOString().replace("T", " ").slice(0, 19)} UTC`));
-  }
-  buildPlateEl.append(buildPlateSessionEl);
-}
 
 /* ————— the held update: a refresh that minds the room —————
    A newer build on the wire does not yank the desk away. The watcher
@@ -1302,7 +1242,6 @@ function startUpdateWatch(): void {
       const r = await fetch(`/version.json?cb=${Date.now()}`, { cache: "no-store" });
       if (!r.ok) return;
       const v = (await r.json()) as { chunk?: unknown; version?: unknown; built?: unknown };
-      renderBuildPlate(v);
       theirs = typeof v.chunk === "string" ? v.chunk : "";
     } catch { return; }
     if (!theirs || theirs === mine) {
@@ -1327,7 +1266,6 @@ function startUpdateWatch(): void {
 
 function boot() {
   startUpdateWatch();
-  mountBuildPlate();
   sweepNestKeys();
   registerCoreVerbs();
   registerWireVerbs();
