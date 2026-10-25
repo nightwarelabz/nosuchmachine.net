@@ -89,6 +89,13 @@ const moduleDef = {
     post({ type: "error", file, message });
   },
   onConsole(text) {
+    /* The runtime's run-dependency watcher narrates its waits
+     * through the error channel ("still waiting on run
+     * dependencies: … dependency: data/… (end of list)"). That is
+     * machinery noise, not the game's word: it is not logged, and
+     * like everything else on this channel it is never rendered
+     * (the console element is display:none — see play.html). */
+    if (/^(still waiting on run dependencies:|dependency: |\(end of list\))/.test(text)) return;
     con.textContent += text + "\n";
     while (con.textContent.length > 20000) con.textContent = con.textContent.slice(6000);
     con.scrollTop = con.scrollHeight;
@@ -107,7 +114,42 @@ if (mode === "join" && !joinLive) {
   post({ type: "error", file: "bridge", message: "join asked for without a bridge address" });
 }
 
+/* The canvas is the engine's window: its backing store is the
+ * video mode. Keep it matched to the stage it stands in — before
+ * the engine boots, so it opens at the size it was dealt, and on
+ * every resize after (the OS stage taking the whole screen, a
+ * window dragged) — through the runtime's own sizing call where
+ * it stands, so SDL hears of the change and re-modes; the plain
+ * attribute set is what SDL reads at boot. */
+const stageEl = document.getElementById("stage");
+const canvasEl = moduleDef.canvas;
+let fitTimer = 0;
+function fitCanvas() {
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  if (!w || !h) return;
+  if (canvasEl.width === w && canvasEl.height === h) return;
+  const M = window.Module;
+  if (M && typeof M.setCanvasSize === "function") { try { M.setCanvasSize(w, h); return; } catch { /* the plain set below */ } }
+  canvasEl.width = w;
+  canvasEl.height = h;
+}
+function fitSoon() { clearTimeout(fitTimer); fitTimer = setTimeout(fitCanvas, 120); }
+if (typeof ResizeObserver === "function") new ResizeObserver(fitSoon).observe(stageEl);
+window.addEventListener("resize", fitSoon);
+fitCanvas();
+
+/* The house word on fullscreen (the OS stage owns the state; the
+ * frame only hears of it): the canvas refits, so the game takes
+ * the whole display. */
+window.addEventListener("message", (ev) => {
+  const m = ev.data;
+  if (!m || m.from !== "house" || m.type !== "fullscreen") return;
+  document.body.classList.toggle("fs", !!m.on);
+  fitSoon();
+});
+
 plateBtn.addEventListener("click", () => {
+  fitCanvas();
   plateBtn.hidden = true;
   plateText.textContent = mode === "join"
     ? "raising the engine — it deals you into thisissparta2! when the table is up…"

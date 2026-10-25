@@ -21,8 +21,12 @@
     padding: 0.5rem 1.1rem; font: inherit; cursor: pointer; }
   #plate button:hover { border-color: #e5484d; }
   #plate .err { color: #ff8589; max-width: 36rem; white-space: pre-wrap; }
-  #con { height: 86px; overflow-y: auto; border-top: 1px solid #232a35; padding: 0.35rem 0.6rem;
-    font-size: 11px; color: #7d8898; white-space: pre-wrap; word-break: break-word; }
+  /* The engine console is an internal log only — it is never
+     rendered: not in the window, not in fullscreen, not during
+     boot. The element stays in the tree so play.js can keep the
+     log (and a diagnosis can read it back), but the game's face
+     is the plate and the canvas, nothing else. */
+  #con { display: none; }
 </style>
 </head>
 <body>
