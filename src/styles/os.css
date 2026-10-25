@@ -299,6 +299,12 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-relay-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .os-relay-lines { flex: 1; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; line-height: 1.5; padding: 0.4rem 0.2rem; overflow-wrap: anywhere; }
 .os-relay-line { white-space: pre-wrap; }
+/* The room's colour law: speech is blue, emotes are not, and
+   development's voice is always yellow. */
+.os-relay-line.chat { color: #7cc4ff; }
+.os-relay-line.emote { color: #c792ea; font-style: italic; }
+.os-relay-line.dev { color: #ffd94d; }
+.os-relay-self-name { background: none; border: none; color: inherit; font: inherit; font-weight: 700; padding: 0; cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.45); text-underline-offset: 3px; }
 .os-relay-inputrow { border-top: 1px solid rgba(255,255,255,0.09); padding-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; }
 .os-relay-inputrow .os-relay-input { flex: 1; }
 .os-relay-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 7px; color: inherit; font: inherit; font-size: 0.85rem; padding: 0.55rem 0.65rem; }

@@ -205,12 +205,27 @@ assert.ok(astroJs.includes("the room remembers its last day now"), "The pinned d
 // machine. Inert without the binding; armed the moment it exists.
 const memLibSrc = fs.readFileSync("functions/_lib/relay-memory.ts", "utf8");
 assert.ok(memLibSrc.includes("expirationTtl"), "Room memory lines must expire — the memory forgets on a clock, it is not an archive");
-assert.ok(memLibSrc.includes("memPurgeNick") && memLibSrc.includes("memWipe"), "Room memory must be purgeable per voice and wipeable per room (mutable by design)");
+assert.ok(memLibSrc.includes("memPurgeNick"), "Room memory must be purgeable per removed voice (mutable by design)");
+assert.ok(!memLibSrc.includes("memWipe"), "No whole-room wipe may exist anywhere: a wipe takes back only what the wiper said — never the entire chat for everyone (house ruling, Chase 2026-10-25)");
+assert.ok(!bridgeSrc.includes("memWipe"), "The bridge must hold no whole-room wipe capability either — a wipe takes back the wiper's own lines only");
 assert.ok(bridgeSrc.includes("RELAY_MEMORY"), "The bridge must read the room-memory binding");
 assert.ok(bridgeSrc.includes("relaymem=1"), "The bridge must tag replayed lines so clients lay them in as memory, not as new speech");
-assert.ok(bridgeSrc.includes("RELAYMEM-WIPE"), "The bridge must honor the room-memory wipe control line (claimed names only)");
+assert.ok(bridgeSrc.includes("RELAYMEM-WIPE"), "The bridge must honor the wipe control line at authorship scope only — the sender's own lines, never the room");
+assert.ok(bridgeSrc.includes("memPurgeNick(mem, host, chan, myNick)"), "A bridge wipe must purge by the name the wiper's own session wears — authorship is the whole scope");
+assert.ok(ircSrc.includes("yours only. Everyone else's words stand"), "The client must state the wipe ruling where a wipe happens: your lines only, everyone else untouched");
 assert.ok(ircSrc.includes('tags?.relaymem'), "The client must recognize memory-tagged lines");
 assert.ok(ircSrc.includes("pushMemory"), "The client must lay memory lines in deduped, with their true time");
+// Relay colour law + restart probes + self-naming (Chase, 2026-10-25):
+// speech renders blue, emotes are the exception, development's voice
+// (bridge, network, system lines) is always yellow; a full service
+// restart registers exactly one probe in the room's memory; a guest
+// names themself by choice, with no registration standing in the way.
+assert.ok(ircSrc.includes("lineKind"), "Relay lines must be classified for the colour law at render");
+assert.ok(osCssSrc.includes(".os-relay-line.dev") && osCssSrc.includes(".os-relay-line.chat") && osCssSrc.includes(".os-relay-line.emote"), "Relay must carry the colour law in CSS (dev yellow, chat blue, emote apart)");
+assert.ok(ircSrc.includes("name yourself"), "A guest's own name must be a door to naming themself — no registration required");
+assert.ok(ircSrc.includes("&build="), "The client must tell the bridge its build so restarts can register");
+assert.ok(bridgeSrc.includes("memBuildProbe"), "The bridge must register full restarts as probes in the room memory");
+assert.ok(memLibSrc.includes("sys|build") && memLibSrc.includes("PROBE_COOLDOWN_MS"), "Restart probes must key on the build stamp and respect a cooldown — register, never spam");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");

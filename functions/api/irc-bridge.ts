@@ -6,12 +6,13 @@
 // and the target still passes the site-wide public-target guard before any
 // socket opens. The bridge pipes lines — and, through _lib/relay-memory,
 // it also holds the room's recent lines in a short, deliberately mutable
-// memory (expiring, capped, purged by moderation, wiped on a claimed
-// name's word) so a client joining from any device hears what the room
+// memory (expiring, capped, purged by moderation; a wipe takes back
+// only the wiper's own lines) so a client joining from any device
+// hears what the room
 // recently said. With no memory binding configured it keeps nothing, as
 // it always did.
 import { guardTarget, err } from "../_lib/guard";
-import { memAppend, memPurgeNick, memReplay, memWipe } from "../_lib/relay-memory";
+import { memAppend, memBuildProbe, memPurgeNick, memReplay } from "../_lib/relay-memory";
 
 const NETWORKS: Record<string, number[]> = {
   "irc.libera.chat": [6697, 6667],
@@ -75,6 +76,12 @@ export async function onRequest(context: any) {
     return err(`relay bridge: the connection could not be opened (${String(e?.message || e).slice(0, 120)}).`, 502);
   }
   const mem = context.env?.RELAY_MEMORY || null;
+  // A client that names its build lets the bridge register a full
+  // service restart in the room's memory (see relay-memory's probe):
+  // a new build going live is the one event that refreshes everyone
+  // at once, and the room hears about it once, in yellow, on rejoin.
+  void memBuildProbe(mem, host, "#nosuchmachine", (url.searchParams.get("build") || "").slice(0, 80),
+    "BLACKSITE was restarted — a new build went live and every client has been refreshed onto it.");
   let myNick = "";
   const pair = new (globalThis as any).WebSocketPair();
   const [client, server] = Object.values(pair) as any[];
@@ -214,16 +221,19 @@ export async function onRequest(context: any) {
         }
         if (upper.startsWith("RELAYMEM-WIPE")) {
           // A control line for the bridge alone — it never crosses to
-          // the network. Only a session that presented the house claim
-          // may wipe a room's memory, and it says so either way.
+          // the network. By the house's ruling a wipe reaches exactly
+          // as far as authorship: it takes back the wiper's OWN lines
+          // from the room's memory, and no one else's. The bridge
+          // knows the name this session wears, and that name is the
+          // whole scope — there is no way to name another voice here.
           const chan = raw.split(/\s+/)[1] || "";
           const say = (text: string) => { try { server.send(new TextEncoder().encode(`:relay.bridge NOTICE * :${text}\r\n`)); } catch { /* the answer is best-effort; the act is what counts */ } };
-          if (!mem) say("this bridge keeps no room memory — there is nothing to wipe.");
-          else if (!claimed) say("a memory wipe opens only with a claimed house name.");
-          else if (!chan.startsWith("#")) say("name the channel to wipe: RELAYMEM-WIPE #channel");
+          if (!mem) say("this bridge keeps no room memory — there is nothing to take back.");
+          else if (!chan.startsWith("#")) say("name the room: RELAYMEM-WIPE #channel — it takes back your own lines there.");
+          else if (!myNick) say("you are wearing no name yet — there is nothing of yours to take back.");
           else {
-            void memWipe(mem, host, chan);
-            say(`the room's memory of ${chan} is wiped — every device forgets it together.`);
+            void memPurgeNick(mem, host, chan, myNick);
+            say(`your lines in ${chan} are wiped from the room's memory. Yours were the only ones touched.`);
           }
           continue;
         }

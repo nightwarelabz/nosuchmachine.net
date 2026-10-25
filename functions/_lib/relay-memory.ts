@@ -14,8 +14,10 @@
 //   · when the room removes someone (a KICK the bridge observes), that
 //     person's lines are purged from the memory as they are purged
 //     from every Relay view — moderation rewrites the past tense too;
-//   · a claimed house name may wipe a channel's memory outright
-//     (RELAYMEM-WIPE), and the wipe is total and immediate;
+//   · a wipe reaches exactly as far as authorship (RELAYMEM-WIPE):
+//     it takes back the wiper's own lines — the purge above, aimed by
+//     the bridge at the name the wiper's session wears — and never
+//     the whole chat for everyone;
 //   · credential-shaped lines never enter: anything carrying the house
 //     claim shape, or a password-shaped assignment, is refused at the
 //     door, and the network's service windows are never channel lines
@@ -133,11 +135,27 @@ export async function memPurgeNick(kv: any, net: string, chan: string, nick: str
   } catch { /* a failed purge still leaves expiry to do the forgetting */ }
 }
 
-/** Forget the whole channel at once. Total and immediate. */
-export async function memWipe(kv: any, net: string, chan: string): Promise<void> {
-  if (!kv) return;
+/* ————— the restart probe —————
+   A full service restart — a new build going live — refreshes every
+   client at once, and the room deserves a register of it: one yellow
+   probe line in the house channel's memory, which every reconnecting
+   client then receives in its replay. Smart about it, never spam:
+   the first build a bridge ever sees is the baseline and registers
+   nothing; a build change registers one probe; further changes
+   inside the cooldown update the stamp silently and register
+   nothing. Concurrent bridges may race the same change — their
+   probes carry identical words into the same time bucket, so the
+   room still stores exactly one. */
+const PROBE_COOLDOWN_MS = 30 * 60 * 1000;
+export async function memBuildProbe(kv: any, net: string, chan: string, build: string, probeText: string): Promise<void> {
+  if (!kv || !build) return;
   try {
-    const keys = await listKeys(kv, net, chan);
-    await Promise.allSettled(keys.map((k) => kv.delete(k)));
-  } catch { /* expiry finishes what a failed wipe began */ }
+    let prev: any = null;
+    try { prev = JSON.parse((await kv.get("sys|build")) || "null"); } catch { prev = null; }
+    if (prev && prev.chunk === build) return;
+    const now = Date.now();
+    const due = !!prev && (typeof prev.probeAt !== "number" || now - prev.probeAt >= PROBE_COOLDOWN_MS);
+    await kv.put("sys|build", JSON.stringify({ chunk: build, probeAt: due ? now : (prev && typeof prev.probeAt === "number" ? prev.probeAt : 0) }));
+    if (due) await memAppend(kv, net, chan, { t: now, p: "relay.bridge", x: probeText });
+  } catch { /* a missed registration is a small thing; the wire never notices */ }
 }

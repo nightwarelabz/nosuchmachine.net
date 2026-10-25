@@ -207,7 +207,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      A topic-of-the-day bar for developer messages: it ships with the
      build, so what it says is always true of the build you are looking
      at, and it never scrolls away with the conversation. */
-  const DEV_NOTE = "the room remembers its last day now — join from any device and the conversation is there. no hard refresh needed; the os updates itself. a claimed name can /wipe the room's memory.";
+  const DEV_NOTE = "the room remembers its last day now — join from any device and the conversation is there. no hard refresh needed; the os updates itself. /wipe takes back only what you yourself said.";
   const noteEl = el("div", "os-relay-note");
   noteEl.append(el("span", "os-relay-note-tag", "dev note · pinned"), document.createTextNode(DEV_NOTE));
 
@@ -242,7 +242,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     pendingJoins = [];
     current = "server";
     renderTargets();
-    push("server", "— forgotten on this machine. The room's own memory is a separate keeping — /wipe, on a claimed name, forgets it for everyone.");
+    push("server", "— forgotten on this machine. The room's own memory keeps what was said — /wipe there takes back only your own lines.");
   });
   input.setAttribute("enterkeyhint", "send");
   inputRow.append(input, sendBtn, idBtn, copyBtn, forgetBtn);
@@ -334,12 +334,13 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      it joins — so a conversation survives the device it was spoken
      from, and nobody is a ghost for having spoken elsewhere. That
      memory is mutable by design, not an archive: lines expire, a
-     removal purges the removed voice from it, a claimed name may
-     /wipe a channel's memory for everyone at once, and
-     credential-shaped lines never enter it. Passwords and the house
-     claim code are NEVER part of either keeping — they ride the
-     visit in memory only, as always. The "forget" button wipes this
-     device's log on the spot; /wipe is the room-level forgetting. */
+     removal purges the removed voice from it, and credential-shaped
+     lines never enter it — and a wipe reaches exactly as far as
+     authorship: it takes back the wiper's own lines from it, never
+     the whole chat for everyone. Passwords and the house claim code
+     are NEVER part of either keeping — they ride the visit in
+     memory only, as always. The "forget" button wipes this device's
+     log on the spot; /wipe takes back your own lines in a room. */
   const RELAY_LOG_KEY = "blacksite-relay-v2";
   /* Conversations with the network's services are never part of the
      kept log: a NickServ window is where IDENTIFY passwords and
@@ -430,9 +431,21 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     if ((buffers.get(target) || []).includes(rendered)) return;
     push(target, body, when);
   };
+  /* The room's colour law (Chase, 2026-10-25): what people say is
+     blue, what they do in an emote is not, and development's voice —
+     the bridge, the network, this client's own system lines — is
+     always yellow. The kept line's dress decides: <nick> is speech,
+     · nick is an emote, and everything else the room shows (—, the
+     bridge's notices, service voices) is the system speaking. */
+  const lineKind = (line: string): string => {
+    const body = line.slice(6); // after the "HH:MM " stamp
+    if (body.startsWith("· ")) return "emote";
+    if (body.startsWith("<")) return "chat";
+    return "dev";
+  };
   const renderLines = () => {
     linesEl.textContent = "";
-    for (const line of buffers.get(current) || []) linesEl.appendChild(el("div", "os-relay-line", line));
+    for (const line of buffers.get(current) || []) linesEl.appendChild(el("div", `os-relay-line ${lineKind(line)}`, line));
     linesEl.scrollTop = linesEl.scrollHeight;
     renderUsers();
   };
@@ -476,7 +489,17 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     return row;
   };
   const renderSelf = () => {
-    selfLine.textContent = myNick ? `${myNick} · ${presence}${presence === "away" && awayMsg && awayMsg !== "away" ? ` — ${awayMsg}` : ""}` : "—";
+    selfLine.textContent = "";
+    if (myNick) {
+      // Your name is yours to choose: wearing it is a button, and the
+      // box it opens takes any name you give it — a password is an
+      // offer, never a toll (no registration stands between a guest
+      // and a name of their own).
+      const selfNameBtn = el("button", "os-relay-self-name", myNick);
+      selfNameBtn.title = "name yourself — wear any name you choose, no registration";
+      selfNameBtn.addEventListener("click", () => showIdentityBox());
+      selfLine.append(selfNameBtn, document.createTextNode(` · ${presence}${presence === "away" && awayMsg && awayMsg !== "away" ? ` — ${awayMsg}` : ""}`));
+    } else selfLine.textContent = "—";
     awayBtn.textContent = presence === "away" ? "I'm back" : "set away";
   };
   const renderUsers = () => {
@@ -657,6 +680,13 @@ export function buildRelayApp(body: HTMLElement, os: any) {
            cut today is cut in the remembered line too. */
         const mem = m.tags?.relaymem === "1";
         const when = mem && m.tags.time ? Date.parse(m.tags.time) || undefined : undefined;
+        if (mem && m.nick === "relay.bridge") {
+          // The bridge's own voice out of the memory — a restart probe
+          // and its kin — wears the bridge's dress, not a chatter's:
+          // a development line, yellow by the room's colour law.
+          pushMemory(target, `— the bridge: ${said}`, when);
+          break;
+        }
         if (target.startsWith("#") && m.nick !== myNick) {
           // GuardianAngel reads every room line before it is shown.
           const v = guardianProcess(target, m.nick, said);
@@ -860,6 +890,21 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   };
 
   interface IdentityOpts { host: string; port: number; nick: string; channel: string; password: string; registerEmail: string; claim: string; }
+  /* The build this client runs, learned from the site's own stamp.
+     It rides every bridge connect so the bridge can register the one
+     event the room deserves to hear about: a full service restart —
+     a new build going live refreshes every client at once — which
+     the bridge writes into the room's memory as a yellow probe line,
+     once, never as spam. */
+  let buildStamp = "";
+  const noteBuild = async () => {
+    try {
+      const r = await fetch("/version.json", { cache: "no-store" });
+      const j = await r.json();
+      if (j && typeof j.chunk === "string") buildStamp = j.chunk;
+    } catch { /* no stamp, no probe — the wire is unaffected */ }
+  };
+  void noteBuild();
   const connectWith = (o: IdentityOpts) => {
     const refusal = os.gate("active");
     if (refusal) { push("server", refusal); return; }
@@ -883,7 +928,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      closing the app — leaves for good. */
   const openWire = () => {
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}/api/irc-bridge?host=${encodeURIComponent(wireHost)}&port=${wirePort}`);
+    ws = new WebSocket(`${proto}//${location.host}/api/irc-bridge?host=${encodeURIComponent(wireHost)}&port=${wirePort}${buildStamp ? `&build=${encodeURIComponent(buildStamp)}` : ""}`);
     ws.binaryType = "arraybuffer";
     const mine = ws;
     let pending = "";
@@ -999,15 +1044,16 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         case "topic": send(`TOPIC ${current} :${arg}`); break;
         case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); push("server", "— off the wire. The identity box is up if you want back in — any name, or none."); showIdentityBox(); break;
         case "wipe": {
-          // Room-level forgetting: the bridge holds the room's memory,
-          // and only a claimed name may empty it (the bridge decides —
-          // its answer arrives as a bridge notice). This device's own
-          // lines for the room go with it, either way.
-          if (!current.startsWith("#")) { push(current, "— /wipe belongs to a room: stand in the channel whose memory you would empty."); break; }
+          // A wipe reaches exactly as far as authorship — the house's
+          // ruling. It takes back YOUR lines: the bridge purges this
+          // name's lines from the room's memory (its answer arrives as
+          // a bridge notice), and this device drops them from the room
+          // in front of you. Everyone else's words stand, untouched —
+          // nobody wipes the whole chat for everyone.
+          if (!current.startsWith("#")) { push(current, "— /wipe belongs to a room: stand in the channel whose lines of yours you would take back."); break; }
           send(`RELAYMEM-WIPE ${current}`);
-          buffers.set(current, []);
-          renderLines();
-          scheduleSave();
+          purgeLines(current, myNick);
+          push(current, "— your lines here are wiped — yours only. Everyone else's words stand, and so does the room.");
           break;
         }
         default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /topic /wipe /quit)`);
