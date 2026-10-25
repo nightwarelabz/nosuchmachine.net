@@ -74,7 +74,7 @@ class SdrDsp extends AudioWorkletProcessor {
     this.agc = 0.2;
     this.slicePow = 0;
     this.envAcc = 0; this.envN = 0;
-    this.fskAcc = 0; this.fskN = 0; this.fskBatch = [];
+    this.fskAcc = 0; this.fskN = 0; this.fskBatch = []; this.fskDebt = 0;
     this.statAcc = 0; this.statAcc2 = 0; this.statN = 0;
     this.specBuf = new Float32Array(FFT_N);
     this.specPos = 0; this.specHop = 0;
@@ -85,7 +85,12 @@ class SdrDsp extends AudioWorkletProcessor {
     this.port.onmessage = (e) => {
       const p = e.data || {};
       if (p.freq !== undefined) this.freq = p.freq;
-      if (p.mode !== undefined) this.mode = p.mode;
+      if (p.mode !== undefined && p.mode !== this.mode) {
+        /* a mode change starts the FSK stream fresh: no half-batch
+           of the previous mode's samples may reach the slicer */
+        this.fskAcc = 0; this.fskN = 0; this.fskBatch = []; this.fskDebt = 0;
+        this.mode = p.mode;
+      }
       if (p.bw !== undefined) this.bw = p.bw;
       if (p.gain !== undefined) this.gain = p.gain;
       if (p.squelch !== undefined) this.squelch = p.squelch;
@@ -154,8 +159,6 @@ class SdrDsp extends AudioWorkletProcessor {
         if (this.envN >= 480) {
           this.port.postMessage({ type: "env", v: Math.sqrt(this.envAcc / this.envN), open: sliceDbEarly > this.squelch });
           this.envAcc = 0; this.envN = 0;
-    this.fskAcc = 0; this.fskN = 0; this.fskBatch = [];
-    this.statAcc = 0; this.statAcc2 = 0; this.statN = 0;
         }
       }
       const sliceDb = 10 * Math.log10(this.slicePow + 1e-12);
@@ -171,16 +174,33 @@ class SdrDsp extends AudioWorkletProcessor {
           this.statAcc = 0; this.statAcc2 = 0; this.statN = 0;
         }
       }
-      /* FSK: instantaneous frequency of the slice, decimated to one
-         value per ~2 ms and batched — the room slices bits from it,
-         folds the eye diagram, and frames ITA2. */
-      if (this.mode === "fsk") {
-        const dot = zi * this.prevI + zq * this.prevQ;
-        const cross = zq * this.prevI - zi * this.prevQ;
+      /* Discriminator, computed ONCE per sample against the previous
+         sample: the FSK stream and the FM/FSK audio both read it.
+         (When each consumer read it separately, the FSK block moved
+         prev first and the audio read compared the sample against
+         itself — atan2(0, |z|²) = 0, silence in FSK mode.) */
+      const dot = zi * this.prevI + zq * this.prevQ;
+      const cross = zq * this.prevI - zi * this.prevQ;
+      if (this.mode === "fm" || this.mode === "fsk") { this.prevI = zi; this.prevQ = zq; }
+      /* FSK: instantaneous frequency of the slice, decimated to
+         EXACTLY 500 values/sec at any sample rate and batched — the
+         room slices bits from it, folds the eye diagram, and frames
+         ITA2 at 500/45.45 values per symbol. The rate is a contract:
+         a fixed 96-sample decimation is 500/sec only at 48 kHz; at
+         44.1 kHz it delivers 459/sec, the slicer's symbol timing
+         slips a full bit within a few characters, and the copy is
+         gibberish. The debt accumulator carries the fractional
+         remainder so the long-run rate is exact at every rate. */
+      if (this.mode === "fsk" && sliceDb > this.squelch) {
+        /* the squelch gates the data stream as it gates the audio:
+           below it there is no carrier, and an unsquelched slicer
+           prints the band's noise as characters. At the default
+           squelch this gate is transparent. */
         const inst = Math.atan2(cross, dot) / (2 * Math.PI) * sr;
-        this.prevI = zi; this.prevQ = zq;
         this.fskAcc += inst; this.fskN++;
-        if (this.fskN >= 96) {
+        this.fskDebt += 1;
+        if (this.fskDebt >= sr / 500) {
+          this.fskDebt -= sr / 500;
           this.fskBatch.push(this.fskAcc / this.fskN);
           this.fskAcc = 0; this.fskN = 0;
           if (this.fskBatch.length >= 24) {
@@ -193,10 +213,7 @@ class SdrDsp extends AudioWorkletProcessor {
       if (this.mode === "am") {
         y = Math.sqrt(zi * zi + zq * zq) - 0.02;
       } else if (this.mode === "fm" || this.mode === "fsk") {
-        const dot = zi * this.prevI + zq * this.prevQ;
-        const cross = zq * this.prevI - zi * this.prevQ;
         y = Math.atan2(cross, dot) * 2.2;
-        this.prevI = zi; this.prevQ = zq;
       } else if (this.mode === "cw") {
         this.bfoPhase += bfoStep;
         y = zi * Math.cos(this.bfoPhase) - zq * Math.sin(this.bfoPhase);

@@ -61,17 +61,31 @@ function seededRand(seed: number) {
   return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
 }
 
-function synthBand(sr: number, seconds: number): AudioBuffer {
+async function synthBand(sr: number, seconds: number): Promise<AudioBuffer> {
   const n = Math.floor(sr * seconds);
   const buf = new Float32Array(n);
   const rnd = seededRand(427427);
-  const add = (t0: number, t1: number, fn: (t: number) => number) => {
+  /* The band is ~1.3M samples of layered synthesis — filled in one
+     synchronous pass it blocks the main thread for over a second
+     (a 1.3–1.45 s longtask measured at power-on in the test rig;
+     worse on a phone), and the tab reads as frozen before the
+     receiver even starts. The fill therefore yields every
+     half-second of audio. Per-sample math and ordering are
+     unchanged — the rendered band is sample-identical; it just
+     arrives without taking the tab hostage. */
+  const yieldNow = () => new Promise<void>((r) => setTimeout(r, 0));
+  const YIELD_EVERY = Math.max(1, Math.floor(sr / 2));
+  const add = async (t0: number, t1: number, fn: (t: number) => number) => {
     const a = Math.max(0, Math.floor(t0 * sr)), b = Math.min(n, Math.floor(t1 * sr));
-    for (let i = a; i < b; i++) buf[i] += fn(i / sr);
+    let lastYield = a;
+    for (let i = a; i < b; i++) {
+      buf[i] += fn(i / sr);
+      if (i - lastYield >= YIELD_EVERY) { lastYield = i; await yieldNow(); }
+    }
   };
   /* noise floor */
   let lp = 0;
-  for (let i = 0; i < n; i++) { const w = rnd() * 2 - 1; lp += 0.08 * (w - lp); buf[i] += lp * 0.03 + w * 0.006; }
+  for (let i = 0; i < n; i++) { const w = rnd() * 2 - 1; lp += 0.08 * (w - lp); buf[i] += lp * 0.03 + w * 0.006; if (i % YIELD_EVERY === YIELD_EVERY - 1) await yieldNow(); }
 
   /* CW beacon @ 3.2 kHz — keyed carrier, shaped edges */
   const msg = "VVV VVV DE NIGHTWARE LABZ · SDR TEST · 599 · ";
@@ -92,7 +106,7 @@ function synthBand(sr: number, seconds: number): AudioBuffer {
     }
   }
   for (const [a, b] of elements) {
-    add(a, b, (t) => {
+    await add(a, b, (t) => {
       const env = Math.min(1, (t - a) / 0.004, (b - t) / 0.004);
       return 0.5 * Math.max(0, env) * Math.sin(2 * Math.PI * 3200 * t);
     });
@@ -120,11 +134,12 @@ function synthBand(sr: number, seconds: number): AudioBuffer {
       const f = bit ? 6800 + 85 : 6800 - 85;
       phase += (2 * Math.PI * f) / sr;
       buf[i] += 0.34 * Math.sin(phase);
+      if (i % YIELD_EVERY === YIELD_EVERY - 1) await yieldNow();
     }
   }
 
   /* AM station @ 10.5 kHz — a slow machine melody, then speech-shaped bursts */
-  add(0, seconds, (t) => {
+  await add(0, seconds, (t) => {
     const notes = [220, 261.6, 329.6, 392, 329.6, 261.6];
     const seg = t % 12;
     let m: number;
@@ -139,7 +154,7 @@ function synthBand(sr: number, seconds: number): AudioBuffer {
   });
 
   /* SSB voice-shaped @ 15.2 kHz — wandering formants, syllabic gating */
-  add(0, seconds, (t) => {
+  await add(0, seconds, (t) => {
     const gate = Math.max(0, Math.sin(2 * Math.PI * 0.45 * t + 1)) > 0.25 ? 1 : 0.08;
     const f1 = 15200 + 500 + 260 * Math.sin(2 * Math.PI * 0.7 * t);
     const f2 = 15200 + 1300 + 420 * Math.sin(2 * Math.PI * 0.53 * t + 2);
@@ -155,18 +170,19 @@ function synthBand(sr: number, seconds: number): AudioBuffer {
       const mod = seg < 1.2 ? Math.sin(2 * Math.PI * 700 * t) : seg < 2.4 ? Math.sin(2 * Math.PI * 900 * t) : 0.15 * Math.sin(2 * Math.PI * 180 * t);
       phase += (2 * Math.PI * (20400 + 2400 * mod)) / sr;
       buf[i] += 0.30 * Math.sin(phase);
+      if (i % YIELD_EVERY === YIELD_EVERY - 1) await yieldNow();
     }
   }
 
   /* The wanderer — a slow chirp crossing the whole band */
-  add(0, seconds, (t) => {
+  await add(0, seconds, (t) => {
     const ph = (t % 30) / 30;
     const f = 800 + ph * 22200;
     return 0.16 * Math.sin(2 * Math.PI * f * t - Math.PI * 22200 * 30 * ph * ph * 0 + 2 * Math.PI * 800 * t * 0 + (2 * Math.PI * (f - 800) * t * ph) / 2);
   });
 
   /* gentle limiting */
-  for (let i = 0; i < n; i++) buf[i] = Math.max(-0.92, Math.min(0.92, buf[i]));
+  for (let i = 0; i < n; i++) { buf[i] = Math.max(-0.92, Math.min(0.92, buf[i])); if (i % YIELD_EVERY === YIELD_EVERY - 1) await yieldNow(); }
   const ctx = new OfflineAudioContext(1, n, sr);
   const b = ctx.createBuffer(1, n, sr);
   b.copyToChannel(buf, 0);
@@ -390,7 +406,12 @@ export function buildSigint(body: HTMLElement) {
       b.classList.toggle("primary", k === kind);
     }
     if (kind === "band") {
-      bandBuffer ??= synthBand(ctx.sampleRate, 30);
+      if (!bandBuffer) {
+        status.textContent = "building the house band…";
+        bandBuffer = await synthBand(ctx.sampleRate, 30);
+        /* powered off while the band was building: stay off */
+        if (!running) return;
+      }
       const s = ctx.createBufferSource(); s.buffer = bandBuffer; s.loop = true;
       s.connect(node); s.start(); liveSrc = s;
       status.textContent = "source: the house band (synthesized) · live";
@@ -556,11 +577,13 @@ export function buildSigint(body: HTMLElement) {
   }
 
   /* ---------------- RTTY decoder (ITA2) ----------------
-     The worklet streams instantaneous frequency (~2 ms/value);
-     a 45.45-baud symbol is 11 values. UART-style framing: hunt a
-     mark→space edge, sample 5 data bits at symbol centres, honour
-     LTRS/FIGS shifts. The eye folds the same stream at the symbol
-     period so the operator can see the two tones separate. */
+     The worklet streams instantaneous frequency at exactly 500
+     values/sec (its decimation is sample-rate exact — see
+     sdr-worklet.js); a 45.45-baud symbol is 500/45.45 ≈ 11 values.
+     UART-style framing: hunt a mark→space edge, sample 5 data bits
+     at symbol centres, honour LTRS/FIGS shifts. The eye folds the
+     same stream at the symbol period so the operator can see the
+     two tones separate. */
   const ITA2_LTRS: Record<number, string> = {
     0x01: "E", 0x03: "A", 0x05: "S", 0x06: "I", 0x07: "U", 0x09: "D", 0x0a: "R", 0x0b: "J",
     0x0c: "N", 0x0d: "F", 0x0e: "C", 0x0f: "K", 0x10: "T", 0x11: "Z", 0x12: "L", 0x13: "W",
@@ -573,7 +596,8 @@ export function buildSigint(body: HTMLElement) {
     0x14: "#", 0x15: "6", 0x16: "0", 0x17: "1", 0x18: "9", 0x19: "?", 0x1a: "&", 0x1c: ".",
     0x1d: "/", 0x1e: ";", 0x04: " ", 0x02: "\n", 0x08: "",
   };
-  const SPS = 11;
+  const SPS = 500 / 45.45; /* worklet FSK values per symbol — the 500/sec contract */
+  const EYE_FS = 250; /* eye full-scale, Hz: the ±85 Hz tones land at ±0.34 */
   let fbuf: number[] = [], fpos = 0, figsShift = false, rttyLine = "";
   let sampleIdx = 0;
   const ex = eye.getContext("2d")!;
@@ -599,14 +623,16 @@ export function buildSigint(body: HTMLElement) {
     const thr0 = fskThreshold();
     for (const v of vs) {
       fbuf.push(v); sampleIdx++;
-      /* eye: fold at the symbol period, fade slowly */
+      /* eye: fold at the symbol period, fade slowly. The stream is
+         raw Hz, so scale it — unscaled, every real value rails the
+         trace at ±1 and the eye shows two lines, not an eye. */
       const x = (sampleIdx % SPS) / SPS * eye.width;
-      const y = eye.height / 2 - Math.max(-1, Math.min(1, v)) * (eye.height / 2 - 2);
+      const y = eye.height / 2 - Math.max(-1, Math.min(1, v / EYE_FS)) * (eye.height / 2 - 2);
       ex.fillStyle = "rgba(120,255,170,0.75)";
       ex.fillRect(x, y, 1.6, 1.6);
     }
     ex.fillStyle = "rgba(2,6,4,0.10)"; ex.fillRect(0, 0, eye.width, eye.height);
-    const thrY = eye.height / 2 - Math.max(-1, Math.min(1, thr0)) * (eye.height / 2 - 2);
+    const thrY = eye.height / 2 - Math.max(-1, Math.min(1, thr0 / EYE_FS)) * (eye.height / 2 - 2);
     ex.strokeStyle = "rgba(255,95,86,0.8)"; ex.beginPath(); ex.moveTo(0, thrY); ex.lineTo(eye.width, thrY); ex.stroke();
     const thr = fskThreshold();
     const bitAt = (center: number): number => {
@@ -618,6 +644,10 @@ export function buildSigint(body: HTMLElement) {
       /* hunt a mark→space edge */
       if (!(fbuf[fpos] <= thr && (fpos === 0 || fbuf[fpos - 1] > thr))) { fpos++; continue; }
       if (bitAt(fpos + 0.5 * SPS) !== 0) { fpos++; continue; }
+      /* framing: the first stop bit must be mark, as any UART
+         requires — a frame without it is noise wearing a start bit,
+         and off-air noise mints far fewer characters for it */
+      if (bitAt(fpos + 6.5 * SPS) !== 1) { fpos++; continue; }
       let code = 0;
       for (let k = 1; k <= 5; k++) code |= bitAt(fpos + (k + 0.5) * SPS) << (k - 1);
       emitRtty(code);
