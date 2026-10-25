@@ -1152,7 +1152,8 @@ export function buildSimulacrum(body: HTMLElement) {
   const titleSub = el("div", "os-sim-title-sub", "");
   const titleMood = el("div", "os-sim-title-mood", "");
   const titleEnter = el("div", "os-sim-title-enter", "click to enter");
-  titleScr.append(titleName, titleSub, titleMood, titleEnter);
+  const titleKeys = el("div", "os-sim-title-keys", "the opening · tab — starlight · 1 — blink · q — stormcall · x — bloom · b");
+  titleScr.append(titleName, titleSub, titleMood, titleEnter, titleKeys);
   const opening = el("div", "os-sim-opening");
   const openingBar = el("div", "os-sim-opening-bar");
   const openingClose = el("button", "os-btn", "close the opening");
@@ -1176,16 +1177,16 @@ export function buildSimulacrum(body: HTMLElement) {
   const fsBtn = el("button", "os-btn", "fullscreen");
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
-  hud.append(seedLabel, flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, fsBtn, xrBtn, posLabel);
-  const chrome = el("div", "os-sim-chrome");
-  chrome.append(hud, powers);
-  stage.append(canvas, shade, uw, whisper, opening, titleScr, chrome);
+  hud.append(seedLabel, posLabel);
+  const controls = el("div", "os-sim-controls");
+  controls.append(flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, fsBtn, xrBtn);
+  stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, controls, powers);
   wrap.append(stage);
   wrap.classList.add("chrome-on");
   body.appendChild(wrap);
 
   const gl = canvas.getContext("webgl", { antialias: true, preserveDrawingBuffer: true }) as WebGLRenderingContext | null;
-  if (!gl) { titleName.textContent = "the simulacrum"; titleMood.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; titleEnter.textContent = ""; return; }
+  if (!gl) { titleName.textContent = "the simulacrum"; titleMood.textContent = "WebGL is not available in this browser — the simulacrum cannot form."; titleEnter.textContent = ""; titleKeys.textContent = ""; return; }
 
   const program = (vs: string, fs: string) => {
     const sh = (type: number, src: string) => {
