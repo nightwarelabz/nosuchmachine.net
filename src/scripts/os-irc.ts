@@ -86,6 +86,11 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      Older builds saved the claim code into the filesystem; that practice
      is retired, and any copy found is destroyed on sight. */
   try { if (os.read(CLAIM_PATH)) os.remove(CLAIM_PATH); } catch { /* nothing saved, nothing to scrub */ }
+  /* The board wipe (Chase's order, 2026-10-25): the pre-presence kept
+     log is retired — its key is destroyed on sight, so every visitor's
+     kept conversation and roster clear exactly once and the room
+     starts over with a clean board under the v2 key. */
+  try { localStorage.removeItem(skey("blacksite-relay-v1")); } catch { /* nothing old to clear */ }
   const card = el("div", "os-relay-card");
   card.hidden = true;
   wrap.appendChild(card);
@@ -184,7 +189,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const inputRow = el("div", "os-relay-inputrow");
   const input = document.createElement("input");
   input.className = "os-relay-input";
-  input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /part · /nick name";
+  input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /away · /part · /nick name";
   input.maxLength = 400;
   const sendBtn = el("button", "os-btn small", "send ▸");
   sendBtn.title = "send it on the wire";
@@ -201,6 +206,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   forgetBtn.addEventListener("click", () => {
     try { localStorage.removeItem(skey(RELAY_LOG_KEY)); } catch { /* nothing kept anyway */ }
     buffers.clear();
+    roster.clear();
+    manualAway = "";
+    for (const [chan, set] of users) for (const n of set) rosterTouch(chan, n, n === myNick ? presence : "here");
     pendingJoins = [];
     current = "server";
     renderTargets();
@@ -209,8 +217,21 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   input.setAttribute("enterkeyhint", "send");
   inputRow.append(input, sendBtn, idBtn, copyBtn, forgetBtn);
   main.append(linesEl, inputRow);
-  const usersEl = el("div", "os-relay-users");
-  view.append(targetsEl, main, usersEl);
+  const usersCol = el("div", "os-relay-users");
+  const selfEl = el("div", "os-relay-self");
+  const selfLine = el("div", "os-relay-self-line", "");
+  const selfBtns = el("div", "os-relay-self-btns");
+  const awayBtn = el("button", "os-btn small", "set away");
+  awayBtn.title = "mark yourself away on the wire — or /away in the chat";
+  awayBtn.addEventListener("click", () => { if (presence === "away") setPresence("here"); else setPresence("away", "away"); input.focus(); });
+  const nameBtn = el("button", "os-btn small", "new name");
+  nameBtn.title = "reset your name — let this one go and draw a fresh machine name";
+  nameBtn.addEventListener("click", () => { resetName(); input.focus(); });
+  selfBtns.append(awayBtn, nameBtn);
+  selfEl.append(el("div", "os-relay-users-h", "you"), selfLine, selfBtns);
+  const usersEl = el("div", "");
+  usersCol.append(selfEl, usersEl);
+  view.append(targetsEl, main, usersCol);
   wrap.appendChild(noteEl);
   wrap.appendChild(view);
   body.appendChild(wrap);
@@ -223,6 +244,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   let intentionalClose = false;
   let attempts = 0;
   let keepalive: ReturnType<typeof setInterval> | null = null;
+  let capFallback: ReturnType<typeof setTimeout> | null = null;
   let wireHost = "";
   let wirePort = 6697;
   let wireClaim = "";
@@ -231,6 +253,45 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   let joinTarget = HOUSE_CHANNEL;
   const buffers = new Map<string, string[]>();
   const users = new Map<string, Set<string>>();
+
+  /* ————— presence + the kept roster —————
+     Presence is real IRC: the client speaks AWAY to the network and
+     shows every state in the room — here, idle, away, gone. Where the
+     network offers away-notify (Libera, hackint) the client negotiates
+     it and states arrive as they change; OFTC offers no such cap
+     (proven live: its LS lists multi-prefix only, away-notify is
+     NAKed), so there the room is read by WHO — the 352 status letter
+     (H here / G gone-away) — on join and once a minute. Idle engages
+     (and speaking or stirring clears it); away is set on purpose, by
+     the button or /away, and is remembered across refreshes. The
+     roster keeps EVERYONE who steps into the room — name, state, last
+     seen — on this machine, so a refresh no longer makes people
+     disappear: whoever is out shows as kept until they step back in.
+     Your own name likewise sticks until you deliberately reset it
+     (the new name button) and draw a fresh machine name. */
+  type Presence = "here" | "idle" | "away";
+  let presence: Presence = "here";
+  let awayMsg = "";
+  let manualAway = "";
+  let registered = false;
+  let lastAct = Date.now();
+  const roster = new Map<string, Map<string, { s: string; l: number }>>();
+  const ROSTER_CAP = 300;
+  const rosterTouch = (chan: string, nick: string, state: string, force = false) => {
+    if (!chan.startsWith("#") || !nick) return;
+    if (!roster.has(chan)) roster.set(chan, new Map());
+    const meta = roster.get(chan)!;
+    const prev = meta.get(nick);
+    // A plain sighting never erases a known away/idle — only the AWAY
+    // event itself (force) or the person leaving/returning moves it.
+    if (prev && !force && state === "here" && (prev.s === "away" || prev.s === "idle")) state = prev.s;
+    meta.set(nick, { s: state, l: Date.now() });
+    if (meta.size > ROSTER_CAP) {
+      const gone = [...meta.entries()].filter(([, m]) => m.s === "gone").sort((a, b) => a[1].l - b[1].l);
+      for (const [n] of gone.slice(0, meta.size - ROSTER_CAP)) meta.delete(n);
+    }
+    scheduleSave();
+  };
 
   /* ————— retention: the room keeps its words on this machine —————
      A refresh used to cost the whole conversation: buffers lived only
@@ -241,12 +302,12 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      only the wire. Passwords and the house claim code are NEVER part
      of the log — they ride the visit in memory only, as always. The
      "forget" button wipes the log on the spot. */
-  const RELAY_LOG_KEY = "blacksite-relay-v1";
+  const RELAY_LOG_KEY = "blacksite-relay-v2";
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   const saveLog = () => {
     saveTimer = null;
     try {
-      const data = { v: 1, nick: myNick, current, channels: [...joinedChans], buffers: Object.fromEntries(buffers) };
+      const data = { v: 2, nick: myNick, current, channels: [...joinedChans], buffers: Object.fromEntries(buffers), roster: Object.fromEntries([...roster].map(([c, m]) => [c, Object.fromEntries(m)])), away: manualAway };
       let body = JSON.stringify(data);
       // A pathological log sheds its oldest lines before it sheds the room.
       let guard = 0;
@@ -259,7 +320,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   };
   const scheduleSave = () => { if (!saveTimer) saveTimer = setTimeout(saveLog, 250); };
   window.addEventListener("pagehide", () => { if (saveTimer) { clearTimeout(saveTimer); saveLog(); } });
-  const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]> } | null => {
+  const loadLog = (): { nick: string; current: string; channels: string[]; buffers: Record<string, string[]>; roster: Record<string, Record<string, { s: string; l: number }>>; away: string } | null => {
     try {
       const raw = localStorage.getItem(skey(RELAY_LOG_KEY));
       if (!raw) return null;
@@ -270,6 +331,16 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         if (Array.isArray(lines)) clean[t] = lines.filter((l) => typeof l === "string").slice(-MAX_LINES);
       }
       if (!Object.keys(clean).length) return null;
+      const cleanRoster: Record<string, Record<string, { s: string; l: number }>> = {};
+      if (data.roster && typeof data.roster === "object") {
+        for (const [chan, members] of Object.entries(data.roster)) {
+          if (!chan.startsWith("#") || !members || typeof members !== "object") continue;
+          cleanRoster[chan] = {};
+          for (const [nick, m] of Object.entries(members as Record<string, any>)) {
+            if (m && typeof m === "object") cleanRoster[chan][nick] = { s: typeof m.s === "string" ? m.s : "gone", l: typeof m.l === "number" ? m.l : 0 };
+          }
+        }
+      }
       return {
         // A claimed house name is never restored from storage: it opens
         // only with its code, presented fresh each visit.
@@ -277,6 +348,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         current: typeof data.current === "string" ? data.current : "server",
         channels: Array.isArray(data.channels) ? data.channels.filter((c) => typeof c === "string" && c.startsWith("#")) : [],
         buffers: clean,
+        roster: cleanRoster,
+        away: typeof data.away === "string" ? data.away : "",
       };
     } catch { return null; }
   };
@@ -308,14 +381,86 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       targetsEl.appendChild(b);
     }
   };
+  const ago = (ts: number) => {
+    const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 48) return `${hrs}h ago`;
+    return `${Math.round(hrs / 24)}d ago`;
+  };
+  const userRow = (nick: string, state: string, last = 0) => {
+    const row = el("div", `os-relay-user${state === "gone" ? " gone" : ""}`);
+    const dot = el("span", "os-relay-dot");
+    dot.dataset.state = state;
+    row.append(dot, document.createTextNode(nick));
+    if (state === "idle" || state === "away") row.append(el("span", "os-relay-state", state));
+    if (state === "gone") row.append(el("span", "os-relay-state", `gone · ${ago(last)}`));
+    return row;
+  };
+  const renderSelf = () => {
+    selfLine.textContent = myNick ? `${myNick} · ${presence}${presence === "away" && awayMsg && awayMsg !== "away" ? ` — ${awayMsg}` : ""}` : "—";
+    awayBtn.textContent = presence === "away" ? "I'm back" : "set away";
+  };
   const renderUsers = () => {
+    renderSelf();
     usersEl.textContent = "";
     const set = users.get(current);
-    if (!set) return;
-    usersEl.appendChild(el("div", "os-relay-users-h", `${set.size} on the wire`));
-    for (const u of [...set].sort((a, b) => a.localeCompare(b))) usersEl.appendChild(el("div", "os-relay-user", u));
+    const meta = roster.get(current);
+    const live = set ? [...set].sort((a, b) => a.localeCompare(b)) : [];
+    usersEl.appendChild(el("div", "os-relay-users-h", `${live.length} on the wire`));
+    for (const u of live) usersEl.appendChild(userRow(u, u === myNick ? presence : (meta?.get(u)?.s || "here")));
+    const kept = meta ? [...meta.entries()].filter(([n, m]) => m.s === "gone" && !(set && set.has(n))).sort((a, b) => b[1].l - a[1].l) : [];
+    if (kept.length) {
+      usersEl.appendChild(el("div", "os-relay-users-h", "kept — not in the room"));
+      for (const [n, m] of kept) usersEl.appendChild(userRow(n, "gone", m.l));
+    }
   };
   const send = (raw: string) => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(raw + "\r\n"); };
+
+  /* Presence moves on the wire as real IRC AWAY, so any client in the
+     room — Relay or not — reads the state the panel shows. */
+  const applyAwayWire = () => {
+    if (!registered) return;
+    if (presence === "here") send("AWAY");
+    else send(`AWAY :${presence === "idle" ? "idle" : (awayMsg || "away")}`);
+  };
+  const setPresence = (p: Presence, msg = "") => {
+    const was = presence;
+    presence = p;
+    awayMsg = p === "away" ? (msg || "away") : (p === "idle" ? "idle" : "");
+    if (p === "away") manualAway = awayMsg;
+    else if (p === "here") manualAway = "";
+    if (was !== p || p === "away") {
+      applyAwayWire();
+      for (const c of joinedChans) rosterTouch(c, myNick, presence, true);
+      push(current.startsWith("#") ? current : "server", p === "here" ? "— you are back" : `— you are ${p}${p === "away" && awayMsg !== "away" ? `: ${awayMsg}` : ""}`);
+    }
+    renderUsers();
+    scheduleSave();
+  };
+  /* Idle is automatic: four quiet minutes with no key or touch, and
+     the room is told. Stirring — or speaking — brings you back. */
+  const bump = () => { lastAct = Date.now(); if (presence === "idle") setPresence("here"); };
+  window.addEventListener("keydown", bump, { passive: true });
+  window.addEventListener("pointerdown", bump, { passive: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) bump(); });
+  const IDLE_MS = 4 * 60_000;
+  const idleWatch = setInterval(() => { if (presence === "here" && Date.now() - lastAct > IDLE_MS) setPresence("idle"); }, 15_000);
+  /* OFTC has no away-notify: the room's states are read by WHO — once
+     on join (from the 366 handler) and once a minute after. */
+  const whoWatch = setInterval(() => { if (registered) for (const c of joinedChans) send(`WHO ${c}`); }, 60_000);
+  /* The deliberate reset: let the worn name go, draw a fresh machine
+     name, and wear it — on the wire at once when connected. */
+  const resetName = () => {
+    const fresh = machineName();
+    push("server", `— a fresh name is drawn: ${fresh}. The old one is let go.`);
+    if (ws && ws.readyState === WebSocket.OPEN && registered) { send(`NICK ${fresh}`); return; }
+    for (const meta of roster.values()) { const e = meta.get(myNick); if (e) { meta.delete(myNick); meta.set(fresh, e); } }
+    myNick = fresh;
+    renderUsers();
+    scheduleSave();
+  };
 
   const handle = (m: IrcMessage) => {
     switch (m.command) {
@@ -324,7 +469,11 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         break;
       case "001":
         attempts = 0;
+        registered = true;
+        if (capFallback) { clearTimeout(capFallback); capFallback = null; }
         push("server", `— registered on the network as ${myNick}`);
+        if (manualAway) { presence = "away"; awayMsg = manualAway; }
+        if (presence !== "here") { applyAwayWire(); renderUsers(); }
         if (wireRegister) {
           send(`PRIVMSG NickServ :REGISTER ${wireRegister.password} ${wireRegister.email}`);
           push("server", `— registering ${myNick} with NickServ: watch your inbox for the code, then send /msg NickServ VERIFY REGISTER ${myNick} <code> — after that, the identity box's password field is this name's key.`);
@@ -361,36 +510,89 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         push("server", `-${m.nick}- ${text}`);
         break;
       }
+      case "CAP": {
+        // Capability negotiation: ask for away-notify so the room's
+        // away/idle states are visible as they change, then close the
+        // negotiation either way — registration must never wait on it.
+        const sub = (m.params[1] || "").toUpperCase();
+        const caps = m.params.slice(2).join(" ");
+        if (sub === "LS") { if (/away-notify/.test(caps)) send("CAP REQ :away-notify"); else send("CAP END"); }
+        else if (sub === "ACK" || sub === "NAK") send("CAP END");
+        break;
+      }
+      case "AWAY": {
+        const msg = m.params[0] || "";
+        const st = msg ? (msg === "idle" ? "idle" : "away") : "here";
+        for (const [chan, set] of users) if (set.has(m.nick)) {
+          rosterTouch(chan, m.nick, st, true);
+          push(chan, msg ? `— ${m.nick} is ${st}${st === "away" && msg !== "away" ? `: ${msg}` : ""}` : `— ${m.nick} is back`);
+        }
+        if (current.startsWith("#")) renderUsers();
+        break;
+      }
       case "JOIN": {
         const chan = m.params[0];
         if (m.nick === myNick) { joinedChans.add(chan); push(chan, `— you stepped into ${chan}`); current = chan; renderTargets(); }
         else push(chan, `— ${m.nick} arrived`);
         if (!users.has(chan)) users.set(chan, new Set());
         users.get(chan)!.add(m.nick);
+        rosterTouch(chan, m.nick, m.nick === myNick ? presence : "here", m.nick === myNick);
         if (chan === current) renderUsers();
         break;
       }
       case "PART": {
         const chan = m.params[0];
-        if (m.nick === myNick) joinedChans.delete(chan);
+        if (m.nick === myNick) { joinedChans.delete(chan); roster.get(chan)?.delete(myNick); }
+        else rosterTouch(chan, m.nick, "gone", true);
         push(chan, `— ${m.nick} left`);
         users.get(chan)?.delete(m.nick);
         if (chan === current) renderUsers();
         break;
       }
       case "QUIT":
-        for (const [chan, set] of users) if (set.delete(m.nick)) push(chan, `— ${m.nick} left the wire`);
+        for (const [chan, set] of users) if (set.delete(m.nick)) { push(chan, `— ${m.nick} left the wire`); rosterTouch(chan, m.nick, "gone", true); }
         if (current.startsWith("#")) renderUsers();
         break;
-      case "NICK":
-        for (const set of users.values()) if (set.delete(m.nick)) set.add(m.params[0]);
-        if (m.nick === myNick) { myNick = m.params[0]; push("server", `— you are now ${myNick}`); }
+      case "NICK": {
+        const fresh = m.params[0];
+        for (const set of users.values()) if (set.delete(m.nick)) set.add(fresh);
+        for (const meta of roster.values()) { const e = meta.get(m.nick); if (e) { meta.delete(m.nick); meta.set(fresh, e); } }
+        if (m.nick === myNick) { myNick = fresh; push("server", `— you are now ${myNick}`); }
+        scheduleSave();
         renderUsers();
         break;
+      }
       case "353": {
         const chan = m.params[2];
         if (!users.has(chan)) users.set(chan, new Set());
-        for (const n of (m.params[3] || "").split(" ")) if (n) users.get(chan)!.add(n.replace(/^[@+]/, ""));
+        for (const n of (m.params[3] || "").split(" ")) if (n) { const nick = n.replace(/^[@+]/, ""); users.get(chan)!.add(nick); rosterTouch(chan, nick, nick === myNick ? presence : "here", nick === myNick); }
+        if (chan === current) renderUsers();
+        break;
+      }
+      case "352": {
+        // WHO reply: [me, chan, user, host, server, nick, status, …] —
+        // the status letter is the network's own word: H here, G away.
+        const chan = m.params[1];
+        const nick = m.params[5];
+        const status = m.params[6] || "";
+        if (nick && nick !== myNick) rosterTouch(chan, nick, status.startsWith("G") ? "away" : "here", true);
+        if (chan === current) renderUsers();
+        break;
+      }
+      case "366": {
+        // End of NAMES: reconcile the kept roster against who is
+        // actually in the room now — anyone kept but absent is gone,
+        // with their last-seen time untouched — then read the room's
+        // presence by WHO (OFTC has no away-notify to push it).
+        const chan = m.params[1];
+        const live = users.get(chan);
+        const meta = roster.get(chan);
+        if (meta) {
+          let changed = false;
+          for (const [nick, e] of meta) if (nick !== myNick && e.s !== "gone" && !(live && live.has(nick))) { e.s = "gone"; changed = true; }
+          if (changed) scheduleSave();
+        }
+        if (chan && chan.startsWith("#")) send(`WHO ${chan}`);
         if (chan === current) renderUsers();
         break;
       }
@@ -444,6 +646,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     let pending = "";
     ws.addEventListener("open", () => {
       push("server", "— bridge open; registering…");
+      send("CAP LS 302");
+      if (capFallback) clearTimeout(capFallback);
+      capFallback = setTimeout(() => { if (!registered) send("CAP END"); }, 6000);
       if (wireClaim) send(`PASS nsm-claim:${wireClaim}`);
       send(`NICK ${myNick}`);
       send(`USER ${myNick} 0 * :BLACKSITE Relay machine`);
@@ -462,6 +667,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     });
     ws.addEventListener("close", () => {
       if (ws !== mine) return;
+      registered = false;
       if (keepalive) { clearInterval(keepalive); keepalive = null; }
       if (intentionalClose) { push("server", "— off the wire."); return; }
       users.clear();
@@ -478,6 +684,12 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const restored = loadLog();
   if (restored) {
     for (const [t, lines] of Object.entries(restored.buffers)) buffers.set(t, lines);
+    for (const [chan, members] of Object.entries(restored.roster)) {
+      const meta = new Map<string, { s: string; l: number }>();
+      for (const [nick, m] of Object.entries(members)) meta.set(nick, { s: m.s, l: m.l });
+      roster.set(chan, meta);
+    }
+    if (restored.away) { manualAway = restored.away; presence = "away"; awayMsg = restored.away; }
     pendingJoins = restored.channels.filter((c) => c !== HOUSE_CHANNEL);
     if (restored.current && buffers.has(restored.current)) current = restored.current;
     renderTargets();
@@ -497,6 +709,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const ghostWatch = setInterval(() => {
     if (!document.body.contains(wrap)) {
       clearInterval(ghostWatch);
+      clearInterval(idleWatch);
+      clearInterval(whoWatch);
       intentionalClose = true;
       if (keepalive) clearInterval(keepalive);
       try { ws?.close(); } catch { /* already gone */ }
@@ -515,15 +729,18 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       switch (cmd.toLowerCase()) {
         case "join": send(`JOIN ${arg}`); break;
         case "part": send(`PART ${current}`); if (current !== "server") { buffers.delete(current); current = "server"; renderTargets(); renderLines(); } break;
-        case "msg": { const [to, ...msgParts] = rest; const msg = msgParts.join(" "); if (to && msg) { send(`PRIVMSG ${to} :${msg}`); push(to, `<${myNick}> ${msg}`); current = to; renderTargets(); renderLines(); } break; }
-        case "me": send(`PRIVMSG ${current} :\x01ACTION ${arg}\x01`); push(current, `· ${myNick} ${arg}`); break;
+        case "msg": { const [to, ...msgParts] = rest; const msg = msgParts.join(" "); if (to && msg) { if (presence !== "here") setPresence("here"); send(`PRIVMSG ${to} :${msg}`); push(to, `<${myNick}> ${msg}`); current = to; renderTargets(); renderLines(); } break; }
+        case "me": if (presence !== "here") setPresence("here"); send(`PRIVMSG ${current} :\x01ACTION ${arg}\x01`); push(current, `· ${myNick} ${arg}`); break;
+        case "away": setPresence("away", arg || "away"); break;
+        case "back": setPresence("here"); break;
         case "nick": send(`NICK ${arg}`); break;
         case "topic": send(`TOPIC ${current} :${arg}`); break;
         case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); push("server", "— off the wire. The identity box is up if you want back in — any name, or none."); showIdentityBox(); break;
-        default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /topic /quit)`);
+        default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /topic /quit)`);
       }
       return;
     }
+    if (presence !== "here") setPresence("here");
     send(`PRIVMSG ${current} :${text}`);
     push(current, `<${myNick}> ${text}`);
   };
