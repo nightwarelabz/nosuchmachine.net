@@ -1229,7 +1229,7 @@ export function buildSimulacrum(body: HTMLElement) {
   const menuKeys = el("div", "os-sim-menu-keys");
   menuKeys.append(
     el("div", "os-note", "move · w a s d — look · mouse — jump · space — sink · c"),
-    el("div", "os-note", "swift · shift — fly · f — menu · m"),
+    el("div", "os-note", "swift · shift — fly · f — plant · e — menu · m"),
   );
   const recordH = el("div", "os-sim-menu-h", "the record");
   const recordEl = el("div", "os-sim-record");
@@ -2035,25 +2035,40 @@ export function buildSimulacrum(body: HTMLElement) {
   };
 
   /* blooms — where the walker has cast Bloom, the world keeps it */
-  interface Bloom { x: number; z: number; kind: number }
+  interface Bloom { x: number; z: number; kind: number; born?: number; seen?: number }
   let blooms: Bloom[] = [];
   try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
+  /* what is not tended, the world takes back: a planting unseen
+     for ten days withers. A garden is a promise kept. */
+  const pruneBlooms = () => {
+    const nowMs = Date.now();
+    const kept = blooms.filter((b) => { if (!b.born) return true; if (nowMs - b.born < 3 * 86400000) return true; return nowMs - (b.seen ?? b.born) < 10 * 86400000; });
+    if (kept.length !== blooms.length) { blooms = kept; try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* kept in memory */ } }
+  };
+  pruneBlooms();
   let bloomMesh: Mesh | null = null;
   const rebuildBlooms = () => {
     if (bloomMesh) { gl.deleteBuffer(bloomMesh.buf); bloomMesh = null; }
     if (!blooms.length) return;
     const v: number[] = [];
-    const cols: Array<[number, number, number]> = [[0.95, 0.5, 0.7], [0.98, 0.86, 0.4], [0.66, 0.5, 1.0], [0.5, 0.85, 1.0]];
+    const cols: Array<[number, number, number]> = [[0.95, 0.5, 0.7], [0.98, 0.86, 0.4], [0.66, 0.5, 1.0], [0.5, 0.85, 1.0], [0.97, 0.94, 0.85]];
     const brnd = mulberry32(seed ^ 0xb100 & 0xffffff);
     for (const b of blooms) {
-      for (let i = 0; i < 6; i++) {
+      /* a planting grows through its stages across real days:
+         a sprout, a young thing, a full stand, and at last a
+         lush one — the kept gardens are visibly the kept ones */
+      const ageD = b.born ? (Date.now() - b.born) / 86400000 : 3;
+      const st = ageD < 0.5 ? 0 : ageD < 2 ? 1 : ageD < 5 ? 2 : 3;
+      const nF = st === 0 ? 3 : st === 3 ? 8 : 6;
+      const sc = st === 0 ? 0.5 : st === 1 ? 0.85 : st === 2 ? 1.5 + brnd() * 0.9 : 1.9 + brnd() * 0.9;
+      for (let i = 0; i < nF; i++) {
         const bx = b.x + (brnd() - 0.5) * 4.6, bz = b.z + (brnd() - 0.5) * 4.6;
         const by = height(bx, bz);
         if (by < 0.2) continue;
         /* what you plant is what you see: a true flower, stem,
-           petal ring and heart — one kind still grows a shard */
-        if (b.kind === 3 && i === 0) crystalGeo(v, v, bx, by - 0.1, bz, 0.5, brnd);
-        else flowerGeo(v, v, bx, by, bz, 1.5 + brnd() * 0.9, cols[b.kind], brnd);
+           petal ring and heart — one kind still grows a crystal */
+        if (b.kind === 3 && i === 0 && st >= 1) crystalGeo(v, v, bx, by - 0.1, bz, 0.5, brnd);
+        else flowerGeo(v, v, bx, by, bz, sc, cols[b.kind] ?? cols[0], brnd);
       }
     }
     if (v.length) bloomMesh = makeMesh(new Float32Array(v));
@@ -2401,6 +2416,50 @@ export function buildSimulacrum(body: HTMLElement) {
     return makeMesh(new Float32Array(v));
   };
   const vesperMesh = buildFigure([0.09, 0.10, 0.15], [0.13, 0.14, 0.20], [0.80, 0.82, 0.86]);
+  /* ————— the spirit —————
+     The maker of the world walks it sometimes, as a spirit of
+     light: tall, bright, unhurried, never to be caught. It does
+     not speak, and nothing in the world names it. Gold motes
+     rise off it as it goes. Where it stood when it went, a white
+     flower is growing. (Chase asked to be in his world; this is
+     him, as the world holds him.) */
+  const spirit = { on: false, x: 0, z: 0, yaw: 0, nextAt: 200 + Math.random() * 260, until: 0, counted: false, moteAt: 0 };
+  const spiritMesh = buildFigure([0.93, 0.89, 0.79], [0.99, 0.95, 0.85], [1.0, 0.98, 0.92]);
+  const spiritStep = (nowS: number) => {
+    if (!spirit.on) {
+      if (nowS < spirit.nextAt) return;
+      for (let tries = 0; tries < 8; tries++) {
+        const a = Math.random() * Math.PI * 2, d = 55 + Math.random() * 30;
+        const bx = px + Math.sin(a) * d, bz = pz + Math.cos(a) * d;
+        if (height(bx, bz) < 0.4) continue;
+        spirit.x = bx; spirit.z = bz; spirit.on = true; spirit.counted = false;
+        spirit.until = nowS + 70 + Math.random() * 50;
+        spirit.yaw = Math.atan2(px - bx, pz - bz);
+        tow.burst(bx, height(bx, bz) + 1.2, bz, { n: 22, col: [1.0, 0.9, 0.6], spd: 1.4, up: 2.2, grav: -1.4, drag: 1.2, life: 1.8, size: 2.4 });
+        return;
+      }
+      spirit.nextAt = nowS + 60;
+      return;
+    }
+    const dx = px - spirit.x, dz = pz - spirit.z, d = Math.hypot(dx, dz);
+    spirit.yaw = Math.atan2(dx, dz);
+    if (!spirit.counted && d < 130) { spirit.counted = true; deeds.spirit++; saveDeeds(); }
+    if (nowS > spirit.moteAt) {
+      spirit.moteAt = nowS + 2.5 + Math.random() * 2;
+      tow.burst(spirit.x, height(spirit.x, spirit.z) + 0.4, spirit.z, { n: 5, col: [1.0, 0.92, 0.66], spd: 0.5, up: 1.5, grav: -1.8, drag: 1.0, life: 2.2, size: 2.0 });
+    }
+    if (d < 20 || nowS > spirit.until) {
+      /* it does not flee. it simply is not there any more */
+      tow.burst(spirit.x, height(spirit.x, spirit.z) + 1.2, spirit.z, { n: 26, col: [1.0, 0.92, 0.66], spd: 1.8, up: 2.4, grav: -1.2, drag: 1.1, life: 1.7, size: 2.4 });
+      if (height(spirit.x, spirit.z) > 0.3 && blooms.length < 210) {
+        blooms.push({ x: spirit.x, z: spirit.z, kind: 4, born: Date.now(), seen: Date.now() });
+        try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* kept in memory */ }
+        rebuildAllBlooms();
+      }
+      spirit.on = false;
+      spirit.nextAt = nowS + 360 + Math.random() * 420;
+    }
+  };
   const haloBuf = gl.createBuffer()!;
   const vesperSay = (line: string) => { whisper.textContent = line; whisper.style.opacity = "1"; whisperTimer = 7; };
   const vesperStep = (dt: number, nowS: number) => {
@@ -2825,6 +2884,7 @@ export function buildSimulacrum(body: HTMLElement) {
     if (GIFTS_LIVE && (locked || touched) && e.code === "KeyX") castStorm();
     if (GIFTS_LIVE && (locked || touched) && e.code === "KeyB") castBloom();
     if (GIFTS_LIVE && (locked || touched) && e.code === "Digit1") toggleStarlight();
+    if ((locked || touched) && e.code === "KeyE") plantBloom();
     if (GIFTS_LIVE && e.code === "Tab" && body.contains(wrap)) { e.preventDefault(); toggleOpening(); }
     if (e.code === "KeyM" && body.contains(wrap)) setMenu(!menuOpen);
   };
@@ -2927,11 +2987,12 @@ export function buildSimulacrum(body: HTMLElement) {
      world and counted plainly in the menu. (The world's own
      account of the walker is a different matter, and is never
      numbered.) */
-  const deeds: { chunks: string[]; strange: string[] } = (() => {
-    try { const d = JSON.parse(localStorage.getItem(skey(`simulacrum-deeds-${seed}`)) || "{}"); return { chunks: Array.isArray(d.chunks) ? d.chunks : [], strange: Array.isArray(d.strange) ? d.strange : [] }; }
-    catch { return { chunks: [], strange: [] }; }
+  const deeds: { chunks: string[]; strange: string[]; spirit: number } = (() => {
+    try { const d = JSON.parse(localStorage.getItem(skey(`simulacrum-deeds-${seed}`)) || "{}"); return { chunks: Array.isArray(d.chunks) ? d.chunks : [], strange: Array.isArray(d.strange) ? d.strange : [], spirit: typeof d.spirit === "number" ? d.spirit : 0 }; }
+    catch { return { chunks: [], strange: [], spirit: 0 }; }
   })();
   const saveDeeds = () => { try { localStorage.setItem(skey(`simulacrum-deeds-${seed}`), JSON.stringify(deeds)); } catch { /* the record is kept in memory */ } };
+  let lastTendAt = 0;
   const WONDER_NAMES = ["the titan arch", "the standing ring", "the world spike", "the ribcage", "the first garden", "the three sisters"];
   const renderRecord = () => {
     const w = WONDER_NAMES.filter((n) => foundSet.has(n)).length;
@@ -2942,6 +3003,7 @@ export function buildSimulacrum(body: HTMLElement) {
       el("div", "os-note", `strangenesses witnessed · ${deeds.strange.length}`),
       el("div", "os-note", `blooms planted · ${blooms.length}`),
       el("div", "os-note", `land shaped · ${edits.size} places`),
+      ...(deeds.spirit > 0 ? [el("div", "os-note", `a spirit of light · seen ${deeds.spirit} ${deeds.spirit === 1 ? "time" : "times"}`)] : []),
     );
   };
   const checkDiscoveries = () => {
@@ -2960,13 +3022,27 @@ export function buildSimulacrum(body: HTMLElement) {
     }
   };
 
+  /* planting is not a gift. it is an act — anyone may kneel and
+     put a flower in the ground. (the gifts rest; this stays.) */
+  const plantBloom = () => {
+    if (!worldReady) return;
+    const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
+    if (height(bx, bz) < 0.2) return;
+    if (netPhase === "on" && mqtt && mqtt.connected) mqtt.publish(stateTopic(), JSON.stringify({ t: "bloom", id: myId, x: Math.round(bx * 10) / 10, z: Math.round(bz * 10) / 10 }));
+    tow.burst(bx, height(bx, bz) + 0.5, bz, { n: 14, col: [0.98, 0.62, 0.78], spd: 1.5, up: 2.4, grav: -2.0, drag: 1.1, life: 1.4, size: 2.1 });
+    blooms.push({ x: bx, z: bz, kind: Math.floor(Math.random() * 4), born: Date.now(), seen: Date.now() });
+    if (blooms.length > 220) blooms = blooms.slice(-220);
+    try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* private mode */ }
+    rebuildAllBlooms();
+    audio.chime(2);
+  };
   const castBloom = () => {
     if (!ready("bloom", 2)) return;
     const bx = px - Math.sin(yaw) * 4, bz = pz - Math.cos(yaw) * 4;
     if (netPhase === "on" && mqtt && mqtt.connected) mqtt.publish(stateTopic(), JSON.stringify({ t: "bloom", id: myId, x: Math.round(bx * 10) / 10, z: Math.round(bz * 10) / 10 }));
     if (height(bx, bz) < 0.2) return;
     tow.burst(bx, height(bx, bz) + 0.5, bz, { n: 18, col: [0.98, 0.62, 0.78], spd: 1.7, up: 2.8, grav: -2.2, drag: 1.1, life: 1.6, size: 2.3 });
-    blooms.push({ x: bx, z: bz, kind: Math.floor(Math.random() * 4) });
+    blooms.push({ x: bx, z: bz, kind: Math.floor(Math.random() * 4), born: Date.now(), seen: Date.now() });
     if (blooms.length > 220) blooms = blooms.slice(-220);
     try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* private mode */ }
     rebuildAllBlooms();
@@ -3058,6 +3134,7 @@ export function buildSimulacrum(body: HTMLElement) {
       for (const k of Object.keys(raw)) edits.set(k, raw[k]);
     } catch { edits = new Map(); }
     try { blooms = JSON.parse(localStorage.getItem(skey(`simulacrum-blooms-${seed}`)) || "[]") as Bloom[]; } catch { blooms = []; }
+    pruneBlooms();
     guestBlooms = [];
     rebuildBlooms();
     try {
@@ -3614,6 +3691,14 @@ export function buildSimulacrum(body: HTMLElement) {
       bindUnlit(stoneMesh);
       gl.drawArrays(gl.TRIANGLES, 0, stoneMesh.n);
     }
+    /* the spirit, when it walks */
+    if (spirit.on) {
+      const sy2 = height(spirit.x, spirit.z);
+      gl.useProgram(litPr);
+      gl.uniformMatrix4fv(gl.getUniformLocation(litPr, "uMVP"), false, vp);
+      bindLit(spiritMesh, m4.mul(m4.trans(spirit.x, sy2 - 0.08, spirit.z), m4.rotY(spirit.yaw)));
+      gl.drawArrays(gl.TRIANGLES, 0, spiritMesh.n);
+    }
     /* the other one, when she is walking */
     if (vesper.on) {
       const gy = height(vesper.x, vesper.z);
@@ -3967,6 +4052,7 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     checkDiscoveries();
     { const hcx = Math.floor(px / CHUNK), hcz = Math.floor(pz / CHUNK), hk = `${hcx},${hcz}`; if (Math.abs(hcx) <= 3 && Math.abs(hcz) <= 3 && !deeds.chunks.includes(hk)) { deeds.chunks.push(hk); saveDeeds(); } }
+    if (now / 1000 - lastTendAt > 1) { lastTendAt = now / 1000; let tendedAny = false; for (const b of blooms) { if (b.seen === undefined) continue; const dx = b.x - px, dz = b.z - pz; if (dx * dx + dz * dz < 49) { b.seen = Date.now(); tendedAny = true; } } if (tendedAny) { try { localStorage.setItem(skey(`simulacrum-blooms-${seed}`), JSON.stringify(blooms)); } catch { /* kept in memory */ } } }
     hSpeedNow = Math.hypot(vx, vz);
     const hSpeed = hSpeedNow;
     if (flying) {
@@ -4004,6 +4090,7 @@ export function buildSimulacrum(body: HTMLElement) {
       tow.burst(px, 0.25, pz, { n: 16, col: [0.75, 0.88, 1.0], spd: 2.6, up: 3.4, grav: -11, life: 0.8, size: 2.4 });
     }
     vesperStep(dt, now / 1000);
+    spiritStep(now / 1000);
     netTick(dt, now / 1000);
     tow.step(dt, now / 1000, { x: px, z: pz, vx, vz }, (bx, bz, big) => {
       audio.splash(big);
