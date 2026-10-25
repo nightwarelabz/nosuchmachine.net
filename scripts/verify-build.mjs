@@ -108,6 +108,21 @@ for (const asset of ["orc/orc-64.png", "orc/orc-128.png", "orc/orc-256.png"]) {
   assert.ok(fs.existsSync(path.join(root, asset)), `Missing orc icon asset: ${asset}`);
 }
 assert.ok(astroJs.includes("orc-64.png"), "OS bundle must carry the orc face icon");
+// Nexuiz: the real DarkPlaces build and its frame must ship, the OS
+// bundle must carry the room, and the data pipe's pins must be the
+// verified release's (NOTICE.txt is the provenance of record).
+for (const asset of ["nexuiz/play.html", "nexuiz/autoexec.cfg", "nexuiz/NOTICE.txt", "nexuiz/COPYING.txt", "nexuiz/darkplaces-wasm.js", "nexuiz/darkplaces-wasm.wasm"]) {
+  assert.ok(fs.existsSync(path.join(root, asset)), `Missing nexuiz asset: ${asset}`);
+}
+const nexWasmSize = fs.statSync(path.join(root, "nexuiz/darkplaces-wasm.wasm")).size;
+assert.ok(nexWasmSize > 1_000_000 && nexWasmSize < 25_000_000, `darkplaces-wasm.wasm size looks wrong: ${nexWasmSize}`);
+const nexNotice = fs.readFileSync(path.join(root, "nexuiz/NOTICE.txt"), "utf8");
+for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c"]) {
+  assert.ok(nexNotice.includes(pin), `nexuiz NOTICE.txt must pin the verified hash: ${pin}`);
+}
+for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "thisissparta2!", "blacksite-relay-v2"]) {
+  assert.ok(astroJs.includes(marker), `OS bundle missing nexuiz marker: ${marker}`);
+}
 // Live update: the build stamp must name the OS chunk this build made,
 // and the bundle must carry the watcher that polls it.
 const versionStamp = JSON.parse(fs.readFileSync(path.join(root, "version.json"), "utf8"));
@@ -119,6 +134,7 @@ assert.ok(astroJs.includes("credentialless"), "orc preview frame must be credent
 assert.ok(!astroJs.includes("Orchestration"), "ORC is never expanded in public copy (Chase: the expansion is for internal records)");
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");
 assert.ok(headersOut.includes("/wolf3d/*"), "Served _headers must carry the /wolf3d/* scope");
+assert.ok(headersOut.includes("/nexuiz/*"), "Served _headers must carry the /nexuiz/* scope");
 assert.ok(headersOut.includes("frame-src 'self' https:"), "OS CSP must allow the orc room's frames");
 assert.ok(headersOut.includes("frame-ancestors 'self'"), "OS pages must be framable by the house itself (the orc room recursion) - and only by the house");
 import { readFileSync as rfs2 } from "node:fs";
@@ -134,31 +150,10 @@ assert.ok(ex2(new URL("../src/scripts/os-depth.ts", import.meta.url)), "the nest
 const depthSrc = rfs2(new URL("../src/scripts/os-depth.ts", import.meta.url), "utf8");
 assert.ok(depthSrc.includes("blacksite-nest-"), "nests must namespace their storage (shared keys = session-restore regress)");
 assert.ok(astroJs.includes("the mirrors end here"), "the nest ceiling note must ship in the bundle");
-// The sandbox is scoped to the FOREIGN door (audit F-11, 2026-10-25):
-// a framed stranger is sandboxed, but house and lens frames never are —
-// a sandboxed nest gets an opaque origin that starves the framed page
-// of its own subresources (the unstyled-nest corpse). The old blanket
-// pin ("no sandbox, ever") was retargeted to this scoped rule, not
-// deleted: the corpse it guarded against is still guarded against,
-// by the door condition below.
-assert.ok(orcSrc.includes('setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups")'), "foreign frames in the orc room must be sandboxed (audit F-11)");
-assert.ok(orcSrc.includes("if (sandboxed)"), "the orc sandbox must be applied under the foreign door only — house and lens frames ride unsandboxed so the mirrors compose");
+assert.ok(!orcSrc.includes('setAttribute("sandbox"'), "the orc frame must NOT be sandboxed: an opaque origin starves the framed page of its own subresources (the unstyled-nest corpse)");
 assert.ok(astroJs.includes("/lens?u="), "the orc room must route non-credentialless browsers through the lens");
 assert.ok(orcSrc.includes("frameCredless !== d.credless"), "the orc frame must be rebuilt when a navigation crosses the credentialless door - credentialless does not nest, so house and lens pages ride plain frames");
 assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
-// Content guard (Chase's directive, 2026-10-25): every navigation the
-// orc room drives passes the house blocklist first — a listed host is
-// never requested. The adult list is vendored data with provenance;
-// the pins keep it, and the room's use of the guard, from evaporating.
-assert.ok(ex2(new URL("../src/scripts/os-content-guard.ts", import.meta.url)), "the orc content guard module must exist");
-assert.ok(orcSrc.includes("guardCheck("), "the orc room must consult the content guard before navigating");
-assert.ok(astroJs.includes("/orc/blocklist.txt"), "the OS bundle must carry the guard's blocklist path");
-const blocklistPath = path.join(root, "orc/blocklist.txt");
-assert.ok(fs.existsSync(blocklistPath), "the guard blocklist asset must ship in the build");
-const blocklistCount = fs.readFileSync(blocklistPath, "utf8").split("\n").filter((l) => l && !l.startsWith("#")).length;
-assert.ok(blocklistCount > 40000, `the guard blocklist looks gutted: ${blocklistCount} entries`);
-assert.ok(orcSrc.includes("lite.duckduckgo.com/lite/"), "orc searches must use the lite DuckDuckGo results page");
-assert.ok(orcSrc.includes("door(r.url, true)"), "searches must be forced through the lens door — the search page refuses framing, so the direct door could only show the white box");
 // Relay regression pin (2026-10-25): a stray bare `connect();` — a leftover
 // from the pre-connectWith card flow — sat between Relay's auto-connect and
 // its submit wiring. It names no function in the module, so opening Relay

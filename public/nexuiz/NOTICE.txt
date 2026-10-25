@@ -1,0 +1,109 @@
+nexuiz — Nexuiz Classic 2.5.2 on the DarkPlaces engine, in the room
+====================================================================
+
+WHAT THIS IS
+------------
+The real game. The client is the DarkPlaces engine compiled from its
+real source tree to WebAssembly; the data is the original Nexuiz
+2.5.2 release data, byte-for-byte; the game logic is the game's own
+QuakeC progs, untouched. Nothing here is a re-implementation.
+
+ENGINE
+------
+Source : DarkPlaces (Xonotic team's maintained tree)
+         https://github.com/xonotic/darkplaces
+Commit : d93f9c4292039354a2b8d40d11bc386891e55fe5 (see tools/nexuiz/BUILD.md)
+Build  : make emscripten-release, configured as recorded in
+         tools/nexuiz/BUILD.md: the wasm is a separate file (no
+         SINGLE_FILE), the pre-js loader is the house fork at
+         tools/nexuiz/pre.js (data transport + hash check), and
+         JPEG + OGG/Vorbis decoding are statically linked (the
+         engine's own LINK_TO_* configuration — see the decoder
+         census in BUILD.md), video capture is configured off,
+         and exactly one engine source patch file is carried
+         (inserted lines across snd_main.c and gl_backend.c:
+         #ifdef guards for the capture-off configuration, and a
+         bind of the newly created framebuffer in the GLES2
+         rendertarget path, without which every rendertarget
+         stayed incomplete and the scene never reached the
+         screen; one line in gl_textures.c moving the GLES2
+         framebuffer color format from an RGB565 combination
+         WebGL2 rejects to plain RGBA; plus two lines in
+         shader_glsl.h spelling shader
+         constants as float literals (0.0/1.0, 1.0) so strict
+         GLSL ES compilers accept them — saved in the repo
+         beside BUILD.md as engine-patches.patch). Nothing else
+         about the engine is changed.
+License: GPL-2.0-or-later (COPYING ships in the engine source; the
+         full text is at /nexuiz/COPYING.txt on this site)
+
+GAME DATA — PROVENANCE AND HASHES
+---------------------------------
+Release: Nexuiz 2.5.2 (Alientrap, 2009), file nexuiz-252.zip
+         931,253,731 bytes
+  SHA-256 a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000
+          (published by FreshPorts, games/nexuiz distinfo)
+  MD5     d750bc328e58df8492f8d88bdcf818cb
+          (published by ModDB on the release's download page)
+The copy used to derive everything below was downloaded from the
+Internet Archive's mirror of the release and matched both hashes.
+
+The game's packs, extracted from that verified zip (each extraction
+CRC-checked against the zip's own central directory):
+
+  data/data20091001.pk3 — 887,580,846 bytes
+    SHA-256 3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0
+  data/common-spog.pk3 — 28,724 bytes
+    SHA-256 d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c
+
+HOW THE DATA TRAVELS
+--------------------
+The packs are too large to ship as site files, and no lawful upstream
+sends the CORS headers a browser fetch would need (measured
+2026-10-25). The site's data pipe (/api/nexuiz-data) therefore
+streams fixed 16 MiB chunks of each pack's raw-deflate span inside
+the pinned release zip:
+
+  data20091001.pk3 span: bytes [23842145, 904335770) of nexuiz-252.zip
+  common-spog.pk3  span: bytes [904335848, 904360486) of nexuiz-252.zip
+
+The loader inflates the span, reassembles the pack, and verifies the
+SHA-256 above before the engine starts. Wrong bytes are refused.
+Chunks are cached by the browser (Cache API) so the wire is crossed
+once. License for the game data and code: GPL-2.0 (the release's own
+terms; see COPYING.txt).
+
+DECODERS LINKED INTO THIS BUILD (census in tools/nexuiz/BUILD.md)
+------------------------------------------------------------------
+TGA and WAV: the engine's own loaders. JPEG (2,188 files in the
+data): statically linked. OGG/Vorbis (538 files — all music, the
+announcer, the welcome voice): statically linked libvorbis 1.3.7 +
+libogg 1.3.5, built from the Xiph tarballs with the same toolchain
+(BSD-style license, Xiph.org Foundation — see BUILD.md for hashes).
+PNG: NOT decoded — this engine tree's PNG support is dynamic-load
+only, and the data carries exactly 4 PNG files of 9,341 (two water
+fallbacks, one sprite, one unused template). Named here rather
+than shipped quiet.
+
+HOUSE CONFIGURATION (the only deliberate deviation from stock)
+--------------------------------------------------------------
+public/nexuiz/autoexec.cfg — cvars only, the way real servers were
+configured. It makes local games MinstaHook instagib (g_minstagib 1,
+g_grappling_hook 1 — the "thisissparta" flavor) with the era's
+tunings. The house server is named thisissparta2! — it runs natively
+at the house; when its public bridge address is published, the
+client's join door deals you straight into the shared room.
+Bots are a switch, never a condition of the room: the local
+match's toggle sets bot_number at the table; the house room's fill
+is the host's server-side switch (bot_join_empty / minplayers).
+
+NETWORKING, HONESTLY
+--------------------
+DarkPlaces speaks UDP (lhnet.c, stock). A browser has no UDP: the
+engine's socket layer (Emscripten SOCKFS) dials a WebSocket address
+verbatim, and the house bridge (sparta-bridge) carries each binary
+frame as one datagram to the real server — one WebSocket session is
+one player. The client supports that contract now (join mode, the
+"sparta" subprotocol); what remains is the public bridge address.
+Local play needs none of it: menus, the single-player ladder, and
+bot matches run on the engine's own in-process server.
