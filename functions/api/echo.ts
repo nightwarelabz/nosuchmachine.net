@@ -9,9 +9,13 @@ export async function onRequestGet(context: any) {
   const headers: Record<string, string> = {};
   req.headers.forEach((v, k) => { headers[k] = v; });
   const cf: any = (req as any).cf || {};
-  // Never reflect credential-shaped headers back in full.
+  // Never reflect credential-shaped headers back in full — any name that
+  // smells of one (cookie, auth, token, api-key, session), not just the
+  // two classics: proxies and SDKs attach credentials under many names,
+  // and the mirror is one shared screenshot from leaking a token the
+  // sender did not know was attached.
   for (const k of Object.keys(headers)) {
-    if (/^(cookie|authorization)/i.test(k)) headers[k] = headers[k] ? `(${headers[k].length} chars — value withheld from the mirror on purpose)` : headers[k];
+    if (/cookie|authorization|auth|token|api[-_]?key|session/i.test(k)) headers[k] = headers[k] ? `(${headers[k].length} chars — value withheld from the mirror on purpose)` : headers[k];
   }
   return json({
     ok: true,

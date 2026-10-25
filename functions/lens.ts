@@ -191,7 +191,20 @@ export async function onRequestGet(context: any) {
           const m = (el.getAttribute("method") || "get").toLowerCase();
           const v = el.getAttribute("action");
           const n = v && absolutize(v, finalUrl);
-          if (n && m === "get") el.setAttribute("action", n);
+          if (n && m === "get") {
+            el.setAttribute("action", n);
+            // A GET submission replaces the action's query string with
+            // the form data — the ?u= that routes the lens would be
+            // discarded, and every lensed GET form landed on a refusal.
+            // Carry u as a hidden field so the submission restores it.
+            if (n.startsWith("/lens?")) {
+              const u = new URL(n, "https://lens.invalid").searchParams.get("u");
+              if (u) {
+                const esc = u.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+                el.append(`<input type="hidden" name="u" value="${esc}">`, { html: true });
+              }
+            }
+          }
         },
       })
       .on("[style]", {

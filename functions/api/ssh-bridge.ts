@@ -13,7 +13,13 @@ export async function onRequest(context: any) {
   if (request.headers.get("Upgrade") !== "websocket") return err("ssh bridge: websocket upgrade required.", 426);
   const url = new URL(request.url);
   const host = url.searchParams.get("host") || "";
-  const port = Math.max(1, Math.min(65535, Number(url.searchParams.get("port") || 22)));
+  // Strict integer port, validated before any dial: a non-numeric port
+  // once became NaN, sailed through the clamp as NaN, and reached
+  // connect() outside any try (an unhandled 500), while port=0 was
+  // silently dialed as port 1.
+  const portRaw = url.searchParams.get("port");
+  const port = portRaw === null ? 22 : Number(portRaw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return err("ssh bridge: port must be an integer between 1 and 65535.", 400);
   let addresses: string[];
   try {
     const g = await guardTarget(host);
@@ -23,25 +29,51 @@ export async function onRequest(context: any) {
   }
   if (!addresses.length) return err("ssh bridge: the target does not resolve to a public address.", 403);
   const { connect } = await import("cloudflare:sockets");
-  const socket = connect({ hostname: addresses[0], port }, { secureTransport: "off", allowHalfOpen: false });
+  let socket: any;
+  try {
+    socket = connect({ hostname: addresses[0], port }, { secureTransport: "off", allowHalfOpen: false });
+  } catch (e: any) {
+    return err(`ssh bridge: the connection could not be opened (${String(e?.message || e).slice(0, 120)}).`, 502);
+  }
   const pair = new (globalThis as any).WebSocketPair();
   const [client, server] = Object.values(pair) as any[];
   server.accept();
   const writer = socket.writable.getWriter();
   const reader = socket.readable.getReader();
   let closed = false;
+  // A bridged pair is a held-open socket on the edge, and this bridge had
+  // no clock at all: a target that never answered left the session pinned
+  // until the client left or the platform reaped it. Now a 10-second
+  // connect deadline and a five-minute idle reaper — any byte in either
+  // direction re-arms the idle clock — close what time closes.
+  const CONNECT_DEADLINE_MS = 10000;
+  const IDLE_LIMIT_MS = 5 * 60 * 1000;
+  let idleTimer: any = null;
+  let connectTimer: any = null;
   const closeBoth = () => {
     if (closed) return; closed = true;
+    if (idleTimer) clearTimeout(idleTimer);
+    if (connectTimer) clearTimeout(connectTimer);
     try { server.close(); } catch { /* already gone */ }
     try { reader.cancel(); } catch { /* already gone */ }
     try { socket.close(); } catch { /* already gone */ }
   };
+  const armIdle = () => {
+    if (closed) return;
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => closeBoth(), IDLE_LIMIT_MS);
+  };
+  connectTimer = setTimeout(() => closeBoth(), CONNECT_DEADLINE_MS);
+  socket.opened.then(
+    () => { if (connectTimer) clearTimeout(connectTimer); armIdle(); },
+    () => closeBoth(),
+  );
   (async () => {
     try {
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value && value.length) server.send(value);
+        if (value && value.length) { armIdle(); server.send(value); }
       }
     } catch { /* the wire ended */ }
     closeBoth();
@@ -50,6 +82,7 @@ export async function onRequest(context: any) {
     try {
       const data = event.data instanceof ArrayBuffer ? new Uint8Array(event.data) : new TextEncoder().encode(String(event.data));
       await writer.write(data);
+      armIdle();
     } catch { closeBoth(); }
   });
   server.addEventListener("close", closeBoth);

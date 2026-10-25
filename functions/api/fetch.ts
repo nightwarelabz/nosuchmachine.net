@@ -40,17 +40,38 @@ export async function onRequestGet(context: any) {
   let truncated = false;
   if (method !== "HEAD") {
     try {
-      const buf = new Uint8Array(await res.arrayBuffer());
-      bodyBytes = buf.length;
+      // Stream the body and stop at the cap: a byte cap that first
+      // downloads the whole response into worker memory caps nothing.
+      // (lens.ts readCapped is the house pattern; this is its shape.)
       const cap = wantBinary ? 262144 : 131072;
-      const slice = buf.slice(0, cap);
-      truncated = buf.length > cap;
-      if (wantBinary) {
-        let bin = "";
-        slice.forEach((b) => (bin += String.fromCharCode(b)));
-        bodyBase64 = btoa(bin);
-      } else {
-        bodyText = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+      const reader = res.body?.getReader();
+      if (reader) {
+        const chunks: Uint8Array[] = [];
+        let total = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          total += value.length;
+          if (total > cap) {
+            truncated = true; // at least one byte beyond the cap exists
+            const keep = value.slice(0, value.length - (total - cap));
+            if (keep.length) chunks.push(keep);
+            await reader.cancel().catch(() => {});
+            break;
+          }
+          chunks.push(value);
+        }
+        bodyBytes = total;
+        const buf = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+        let off = 0;
+        for (const c of chunks) { buf.set(c, off); off += c.length; }
+        if (wantBinary) {
+          let bin = "";
+          buf.forEach((b) => (bin += String.fromCharCode(b)));
+          bodyBase64 = btoa(bin);
+        } else {
+          bodyText = new TextDecoder("utf-8", { fatal: false }).decode(buf);
+        }
       }
     } catch { /* body unreadable */ }
   }

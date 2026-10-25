@@ -59,18 +59,33 @@ export async function onRequest(context: any) {
   // The guard above has already proven this name resolves to public space,
   // and the host is allowlisted, so the name is the right dial string.
   void addresses;
-  const socket = connect(
-    { hostname: host, port },
-    { secureTransport: port === 6697 ? "on" : "off", allowHalfOpen: false },
-  );
+  let socket: any;
+  try {
+    socket = connect(
+      { hostname: host, port },
+      { secureTransport: port === 6697 ? "on" : "off", allowHalfOpen: false },
+    );
+  } catch (e: any) {
+    return err(`relay bridge: the connection could not be opened (${String(e?.message || e).slice(0, 120)}).`, 502);
+  }
   const pair = new (globalThis as any).WebSocketPair();
   const [client, server] = Object.values(pair) as any[];
   server.accept();
   const writer = socket.writable.getWriter();
   const reader = socket.readable.getReader();
   let closed = false;
+  // The bridge had no clock: a network that never answered, or a room
+  // gone silent, pinned the pair open until the client left. Same
+  // discipline as the ssh bridge — a 10-second connect deadline and a
+  // five-minute idle reaper, re-armed by any byte in either direction.
+  const CONNECT_DEADLINE_MS = 10000;
+  const IDLE_LIMIT_MS = 5 * 60 * 1000;
+  let idleTimer: any = null;
+  let connectTimer: any = null;
   const closeBoth = (code?: number) => {
     if (closed) return; closed = true;
+    if (idleTimer) clearTimeout(idleTimer);
+    if (connectTimer) clearTimeout(connectTimer);
     // A claim refusal closes with 4403 so the client can tell a final
     // refusal from a dropped wire — and stop re-presenting the same
     // refused name in an auto-reconnect loop.
@@ -78,12 +93,22 @@ export async function onRequest(context: any) {
     try { reader.cancel(); } catch { /* already gone */ }
     try { socket.close(); } catch { /* already gone */ }
   };
+  const armIdle = () => {
+    if (closed) return;
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => closeBoth(), IDLE_LIMIT_MS);
+  };
+  connectTimer = setTimeout(() => closeBoth(), CONNECT_DEADLINE_MS);
+  socket.opened.then(
+    () => { if (connectTimer) clearTimeout(connectTimer); armIdle(); },
+    () => closeBoth(),
+  );
   (async () => {
     try {
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value && value.length) server.send(value);
+        if (value && value.length) { armIdle(); server.send(value); }
       }
     } catch { /* the wire ended */ }
     closeBoth();
@@ -121,6 +146,7 @@ export async function onRequest(context: any) {
           }
         }
         await writer.write(new TextEncoder().encode(raw + "\r\n"));
+        armIdle();
       }
     } catch { closeBoth(); }
   });

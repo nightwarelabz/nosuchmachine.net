@@ -222,6 +222,26 @@ async function readCertificateFlight(host: string, port: number, timeoutMs = 800
               const sidLen = payload[sidLenOff];
               const cipherOff = sidLenOff + 1 + sidLen;
               cipher = (payload[cipherOff] << 8) | payload[cipherOff + 1];
+              // RFC 8446 freezes that legacy version field at 0x0303, so
+              // reading it alone labels every TLS 1.3 server "TLS 1.2" —
+              // in the same response whose findings say 1.3 was negotiated.
+              // The real version rides the supported_versions extension
+              // (43): in a ServerHello its value is one 2-byte version.
+              // Walk the extensions after the cipher and compression
+              // fields, bounds-checked against the handshake body's end.
+              const bodyEnd = p + 4 + hLen;
+              const extLenOff = cipherOff + 3;
+              if (extLenOff + 2 <= bodyEnd) {
+                const extEnd = Math.min(extLenOff + 2 + ((payload[extLenOff] << 8) | payload[extLenOff + 1]), bodyEnd);
+                let e = extLenOff + 2;
+                while (e + 4 <= extEnd) {
+                  const eType = (payload[e] << 8) | payload[e + 1];
+                  const eLen = (payload[e + 2] << 8) | payload[e + 3];
+                  if (e + 4 + eLen > extEnd) break;
+                  if (eType === 43 && eLen === 2) serverVersion = (payload[e + 4] << 8) | payload[e + 5];
+                  e += 4 + eLen;
+                }
+              }
             }
             if (hType === 11) { // Certificate
               let q = p + 4;

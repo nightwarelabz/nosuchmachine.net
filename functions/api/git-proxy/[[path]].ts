@@ -17,7 +17,13 @@ export async function onRequest(context: any) {
   const marker = "/api/git-proxy/";
   const idx = outer.pathname.indexOf(marker);
   if (idx < 0) return err("git proxy: malformed path.", 400);
-  const rawTarget = decodeURIComponent(outer.pathname.slice(idx + marker.length)) + outer.search;
+  let decodedTarget: string;
+  try {
+    decodedTarget = decodeURIComponent(outer.pathname.slice(idx + marker.length));
+  } catch {
+    return err("git proxy: the target path is not valid percent-encoding.", 400);
+  }
+  const rawTarget = decodedTarget + outer.search;
   if (!rawTarget.startsWith("https://")) return err("git proxy: only https:// git remotes — the room does not do plaintext git.", 400);
   const pathOnly = rawTarget.split("?")[0];
   if (!ALLOWED.test(pathOnly)) return err("git proxy: only info/refs, git-upload-pack, and git-receive-pack are forwarded.", 400);
@@ -42,8 +48,15 @@ export async function onRequest(context: any) {
     return err(`git proxy: the remote did not answer (${String(e?.message || e).slice(0, 120)}).`, 502);
   }
   const out = new Headers();
-  const ct = upstream.headers.get("content-type");
-  if (ct) out.set("content-type", ct);
+  // Location matters: redirects are set to manual here, and a git host
+  // that moved (renamed account, canonical host) answers 3xx — passing
+  // the status through without its Location left the client facing a
+  // redirect it could not follow. www-authenticate rides along so an
+  // upstream credential challenge reaches the client as itself.
+  for (const h of ["content-type", "location", "www-authenticate"]) {
+    const v = upstream.headers.get(h);
+    if (v) out.set(h, v);
+  }
   out.set("cache-control", "no-store");
   return new Response(upstream.body, { status: upstream.status, headers: out });
 }

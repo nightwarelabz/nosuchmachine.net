@@ -21,8 +21,15 @@ async function timeConnect(host: string, port: number, timeoutMs = 3000): Promis
 
 export async function onRequestGet(context: any) {
   const q = new URL(context.request.url).searchParams;
-  const count = Math.min(8, Math.max(1, Number(q.get("count") || 4)));
-  const port = Number(q.get("port") || 443);
+  // Strict integer params, the exchange.ts shape: a non-numeric port or
+  // count once became NaN, flowed through the clamps untouched, and the
+  // endpoint answered ok:true with null samples and a null port.
+  const portRaw = q.get("port");
+  const port = portRaw === null ? 443 : Number(portRaw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return err("Port must be 1-65535.");
+  const countRaw = q.get("count");
+  const count = countRaw === null ? 4 : Number(countRaw);
+  if (!Number.isInteger(count) || count < 1 || count > 8) return err("Count must be 1-8.");
   let host: string;
   try {
     const g = await guardTarget(q.get("host") || "");
