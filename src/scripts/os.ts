@@ -22,7 +22,7 @@ import { wakeSubconscious, type Subconscious } from "./os-subconscious";
 import roster from "../data/blacksite-commands.json";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
-import { Chip8, CHIP8_DEMO } from "./os-engines2";
+import { Chip8, CHIP8_DEMO, CHIP8_QUIRKS_MODERN, CHIP8_QUIRKS_VIP, CHIP8_TUNE_LEAD, CHIP8_TUNE_BASS, CHIP8_TUNE_STEPS, CHIP8_TUNE_BPM } from "./os-engines2";
 import { SshSession } from "./os-ssh";
 
 const os = new BlacksiteOS();
@@ -660,6 +660,8 @@ function buildChip8(body: HTMLElement, arg?: string) {
   const canvas = document.createElement("canvas");
   canvas.width = 64; canvas.height = 32;
   canvas.className = "os-chip8-screen";
+  const frame = el("div", "os-chip8-frame");
+  frame.appendChild(canvas);
   const bar = el("div", "os-files-bar");
   const sel = document.createElement("select");
   sel.className = "os-bottle-select";
@@ -670,45 +672,160 @@ function buildChip8(body: HTMLElement, arg?: string) {
   scan("/home");
   for (const r of roms) { const o = document.createElement("option"); o.value = r; o.textContent = r; sel.appendChild(o); }
   if (arg && roms.includes(arg)) sel.value = arg;
+  // machine semantics, in the same select idiom as the ROM picker:
+  // modern (as this console has always run) or the 1977 VIP's own.
+  const qsel = document.createElement("select");
+  qsel.className = "os-bottle-select";
+  const qModern = document.createElement("option"); qModern.value = "modern"; qModern.textContent = "quirks: modern";
+  const qVip = document.createElement("option"); qVip.value = "vip"; qVip.textContent = "quirks: vip (1977)";
+  qsel.append(qModern, qVip);
+  const CRTK = skey("chip8-crt-v1");
+  const crtBtn = el("button", "os-btn small", "crt: on");
+  const setCrt = (on: boolean) => {
+    frame.classList.toggle("crt-off", !on);
+    crtBtn.textContent = on ? "crt: on" : "crt: off";
+    try { localStorage.setItem(CRTK, on ? "on" : "off"); } catch { /* private modes keep no notes */ }
+  };
+  crtBtn.addEventListener("click", () => setCrt(frame.classList.contains("crt-off")));
   const status = el("span", "os-note", "");
-  bar.append(sel, status);
-  wrap.append(bar, canvas);
+  bar.append(sel, qsel, crtBtn, status);
+  wrap.append(bar, frame);
   const keysNote = el("p", "os-note", "keys: 1 2 3 4 / Q W E R / A S D F / Z X C V map to the hex pad. click the screen, then play.");
   wrap.appendChild(keysNote);
   body.appendChild(wrap);
+  try { if (localStorage.getItem(CRTK) === "off") setCrt(false); } catch { /* defaults stand */ }
   const cpu = new Chip8();
+  cpu.quirks = qsel.value === "vip" ? { ...CHIP8_QUIRKS_VIP } : { ...CHIP8_QUIRKS_MODERN };
+  qsel.addEventListener("change", () => {
+    cpu.quirks = qsel.value === "vip" ? { ...CHIP8_QUIRKS_VIP } : { ...CHIP8_QUIRKS_MODERN };
+    load();
+  });
   const KEYMAP: Record<string, number> = { "1": 1, "2": 2, "3": 3, "4": 0xc, q: 4, w: 5, e: 6, r: 0xd, a: 7, s: 8, d: 9, f: 0xe, z: 0xa, x: 0, c: 0xb, v: 0xf };
   const load = () => {
     cpu.load(sel.value ? (os.readBytes(sel.value) || CHIP8_DEMO) : CHIP8_DEMO);
     status.textContent = sel.value || "built-in demo";
+    trail.fill(0);
+    blip();
+    wantTune = true;
+    maybeTune();
   };
   sel.addEventListener("change", load);
-  const down = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) { cpu.keys[k] = 1; e.preventDefault(); } };
+
+  /* ——— the machine's voice ———
+     One small audio engine for the console: the ROM's own buzzer
+     (a square wave gated by the sound timer, as the hardware does),
+     the composed boot tune as note data, and a soft key click —
+     all through one master gain, armed on first gesture, silent
+     before it, and respectful of the room's sound switch. */
+  let actx: AudioContext | null = null;
+  let master: GainNode | null = null;
+  let buzzOsc: OscillatorNode | null = null;
+  let buzzGain: GainNode | null = null;
+  let wantTune = true;
+  const audioUp = (): boolean => {
+    if (!soundPrefs().enabled) return false;
+    if (actx) { if (actx.state === "suspended") void actx.resume(); return true; }
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AC) return false;
+      actx = new AC();
+      master = actx.createGain();
+      master.gain.value = 0.5 * soundPrefs().volume + 0.08;
+      const lp = actx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 4200;
+      master.connect(lp).connect(actx.destination);
+      return true;
+    } catch { return false; }
+  };
+  const chipTone = (freq: number, at: number, dur: number, type: OscillatorType, peak: number) => {
+    if (!actx || !master) return;
+    const t0 = actx.currentTime + at;
+    const o = actx.createOscillator(); o.type = type; o.frequency.value = freq;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(master);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  };
+  const blip = () => { if (audioUp() && actx && actx.state === "running") { chipTone(1180, 0, 0.05, "square", 0.05); chipTone(1560, 0.045, 0.06, "square", 0.04); } };
+  const maybeTune = () => {
+    // stays wanted until the context is genuinely running — a tune
+    // scheduled into a suspended context would pile up at time zero.
+    if (!wantTune || !audioUp() || !actx || actx.state !== "running") return;
+    wantTune = false;
+    const stepDur = 60 / CHIP8_TUNE_BPM / 4;
+    const f = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+    for (const [at, midi, len] of CHIP8_TUNE_LEAD) chipTone(f(midi), at * stepDur, stepDur * len * 0.92, "square", 0.075);
+    for (const [at, midi, len] of CHIP8_TUNE_BASS) chipTone(f(midi), at * stepDur, stepDur * len * 0.95, "triangle", 0.11);
+    for (let s = 2; s < CHIP8_TUNE_STEPS; s += 4) chipTone(5200, s * stepDur, 0.02, "square", 0.012);
+  };
+  const setBuzz = (on: boolean) => {
+    if (on) {
+      if (buzzOsc || !audioUp() || !actx || !master) return;
+      buzzOsc = actx.createOscillator(); buzzOsc.type = "square"; buzzOsc.frequency.value = 660;
+      buzzGain = actx.createGain(); buzzGain.gain.value = 0.055;
+      buzzOsc.connect(buzzGain).connect(master);
+      buzzOsc.start();
+    } else if (buzzOsc) {
+      try { buzzOsc.stop(); } catch { /* already quiet */ }
+      buzzOsc.disconnect(); buzzOsc = null; buzzGain = null;
+    }
+  };
+
+  const down = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) { if (!cpu.keys[k]) { maybeTune(); if (audioUp()) chipTone(2400, 0, 0.025, "square", 0.02); } cpu.keys[k] = 1; e.preventDefault(); } };
   const up = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) cpu.keys[k] = 0; };
   canvas.tabIndex = 0;
   canvas.addEventListener("keydown", down);
   canvas.addEventListener("keyup", up);
-  canvas.addEventListener("pointerdown", () => canvas.focus());
+  canvas.addEventListener("pointerdown", () => { canvas.focus(); maybeTune(); });
+  const trail = new Float32Array(64 * 32);
   load();
   let dead = false;
-  const obs = new MutationObserver(() => { if (!document.body.contains(wrap)) { dead = true; obs.disconnect(); } });
+  const obs = new MutationObserver(() => {
+    if (!document.body.contains(wrap)) {
+      dead = true;
+      obs.disconnect();
+      setBuzz(false);
+      if (actx) void actx.close().catch(() => undefined);
+    }
+  });
   obs.observe(document.body, { childList: true, subtree: true });
   const ctx2 = canvas.getContext("2d")!;
-  let lastTimer = performance.now();
-  const frame = () => {
+  const img = ctx2.createImageData(64, 32);
+  /* The clock is an accumulator now, not a hope: CPU cycles accrue
+     at 600 Hz of wall time and the timers at exactly 60 Hz, so the
+     machine runs true at 120 Hz, 60 Hz and 30 Hz displays alike —
+     and the phosphor trail is re-rendered every frame, decaying
+     behind whatever the ROM last lit. */
+  let last = performance.now();
+  let cycleAcc = 0, timerAcc = 0;
+  const frame2 = () => {
     if (dead) return;
-    for (let i = 0; i < 10; i++) cpu.cycle();
     const now = performance.now();
-    if (now - lastTimer > 16) { cpu.tickTimers(); lastTimer = now; }
-    if (cpu.drawFlag) {
-      cpu.drawFlag = false;
-      const img = ctx2.createImageData(64, 32);
-      for (let i = 0; i < 64 * 32; i++) { const on = cpu.gfx[i]; img.data[i * 4] = on ? 120 : 8; img.data[i * 4 + 1] = on ? 255 : 14; img.data[i * 4 + 2] = on ? 170 : 10; img.data[i * 4 + 3] = 255; }
-      ctx2.putImageData(img, 0, 0);
+    const elapsed = Math.min(100, now - last);
+    last = now;
+    cycleAcc += elapsed * 0.6;
+    let n = Math.floor(cycleAcc);
+    cycleAcc -= n;
+    if (n > 80) n = 80;
+    for (let i = 0; i < n; i++) cpu.cycle();
+    timerAcc += elapsed;
+    while (timerAcc >= 1000 / 60) { cpu.tickTimers(); timerAcc -= 1000 / 60; }
+    setBuzz(cpu.sound > 0);
+    let anyTrail = false;
+    for (let i = 0; i < 64 * 32; i++) {
+      const b = cpu.gfx[i] ? 1 : trail[i] * 0.86;
+      trail[i] = b;
+      if (b > 0.02) anyTrail = true;
+      img.data[i * 4] = 10 + 116 * b;
+      img.data[i * 4 + 1] = 22 + 226 * b;
+      img.data[i * 4 + 2] = 12 + 158 * b;
+      img.data[i * 4 + 3] = 255;
     }
-    requestAnimationFrame(frame);
+    if (cpu.drawFlag || anyTrail) { cpu.drawFlag = false; ctx2.putImageData(img, 0, 0); }
+    requestAnimationFrame(frame2);
   };
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame2);
   setTimeout(() => canvas.focus(), 80);
 }
 

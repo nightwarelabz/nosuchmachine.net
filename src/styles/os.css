@@ -173,10 +173,34 @@
 .os-file-row:hover, .os-file-row.selected { background: rgba(255, 255, 255, 0.06); border-color: var(--os-line-soft); }
 .os-file-actions { margin-left: auto; display: flex; gap: 0.3rem; }
 .os-chip8 { display: flex; flex-direction: column; gap: 0.6rem; }
-.os-chip8-screen { width: 100%; aspect-ratio: 2 / 1; image-rendering: pixelated; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; outline: none; }
+.os-chip8-frame { position: relative; border-radius: 8px; }
+.os-chip8-screen { width: 100%; aspect-ratio: 2 / 1; image-rendering: pixelated; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; outline: none; display: block; }
 .os-chip8-screen:focus { border-color: var(--os-accent); box-shadow: 0 0 0 1px var(--os-accent), 0 0 24px rgba(61, 220, 132, 0.15); }
+/* the tube's face over the console: scanlines, a faint grille, and
+   the vignette of curved glass. Pure presentation — it sits above
+   the canvas, takes no pointer, and the crt toggle lifts it. */
+.os-chip8-frame::after { content: ""; position: absolute; inset: 0; border-radius: 8px; pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 62%, rgba(0, 0, 0, 0.38) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 0, 80, 0.025) 0 2px, rgba(0, 255, 120, 0.02) 2px 4px, rgba(0, 80, 255, 0.025) 4px 6px);
+  box-shadow: inset 0 0 42px rgba(0, 0, 0, 0.5), inset 0 0 6px rgba(120, 255, 170, 0.10); }
+.os-chip8-frame.crt-off::after { display: none; }
 .os-wolf3d { display: flex; flex-direction: column; gap: 0.6rem; height: 100%; }
-.os-wolf-stage { flex: 1; min-height: 320px; background: #000; border: 1px solid var(--os-line); border-radius: 8px; overflow: hidden; position: relative; }
+.os-wolf-frame { position: relative; flex: 1; min-height: 320px; background: #000; border: 1px solid var(--os-line); border-radius: 8px; overflow: hidden; box-shadow: 0 0 34px rgba(0, 0, 0, 0.55), 0 0 90px rgba(120, 30, 20, 0.07); }
+.os-wolf-frame:fullscreen { border: none; border-radius: 0; }
+.os-wolf-stage { position: absolute; inset: 0; }
+.os-wolf-stage canvas { image-rendering: pixelated; }
+/* the DOS machine's own tube sheet — same house treatment as the
+   console's, warmer: scanlines and vignette over the game's canvas,
+   pointer-transparent, lifted by the crt toggle (.off). */
+.os-wolf-crt { position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 95% at 50% 45%, transparent 60%, rgba(0, 0, 0, 0.42) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 60, 40, 0.02) 0 2px, rgba(255, 200, 120, 0.015) 2px 4px, rgba(80, 120, 255, 0.02) 4px 6px);
+  box-shadow: inset 0 0 46px rgba(0, 0, 0, 0.55); }
+.os-wolf-crt.off { display: none; }
 .os-wolf-stage .jsdos { width: 100%; height: 100%; }
 .os-wolf-stage:fullscreen { border-radius: 0; border: none; }
 .os-orc { display: flex; flex-direction: column; gap: 0.6rem; height: 100%; }

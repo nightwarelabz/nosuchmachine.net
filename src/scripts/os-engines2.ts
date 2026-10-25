@@ -209,6 +209,13 @@ export function runBrainfuck(source: string, input: string, io: IO): void {
 
 /* ————————————————— CHIP-8 ————————————————— */
 const FONT = [0xf0, 0x90, 0x90, 0x90, 0xf0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xf0, 0x10, 0xf0, 0x80, 0xf0, 0xf0, 0x10, 0xf0, 0x10, 0xf0, 0x90, 0x90, 0xf0, 0x10, 0x10, 0xf0, 0x80, 0xf0, 0x10, 0xf0, 0xf0, 0x80, 0xf0, 0x90, 0xf0, 0xf0, 0x10, 0x20, 0x40, 0x40, 0xf0, 0x90, 0xf0, 0x90, 0xf0, 0xf0, 0x90, 0xf0, 0x10, 0xf0, 0xf0, 0x90, 0xf0, 0x90, 0x90, 0xe0, 0x90, 0xe0, 0x90, 0xe0, 0xf0, 0x80, 0x80, 0x80, 0xf0, 0xe0, 0x90, 0x90, 0x90, 0xe0, 0xf0, 0x80, 0xf0, 0x80, 0xf0, 0xf0, 0x80, 0xf0, 0x80, 0x80];
+/** The three places the family disagreed with itself. Defaults are
+ * the behavior this machine has always shipped (modern shifts,
+ * I left alone by load/store, jump offset from V0); the VIP flags
+ * give a ROM the original 1977 COSMAC semantics instead. */
+export interface Chip8Quirks { shiftVy: boolean; memIncrI: boolean; jumpVx: boolean }
+export const CHIP8_QUIRKS_MODERN: Chip8Quirks = { shiftVy: false, memIncrI: false, jumpVx: false };
+export const CHIP8_QUIRKS_VIP: Chip8Quirks = { shiftVy: true, memIncrI: true, jumpVx: false };
 export class Chip8 {
   mem = new Uint8Array(4096);
   V = new Uint8Array(16);
@@ -216,6 +223,7 @@ export class Chip8 {
   gfx = new Uint8Array(64 * 32);
   keys = new Uint8Array(16);
   delay = 0; sound = 0; drawFlag = false;
+  quirks: Chip8Quirks = { ...CHIP8_QUIRKS_MODERN };
   constructor() { this.mem.set(FONT, 0); }
   load(bytes: Uint8Array) { this.mem.set(bytes.slice(0, 3584), 0x200); this.pc = 0x200; }
   cycle() {
@@ -242,14 +250,14 @@ export class Chip8 {
           case 0x3: this.V[x] ^= this.V[y]; break;
           case 0x4: { const s = this.V[x] + this.V[y]; this.V[0xf] = s > 255 ? 1 : 0; this.V[x] = s & 0xff; break; }
           case 0x5: this.V[0xf] = this.V[x] >= this.V[y] ? 1 : 0; this.V[x] = (this.V[x] - this.V[y]) & 0xff; break;
-          case 0x6: this.V[0xf] = this.V[x] & 1; this.V[x] >>= 1; break;
+          case 0x6: { const s = this.quirks.shiftVy ? this.V[y] : this.V[x]; this.V[0xf] = s & 1; this.V[x] = s >> 1; break; }
           case 0x7: this.V[0xf] = this.V[y] >= this.V[x] ? 1 : 0; this.V[x] = (this.V[y] - this.V[x]) & 0xff; break;
-          case 0xe: this.V[0xf] = (this.V[x] >> 7) & 1; this.V[x] = (this.V[x] << 1) & 0xff; break;
+          case 0xe: { const s = this.quirks.shiftVy ? this.V[y] : this.V[x]; this.V[0xf] = (s >> 7) & 1; this.V[x] = (s << 1) & 0xff; break; }
         }
         break;
       case 0x9000: if (this.V[x] !== this.V[y]) this.pc += 2; break;
       case 0xa000: this.I = nnn; break;
-      case 0xb000: this.pc = nnn + this.V[0]; break;
+      case 0xb000: this.pc = nnn + (this.quirks.jumpVx ? this.V[x] : this.V[0]); break;
       case 0xc000: this.V[x] = (Math.random() * 256) & nn; break;
       case 0xd000: {
         this.V[0xf] = 0;
@@ -279,8 +287,8 @@ export class Chip8 {
           case 0x1e: this.I = (this.I + this.V[x]) & 0xfff; break;
           case 0x29: this.I = this.V[x] * 5; break;
           case 0x33: this.mem[this.I] = Math.floor(this.V[x] / 100); this.mem[this.I + 1] = Math.floor((this.V[x] / 10) % 10); this.mem[this.I + 2] = this.V[x] % 10; break;
-          case 0x55: for (let i = 0; i <= x; i++) this.mem[this.I + i] = this.V[i]; break;
-          case 0x65: for (let i = 0; i <= x; i++) this.V[i] = this.mem[this.I + i]; break;
+          case 0x55: for (let i = 0; i <= x; i++) this.mem[this.I + i] = this.V[i]; if (this.quirks.memIncrI) this.I = (this.I + x + 1) & 0xfff; break;
+          case 0x65: for (let i = 0; i <= x; i++) this.V[i] = this.mem[this.I + i]; if (this.quirks.memIncrI) this.I = (this.I + x + 1) & 0xfff; break;
         }
         break;
     }
@@ -294,6 +302,23 @@ export const CHIP8_DEMO = new Uint8Array([
   0x60, 0x05, 0xf0, 0x29, 0x62, 0x18, 0x63, 0x0a, 0xd2, 0x35, // draw 5 lower
   0x12, 0x14,                                     // loop forever at 0x214
 ]);
+
+/* The console's boot tune — an original four-bar chip melody in
+   note data. Steps are 16ths at 132 BPM; a bar is 16 steps; the
+   piece is 64. Events are [step, midi, len]. Square lead, triangle
+   bass — the timbres a beeper machine dreams in. */
+export const CHIP8_TUNE_LEAD: Array<[number, number, number]> = [
+  [0, 72, 2], [2, 76, 2], [4, 79, 3], [7, 76, 1], [8, 79, 4], [12, 84, 4],
+  [16, 83, 2], [18, 79, 2], [20, 81, 3], [23, 79, 1], [24, 76, 4], [28, 74, 4],
+  [32, 76, 2], [34, 79, 2], [36, 81, 3], [39, 79, 1], [40, 84, 3], [43, 83, 1], [44, 81, 4],
+  [48, 79, 4], [52, 76, 3], [55, 74, 1], [56, 72, 8],
+];
+export const CHIP8_TUNE_BASS: Array<[number, number, number]> = [
+  [0, 48, 8], [8, 55, 8], [16, 55, 8], [24, 50, 8],
+  [32, 53, 8], [40, 55, 8], [48, 48, 16],
+];
+export const CHIP8_TUNE_STEPS = 64;
+export const CHIP8_TUNE_BPM = 132;
 
 /* ————————————————— WebAssembly room ————————————————— */
 export async function wasmExports(bytes: Uint8Array): Promise<Array<{ name: string; kind: string }>> {
