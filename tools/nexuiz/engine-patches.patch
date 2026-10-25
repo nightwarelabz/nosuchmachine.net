@@ -1,0 +1,111 @@
+diff --git a/gl_backend.c b/gl_backend.c
+index 9710c04..c7d5d09 100644
+--- a/gl_backend.c
++++ b/gl_backend.c
+@@ -77,6 +77,7 @@ void GL_PrintError(GLenum errornumber, const char *filename, unsigned int linenu
+ }
+ #endif // DEBUGGL
+ 
++#ifndef USE_GLES2
+ static void GLAPIENTRY GL_DebugOutputCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam)
+ {
+ 	const char *sev = "ENUM?", *typ = "ENUM?", *src = "ENUM?", *col = "";
+@@ -106,6 +107,7 @@ static void GLAPIENTRY GL_DebugOutputCallback(GLenum source, GLenum type, GLuint
+ 	}
+ 	Con_Printf("gl_debug: %s%s %s %s: %u: %s\n", col, sev, typ, src, (unsigned int)id, message);
+ }
++#endif // USE_GLES2
+ 
+ #define BACKENDACTIVECHECK if (!gl_state.active) Sys_Error("GL backend function called when backend is not active");
+ 
+@@ -968,6 +970,15 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
+ 		CHECKGLERROR
+ 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
+ 
++#ifdef USE_GLES2
++		// The desktop path binds the new framebuffer through
++		// R_Mesh_SetRenderTargets, which this flavor excludes;
++		// without a bind the attachments below land on whatever
++		// framebuffer was bound before, the new one stays empty
++		// (incomplete), and every rendertarget renders black.
++		qglBindFramebuffer(GL_FRAMEBUFFER, temp);CHECKGLERROR
++#endif
++
+ #ifndef USE_GLES2
+ 		R_Mesh_SetRenderTargets(temp);  // This breaks GLES2.
+ 		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
+@@ -1034,6 +1045,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
+ 			qglDeleteFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
+ 			temp = 0;
+ 		}
++		qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);CHECKGLERROR
+ 		return temp;
+ 	}
+ 	return 0;
+@@ -1097,6 +1109,7 @@ static void GL_Backend_ResetState(void)
+ 	case RENDERPATH_GL32:
+ 	case RENDERPATH_GLES2:
+ 		// set up debug output early
++#ifndef USE_GLES2
+ 		if (gl_debug.integer > 0 && vid.support.arb_debug_output)
+ 		{
+ 			GLuint unused = 0;
+@@ -1116,6 +1129,7 @@ static void GL_Backend_ResetState(void)
+ 				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unused, GL_FALSE);
+ 			qglDebugMessageCallbackARB(GL_DebugOutputCallback, NULL);
+ 		}
++#endif // USE_GLES2
+ 		CHECKGLERROR
+ 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
+ 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
+diff --git a/gl_textures.c b/gl_textures.c
+index 049240b..13017e8 100644
+--- a/gl_textures.c
++++ b/gl_textures.c
+@@ -92,7 +92,7 @@ static textypeinfo_t textype_shadowmap24_raw             = {"shadowmap24_raw",
+ static textypeinfo_t textype_depth16                     = {"depth16",                  TEXTYPE_DEPTHBUFFER16        ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+ static textypeinfo_t textype_depth24                     = {"depth24",                  TEXTYPE_DEPTHBUFFER24        ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+ static textypeinfo_t textype_depth24stencil8             = {"depth24stencil8",          TEXTYPE_DEPTHBUFFER24STENCIL8,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+-static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER          ,  2,  2,  2.0f, GL_RGB565                         , GL_RGBA           , GL_UNSIGNED_SHORT_5_6_5};
++static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER          ,  4,  4,  4.0f, GL_RGBA                           , GL_RGBA           , GL_UNSIGNED_BYTE};
+ static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F       ,  2,  2,  2.0f, GL_RGBA16F                        , GL_RGBA           , GL_HALF_FLOAT};
+ static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F       ,  2,  2,  2.0f, GL_RGBA32F                        , GL_RGBA           , GL_FLOAT};
+ 
+diff --git a/shader_glsl.h b/shader_glsl.h
+index dc56d08..6045c2d 100644
+--- a/shader_glsl.h
++++ b/shader_glsl.h
+@@ -21,7 +21,7 @@
+ "# endif\n",
+ "#endif\n",
+ "\n",
+-"#define sat(x) clamp(x, 0, 1)\n",
++"#define sat(x) clamp(x, 0.0, 1.0)\n",
+ "#define possat(x) sat(x)\n",//As replacement of max(x, 0) when x<=1, better for gpus that can't do 0-cycle max(x, 0)
+ "#define minonesat(x) sat(x)\n",//As replacement of min(x, 1) when x>=0, better for gpus that can't do 0-cycle min(x, 1)
+ "#define possatdot(x, y) possat(dot(x, y))\n",
+@@ -1597,7 +1597,7 @@
+ "	#ifdef USEDIFFUSE\n",
+ "		myhalf3 lightnormal = cast_myhalf3(normalize(LightVector));\n",
+ "	#endif\n",
+-"	#define lightcolor 1\n",
++"	#define lightcolor 1.0\n",
+ "#endif // MODE_LIGHTDIRECTION\n",
+ "#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n",
+ "   #define SHADING\n",
+diff --git a/snd_main.c b/snd_main.c
+index cee8ec5..3496c63 100644
+--- a/snd_main.c
++++ b/snd_main.c
+@@ -1955,7 +1955,11 @@ static void S_PaintAndSubmit (void)
+ 
+ 	// mixing is always required here when capturing, even if output is muted
+ 	// (capture doesn't use threaded/callback mode)
++#ifdef CONFIG_VIDEO_CAPTURE
+ 	if (!soundtimehack && snd_blocked && !cls.capturevideo.active)
++#else
++	if (!soundtimehack && snd_blocked)
++#endif
+ 		return;
+ 
+ 	if (snd_usethreadedmixing)

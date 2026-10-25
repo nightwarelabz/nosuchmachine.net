@@ -172,16 +172,12 @@
 .os-wolf-stage { flex: 1; min-height: 320px; background: #000; border: 1px solid var(--os-line); border-radius: 8px; overflow: hidden; position: relative; }
 .os-wolf-stage .jsdos { width: 100%; height: 100%; }
 .os-wolf-stage:fullscreen { border-radius: 0; border: none; }
+.os-nexuiz { display: flex; flex-direction: column; gap: 0.6rem; height: 100%; }
+.os-nexuiz-stage { flex: 1; min-height: 320px; background: #000; border: 1px solid var(--os-line); border-radius: 8px; overflow: hidden; position: relative; }
+.os-nexuiz-frame { width: 100%; height: 100%; border: none; display: block; }
+.os-nexuiz-stage:fullscreen { border-radius: 0; border: none; }
 .os-orc { display: flex; flex-direction: column; gap: 0.6rem; height: 100%; }
 .os-orc-frame { flex: 1; width: 100%; min-height: 320px; background: #0b0e14; border: 1px solid var(--os-line); border-radius: 8px; }
-.os-orc-stage { position: relative; flex: 1; display: flex; min-height: 320px; }
-.os-orc-plate { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: #0b0e14; border: 1px solid var(--os-line); border-radius: 8px; padding: 1.2rem; }
-.os-orc-plate[hidden] { display: none; }
-.os-orc-plate-inner { max-width: 30rem; display: flex; flex-direction: column; gap: 0.7rem; align-items: center; text-align: center; }
-.os-orc-plate-text { margin: 0; line-height: 1.55; color: #cfd6e4; }
-.os-orc-hint { display: flex; gap: 0.6rem; align-items: center; }
-.os-orc-hint[hidden] { display: none; }
-.os-orc-hint-text { color: var(--os-muted); font-size: 0.82rem; }
 a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .orc-face { width: 100%; height: 100%; object-fit: contain; display: block; }
 .os-orc-hero { display: flex; gap: 0.8rem; align-items: center; }

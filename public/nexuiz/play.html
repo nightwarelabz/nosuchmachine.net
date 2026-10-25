@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>nexuiz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #000; color: #d7dde6;
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  #main { display: flex; flex-direction: column; height: 100%; }
+  #stage { flex: 1; min-height: 0; position: relative; display: flex; }
+  #canvas { flex: 1; width: 100%; height: 100%; display: block; outline: none; }
+  #plate { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 0.7rem;
+    align-items: center; justify-content: center; text-align: center; padding: 1.2rem; background: #000; }
+  #plate[hidden] { display: none; }
+  #plate h1 { font-size: 1.05rem; font-weight: 600; margin: 0; letter-spacing: 0.04em; }
+  #plate p { margin: 0; max-width: 34rem; color: #93a1b3; }
+  #plate .bar { width: min(30rem, 80%); height: 6px; border: 1px solid #3a4353; border-radius: 3px; overflow: hidden; }
+  #plate .fill { height: 100%; width: 0%; background: #e5484d; transition: width 0.2s; }
+  #plate button { background: #171c24; color: #e8edf3; border: 1px solid #3a4353; border-radius: 7px;
+    padding: 0.5rem 1.1rem; font: inherit; cursor: pointer; }
+  #plate button:hover { border-color: #e5484d; }
+  #plate .err { color: #ff8589; max-width: 36rem; white-space: pre-wrap; }
+  #con { height: 86px; overflow-y: auto; border-top: 1px solid #232a35; padding: 0.35rem 0.6rem;
+    font-size: 11px; color: #7d8898; white-space: pre-wrap; word-break: break-word; }
+</style>
+</head>
+<body>
+<main id="main">
+  <div id="stage">
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+    <div id="plate">
+      <h1>nexuiz</h1>
+      <p id="plate-text">Nexuiz Classic 2.5.2 on the real DarkPlaces engine. The game's own
+      data pack (847 MB) is fetched once, verified byte-for-byte against its published
+      SHA-256, and kept in your browser for next time.</p>
+      <div class="bar" id="plate-bar" hidden><div class="fill" id="plate-fill"></div></div>
+      <p id="plate-status"></p>
+      <button id="plate-btn">click to play</button>
+    </div>
+  </div>
+  <pre id="con" aria-label="engine console"></pre>
+</main>
+<script src="play.js"></script>
+</body>
+</html>
