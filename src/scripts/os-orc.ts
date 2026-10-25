@@ -15,15 +15,49 @@
  * (X-Frame-Options / frame-ancestors) still do not load here — orc
  * the browser has no such limit, because there the page is top-level.
  * The OS shell widens its own CSP for this room's scope with
- * frame-src https: (see public/_headers). */
+ * frame-src https: (see public/_headers).
+ *
+ * A refusal cannot be detected from outside the frame — proven in
+ * the lab, not assumed: in a credentialless frame a refused page
+ * and a loaded page are indistinguishable to the parent (the load
+ * event fires for both, every cross-origin probe reads the same,
+ * resource timing is zeroed). The room never pretends otherwise.
+ * What it does instead: a SEARCH rides the lens from the start
+ * (DuckDuckGo refuses framing outright, and the lens always answers
+ * with a readable page or a legible refusal — never a silent white
+ * box), and every direct framing carries a standing hint strip
+ * with the one-click lens route for exactly the blank case.
+ *
+ * Every navigation the room drives passes the house content guard
+ * first (os-content-guard.ts): a listed host — adult, gore, shock —
+ * is never requested; the pane shows the refusal plate instead.
+ */
 
 import { DEPTH, MAX_NEST } from "./os-depth";
+import { guardCheck, type GuardHit } from "./os-content-guard";
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
   if (text !== undefined) e.textContent = text;
   return e;
+}
+
+/** The room's search page: the lite DuckDuckGo results sheet. It
+ *  refuses framing like the rest of DuckDuckGo, so searches ride
+ *  the lens (see door()); lite is also the better reader page —
+ *  plain HTML, almost no subresource weight. */
+const searchUrl = (q: string): string => `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(q)}`;
+
+/** What the operator typed, resolved to a destination: a full URL
+ *  stays itself, a bare host gains https, anything else is a
+ *  search. One resolver for both branches of the room. */
+function resolveInput(raw: string): { url: string; isSearch: boolean } | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return { url: v, isSearch: false };
+  if (/\.[a-z]{2,}(\/|$)/i.test(v)) return { url: `https://${v}`, isSearch: false };
+  return { url: searchUrl(v), isSearch: true };
 }
 
 export function buildOrc(body: HTMLElement, arg?: string) {
@@ -54,23 +88,30 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   if (DEPTH >= MAX_NEST) {
     const floor = el("p", "os-note", `the mirrors end here — ${MAX_NEST} nests deep is where physics collects. there is no pane left to frame another page in — but the address bar is not dead: it drives THIS frame, and what you open replaces the room you are standing in (one mirror up, the desk is as you left it). orc standalone starts fresh at the surface.`);
     floor.style.padding = "1.2rem";
-    wrap.append(hero, bar, floor);
+    const blockNote = el("p", "os-note");
+    blockNote.style.padding = "0 1.2rem";
+    wrap.append(hero, bar, floor, blockNote);
     body.appendChild(wrap);
     // The bar drives the frame this room itself stands in. House
     // pages go direct; the wider web rides the lens — at this depth
     // a bare cross-origin navigation dies on the ancestors' COEP
-    // wall, and the lens is the door that gets through.
+    // wall, and the lens is the door that gets through. The guard
+    // stands at this door too: a listed host is never navigated to.
     let lensForcedFloor = false;
     const navigateSelf = (raw: string) => {
-      let url = raw.trim();
-      if (!url) return;
-      if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
-        url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
-      }
-      addr.value = url;
-      let u: URL;
-      try { u = new URL(url); } catch { return; }
-      window.location.href = !lensForcedFloor && u.origin === window.location.origin ? url : `/lens?u=${encodeURIComponent(url)}`;
+      const r = resolveInput(raw);
+      if (!r) return;
+      addr.value = r.url;
+      void guardCheck(r.url).then((hit) => {
+        if (hit) {
+          blockNote.textContent = `orc doesn't open that — ${hit.host} is on the house blocklist. nothing was requested.`;
+          return;
+        }
+        blockNote.textContent = "";
+        let u: URL;
+        try { u = new URL(r.url); } catch { return; }
+        window.location.href = !lensForcedFloor && u.origin === window.location.origin ? r.url : `/lens?u=${encodeURIComponent(r.url)}`;
+      });
     };
     go.addEventListener("click", () => navigateSelf(addr.value));
     lens.addEventListener("click", () => { lensForcedFloor = true; navigateSelf(addr.value); });
@@ -78,6 +119,36 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     if (arg) navigateSelf(arg);
     return;
   }
+
+  // The pane's stage: the frame, and over it the guard's refusal
+  // plate. The hint strip sits under the bar — shown after every
+  // direct framing, because a refusal cannot be told from a slow
+  // page from out here (see the header), and the strip is the way
+  // out of the blank case, present exactly when it can happen.
+  const stage = el("div", "os-orc-stage");
+  const plate = el("div", "os-orc-plate");
+  plate.hidden = true;
+  const plateInner = el("div", "os-orc-plate-inner");
+  const plateText = el("p", "os-orc-plate-text");
+  const plateHome = el("button", "os-btn", "house page");
+  plateInner.append(plateText, plateHome);
+  plate.append(plateInner);
+  const hint = el("div", "os-orc-hint");
+  hint.hidden = true;
+  const hintText = el("span", "os-orc-hint-text", "if the pane stays blank, the site refuses framing.");
+  const hintLens = el("button", "os-btn", "open through the lens");
+  const hintX = el("button", "os-btn", "×");
+  hintX.setAttribute("aria-label", "dismiss");
+  hint.append(hintText, hintLens, hintX);
+  wrap.append(hero, bar, hint, stage);
+  stage.append(plate);
+  body.appendChild(wrap);
+
+  const showBlocked = (hit: GuardHit) => {
+    plateText.textContent = `orc doesn't open that — ${hit.host} is on the house blocklist (${hit.category === "adult" ? "adult" : "gore and shock"}). nothing was requested.`;
+    plate.hidden = false;
+  };
+
   // The frame's credentialless-ness is a property of the DOOR, not
   // of the room, and the element is rebuilt whenever a navigation
   // crosses doors (the attribute is read at navigation start).
@@ -98,30 +169,66 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // in a plain frame is an ordinary same-origin document, so its
   // own orc room starts from surface physics again.
   //
-  // NO sandbox attribute, ever — deliberately. A sandboxed frame
-  // without allow-same-origin gets an opaque origin, which makes
-  // the framed page's OWN subresources cross-origin: under the
-  // framed OS's COEP its CSS and module scripts then die for want
-  // of CORP/CORS slips, and the nest renders as raw static HTML —
-  // the exact corpse Chase screenshotted. The lens door carries
-  // its own sandbox at the response level, where it belongs.
+  // The sandbox is scoped to the FOREIGN door only (audit F-11):
+  // a framed stranger gets allow-scripts allow-same-origin
+  // allow-forms allow-popups — enough to read and use the page,
+  // no top-navigation or download freedom it never needed. House
+  // and lens frames are NEVER sandboxed: a sandboxed frame without
+  // allow-same-origin gets an opaque origin, which makes the framed
+  // page's OWN subresources cross-origin — under the framed OS's
+  // COEP its CSS and module scripts then die for want of CORP/CORS
+  // slips, and the nest renders as raw static HTML, the exact
+  // corpse Chase screenshotted. The lens door carries its own
+  // sandbox at the response level, where it belongs.
   let frame: HTMLIFrameElement;
   let frameCredless: boolean | null = null;
-  const mountFrame = (credless: boolean) => {
+  let frameSandboxed: boolean | null = null;
+  const mountFrame = (credless: boolean, sandboxed: boolean) => {
     const f = document.createElement("iframe");
     f.className = "os-orc-frame";
     f.setAttribute("title", "orc preview pane");
     if (credless) f.setAttribute("credentialless", "");
+    if (sandboxed) f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups");
     f.setAttribute("referrerpolicy", "no-referrer");
-    if (frame) frame.replaceWith(f); else wrap.appendChild(f);
+    f.addEventListener("load", onFrameLoad);
+    // State is assigned BEFORE the element enters the document:
+    // an iframe's first about:blank load can dispatch synchronously
+    // out of the insertion, and the load handler reads this state —
+    // assign-after-append threw exactly once per room open.
+    const old = frame;
     frame = f;
     frameCredless = credless;
+    frameSandboxed = sandboxed;
+    if (old) old.replaceWith(f); else stage.appendChild(f);
   };
-  wrap.append(hero, bar);
-  mountFrame(false);
-  body.appendChild(wrap);
 
-  // Two doors into the pane. Browsers with credentialless frames
+  // Links inside a lensed page are rewritten back through the
+  // lens, so a link-follow surfaces here as a lens navigation of
+  // the SAME frame. The room can read its own lens URLs: re-check
+  // the target, and if it names a blocked host, blank the pane and
+  // raise the plate. The guard's second door.
+  const onFrameLoad = (ev: Event) => {
+    // Read the element that actually fired — a stale frame's late
+    // load must not judge (or blank) the pane that replaced it.
+    const f = ev.currentTarget as HTMLIFrameElement | null;
+    if (!f) return;
+    const src = f.getAttribute("src") || "";
+    if (!src.startsWith("/lens?u=")) return;
+    let target = "";
+    try { target = new URL(src, window.location.origin).searchParams.get("u") || ""; } catch { return; }
+    if (!target) return;
+    void guardCheck(target).then((hit) => {
+      if (!hit) return;
+      if (frame !== f) return; // the pane has a new frame
+      if ((frame.getAttribute("src") || "") !== src) return; // …or has moved on
+      frame.src = "about:blank";
+      showBlocked(hit);
+    });
+  };
+
+  mountFrame(false, false);
+
+  // Three doors into the pane. Browsers with credentialless frames
   // (Chromium) frame the web directly — full fidelity. Browsers
   // without (Safari supports neither credentialless frames nor COEP
   // credentialless, so this page's isolation wall blacks out every
@@ -132,31 +239,51 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   // Gecko advertises the credentialless attribute but its frames
   // still die on this page's COEP wall (NS_ERROR_DOM_COEP_FAILED,
   // seen in orc standalone 2026-10-24) — for Gecko the lens is the
-  // working door, same as Safari.
+  // working door, same as Safari. Searches ride the lens on every
+  // browser: the search page refuses framing by policy, so the
+  // direct door could only ever show the white box.
   const HAS_CREDLESS = "credentialless" in HTMLIFrameElement.prototype && !navigator.userAgent.includes("Firefox");
+  interface Door { src: string; credless: boolean; sandboxed: boolean; kind: "house" | "lens" | "foreign"; }
   let lensForced = false;
-  const door = (url: string): { src: string; credless: boolean } => {
+  const door = (url: string, forceLens = false): Door => {
     let u: URL;
-    try { u = new URL(url); } catch { return { src: url, credless: false }; }
-    if (u.origin === window.location.origin) return { src: url, credless: false };
-    if (HAS_CREDLESS && !lensForced) return { src: url, credless: true };
-    return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false };
+    try { u = new URL(url); } catch { return { src: url, credless: false, sandboxed: false, kind: "house" }; }
+    if (u.origin === window.location.origin) return { src: url, credless: false, sandboxed: false, kind: "house" };
+    if (HAS_CREDLESS && !lensForced && !forceLens) return { src: url, credless: true, sandboxed: true, kind: "foreign" };
+    return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false, sandboxed: false, kind: "lens" };
   };
 
-  const navigate = (raw: string) => {
-    let url = raw.trim();
-    if (!url) return;
-    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
-      url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
-    }
-    addr.value = url;
-    const d = door(url);
-    if (frameCredless !== d.credless) mountFrame(d.credless);
+  let currentUrl = "";
+  let navSeq = 0;
+  let hintTimer: ReturnType<typeof setTimeout> | undefined;
+  const drive = async (rawInput: string) => {
+    const seq = ++navSeq;
+    const r = resolveInput(rawInput);
+    if (!r) return;
+    addr.value = r.url;
+    const hit = await guardCheck(r.url);
+    if (seq !== navSeq) return; // a newer navigation superseded this one
+    if (hit) { hint.hidden = true; showBlocked(hit); return; }
+    plate.hidden = true;
+    const d = r.isSearch ? door(r.url, true) : door(r.url);
+    currentUrl = r.url;
+    if (frameCredless !== d.credless || frameSandboxed !== d.sandboxed) mountFrame(d.credless, d.sandboxed);
     frame.src = d.src;
+    if (d.kind === "foreign") {
+      hint.hidden = false;
+      clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => { hint.hidden = true; }, 12000);
+    } else {
+      hint.hidden = true;
+    }
   };
+  const navigate = (raw: string) => { void drive(raw); };
   go.addEventListener("click", () => navigate(addr.value));
   lens.addEventListener("click", () => { lensForced = true; navigate(addr.value); });
   addr.addEventListener("keydown", (e) => { if (e.key === "Enter") navigate(addr.value); e.stopPropagation(); });
+  plateHome.addEventListener("click", () => navigate("https://nosuchmachine.net/"));
+  hintLens.addEventListener("click", () => { lensForced = true; if (currentUrl) void drive(currentUrl); });
+  hintX.addEventListener("click", () => { hint.hidden = true; clearTimeout(hintTimer); });
   // The starter pane is the house itself (Chase's ruling,
   // 2026-10-24): the room opens on nosuchmachine.net — on the house
   // origin that is the first mirror of the nest.

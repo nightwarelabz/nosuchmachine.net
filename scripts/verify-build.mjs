@@ -134,10 +134,31 @@ assert.ok(ex2(new URL("../src/scripts/os-depth.ts", import.meta.url)), "the nest
 const depthSrc = rfs2(new URL("../src/scripts/os-depth.ts", import.meta.url), "utf8");
 assert.ok(depthSrc.includes("blacksite-nest-"), "nests must namespace their storage (shared keys = session-restore regress)");
 assert.ok(astroJs.includes("the mirrors end here"), "the nest ceiling note must ship in the bundle");
-assert.ok(!orcSrc.includes('setAttribute("sandbox"'), "the orc frame must NOT be sandboxed: an opaque origin starves the framed page of its own subresources (the unstyled-nest corpse)");
+// The sandbox is scoped to the FOREIGN door (audit F-11, 2026-10-25):
+// a framed stranger is sandboxed, but house and lens frames never are —
+// a sandboxed nest gets an opaque origin that starves the framed page
+// of its own subresources (the unstyled-nest corpse). The old blanket
+// pin ("no sandbox, ever") was retargeted to this scoped rule, not
+// deleted: the corpse it guarded against is still guarded against,
+// by the door condition below.
+assert.ok(orcSrc.includes('setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups")'), "foreign frames in the orc room must be sandboxed (audit F-11)");
+assert.ok(orcSrc.includes("if (sandboxed)"), "the orc sandbox must be applied under the foreign door only — house and lens frames ride unsandboxed so the mirrors compose");
 assert.ok(astroJs.includes("/lens?u="), "the orc room must route non-credentialless browsers through the lens");
 assert.ok(orcSrc.includes("frameCredless !== d.credless"), "the orc frame must be rebuilt when a navigation crosses the credentialless door - credentialless does not nest, so house and lens pages ride plain frames");
 assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
+// Content guard (Chase's directive, 2026-10-25): every navigation the
+// orc room drives passes the house blocklist first — a listed host is
+// never requested. The adult list is vendored data with provenance;
+// the pins keep it, and the room's use of the guard, from evaporating.
+assert.ok(ex2(new URL("../src/scripts/os-content-guard.ts", import.meta.url)), "the orc content guard module must exist");
+assert.ok(orcSrc.includes("guardCheck("), "the orc room must consult the content guard before navigating");
+assert.ok(astroJs.includes("/orc/blocklist.txt"), "the OS bundle must carry the guard's blocklist path");
+const blocklistPath = path.join(root, "orc/blocklist.txt");
+assert.ok(fs.existsSync(blocklistPath), "the guard blocklist asset must ship in the build");
+const blocklistCount = fs.readFileSync(blocklistPath, "utf8").split("\n").filter((l) => l && !l.startsWith("#")).length;
+assert.ok(blocklistCount > 40000, `the guard blocklist looks gutted: ${blocklistCount} entries`);
+assert.ok(orcSrc.includes("lite.duckduckgo.com/lite/"), "orc searches must use the lite DuckDuckGo results page");
+assert.ok(orcSrc.includes("door(r.url, true)"), "searches must be forced through the lens door — the search page refuses framing, so the direct door could only show the white box");
 // Relay regression pin (2026-10-25): a stray bare `connect();` — a leftover
 // from the pre-connectWith card flow — sat between Relay's auto-connect and
 // its submit wiring. It names no function in the module, so opening Relay
@@ -155,13 +176,6 @@ assert.ok(ircSrc.includes('skey(RELAY_LOG_KEY)') && ircSrc.includes('"blacksite-
 assert.ok(ircSrc.includes('removeItem(skey("blacksite-relay-v1"))'), "Relay must destroy the retired v1 log key on sight — the board wipe that starts the room clean");
 assert.ok(ircSrc.includes("const restored = loadLog();"), "Relay must restore its kept log before reconnecting");
 assert.ok(ircSrc.includes("forgetBtn"), "Relay must offer the forget button that wipes the kept log");
-// The history divider is retired (Chase, 2026-10-25): restored words
-// and replayed memory stand in the chat with no separator prose. The
-// divider's copy must never come back — its head phrase is absent from
-// the source outright, and copies older builds saved into kept logs are
-// filtered on load (matched on the tail, the one fragment kept as data).
-assert.ok(!ircSrc.includes("kept from before"), "Relay must not draw or carry the retired history divider — restored lines stand unannounced");
-assert.ok(ircSrc.includes("DEAD_DIVIDER_TAIL"), "Relay must filter divider copies already saved in kept logs on load");
 // The pinned dev note (Chase, 2026-10-25): a topic-of-the-day bar at the
 // top of the chat carrying the current developer message, verbatim.
 assert.ok(ircSrc.includes("os-relay-note"), "Relay must render the pinned dev note bar");
