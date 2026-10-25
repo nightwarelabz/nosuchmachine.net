@@ -4,13 +4,55 @@
 // Certificate Transparency subdomain census (crt.sh), and the domain's
 // well-known public files (robots.txt, security.txt, sitemap.xml).
 // Nothing here touches the target except three ordinary public-file GETs.
-import { err, guardTarget, json, userAgent } from "../_lib/guard";
+import { err, guardTarget, guardUrl, json, userAgent } from "../_lib/guard";
+
+/** Stream a response body to text, stopping at the cap: a byte cap that
+ *  first downloads the whole body into worker memory caps nothing. */
+async function readCappedText(res: Response, cap: number): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > cap) {
+      const keep = value.slice(0, value.length - (total - cap));
+      if (keep.length) chunks.push(keep);
+      await reader.cancel().catch(() => {});
+      break;
+    }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let off = 0;
+  for (const c of chunks) { buf.set(c, off); off += c.length; }
+  return new TextDecoder("utf-8", { fatal: false }).decode(buf);
+}
 
 async function fetchText(url: string, timeoutMs = 8000): Promise<{ status: number; text: string } | null> {
+  // Only the target's own well-known files (robots.txt, security.txt,
+  // sitemap.xml) flow through here — the public ledgers keep their own
+  // fetches. Redirects are walked by hand, at most 3 hops, with the
+  // public-target guard re-checked on every hop: redirect:"follow" let a
+  // public name bounce this fetch onto an address nobody had verified,
+  // which is the one door the guard exists to keep shut.
   try {
-    const res = await fetch(url, { headers: { "user-agent": userAgent(), accept: "text/plain,*/*" }, signal: AbortSignal.timeout(timeoutMs), redirect: "follow" });
-    const text = await res.text();
-    return { status: res.status, text: text.slice(0, 20000) };
+    let current = url;
+    for (let hop = 0; hop <= 3; hop++) {
+      await guardUrl(current);
+      const res = await fetch(current, { headers: { "user-agent": userAgent(), accept: "text/plain,*/*" }, signal: AbortSignal.timeout(timeoutMs), redirect: "manual" });
+      const location = res.headers.get("location");
+      if ([301, 302, 303, 307, 308].includes(res.status) && location) {
+        try { await res.body?.cancel(); } catch { /* noop */ }
+        if (hop === 3) return null;
+        current = new URL(location, current).toString();
+        continue;
+      }
+      return { status: res.status, text: await readCappedText(res, 20000) };
+    }
+    return null;
   } catch {
     return null;
   }

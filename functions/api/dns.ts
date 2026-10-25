@@ -1,5 +1,5 @@
 // @ts-nocheck
-// GET /api/dns?name=example.com&type=A|AAAA|CNAME|MX|TXT|NS|SOA|CAA|PTR|SRV|DS|DNSKEY|ALL
+// GET /api/dns?name=example.com&type=A|AAAA|CNAME|MX|TXT|NS|SOA|CAA|PTR|SRV|DS|DNSKEY|HTTPS|SVCB|ALL
 // Multi-resolver DNS lookup via DNS-over-HTTPS. Read-only, no target contact.
 import { err, guardTarget, json } from "../_lib/guard";
 
@@ -53,11 +53,15 @@ export async function onRequestGet(context: any) {
       host = h;
     } else return err(msg);
   }
-  const types = typeParam === "ALL" ? TYPES.slice(0, 10) : [typeParam];
-  if (types.some((t) => !TYPES.includes(t) && t !== "ALL")) return err(`Unsupported record type. Use one of: ${TYPES.join(", ")}, ALL.`);
+  const types = typeParam === "ALL" ? [...TYPES] : [typeParam];
+  if (types.some((t) => !TYPES.includes(t))) return err(`Unsupported record type. Use one of: ${TYPES.join(", ")}, ALL.`);
+  // The ALL sweep covers all 14 types and runs them in parallel — each
+  // type still asks all three resolvers. (It once stopped at slice(0, 10),
+  // leaving DS, DNSKEY, HTTPS and SVCB unreachable through ALL, and walked
+  // the types one by one, so a full census could take a minute of serial
+  // resolver waits.)
+  const swept = await Promise.all(types.map(async (t) => ({ t, rows: await Promise.all(RESOLVERS.map((r) => queryResolver(r, host, t))) })));
   const out: Record<string, unknown> = {};
-  for (const t of types) {
-    out[t] = await Promise.all(RESOLVERS.map((r) => queryResolver(r, host, t)));
-  }
+  for (const { t, rows } of swept) out[t] = rows;
   return json({ ok: true, name: host, types, results: out, note: "Answers from three public resolvers. AD = DNSSEC-validated by that resolver." });
 }

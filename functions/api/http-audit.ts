@@ -17,6 +17,32 @@ async function fetchHop(url: string, extraHeaders: Record<string, string> = {}):
   return { res, ms: Date.now() - started };
 }
 
+/** Stream a response body to text, stopping at the cap: a byte cap that
+ *  first downloads the whole body into worker memory caps nothing (the
+ *  final-page snippet below once read the entire HTML with res.text()). */
+async function readCappedText(res: Response, cap: number): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > cap) {
+      const keep = value.slice(0, value.length - (total - cap));
+      if (keep.length) chunks.push(keep);
+      await reader.cancel().catch(() => {});
+      break;
+    }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
+  let off = 0;
+  for (const c of chunks) { buf.set(c, off); off += c.length; }
+  return new TextDecoder("utf-8", { fatal: false }).decode(buf);
+}
+
 function gradeSecurityHeaders(headers: Record<string, string>) {
   const checks: Array<{ id: string; label: string; pass: boolean; detail: string; weight: number }> = [];
   const has = (k: string) => (headers[k] || "").trim();
@@ -90,8 +116,7 @@ export async function onRequestGet(context: any) {
     finalContentType = res.headers.get("content-type") || "";
     if (/text\/html|application\/xhtml/i.test(finalContentType)) {
       try {
-        const text = await res.text();
-        finalBodySnippet = text.slice(0, 60000);
+        finalBodySnippet = await readCappedText(res, 60000);
       } catch { /* body unreadable */ }
     } else {
       try { await res.body?.cancel(); } catch { /* noop */ }
