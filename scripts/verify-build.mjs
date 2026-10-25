@@ -141,6 +141,12 @@ const ircSrc = rfs2(new URL("../src/scripts/os-irc.ts", import.meta.url), "utf8"
 assert.ok(!/^\s*connect\(\);\s*$/m.test(ircSrc), "Relay must not call the retired card-flow connect() — it is undefined and kills the send wiring below it");
 assert.ok(ircSrc.includes('input.addEventListener("keydown"'), "Relay must wire Enter to submit");
 assert.ok(ircSrc.includes('sendBtn.addEventListener("click"'), "Relay must wire the send button to submit");
+// Relay retention (Chase, 2026-10-25): a refresh must not cost the room its
+// words. The log persists on-device under the depth-namespaced key, restore
+// runs before the auto-connect, and the forget button can wipe it.
+assert.ok(ircSrc.includes('skey(RELAY_LOG_KEY)') && ircSrc.includes('"blacksite-relay-v1"'), "Relay retention must persist under the skey-namespaced blacksite-relay-v1 key");
+assert.ok(ircSrc.includes("const restored = loadLog();"), "Relay must restore its kept log before reconnecting");
+assert.ok(ircSrc.includes("forgetBtn"), "Relay must offer the forget button that wipes the kept log");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");
