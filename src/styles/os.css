@@ -232,6 +232,10 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 /* toasts */
 .os-toasts { position: absolute; right: 12px; top: 12px; z-index: 96; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .os-toast { background: var(--os-panel); border: 1px solid var(--os-line); border-left: 3px solid var(--os-accent); border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.76rem; max-width: min(360px, 86vw); box-shadow: 0 14px 40px rgba(0,0,0,0.55); backdrop-filter: blur(14px); animation: os-win-in 0.25s ease both; }
+/* the held update's toast: one instance, no fade — it stands until the
+   update lands or the state that holds it resolves. Its edge carries
+   the update bar's red, so the two read as one signal. */
+.os-update-toast { border-left-color: rgba(255, 84, 112, 0.85); pointer-events: auto; }
 @media (max-width: 760px) { .os-launcher { left: 6px; right: 6px; width: auto; bottom: 6px; } .os-launcher input { font-size: 16px; } }
 
 /* daylight bottle */

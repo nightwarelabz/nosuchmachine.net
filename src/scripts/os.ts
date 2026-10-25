@@ -1146,8 +1146,11 @@ function updateEmconChip() {
    Every build stamps /version.json with the OS chunk it produced. The
    running OS checks that stamp (never cached) shortly after boot, every
    45 seconds, and whenever the tab comes back into view. When the stamp
-   names a newer chunk than the one running, this window says so and
-   reloads onto the new build. The guards matter as much as the push: a
+   names a newer chunk than the one running, the update is held and
+   landed by the room's rules (see the held update below) — a bare desk
+   reloads onto the new build at once, an occupied one is warned first,
+   and a desk with nexuiz open is never reloaded under the game. The
+   guards matter as much as the push: a
    missing or unreadable stamp means silence, an unidentified running
    build means silence, and a version this session already chased is not
    chased again for ten minutes — a deployment still rolling across the
@@ -1229,10 +1232,66 @@ function renderBuildPlate(v: { version?: unknown; chunk?: unknown; built?: unkno
   buildPlateEl.append(buildPlateSessionEl);
 }
 
+/* ————— the held update: a refresh that minds the room —————
+   A newer build on the wire does not yank the desk away. The watcher
+   holds the update as pending and a half-second evaluator reads the
+   window manager's own truth — the windows map — to decide its fate:
+   a bare desk takes the update at once, as it always has; any window
+   open earns a toast and a two-minute countdown, at whose end the
+   update lands (and if the last window closes first, it lands then);
+   and while the nexuiz window exists the update never lands at all —
+   the toast waits, untimed, until that window is closed completely,
+   and only then does the pending update re-enter the flow above. */
+const UPDATE_HOLD_MS = 2 * 60 * 1000;
 function startUpdateWatch(): void {
   const mine = ownChunk();
   if (!mine) return; // this build cannot name itself — stay silent
   let taking = false;
+  let pending = ""; // the chunk waiting to land, "" while the wire is quiet
+  let holdMode: "" | "count" | "wait" = "";
+  let deadline = 0; // countdown end, while holdMode === "count"
+  let toastEl: HTMLElement | null = null;
+
+  const dropToast = () => { toastEl?.remove(); toastEl = null; };
+  const showToast = (text: string) => {
+    if (!toastEl || !toastEl.isConnected) {
+      let stack = document.querySelector<HTMLElement>(".os-toasts");
+      if (!stack) { stack = el("div", "os-toasts"); desktop().appendChild(stack); }
+      toastEl = el("div", "os-toast os-update-toast");
+      stack.appendChild(toastEl);
+    }
+    if (toastEl.textContent !== text) toastEl.textContent = text;
+  };
+  const takeUpdate = () => {
+    if (taking || !pending) return;
+    taking = true;
+    dropToast();
+    const bar = document.createElement("div");
+    bar.className = "os-update-bar";
+    bar.textContent = "BLACKSITE has been updated — reloading onto the new build…";
+    document.body.appendChild(bar);
+    setTimeout(() => location.reload(), 3500);
+  };
+  const evaluate = () => {
+    if (!pending || taking) return;
+    if (windows.has("nexuiz")) {
+      // the hard exception: no countdown, no landing — the update waits
+      holdMode = "wait"; deadline = 0;
+      showToast("server is about to refresh for an update… waiting for nexuiz to close.");
+      return;
+    }
+    if (windows.size > 0) {
+      if (holdMode !== "count") { holdMode = "count"; deadline = Date.now() + UPDATE_HOLD_MS; }
+      const left = deadline - Date.now();
+      if (left <= 0) { takeUpdate(); return; }
+      const s = Math.ceil(left / 1000);
+      showToast(`server is about to refresh for an update… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} remaining.`);
+      return;
+    }
+    takeUpdate(); // a bare desk takes the update at once
+  };
+  setInterval(evaluate, 500);
+
   const check = async () => {
     if (taking || document.hidden) return;
     let theirs = "";
@@ -1244,20 +1303,19 @@ function startUpdateWatch(): void {
       theirs = typeof v.chunk === "string" ? v.chunk : "";
     } catch { return; }
     if (!theirs || theirs === mine) {
+      // the wire is quiet again — any pending hold dissolves with it
+      pending = ""; holdMode = ""; deadline = 0; dropToast();
       try { sessionStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch { /* storage denied */ }
       return;
     }
+    if (pending === theirs) return; // already held — the evaluator is on it
     try {
       const prev = JSON.parse(sessionStorage.getItem(UPDATE_ATTEMPT_KEY) || "null") as { chunk: string; at: number } | null;
       if (prev && prev.chunk === theirs && Date.now() - prev.at < 10 * 60 * 1000) return;
       sessionStorage.setItem(UPDATE_ATTEMPT_KEY, JSON.stringify({ chunk: theirs, at: Date.now() }));
     } catch { /* attempts unkept — the update is still taken, once per page */ }
-    taking = true;
-    const bar = document.createElement("div");
-    bar.className = "os-update-bar";
-    bar.textContent = "BLACKSITE has been updated — reloading onto the new build…";
-    document.body.appendChild(bar);
-    setTimeout(() => location.reload(), 3500);
+    pending = theirs; holdMode = ""; deadline = 0;
+    evaluate();
   };
   setTimeout(() => void check(), 20000);
   setInterval(() => void check(), 45000);
