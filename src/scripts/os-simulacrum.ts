@@ -145,9 +145,9 @@ void main() {
   vec3 n = normalize(vNor);
   vec3 sunN = normalize(uSun);
   /* wrap diffuse: light bends a little way around forms */
-  float dif = clamp((dot(n, sunN) + 0.55) / 1.55, 0.0, 1.0);
-  float li = 0.16 + 0.84 * dif * dif;
-  float hemi = 0.72 + 0.28 * n.y;
+  float dif = clamp((dot(n, sunN) + 0.85) / 1.85, 0.0, 1.0);
+  float li = 0.24 + 0.76 * pow(dif, 1.5);
+  float hemi = 0.78 + 0.22 * n.y;
   vec3 c = vCol * li * hemi * uTint;
   /* the sun's shadow, sampled soft */
   if (uShadowAmt > 0.003) {
@@ -847,6 +847,17 @@ export class Dreamer {
        breathes wrong every little while. Night and trust both
        hasten it. */
     if (!this.anomalyKind && now >= this.nextAnomalyAt) {
+      /* the visitor — one roll in three thousand (Chase's number,
+         2026-10-24): something crosses the sky that is not a bird,
+         not a star, and does not stop */
+      if (this.rnd() < 1 / 3000) {
+        this.anomalyKind = "visitor";
+        this.anomalyFrom = now;
+        this.anomalyDur = 48;
+        this.anomalyUntil = now + 48;
+        this.nextAnomalyAt = now + 48 + 300 + this.rnd() * 300;
+        if (this.rnd() < 0.7) this.say("something crossed, and did not stop", "it was not a star. it was not a bird");
+      } else {
       const j = this.judgment;
       const darkBoost = 1 + Math.max(0, -j) * 1.1, kindBoost = 1 + Math.max(0, j) * 0.8;
       const pool: Array<[string, number, number]> = [
@@ -880,6 +891,7 @@ export class Dreamer {
         if (kind === "glass") this.say("the sea has gone to glass");
         if (kind === "stretch") this.say("the world is breathing in");
         if (kind === "murmur") this.say("something is saying your name, almost");
+      }
       }
     }
     /* the account, and the crossing of it */
@@ -1621,16 +1633,46 @@ export function buildSimulacrum(body: HTMLElement) {
     }
   };
   /* a flower, honestly: stem, heart, and a ring of solid petals */
+  /* a true flower (Chase's crystal rule, applied to everything,
+     2026-10-24: modelled, not coloured shapes): a two-bend stem
+     with one leaf, a sepal star, petals as ridged cups around a
+     domed heart — or, now and then, a bud not yet open */
   const flowerGeo = (lit: number[], glow: number[], x: number, y: number, z: number, s: number, petal: Col3, rnd: () => number) => {
-    prism(lit, x, y - 0.03, z, 0.035 * s, 0.025 * s, 0.52 * s, 5, [0.18, 0.38, 0.14], (rnd() - 0.5) * 0.1 * s, (rnd() - 0.5) * 0.1 * s);
-    const hx = x + (rnd() - 0.5) * 0.05 * s, hz = z + (rnd() - 0.5) * 0.05 * s, hy = y + 0.52 * s;
-    const pc = vary(petal, 0.16, rnd);
+    const leanX = (rnd() - 0.5) * 0.16 * s, leanZ = (rnd() - 0.5) * 0.16 * s;
+    const stem: Col3 = [0.20, 0.40, 0.15];
+    prism(lit, x, y - 0.03, z, 0.034 * s, 0.026 * s, 0.30 * s, 5, stem);
+    prism(lit, x, y + 0.27 * s, z, 0.026 * s, 0.020 * s, 0.26 * s, 5, stem, leanX, leanZ);
+    const hx = x + leanX, hz = z + leanZ, hy = y + 0.53 * s;
+    { const la = rnd() * Math.PI * 2, lx = x + leanX * 0.5, lz = z + leanZ * 0.5, ly = y + 0.26 * s;
+      const dx = Math.cos(la), dz = Math.sin(la), lc = vary(stem, 0.10, rnd);
+      tri(lit, [lx, ly, lz], [lx + dx * 0.20 * s - dz * 0.06 * s, ly + 0.02 * s, lz + dz * 0.20 * s + dx * 0.06 * s], [lx + dx * 0.13 * s, ly + 0.07 * s, lz + dz * 0.13 * s], lc);
+      tri(lit, [lx, ly, lz], [lx + dx * 0.13 * s, ly + 0.07 * s, lz + dz * 0.13 * s], [lx + dx * 0.20 * s + dz * 0.06 * s, ly + 0.02 * s, lz + dz * 0.20 * s - dx * 0.06 * s], lc); }
+    const pc = vary(petal, 0.14, rnd);
+    const pcLight = pc.map((c) => Math.min(1, c + 0.10)) as unknown as Col3;
+    if (rnd() < 0.16) {
+      for (let k = 0; k < 5; k++) {
+        const pa = (k / 5) * Math.PI * 2;
+        prism(lit, hx + Math.cos(pa) * 0.045 * s, hy - 0.02 * s, hz + Math.sin(pa) * 0.045 * s, 0.055 * s, 0.006 * s, 0.20 * s, 4, k % 2 ? pc : pcLight, -Math.cos(pa) * 0.05 * s, -Math.sin(pa) * 0.05 * s);
+      }
+      prism(lit, hx, hy - 0.09 * s, hz, 0.075 * s, 0.03 * s, 0.10 * s, 5, stem);
+      return;
+    }
+    for (let k = 0; k < 5; k++) {
+      const pa = (k / 5) * Math.PI * 2 + 0.3;
+      octa(lit, hx + Math.cos(pa) * 0.09 * s, hy - 0.035 * s, hz + Math.sin(pa) * 0.09 * s, 0.075 * s, 0.02 * s, 0.075 * s, stem, -pa + Math.PI / 2);
+    }
     const petals = 5 + Math.floor(rnd() * 3);
     for (let pI = 0; pI < petals; pI++) {
-      const pa = (pI / petals) * Math.PI * 2 + rnd() * 0.3;
-      octa(lit, hx + Math.cos(pa) * 0.15 * s, hy + 0.015 * s, hz + Math.sin(pa) * 0.15 * s, 0.11 * s, 0.028 * s, 0.075 * s, pc, -pa + Math.PI / 2);
+      const pa = (pI / petals) * Math.PI * 2 + rnd() * 0.25;
+      const dx = Math.cos(pa), dz = Math.sin(pa), qx = -dz, qz = dx;
+      const B: number[] = [hx + dx * 0.03 * s, hy, hz + dz * 0.03 * s];
+      const M: number[] = [hx + dx * 0.17 * s, hy + 0.075 * s, hz + dz * 0.17 * s];
+      const T: number[] = [hx + dx * 0.31 * s, hy + 0.10 * s, hz + dz * 0.31 * s];
+      const L: number[] = [hx + dx * 0.16 * s + qx * 0.09 * s, hy + 0.04 * s, hz + dz * 0.16 * s + qz * 0.09 * s];
+      const R: number[] = [hx + dx * 0.16 * s - qx * 0.09 * s, hy + 0.04 * s, hz + dz * 0.16 * s - qz * 0.09 * s];
+      tri(lit, B, L, M, pc); tri(lit, B, M, R, pc); tri(lit, L, T, M, pcLight); tri(lit, R, M, T, pcLight);
     }
-    octa(glow, hx, hy + 0.03 * s, hz, 0.075 * s, 0.05 * s, 0.075 * s, [0.98, 0.78, 0.30]);
+    octa(glow, hx, hy + 0.035 * s, hz, 0.07 * s, 0.05 * s, 0.07 * s, [0.98, 0.78, 0.30]);
   };
   /* a garden bed: soil, a stone lip, and flowers in honest rows —
      the sign that something in this world tends what grows */
@@ -1691,9 +1733,33 @@ export function buildSimulacrum(body: HTMLElement) {
     for (let i = 0; i < nSmall; i++) { const a = rnd() * 6.28, d = (0.5 + rnd() * 0.4) * s; point(x + Math.cos(a) * d, z + Math.sin(a) * d, s * (0.35 + rnd() * 0.3), 0.3 + rnd() * 0.4, a); }
     octa(glow, x, y + 0.9 * s, z, 0.10 * s, 0.16 * s, 0.10 * s, amethyst ? [0.55, 0.38, 0.95] : [0.75, 0.82, 0.95]);
   };
+  /* a true mushroom (the crystal rule again): a bulbed cream stem
+     with its little ring, pale gills under a russet dome built in
+     shrinking courses, light freckles on the cap — and, often, a
+     smaller one leaning at its foot. It was a violet prism once;
+     the world is not made of coloured shapes any more. */
   const shroomGeo = (lit: number[], glow: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
-    prism(lit, x, y - 0.03, z, 0.10 * s, 0.14 * s, 0.55 * s, 6, [0.78, 0.72, 0.62]);
-    prism(glow, x, y + 0.5 * s, z, 0.62 * s, 0.05, 0.34 * s, 7, vary([0.55, 0.38, 0.95], 0.2, rnd));
+    void glow;
+    const one = (mx: number, mz: number, ms: number) => {
+      const my = height(mx, mz);
+      if (my < 0.3) return;
+      const stem: Col3 = [0.82, 0.76, 0.64];
+      const capTop = vary(rnd() < 0.5 ? [0.60, 0.27, 0.15] as Col3 : [0.72, 0.48, 0.22] as Col3, 0.12, rnd);
+      prism(lit, mx, my - 0.04, mz, 0.16 * ms, 0.11 * ms, 0.30 * ms, 7, vary(stem, 0.06, rnd));
+      prism(lit, mx, my + 0.24 * ms, mz, 0.11 * ms, 0.09 * ms, 0.26 * ms, 7, stem);
+      prism(lit, mx, my + 0.30 * ms, mz, 0.13 * ms, 0.15 * ms, 0.05 * ms, 7, vary(stem, 0.05, rnd));
+      prism(lit, mx, my + 0.46 * ms, mz, 0.46 * ms, 0.40 * ms, 0.06 * ms, 8, [0.88, 0.80, 0.66]);
+      prism(lit, mx, my + 0.50 * ms, mz, 0.58 * ms, 0.50 * ms, 0.13 * ms, 8, capTop);
+      prism(lit, mx, my + 0.61 * ms, mz, 0.50 * ms, 0.34 * ms, 0.11 * ms, 8, vary(capTop, 0.05, rnd));
+      prism(lit, mx, my + 0.70 * ms, mz, 0.34 * ms, 0.10 * ms, 0.09 * ms, 8, vary(capTop, 0.08, rnd));
+      const spots = 3 + Math.floor(rnd() * 3);
+      for (let k = 0; k < spots; k++) {
+        const sa = rnd() * Math.PI * 2, sr = (0.10 + rnd() * 0.16) * ms;
+        octa(lit, mx + Math.cos(sa) * sr, my + 0.735 * ms, mz + Math.sin(sa) * sr, 0.04 * ms, 0.02 * ms, 0.04 * ms, [0.92, 0.88, 0.78], rnd());
+      }
+    };
+    one(x, z, s);
+    if (rnd() < 0.45) one(x + (rnd() - 0.5) * 0.9 * s, z + (rnd() - 0.5) * 0.9 * s, s * (0.45 + rnd() * 0.3));
   };
 
   /* ---- the great paths: worn ways across the world, seeded once.
@@ -2235,6 +2301,27 @@ export function buildSimulacrum(body: HTMLElement) {
       const drift = (performance.now() / 1000) * skyAn.sp;
       const az = skyAn.az + drift;
       octa(px + Math.sin(az) * 330, 150 + Math.sin(skyAn.el) * 60, pz + Math.cos(az) * 330, 2.6, [1.0, 0.98, 0.9]);
+    }
+    if (anKind === "visitor" && anAmt > 0.02) {
+      const t2 = performance.now() / 1000;
+      const az = skyAn.az + t2 * skyAn.sp;
+      const vx = px + Math.sin(az) * 240, vz = pz + Math.cos(az) * 240, vy = 165 + Math.sin(t2 * 0.5) * 6;
+      /* a disc: two shallow cones rim to rim, a dome above, and
+         three lights underneath taking their turns at blinking */
+      const R = 13, hull: [number, number, number] = [0.32, 0.34, 0.42];
+      const rim: Array<[number, number, number]> = [];
+      for (let k = 0; k < 10; k++) { const a = (k / 10) * Math.PI * 2; rim.push([vx + Math.cos(a) * R, vy, vz + Math.sin(a) * R]); }
+      for (let k = 0; k < 10; k++) {
+        const A = rim[k], C = rim[(k + 1) % 10];
+        v.push(vx, vy + 2.6, vz, ...hull, 0, 1, 0, ...A, ...hull, 0, 1, 0, ...C, ...hull, 0, 1, 0);
+        v.push(vx, vy - 1.6, vz, ...hull, 0, -1, 0, ...C, ...hull, 0, -1, 0, ...A, ...hull, 0, -1, 0);
+      }
+      octa(vx, vy + 3.4, vz, 3.4, [0.45, 0.50, 0.62]);
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + t2 * 0.9;
+        const on = 0.55 + 0.45 * Math.sin(t2 * 2.4 + k * 2.1);
+        octa(vx + Math.cos(a) * R * 0.62, vy - 1.9, vz + Math.sin(a) * R * 0.62, 0.9, [1.0 * on, 0.85 * on, 0.55 * on]);
+      }
     }
     if (anKind === "procession" && anAmt > 0.02) {
       const head = (performance.now() / 1000) * 1.15 % 320;
@@ -3801,6 +3888,7 @@ export function buildSimulacrum(body: HTMLElement) {
         if (anKind === "glass") glassT = now / 1000;
         if (anKind === "stone") spawnStone();
         if (anKind === "star") { skyAn.az = Math.random() * 6.28; skyAn.el = 0.35 + Math.random() * 0.5; skyAn.sp = 0.008 + Math.random() * 0.01; }
+        if (anKind === "visitor") { skyAn.az = Math.random() * 6.28; skyAn.sp = 0.021; }
         if (anKind === "procession") { skyAn.az = Math.random() * 6.28; skyAn.x0 = px - Math.sin(skyAn.az) * 150; skyAn.z0 = pz - Math.cos(skyAn.az) * 150; }
         lastAnKind = anKind;
       }
