@@ -1178,9 +1178,18 @@ export function buildSimulacrum(body: HTMLElement) {
   const xrBtn = el("button", "os-btn", "enter VR");
   const posLabel = el("span", "os-note", "");
   hud.append(seedLabel, posLabel);
-  const controls = el("div", "os-sim-controls");
-  controls.append(flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, fsBtn, xrBtn);
-  stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, controls, powers);
+  const menuBtn = el("button", "os-btn os-sim-menubtn", "≡");
+  menuBtn.setAttribute("aria-label", "menu");
+  const menu = el("div", "os-sim-menu");
+  const menuRow = el("div", "os-sim-menu-row");
+  menuRow.append(flyBtn, sndBtn, irisBtn, commonsBtn, photoBtn, fsBtn, xrBtn);
+  const menuKeys = el("div", "os-sim-menu-keys");
+  menuKeys.append(
+    el("div", "os-note", "move · w a s d — look · mouse — jump · space — sink · c"),
+    el("div", "os-note", "swift · shift — fly · f — shape the land · r / g — menu · m"),
+  );
+  menu.append(menuRow, el("div", "os-sim-menu-h", "the gifts"), powers, el("div", "os-sim-menu-h", "the keys"), menuKeys);
+  stage.append(canvas, shade, uw, whisper, opening, titleScr, hud, menuBtn, menu);
   wrap.append(stage);
   wrap.classList.add("chrome-on");
   body.appendChild(wrap);
@@ -2517,6 +2526,7 @@ export function buildSimulacrum(body: HTMLElement) {
     if ((locked || touched) && e.code === "KeyB") castBloom();
     if ((locked || touched) && e.code === "Digit1") toggleStarlight();
     if (e.code === "Tab" && body.contains(wrap)) { e.preventDefault(); toggleOpening(); }
+    if (e.code === "KeyM" && body.contains(wrap)) setMenu(!menuOpen);
   };
   const ku = (e: KeyboardEvent) => keys.delete(e.code);
   document.addEventListener("keydown", kd);
@@ -2531,6 +2541,7 @@ export function buildSimulacrum(body: HTMLElement) {
   });
   commonsBtn.addEventListener("click", () => { if (netPhase === "off") enterCommons(); else leaveCommons(); audio.ui("toggle"); });
   photoBtn.addEventListener("click", () => {
+    setMenu(false);
     wrap.classList.add("os-sim-photo");
     window.setTimeout(() => {
       canvas.toBlob((blob) => {
@@ -2665,11 +2676,24 @@ export function buildSimulacrum(body: HTMLElement) {
   ];
   for (const [label, keyHint, fn] of powerDefs) {
     const b = el("button", "os-btn os-sim-power", `${label} · ${keyHint}`);
-    b.addEventListener("click", () => { if (!audio.live) audio.start(); audio.kick(); touched = true; titleScr.classList.add("taken"); fn(); });
+    b.addEventListener("click", () => { if (!audio.live) audio.start(); audio.kick(); touched = true; titleScr.classList.add("taken"); setMenu(false); fn(); });
     powers.append(b);
   }
   let chromeTimer = 6;
   const chromeWake = () => { wrap.classList.add("chrome-on"); chromeTimer = 4; };
+  /* one door for everything the slab used to carry: a small button,
+     and a glass sheet that rises from it — toggles, gifts, the keys */
+  let menuOpen = false;
+  function setMenu(open: boolean) {
+    menuOpen = open;
+    wrap.classList.toggle("menu-on", open);
+    if (open) {
+      chromeWake();
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    }
+  }
+  menuBtn.addEventListener("click", () => { audio.kick(); setMenu(!menuOpen); });
+  canvas.addEventListener("pointerdown", () => { if (menuOpen) setMenu(false); });
   wrap.addEventListener("pointermove", chromeWake);
   wrap.addEventListener("pointerdown", chromeWake);
   wrap.addEventListener("touchstart", chromeWake, { passive: true });
@@ -3520,10 +3544,11 @@ export function buildSimulacrum(body: HTMLElement) {
       }
     }
     whisperTimer = Math.max(0, whisperTimer - dt);
-    if (chromeTimer > 0) { chromeTimer -= dt; if (chromeTimer <= 0) wrap.classList.remove("chrome-on"); }
+    if (chromeTimer > 0 && !menuOpen) { chromeTimer -= dt; if (chromeTimer <= 0) wrap.classList.remove("chrome-on"); }
     /* inside the world there is no furniture — the panel belongs
        to the threshold and to the pause, never to the walk itself */
     wrap.classList.toggle("sim-in", touched && document.pointerLockElement === canvas);
+    if (menuOpen && document.pointerLockElement === canvas) setMenu(false);
     if (whisperTimer === 0) whisper.style.opacity = "0";
     mistAmt += ((weather === "mist" ? 1 : 0) - mistAmt) * Math.min(1, dt * 0.25);
     rainAmt += ((weather === "rain" ? 1 : 0) - rainAmt) * Math.min(1, dt * 0.25);
