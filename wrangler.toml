@@ -3,3 +3,10 @@
 name = "nosuchmachine-net"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "./dist"
+
+# Relay room memory — the cross-device chat memory the Relay bridge
+# reads and writes (functions/_lib/relay-memory.ts). Namespace created
+# in the Cloudflare dashboard 2026-10-25.
+[[kv_namespaces]]
+binding = "RELAY_MEMORY"
+id = "e3c3caaa70154344b9fa70d6373a8de9"
