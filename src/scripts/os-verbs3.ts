@@ -610,6 +610,9 @@ function loadSkulpt(): Promise<any> {
     s1.onerror = () => reject(new Error("skulpt failed to load"));
     document.head.appendChild(s1);
   });
+  // a failed load must not brick the engine for the whole session:
+  // evict the rejection so the next run tries the wire again.
+  skulptPromise.catch(() => { skulptPromise = null; });
   return skulptPromise;
 }
 async function runJs(ctx: Ctx, source: string): Promise<string> {

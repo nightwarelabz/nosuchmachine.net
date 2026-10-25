@@ -209,6 +209,7 @@ export interface SshCallbacks {
   onClose: (reason: string) => void;
 }
 const CLIENT_VERSION = "SSH-2.0-BLACKSITE-OS_1.0";
+const HANDSHAKE_STEP_MS = 10_000;
 const KEX_ALGS = ["curve25519-sha256", "curve25519-sha256@libssh.org"];
 const HOSTKEY_ALGS = ["ssh-ed25519", "rsa-sha2-256"];
 const CIPHER_ALGS = ["aes256-gcm@openssh.com", "aes128-gcm@openssh.com"];
@@ -273,7 +274,26 @@ export class SshSession {
   private waitFor(type: number): Promise<Uint8Array> {
     const stashed = this.stash.get(type);
     if (stashed) { this.stash.delete(type); return Promise.resolve(stashed); }
-    return new Promise((resolve) => this.waiters.push({ type, resolve }));
+    return new Promise((resolve, reject) => {
+      let timer: ReturnType<typeof setTimeout>;
+      const w = { type, resolve: (p: Uint8Array) => { clearTimeout(timer); resolve(p); } };
+      // The bridge's discipline, kept on this side too: no single
+      // machine-paced step of the greeting may wait on the far door
+      // longer than 10s. A server that goes silent mid-handshake —
+      // after the banner, during kex, before auth — fails the
+      // connect instead of hanging it forever. Steps paced by the
+      // operator's own hand (trusting a host key, typing a password)
+      // are waits on the operator, not the wire, and are not on
+      // this clock.
+      timer = setTimeout(() => {
+        const i = this.waiters.indexOf(w);
+        if (i >= 0) this.waiters.splice(i, 1);
+        const err = new Error(`ssh: the server went silent mid-handshake (10s waiting for packet type ${type}) — connection dropped.`);
+        this.close(err.message);
+        reject(err);
+      }, HANDSHAKE_STEP_MS);
+      this.waiters.push(w);
+    });
   }
   private close(reason: string) {
     if (this.closed) return;

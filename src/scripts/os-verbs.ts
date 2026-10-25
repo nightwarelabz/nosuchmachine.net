@@ -120,6 +120,11 @@ function registerHouse() {
     const pid = Number(ctx.args[0]);
     const proc = ctx.os.procs.find((p) => p.pid === pid);
     if (!proc) return `no such pid: ${ctx.args[0]}`;
+    if (proc.state !== "running") return `${pid} is already ${proc.state} — nothing left to stop.`;
+    // the abort signal is the execution's own stop wire: the pipeline
+    // sees it at its next step, the in-flight stage's output is
+    // discarded, and verbs holding ctx.signal can stand down early.
+    proc.ctrl.abort();
     proc.state = "killed";
     ctx.os.log(`kill ${pid} (${proc.cmd})`);
     return `killed ${pid}. the kernel reclaims it.`;

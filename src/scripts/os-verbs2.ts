@@ -12,6 +12,20 @@ async function fetchEdge(ctx: Ctx, url: string, method = "GET", binary = false):
   return api(`/api/fetch?url=${encodeURIComponent(url)}&method=${method}${binary ? "&binary=1" : ""}`);
 }
 function asUrl(arg: string): string { return /^[a-z][a-z0-9+.-]*:\/\//i.test(arg) ? arg : `https://${arg}`; }
+/* Save a fetched body into the tree without mangling it. Callers fetch
+   with binary=1, so the exact bytes arrive as bodyBase64 and land as a
+   binary node — unless they are clean UTF-8 text with no NULs, in
+   which case they land as text, so the room's readers (cat, the
+   editor) see them as they always have. The old path wrote the
+   text-decoded bodyText for everything, which corrupted every
+   non-text byte on the way in. */
+function saveFetched(ctx: Ctx, name: string, data: any): void {
+  const bytes = data.bodyBase64 ? b64ToB(data.bodyBase64) : new TextEncoder().encode(data.bodyText || "");
+  let text: string | null = null;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { text = null; }
+  if (text !== null && !text.includes("\0")) ctx.os.write(name, text);
+  else ctx.os.writeBytes(name, bytes);
+}
 function gradeLine(score: number) { return score >= 90 ? "A" : score >= 75 ? "B" : score >= 55 ? "C" : score >= 35 ? "D" : "F"; }
 
 function registerWire() {
@@ -82,20 +96,20 @@ function registerWire() {
     const outFile = oIdx >= 0 ? ctx.args[oIdx + 1] : null;
     const urlArg = ctx.args.find((a, i) => !a.startsWith("-") && i !== oIdx + 1);
     if (!urlArg) { ctx.io.print("usage: curl [-I] [-o file] <url>", "err"); return; }
-    const data = await fetchEdge(ctx, asUrl(urlArg), headOnly ? "HEAD" : "GET");
+    const data = await fetchEdge(ctx, asUrl(urlArg), headOnly ? "HEAD" : "GET", !!outFile);
     if (!data.ok) return `curl: ${data.error}`;
     const headerLines = Object.entries(data.headers).map(([k, v]) => `${k}: ${v}`);
     if (headOnly) return [`HTTP ${data.status} (${data.ms} ms)`, ...headerLines].join("\n");
-    if (outFile) { ctx.os.write(outFile, data.bodyText || ""); return `saved ${data.bodyBytes} bytes to ${outFile} (HTTP ${data.status})`; }
+    if (outFile) { saveFetched(ctx, outFile, data); return `saved ${data.bodyBytes} bytes to ${outFile} (HTTP ${data.status})`; }
     return [`HTTP ${data.status} · ${data.bodyBytes} bytes · ${data.ms} ms`, ...headerLines.slice(0, 14), "", (data.bodyText || "").slice(0, 4000)].join("\n");
   });
   verb("wget", "EDGE", "wget <url> [file] — fetch it into the files", async (ctx) => {
     if (!need(ctx, 1, "wget <url> [file]")) return;
     const url = asUrl(ctx.args[0]);
-    const data = await fetchEdge(ctx, url);
+    const data = await fetchEdge(ctx, url, "GET", true);
     if (!data.ok) return `wget: ${data.error}`;
     const name = ctx.args[1] || url.split("/").filter(Boolean).pop() || "index.html";
-    ctx.os.write(name, data.bodyText || "");
+    saveFetched(ctx, name, data);
     return `saved ${data.bodyBytes} bytes → ${ctx.os.norm(name)} (HTTP ${data.status})`;
   });
   verb("nc", "EDGE", "nc -z <host> <port> | nc <host> <port> [words] — a raw conversation, one knock", async (ctx) => {
@@ -105,6 +119,10 @@ function registerWire() {
     const [host, portS, ...words] = rest;
     const port = Number(portS);
     if (zero) {
+      // the -z path knocks through /api/tcp directly, so it takes the
+      // EMCON gate itself — the exchange path below is gated inside
+      // exchange(), and this one was leaving by the side door.
+      const refusal = gateActive(ctx); if (refusal) return refusal;
       const data = await api(`/api/tcp?host=${encodeURIComponent(host)}&ports=${port}`);
       if (!data.ok) return `nc: ${data.error}`;
       const r = data.results[0];
@@ -121,10 +139,10 @@ function registerWire() {
     if (!data.ok) return `telnet: ${data.error}`;
     return data.receivedBytes ? fmtBytes(b64ToB(data.receivedBase64)) : `connected to ${host}:${port} in ${data.connectMs} ms — no banner offered.`;
   });
-  verb("banner", "EDGE", "banner <host> <port> — make a door introduce itself", async (ctx) => {
-    if (!need(ctx, 2, "banner <host> <port>")) return;
+  verb("bannergrab", "EDGE", "bannergrab <host> <port> — make a door introduce itself", async (ctx) => {
+    if (!need(ctx, 2, "bannergrab <host> <port>")) return;
     const data = await exchange(ctx, ctx.args[0], Number(ctx.args[1]));
-    if (!data.ok) return `banner: ${data.error}`;
+    if (!data.ok) return `bannergrab: ${data.error}`;
     return data.receivedBytes ? fmtBytes(b64ToB(data.receivedBase64)) : "(connected — the door introduces itself to no one)";
   });
   verb("knock", "EDGE", "knock <host> [ports] — knock a host (default: the top doors)", async (ctx) => {
@@ -211,6 +229,7 @@ function registerWebBench() {
   });
   verb("corsdeep", "EDGE", "corsdeep <url> — cross-origin deepened: null origin, subdomain origin, preflight", async (ctx) => {
     if (!need(ctx, 1, "corsdeep <url>")) return;
+    const refusal = gateActive(ctx); if (refusal) return refusal;
     const url = asUrl(ctx.args[0]);
     const host = new URL(url).hostname;
     const probes = ["https://blacksite-probe.nosuchmachine.net", "null", `https://evil.${host}`];

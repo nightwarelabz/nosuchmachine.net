@@ -15,9 +15,9 @@ export interface ShellIO {
   setWallpaper?(kind: string): void;
   setTheme?(name: string): void;
 }
-export interface Proc { pid: number; cmd: string; state: "running" | "done" | "killed"; started: number; }
+export interface Proc { pid: number; cmd: string; state: "running" | "done" | "killed"; started: number; ctrl: AbortController; }
 interface VNode { type: "dir" | "file"; content?: string; binary?: string; mtime: number; }
-interface Ctx { args: string[]; stdin: string; os: BlacksiteOS; io: ShellIO; raw: string; }
+interface Ctx { args: string[]; stdin: string; os: BlacksiteOS; io: ShellIO; raw: string; signal?: AbortSignal; }
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -148,6 +148,13 @@ export class BlacksiteOS {
   history: string[] = [];
   procs: Proc[] = [];
   nextPid = 100;
+  /* > 0 while the room's own hand works (its git engine): AEGIS's
+     cadence and entropy heuristics stand down — a clone's thousand
+     writes are the operator's own work, not an attack's shape. The
+     signature checks (ransom names/text, the decoy canaries) stay
+     armed throughout. See withOwnOps. */
+  ownOps = 0;
+  private persistFailed = false;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
   theme = "violent-redteam";
   wallpaper = "mare";
@@ -269,6 +276,7 @@ export class BlacksiteOS {
       this.mirageSetWrite(p, content, bytes, true);
       return true;
     }
+    if (this.ownOps > 0) return false;
     this.maybeSnapshot();
     if (this.aegisObserve(AEGIS_CANARIES.has(p) ? 6 : 1)) {
       this.aegisTrip("bulk mutation — the cadence of a mass-encryption run");
@@ -297,6 +305,7 @@ export class BlacksiteOS {
   private aegisGateRemove(p: string): boolean {
     if (this.aegis.contained) { this.mirageTombstone(p); return true; }
     if (AEGIS_CANARIES.has(p)) { this.aegisTrip(`a decoy file was deleted: ${p}`); this.mirageTombstone(p); return true; }
+    if (this.ownOps > 0) return false;
     if (this.aegisObserve(1)) { this.aegisTrip("bulk deletion — the shape of a wipe"); this.mirageTombstone(p); return true; }
     return false;
   }
@@ -400,15 +409,34 @@ export class BlacksiteOS {
         localStorage.setItem(VFS_KEY, JSON.stringify([...this.files.entries()]));
         localStorage.setItem(MACRO_KEY, JSON.stringify(Object.fromEntries(this.macros)));
         localStorage.setItem(SET_KEY, JSON.stringify({ emcon: this.emcon, theme: this.theme, wallpaper: this.wallpaper, tomatoes: this.tomatoes }));
-      } catch { /* storage full/blocked — the room runs volatile and says so in limits */ }
+        this.persistFailed = false;
+      } catch {
+        /* storage full/blocked — the room runs volatile, and it SAYS so:
+           once in the journal, once as a toast. It never claims a save
+           that did not land. */
+        if (!this.persistFailed) {
+          this.persistFailed = true;
+          this.log("persistence refused — storage would not take the room's state (full or blocked). Work from here runs volatile: it will not survive a reload, and the room will not pretend it was saved.");
+          try { document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "the room could not save — storage refused. Work runs volatile and will not survive a reload." } })); } catch { /* headless — the journal still knows */ }
+        }
+      }
     }, 250);
   }
   reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(skey("blacksite-relay-v2")); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
   spawn(cmd: string): Proc {
-    const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now() };
+    const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now(), ctrl: new AbortController() };
     this.procs.push(proc);
     if (this.procs.length > 40) this.procs = this.procs.slice(-40);
     return proc;
+  }
+  /** Run fn as the room's own hand. While it runs, AEGIS's cadence and
+   *  entropy heuristics stand down (see ownOps); its signature checks
+   *  never do. The git engine works under this — a clone or checkout is
+   *  bulk mutation by nature, and the room does not trip its own alarm
+   *  over the operator's own work. */
+  async withOwnOps<T>(fn: () => Promise<T>): Promise<T> {
+    this.ownOps++;
+    try { return await fn(); } finally { this.ownOps--; }
   }
   /** The EMCON gate. Returns a refusal line, or null when the verb may run. */
   gate(kind: "active" | "ledger"): string | null {
@@ -495,6 +523,7 @@ async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: n
     let stdin = "";
     let ok = true;
     for (let s = 0; s < stages.length; s++) {
+      if (proc.ctrl.signal.aborted) { proc.state = "killed"; return ok; }
       const stage = stages[s];
       // redirects
       let redirect: { file: string; append: boolean } | null = null;
@@ -522,7 +551,10 @@ async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: n
       let out = "";
       const collectIO: ShellIO = { ...io, print: (t, cls) => { if (s === stages.length - 1 && !redirect) io.print(t, cls); else out += (out ? "\n" : "") + t; } };
       try {
-        const result = await def.run({ args, stdin, os, io: collectIO, raw: cmdline });
+        const result = await def.run({ args, stdin, os, io: collectIO, raw: cmdline, signal: proc.ctrl.signal });
+        // killed while this stage ran: its output dies with it, and no
+        // further stage is served — `kill` is a stop, not a label.
+        if (proc.ctrl.signal.aborted) { proc.state = "killed"; return false; }
         if (typeof result === "string") out = out ? out + "\n" + result : result;
       } catch (e: any) {
         io.print(`blacksite: ${name}: ${e?.message || e}`, "err");

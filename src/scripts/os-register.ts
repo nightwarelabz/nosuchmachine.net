@@ -39,8 +39,18 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
   ];
 }
 
-export function vfsStats(files: Map<string, { type: string; content?: string; b64?: string }>): { files: number; bytes: number } {
+export function vfsStats(files: Map<string, { type: string; content?: string; binary?: string }>): { files: number; bytes: number } {
   let count = 0, bytes = 0;
-  for (const n of files.values()) if (n.type === "file") { count++; bytes += (n.content?.length ?? 0) + (n.b64?.length ?? 0); }
+  for (const n of files.values()) {
+    if (n.type !== "file") continue;
+    count++;
+    bytes += n.content?.length ?? 0;
+    // binary nodes carry base64 in `binary` — count the bytes it
+    // decodes to, not the armour it travels in.
+    if (n.binary) {
+      const pad = n.binary.endsWith("==") ? 2 : n.binary.endsWith("=") ? 1 : 0;
+      bytes += Math.max(0, Math.floor((n.binary.length * 3) / 4) - pad);
+    }
+  }
   return { files: count, bytes };
 }

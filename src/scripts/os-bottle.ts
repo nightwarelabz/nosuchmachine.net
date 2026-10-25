@@ -27,13 +27,23 @@ const MAX_MESSAGE_BYTES = 64 * 1024;
 type AgeModule = typeof import("age-encryption");
 let agePromise: Promise<AgeModule> | null = null;
 function ageLib(): Promise<AgeModule> {
-  if (!agePromise) agePromise = import("age-encryption");
+  if (!agePromise) {
+    agePromise = import("age-encryption");
+    // a failed load must not brick the bottle for the whole session:
+    // evict the rejection so the next attempt tries the wire again.
+    agePromise.catch(() => { agePromise = null; });
+  }
   return agePromise;
 }
 
 interface KeyRecord { keyname: string; publicRecipient: string; fingerprint: string; status: string; createdAt?: string }
 interface Identity { secret: string; recipient: string }
 let identity: Identity | null = null;
+/* Inbox reading cursors, kept per lookup fingerprint: a reading that
+   stops at the page cap leaves its cursor here, and the next reading
+   — verb or app — resumes from it instead of starting over, so pages
+   past the cap are reachable. A completed reading clears its cursor. */
+const inboxCursors = new Map<string, string>();
 
 const te = new TextEncoder();
 async function sha256Hex(input: string | Uint8Array): Promise<string> {
@@ -190,7 +200,14 @@ export function registerBottleVerbs() {
       if (!keyname) return "usage: bottle inbox <keyname> — your registered keyname pairs with your identity to form the lookup fingerprint";
       const fingerprint = await fingerprintFor(keyname, identity.recipient);
       const lines: string[] = [`inbox for ${keyname} — fingerprint ${fingerprint.slice(0, 23)}…`];
-      let cursor: string | undefined;
+      // A reading stops after a few pages (each bottle is opened
+      // locally — a deep inbox is real work), but the cursor is KEPT,
+      // keyed by fingerprint: running `bottle inbox` again resumes
+      // where the last reading stopped, so every page is reachable.
+      // A reading that reaches the end clears it; the next starts
+      // from the top.
+      let cursor: string | undefined = inboxCursors.get(fingerprint);
+      if (cursor) lines.push("(resuming where the last reading stopped — the pages before this were shown then)");
       let pages = 0, found = 0;
       do {
         const q = new URLSearchParams({ action: "list", recipientFingerprint: fingerprint });
@@ -209,8 +226,9 @@ export function registerBottleVerbs() {
         }
         cursor = headers.get("x-daylight-next-cursor") || undefined;
       } while (cursor && pages < 4);
+      if (cursor) { inboxCursors.set(fingerprint, cursor); lines.push("\n(more pages remain — run it again to keep reading from here)"); }
+      else inboxCursors.delete(fingerprint);
       if (!found) lines.push("no bottles waiting. (the service is eventually consistent — a fresh drop can take a minute to surface.)");
-      if (cursor) lines.push("\n(more pages remain — run it again to keep reading)");
       return lines.join("\n");
     }
 
@@ -412,7 +430,9 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
     try {
       const fingerprint = await fingerprintFor(keyname, identity.recipient);
       const lines: string[] = [];
-      let cursor: string | undefined; let pages = 0; let found = 0;
+      let cursor: string | undefined = inboxCursors.get(fingerprint);
+      const resumed = !!cursor;
+      let pages = 0; let found = 0;
       do {
         const q = new URLSearchParams({ action: "list", recipientFingerprint: fingerprint });
         if (cursor) q.set("cursor", cursor);
@@ -429,7 +449,11 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
         }
         cursor = headers.get("x-daylight-next-cursor") || undefined;
       } while (cursor && pages < 4);
-      say(found ? lines.join("\n\n") : "no bottles waiting under that fingerprint. (fresh drops can take a minute to surface — the service is eventually consistent.)");
+      if (cursor) inboxCursors.set(fingerprint, cursor); else inboxCursors.delete(fingerprint);
+      const notes: string[] = [];
+      if (resumed) notes.push("(resumed where the last reading stopped — the pages before this were shown then)");
+      if (cursor) notes.push("(more pages remain — press inbox again to keep reading from here; a reading that reaches the end starts the next from the top)");
+      say([found ? lines.join("\n\n") : "no bottles waiting under that fingerprint. (fresh drops can take a minute to surface — the service is eventually consistent.)", ...notes].join("\n\n"));
     } catch (e: any) { say(`✗ inbox: ${e?.message || e}`); }
   });
   say("daylight bottle, in the room. seal and drop from here, or drive it from the terminal: `bottle`.");
