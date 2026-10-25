@@ -173,6 +173,14 @@ assert.ok(ircSrc.includes("code === 4403"), "Client must treat bridge close 4403
 assert.ok(ircSrc.includes('m.nick === "relay.bridge"'), "The bridge's own NOTICE must be dressed as the bridge, not as network chatter");
 const bridgeSrc = fs.readFileSync("functions/api/irc-bridge.ts", "utf8");
 assert.ok(bridgeSrc.includes("closeBoth(4403)"), "Bridge must close claim refusals with code 4403");
+// Relay view logic (Chase, 2026-10-25): auto-join must land IN the
+// channel — tab, pane and roster describing the same target — with no
+// toggle away and back; kept service windows and credentials must
+// never enter the persisted log.
+assert.ok(ircSrc.includes("const selectTarget"), "Relay view changes must go through the single selectTarget door (tab + pane + roster together)");
+assert.ok(ircSrc.includes("joinFocus"), "Automatic rejoins must not steal the view from the target being read");
+assert.ok(ircSrc.includes("SERVICE_NICKS"), "NickServ/ChanServ windows must be excluded from the kept log (they carry passwords and codes)");
+assert.ok(ircSrc.includes("It was NOT sent"), "Relay must refuse to send a credential handed to it this visit");
 assert.ok(astroJs.includes("hard refresh to check chat if chat works. added persistence to the chat"), "The pinned dev note must carry the current developer message in the served bundle");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");

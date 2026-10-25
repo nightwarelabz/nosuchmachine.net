@@ -318,11 +318,22 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      of the log — they ride the visit in memory only, as always. The
      "forget" button wipes the log on the spot. */
   const RELAY_LOG_KEY = "blacksite-relay-v2";
+  /* Conversations with the network's services are never part of the
+     kept log: a NickServ window is where IDENTIFY passwords and
+     REGISTER verification codes land, and a kept log that kept those
+     would be a credential file wearing a chat's clothes. Service
+     windows live for the visit, in memory only. */
+  const SERVICE_NICKS = new Set(["nickserv", "chanserv"]);
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   const saveLog = () => {
     saveTimer = null;
     try {
-      const data = { v: 2, nick: myNick, current, channels: [...joinedChans], buffers: Object.fromEntries(buffers), roster: Object.fromEntries([...roster].map(([c, m]) => [c, Object.fromEntries(m)])), away: manualAway };
+      const scrub = (line: string) => {
+        for (const secret of [wirePassword, wireClaim]) if (secret && secret.length >= 4) line = line.split(secret).join("•••");
+        return line;
+      };
+      const keptBuffers = Object.fromEntries([...buffers].filter(([t]) => !SERVICE_NICKS.has(t.toLowerCase())).map(([t, lines]) => [t, lines.map(scrub)]));
+      const data = { v: 2, nick: myNick, current, channels: [...joinedChans], buffers: keptBuffers, roster: Object.fromEntries([...roster].map(([c, m]) => [c, Object.fromEntries(m)])), away: manualAway };
       let body = JSON.stringify(data);
       // A pathological log sheds its oldest lines before it sheds the room.
       let guard = 0;
@@ -343,6 +354,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       if (!data || typeof data !== "object" || !data.buffers || typeof data.buffers !== "object") return null;
       const clean: Record<string, string[]> = {};
       for (const [t, lines] of Object.entries(data.buffers)) {
+        if (SERVICE_NICKS.has(t.toLowerCase())) continue; // service windows were never meant to be kept — older logs lose them here
         if (Array.isArray(lines)) clean[t] = lines.filter((l) => typeof l === "string").slice(-MAX_LINES);
       }
       if (!Object.keys(clean).length) return null;
@@ -369,6 +381,11 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     } catch { return null; }
   };
   let pendingJoins: string[] = [];
+  /* Channels a JOIN echo may pull the view to: an explicit /join, or
+     the first join out of the server tab. Automatic rejoins (refresh,
+     reconnect, kept channels) must never steal the view from the
+     target the operator is actually reading. */
+  const joinFocus = new Set<string>();
 
   const stamp = () => {
     const d = new Date();
@@ -392,9 +409,23 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     targetsEl.textContent = "";
     for (const t of buffers.keys()) {
       const b = el("button", `os-relay-target${t === current ? " active" : ""}`, t);
-      b.addEventListener("click", () => { current = t; renderTargets(); renderLines(); });
+      b.addEventListener("click", () => selectTarget(t));
       targetsEl.appendChild(b);
     }
+  };
+  /* One door for every view change: the active tab, the lines pane and
+     the roster must always describe the SAME target. The auto-join bug
+     was a split change — JOIN moved `current` and repainted only the
+     tabs, leaving the pane showing the server buffer until the operator
+     toggled away and back. Nothing may move `current` bare any more. */
+  const selectTarget = (t: string) => {
+    current = t;
+    renderTargets();
+    renderLines();
+    // A view change is state worth keeping: without this, a refresh
+    // after merely tapping a tab restored the previous target, because
+    // only pushed lines ever scheduled a save.
+    scheduleSave();
   };
   const ago = (ts: number) => {
     const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -553,12 +584,23 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       }
       case "JOIN": {
         const chan = m.params[0];
-        if (m.nick === myNick) { joinedChans.add(chan); push(chan, `— you stepped into ${chan}`); current = chan; renderTargets(); }
-        else push(chan, `— ${m.nick} arrived`);
+        if (m.nick === myNick) {
+          joinedChans.add(chan);
+          // Move the WHOLE view — tab, pane and roster together — and
+          // only when this join owns the view: the first step out of
+          // the server tab, or a channel the operator explicitly
+          // joined. A kept channel rejoining behind a refresh or a
+          // reconnect must not yank the operator off what they read.
+          const focus = current === "server" || joinFocus.has(chan);
+          joinFocus.delete(chan);
+          if (focus) current = chan;
+          push(chan, `— you stepped into ${chan}`);
+          if (focus) renderTargets();
+        } else push(chan, `— ${m.nick} arrived`);
         if (!users.has(chan)) users.set(chan, new Set());
         users.get(chan)!.add(m.nick);
         rosterTouch(chan, m.nick, m.nick === myNick ? presence : "here", m.nick === myNick);
-        if (chan === current) renderUsers();
+        if (chan === current) renderLines();
         break;
       }
       case "PART": {
@@ -731,8 +773,10 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      wearing an issued machine name. Identity is opt-in, from the button. */
   connectWith({ host: NETWORKS[0].host, port: 6697, nick: restored?.nick || machineName(), channel: HOUSE_CHANNEL, password: "", registerEmail: "", claim: "" });
   // connectWith lands on the server tab; if a kept log was restored, put
-  // the operator back on the target they were reading when they left.
-  if (restored && restored.current && buffers.has(restored.current)) { current = restored.current; renderTargets(); renderLines(); }
+  // the operator back on the target they were reading when they left —
+  // through the same single door, so tab and pane agree. The JOIN
+  // echoes that follow must not steal it back (see joinFocus).
+  if (restored && restored.current && buffers.has(restored.current)) selectTarget(restored.current);
 
   /* Closing the window leaves the wire — no ghost sessions idling in the
      room after the operator has gone. */
@@ -750,6 +794,14 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const submit = () => {
     const text = input.value.trim();
     if (!text) return;
+    if ((wirePassword && text === wirePassword) || (wireClaim && text === wireClaim)) {
+      // The one accident Relay can actually prevent: the operator
+      // pasting a credential they handed this visit into the room.
+      // It is not sent, and it does not stay sitting in the box.
+      input.value = "";
+      push(current, "— that text is a credential you handed this visit. It was NOT sent — credentials belong nowhere near a chat box. If it was pasted by accident, it never left this machine.");
+      return;
+    }
     if (!ws || ws.readyState !== WebSocket.OPEN) { push(current, "— the wire is down this second; your line stays in the box and goes out when the wire is back."); return; }
     if (current === "server" && !text.startsWith("/")) { push("server", "— join a channel first (the house channel opens on connect)"); return; }
     input.value = "";
@@ -757,9 +809,9 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       const [cmd, ...rest] = text.slice(1).split(" ");
       const arg = rest.join(" ");
       switch (cmd.toLowerCase()) {
-        case "join": send(`JOIN ${arg}`); break;
-        case "part": send(`PART ${current}`); if (current !== "server") { buffers.delete(current); current = "server"; renderTargets(); renderLines(); } break;
-        case "msg": { const [to, ...msgParts] = rest; const msg = msgParts.join(" "); if (to && msg) { if (presence !== "here") setPresence("here"); send(`PRIVMSG ${to} :${msg}`); push(to, `<${myNick}> ${msg}`); current = to; renderTargets(); renderLines(); } break; }
+        case "join": if (arg.startsWith("#")) joinFocus.add(arg); send(`JOIN ${arg}`); break;
+        case "part": send(`PART ${current}`); if (current !== "server") { buffers.delete(current); selectTarget("server"); } break;
+        case "msg": { const [to, ...msgParts] = rest; const msg = msgParts.join(" "); if (to && msg) { if (presence !== "here") setPresence("here"); send(`PRIVMSG ${to} :${msg}`); push(to, `<${myNick}> ${msg}`); selectTarget(to); } break; }
         case "me": if (presence !== "here") setPresence("here"); send(`PRIVMSG ${current} :\x01ACTION ${arg}\x01`); push(current, `· ${myNick} ${arg}`); break;
         case "away": setPresence("away", arg || "away"); break;
         case "back": setPresence("here"); break;
