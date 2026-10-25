@@ -60,11 +60,36 @@ async function lineKey(net: string, chan: string, line: MemLine): Promise<string
   return `${chanPrefix(net, chan)}${bucket}|${nickOf(line.p)}|${hex}`;
 }
 
-/* The door rule: credential-shaped lines are never remembered. */
-function refused(text: string): boolean {
+/* The door rule: credential-shaped lines are never remembered. The
+   shapes people actually paste are wider than "password: x" — "my
+   password is hunter2", "pass word: x", "pw: x", a NickServ command
+   mid-sentence — so the door watches for all of those. And the
+   sharpest hole was never a shape at all: the bare claim code pasted
+   without its label. The door therefore also hashes every word of the
+   line against the house claim verifier the bridge hands it, and
+   refuses on equality — the code alone, label or not, never enters. */
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function refused(text: string, claimSha256?: string): Promise<boolean> {
   if (/nsm-claim:/i.test(text)) return true;
   if (/\b(?:pass(?:word|wd)?|pwd)\s*[:=]\s*\S+/i.test(text)) return true;
-  if (/^\s*\/?(?:msg|query)\s+(?:nickserv|chanserv)\b/i.test(text)) return true;
+  if (/\bpass\s?word(?:\s+is\b|\s*[:=])\s*\S+/i.test(text)) return true;
+  if (/\bpw\s*[:=]\s*\S+/i.test(text)) return true;
+  if (/(?:^|\s)\/?(?:msg|query)\s+(?:nickserv|chanserv)\b/i.test(text)) return true;
+  if (/\b(?:nickserv|chanserv)\s+(?:identify|id)\b/i.test(text)) return true;
+  if (claimSha256) {
+    const tokens = text.split(/\s+/).slice(0, 64);
+    for (const raw of tokens) {
+      const bare = raw.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
+      for (const tok of bare === raw ? [raw] : [raw, bare]) {
+        if (tok.length < 6 || tok.length > 128) continue;
+        if ((await sha256Hex(tok)) === claimSha256) return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -91,14 +116,25 @@ async function prune(kv: any, net: string, chan: string): Promise<void> {
   await Promise.allSettled(keys.slice(0, keys.length - CAP).map((k) => kv.delete(k)));
 }
 
+let appendsSincePrune = 0;
+
 /** Remember one channel line. Fire-and-forget by design: memory must
- *  never delay, break, or block the wire it listens to. */
-export async function memAppend(kv: any, net: string, chan: string, line: MemLine): Promise<void> {
+ *  never delay, break, or block the wire it listens to. Pruning is
+ *  throttled to one append in 32: the tap hears every line once per
+ *  connected bridge session, and a full prefix listing on every line
+ *  multiplied KV reads by the room's whole audience. The cap still
+ *  binds — a prune still sheds back to exactly CAP — it just runs on
+ *  a counter instead of on every word spoken. claimSha256, when the
+ *  caller holds it, arms the door's bare-code check (see refused). */
+export async function memAppend(kv: any, net: string, chan: string, line: MemLine, claimSha256?: string): Promise<void> {
   if (!kv || !chan.startsWith("#")) return;
-  if (refused(line.x)) return;
+  if (await refused(line.x, claimSha256)) return;
   try {
     await kv.put(await lineKey(net, chan, line), JSON.stringify(line), { expirationTtl: TTL_S });
-    await prune(kv, net, chan);
+    if (++appendsSincePrune >= 32) {
+      appendsSincePrune = 0;
+      await prune(kv, net, chan);
+    }
   } catch { /* the room forgets this one; the wire never notices */ }
 }
 
@@ -149,6 +185,11 @@ export async function memPurgeNick(kv: any, net: string, chan: string, nick: str
 const PROBE_COOLDOWN_MS = 30 * 60 * 1000;
 export async function memBuildProbe(kv: any, net: string, chan: string, build: string, probeText: string): Promise<void> {
   if (!kv || !build) return;
+  // The stamp arrives as a bare, unauthenticated query parameter, so
+  // anything that is not exactly a stamped chunk name is ignored:
+  // without the shape rule, a rotating invented stamp would force a
+  // KV write on every connect and could forge a restart probe.
+  if (!/^os\.[A-Za-z0-9_-]+\.js$/.test(build)) return;
   try {
     let prev: any = null;
     try { prev = JSON.parse((await kv.get("sys|build")) || "null"); } catch { prev = null; }

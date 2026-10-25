@@ -11,6 +11,16 @@ import { guardTarget, err } from "../_lib/guard";
 export async function onRequest(context: any) {
   const { request } = context;
   if (request.headers.get("Upgrade") !== "websocket") return err("ssh bridge: websocket upgrade required.", 426);
+  // Browser callers must come from the site itself: any web page can
+  // otherwise open bridge sessions out of a visitor's browser and use
+  // the house's edge as a connection mule. A missing Origin is a
+  // non-browser client, which is the bridge's own kind of caller.
+  const origin = request.headers.get("Origin");
+  if (origin) {
+    let originUrl: string | null = null;
+    try { originUrl = new URL(origin).origin; } catch { originUrl = null; }
+    if (originUrl !== new URL(request.url).origin) return err("ssh bridge: websocket upgrades are accepted from this site only.", 403);
+  }
   const url = new URL(request.url);
   const host = url.searchParams.get("host") || "";
   // Strict integer port, validated before any dial: a non-numeric port
