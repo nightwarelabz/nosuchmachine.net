@@ -1,4 +1,4 @@
-/* sigint bench.
+/* SIGINT bench — the wide ear.
  *
  * A full receive bench for Blacksite, built from the house's own
  * technologies: nightjar's listening-post pattern (a presence
@@ -17,11 +17,15 @@
  * Morse and RTTY among others), the microphone / line-in (a real
  * radio's audio is a real input), audio files, and baseband
  * recordings the bench itself makes (WAV, replayable through the
- * file source). An SDR over USB is a later wave's door; nothing
- * here can transmit — receive only, by construction.
+ * file source), and live broadcast stations streamed from the
+ * radio-browser.info directory — programme audio on the post-demod
+ * bus, no RF pretence (os-sigint-live.ts). An SDR over USB is a
+ * later wave's door; nothing here can transmit — receive only,
+ * by construction.
  */
 
 import { skey } from "./os-depth";
+import { createLiveSource } from "./os-sigint-live";
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -222,10 +226,11 @@ export function buildSigint(body: HTMLElement) {
   const srcBand = el("button", "os-btn primary", "band");
   const srcMic = el("button", "os-btn", "mic");
   const srcFile = el("button", "os-btn", "file");
+  const srcLive = el("button", "os-btn", "stations");
   const recBtn = el("button", "os-btn", "rec");
   const fileInput = document.createElement("input");
   fileInput.type = "file"; fileInput.accept = "audio/*"; fileInput.style.display = "none";
-  head.append(freqInput, freqUnit, power, srcBand, srcMic, srcFile, recBtn, fileInput);
+  head.append(freqInput, freqUnit, power, srcBand, srcMic, srcFile, srcLive, recBtn, fileInput);
 
   const fall = document.createElement("canvas");
   fall.className = "os-sigint-fall";
@@ -322,17 +327,18 @@ export function buildSigint(body: HTMLElement) {
   interface Intercept { t: number; mode: string; freq: number; text: string }
   let intercepts: Intercept[] = [];
   try { intercepts = JSON.parse(localStorage.getItem(skey("sigint-log-v1")) || "[]") as Intercept[]; } catch { intercepts = []; }
-  const commitIntercept = (m: string, text: string) => {
+  const commitIntercept = (m: string, text: string, atFreq: number = freq) => {
     const clean = text.replace(/\s+/g, " ").trim();
     if (clean.length < 6) return;
-    intercepts.push({ t: Date.now(), mode: m, freq, text: clean.slice(0, 220) });
+    intercepts.push({ t: Date.now(), mode: m, freq: atFreq, text: clean.slice(0, 220) });
     if (intercepts.length > 80) intercepts = intercepts.slice(-80);
     try { localStorage.setItem(skey("sigint-log-v1"), JSON.stringify(intercepts)); } catch { /* private mode */ }
     renderLog();
   };
   const renderLog = () => {
+    /* freq 0 marks a live stream entry: no RF frequency is claimed */
     logPane.textContent = intercepts.slice(-30).map((i) =>
-      `${new Date(i.t).toLocaleTimeString()} · ${i.mode} · ${(i.freq / 1000).toFixed(3)} kHz · ${i.text}`).join("\n");
+      `${new Date(i.t).toLocaleTimeString()} · ${i.mode} · ${i.freq > 0 ? `${(i.freq / 1000).toFixed(3)} kHz` : "live"} · ${i.text}`).join("\n");
     logPane.scrollTop = logPane.scrollHeight;
   };
   renderLog();
@@ -342,11 +348,23 @@ export function buildSigint(body: HTMLElement) {
     renderLog();
   });
   logExport.addEventListener("click", () => {
-    const txt = intercepts.map((i) => `${new Date(i.t).toISOString()} · ${i.mode} · ${(i.freq / 1000).toFixed(3)} kHz · ${i.text}`).join("\n");
+    const txt = intercepts.map((i) => `${new Date(i.t).toISOString()} · ${i.mode} · ${i.freq > 0 ? `${(i.freq / 1000).toFixed(3)} kHz` : "live"} · ${i.text}`).join("\n");
     const url = URL.createObjectURL(new Blob([txt || "(empty log)"], { type: "text/plain" }));
     const a = el("a"); a.setAttribute("href", url); a.setAttribute("download", "sigint-intercept-log.txt"); a.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 4000);
   });
+  /* Live stations source (os-sigint-live.ts): real broadcast
+     streams on the post-demod bus — master is its output path, the
+     bench gain slider is its volume, the intercept log takes its
+     plays with freq 0 (no RF claimed). */
+  const live = createLiveSource({
+    context: () => ctx,
+    master: () => master,
+    gain: () => Number(gain.value),
+    status: (t) => { status.textContent = t; },
+    intercept: (text) => commitIntercept("stream", text, 0),
+  });
+  logBox.after(live.panel);
   markA.addEventListener("click", () => { curA = freq; });
   markB.addEventListener("click", () => { curB = freq; });
   markX.addEventListener("click", () => { curA = null; curB = null; });
@@ -392,6 +410,7 @@ export function buildSigint(body: HTMLElement) {
 
   /* ---------------- audio graph ---------------- */
   const stopSource = () => {
+    live.deactivate();
     try { liveSrc?.disconnect(); } catch { /* already gone */ }
     if (liveSrc instanceof AudioBufferSourceNode) { try { liveSrc.stop(); } catch { /* noop */ } }
     liveSrc = null;
@@ -399,10 +418,10 @@ export function buildSigint(body: HTMLElement) {
     micStream = null;
   };
 
-  const setSource = async (kind: "band" | "mic" | "file", file?: File) => {
+  const setSource = async (kind: "band" | "mic" | "file" | "stations", file?: File) => {
     if (!ctx || !node) return;
     stopSource();
-    for (const [b, k] of [[srcBand, "band"], [srcMic, "mic"], [srcFile, "file"]] as Array<[HTMLButtonElement, string]>) {
+    for (const [b, k] of [[srcBand, "band"], [srcMic, "mic"], [srcFile, "file"], [srcLive, "stations"]] as Array<[HTMLButtonElement, string]>) {
       b.classList.toggle("primary", k === kind);
     }
     if (kind === "band") {
@@ -422,6 +441,8 @@ export function buildSigint(body: HTMLElement) {
         s.connect(node); liveSrc = s;
         status.textContent = "source: microphone / line-in · live — a real radio's audio is a real input";
       } catch { status.textContent = "microphone refused — the bench hears nothing from it"; }
+    } else if (kind === "stations") {
+      live.activate();
     } else if (kind === "file" && file) {
       try {
         const buf = await ctx.decodeAudioData(await file.arrayBuffer());
@@ -489,6 +510,7 @@ export function buildSigint(body: HTMLElement) {
   srcBand.addEventListener("click", () => void setSource("band"));
   srcMic.addEventListener("click", () => void setSource("mic"));
   srcFile.addEventListener("click", () => fileInput.click());
+  srcLive.addEventListener("click", () => void setSource("stations"));
   fileInput.addEventListener("change", () => { const f = fileInput.files?.[0]; if (f) void setSource("file", f); });
 
   /* recording: the worklet taps the raw band; the room keeps WAV. */
@@ -535,6 +557,7 @@ export function buildSigint(body: HTMLElement) {
   }
   bwSel.addEventListener("change", post);
   gain.addEventListener("input", post);
+  gain.addEventListener("input", () => live.setGain(Number(gain.value)));
   squelch.addEventListener("input", post);
   freqInput.addEventListener("keydown", (e) => {
     e.stopPropagation();
