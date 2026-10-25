@@ -131,6 +131,16 @@ assert.ok(!orcSrc.includes('setAttribute("sandbox"'), "the orc frame must NOT be
 assert.ok(astroJs.includes("/lens?u="), "the orc room must route non-credentialless browsers through the lens");
 assert.ok(orcSrc.includes("frameCredless !== d.credless"), "the orc frame must be rebuilt when a navigation crosses the credentialless door - credentialless does not nest, so house and lens pages ride plain frames");
 assert.ok(!astroJs.includes("open in your browser"), "the orc room has no open-out button (Chase's ruling)");
+// Relay regression pin (2026-10-25): a stray bare `connect();` — a leftover
+// from the pre-connectWith card flow — sat between Relay's auto-connect and
+// its submit wiring. It names no function in the module, so opening Relay
+// threw and the Enter/send listeners below it were never registered: the
+// room joined and listened, but nobody could send. Pin both halves: no
+// undefined bare call, and the send wiring present.
+const ircSrc = rfs2(new URL("../src/scripts/os-irc.ts", import.meta.url), "utf8");
+assert.ok(!/^\s*connect\(\);\s*$/m.test(ircSrc), "Relay must not call the retired card-flow connect() — it is undefined and kills the send wiring below it");
+assert.ok(ircSrc.includes('input.addEventListener("keydown"'), "Relay must wire Enter to submit");
+assert.ok(ircSrc.includes('sendBtn.addEventListener("click"'), "Relay must wire the send button to submit");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");

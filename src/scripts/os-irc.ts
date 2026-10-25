@@ -404,11 +404,6 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      wearing an issued machine name. Identity is opt-in, from the button. */
   connectWith({ host: NETWORKS[0].host, port: 6697, nick: machineName(), channel: HOUSE_CHANNEL, password: "", registerEmail: "", claim: "" });
 
-  /* No registration, no form to clear: opening Relay steps straight into
-     the house channel as a guest. The card above is for changing network
-     or wearing a name of your own — never a toll booth. */
-  connect();
-
   /* Closing the window leaves the wire — no ghost sessions idling in the
      room after the operator has gone. */
   const ghostWatch = setInterval(() => {
