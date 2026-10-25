@@ -360,20 +360,33 @@ void main() {
 export const PTS_VS = `
 attribute vec3 aPos; attribute vec3 aCol; attribute float aSize;
 uniform mat4 uVP; uniform float uTime; uniform float uFall; uniform vec3 uCam; uniform vec3 uBox;
+uniform float uDrift; uniform float uTwinkle; uniform float uTint;
 varying vec3 vCol; varying float vFade;
 void main() {
-  vCol = aCol;
+  float ph = fract(aPos.x * 0.371 + aPos.y * 0.717 + aPos.z * 0.113);
+  float ph2 = fract(ph * 7.31 + 0.17);
+  vCol = mix(aCol, vec3(0.60, 0.48, 1.0), uTint * step(0.82, ph));
   vec3 p = uCam + mod(aPos - uCam, uBox) - uBox * 0.5;
-  if (uFall > 0.0) {
+  if (uFall != 0.0) {
     float fall = mod(uCam.y + 20.0 - aPos.y + uTime * uFall, uBox.y);
     p.y = uCam.y + 20.0 - fall;
-    p.x += fall * 0.22;
+    if (uFall > 0.0) p.x += fall * 0.22;
   }
+  /* a gentle, doubled wander — no two lights keep the same path,
+     and none of them keep a straight one */
+  float w1 = uTime * (0.05 + ph * 0.05);
+  float w2 = uTime * (0.13 + ph2 * 0.11);
+  p += uDrift * vec3(
+    sin(w1 * 6.28 + ph * 40.0) + 0.6 * sin(w2 * 6.28 + ph2 * 31.0),
+    0.55 * sin(w1 * 4.9 + ph2 * 47.0) + 0.4 * sin(w2 * 5.7 + ph * 23.0),
+    cos(w1 * 5.6 + ph2 * 36.0) + 0.6 * cos(w2 * 6.9 + ph * 29.0));
   vec4 mv = uVP * vec4(p, 1.0);
   gl_Position = mv;
   float dist = max(1.0, -mv.z);
-  gl_PointSize = clamp(aSize * (120.0 / dist), 1.0, 9.0);
-  vFade = clamp(1.6 - dist / (uBox.x * 0.62), 0.0, 1.0);
+  float big = step(0.93, ph);
+  gl_PointSize = clamp(aSize * (1.0 + big * 1.7) * (120.0 / dist), 1.0, 9.0 + big * 8.0);
+  float tw = mix(1.0, pow(0.5 + 0.5 * sin(uTime * (0.35 + ph2 * 0.8) + ph * 80.0), 3.0), uTwinkle);
+  vFade = clamp(1.6 - dist / (uBox.x * 0.62), 0.0, 1.0) * (0.15 + 0.85 * tw);
 }`;
 export const PTS_FS = `
 precision mediump float;
@@ -1312,10 +1325,17 @@ export function buildSimulacrum(body: HTMLElement) {
   let noise = new Noise(seed);
   let moistNoise = new Noise(seed ^ 0x5eed);
   let detailNoise = new Noise(seed ^ 0xd37a);
+  let mountNoise = new Noise(seed ^ 0x9a17);
+  let forestNoise = new Noise(seed ^ 0xf023);
   const heightBase = (x: number, z: number): number => {
     const hills = noise.fbm(x * 0.012 + 31, z * 0.012 + 7, 4);
     const ridge = 1 - Math.abs(noise.fbm(x * 0.004 + 3, z * 0.004 + 19, 3) * 2 - 1);
-    return -3.5 + hills * 13 + Math.pow(ridge, 3) * 15;
+    /* true ranges: a slow continental mask lifts whole districts
+       into mountains — foothills first, then ridged peaks */
+    const mRaw = mountNoise.fbm(x * 0.0016 + 57, z * 0.0016 + 21, 2);
+    const mk = Math.max(0, Math.min(1, (mRaw - 0.56) / 0.2));
+    const mount = mk * mk * (3 - 2 * mk);
+    return -3.5 + hills * 13 + Math.pow(ridge, 3) * 15 + mount * (9 + Math.pow(ridge, 2) * 30);
   };
   /* Worldshaping: the walker's edits live in an overlay on a 2-unit
      grid, smoothed into the land, kept per world. The pure noise
@@ -1449,8 +1469,8 @@ export function buildSimulacrum(body: HTMLElement) {
     if (h < -0.4) { const d = Math.min(1, -h / 7); c = [0.55 - d * 0.3, 0.50 - d * 0.22, 0.34 - d * 0.1]; }
     else if (h < 0.7) c = [0.80, 0.70, 0.47];
     else if (slope > 0.55) c = [0.40, 0.37, 0.42];
-    else if (h > 14.5 && slope < 0.5) c = [0.90, 0.93, 0.97];
-    else if (h > 10) c = [0.45, 0.42, 0.46];
+    else if (h > 25 && slope < 0.62) c = [0.90, 0.93, 0.97];
+    else if (h > 12) c = [0.45, 0.42, 0.46];
     else {
       const dry: [number, number, number] = [0.44, 0.38, 0.20];
       const lush: [number, number, number] = [0.15, 0.36, 0.18];
@@ -1591,6 +1611,24 @@ export function buildSimulacrum(body: HTMLElement) {
     }
     octa(glow, hx, hy + 0.03 * s, hz, 0.075 * s, 0.05 * s, 0.075 * s, [0.98, 0.78, 0.30]);
   };
+  /* a garden bed: soil, a stone lip, and flowers in honest rows —
+     the sign that something in this world tends what grows */
+  const gardenBed = (lit: number[], glow: number[], x: number, y: number, z: number, rot: number, rnd: () => number) => {
+    const soil: Col3 = [0.23, 0.16, 0.10];
+    const edge: Col3 = [0.42, 0.40, 0.38];
+    const c = Math.cos(rot), s = Math.sin(rot);
+    const L = (lx: number, lz: number): [number, number] => [x + lx * c - lz * s, z + lx * s + lz * c];
+    boxS(lit, x, y - 0.10, z, 5.6, 0.24, 3.8, soil, rot);
+    for (const [ex, ez, w, d] of [[0, -1.95, 5.9, 0.3], [0, 1.95, 5.9, 0.3], [-2.85, 0, 0.3, 4.2], [2.85, 0, 0.3, 4.2]] as Array<[number, number, number, number]>) {
+      const [wx, wz] = L(ex, ez);
+      boxS(lit, wx, y - 0.02, wz, w, 0.3, d, vary(edge, 0.08, rnd), rot);
+    }
+    const petals: Col3[] = [[0.95, 0.45, 0.65], [0.98, 0.85, 0.35], [0.72, 0.55, 1.0]];
+    for (let row = 0; row < 3; row++) for (let i = 0; i < 5; i++) {
+      const [fx, fz] = L(-2.1 + i * 1.05, -1.15 + row * 1.15);
+      flowerGeo(lit, glow, fx, height(fx, fz) + 0.05, fz, 0.85 + rnd() * 0.3, petals[(row + i) % 3], rnd);
+    }
+  };
   const grassTuft = (a: number[], x: number, y: number, z: number, s: number, rnd: () => number) => {
     const g1: Col3 = [0.20, 0.42, 0.16], g2: Col3 = [0.38, 0.55, 0.22];
     const blades = 5 + Math.floor(rnd() * 3);
@@ -1719,6 +1757,34 @@ export function buildSimulacrum(body: HTMLElement) {
       }
       pois.push({ name: "the ribcage", x, z, r: 48 });
     }
+    /* the first garden — beds in rings around one great tree */
+    {
+      const [x, z] = findLand(rnd() * 6.28, 260 + rnd() * 200);
+      const y = height(x, z);
+      for (let ring = 0; ring < 3; ring++) {
+        const rr = 9 + ring * 6.5, n = 6 + ring * 2;
+        for (let k = 0; k < n; k++) {
+          const a = (k / n) * Math.PI * 2 + ring * 0.35, bx = x + Math.cos(a) * rr, bz = z + Math.sin(a) * rr;
+          gardenBed(lit, glow, bx, height(bx, bz), bz, a + Math.PI / 2, rnd);
+        }
+      }
+      const s = 1.1 + rnd() * 0.3;
+      treeGiant(lit, x, y, z, s, rnd);
+      worldSolids.push({ x, z, r: 1.8 * s, top: y + 24 * s });
+      pois.push({ name: "the first garden", x, z, r: 48 });
+    }
+    /* the three sisters — dead giants keeping one another company */
+    {
+      const [x, z] = findLand(rnd() * 6.28, 340 + rnd() * 200);
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + rnd() * 0.5, sx = x + Math.cos(a) * 15, sz = z + Math.sin(a) * 15;
+        const sy = height(sx, sz), s = 2.4 + rnd() * 0.8;
+        treeDead(lit, sx, sy, sz, s, rnd);
+        shardGeo(glow, sx, sy + 4.4 * s, sz, 0.8, [0.62, 0.36, 1.0], [0.45, 0.75, 1.0], rnd);
+        worldSolids.push({ x: sx, z: sz, r: 0.9 * s, top: sy + 5 * s });
+      }
+      pois.push({ name: "the three sisters", x, z, r: 46 });
+    }
     if (lit.length) wonderMesh = makeMesh(new Float32Array(lit));
     if (glow.length) wonderGlow = makeMesh(new Float32Array(glow));
   };
@@ -1761,9 +1827,13 @@ export function buildSimulacrum(body: HTMLElement) {
     const lean = leanOf(rec);
     const wonderBias = 1 + lean * 0.55;
     const gloomBias = 1 - lean * 0.5;
-    /* how forested is this place? a field, not a coin per chunk */
-    const dens = 0.30 + 0.85 * Math.max(0, moisture(x0 + CHUNK / 2, z0 + CHUNK / 2));
-    const treeTries = Math.round(30 * dens);
+    /* how forested is this place? a field, not a coin per chunk —
+       and the forest field gathers trees into true woods with
+       clearings between, not a uniform sprinkle */
+    const fmask = forestNoise.fbm((x0 + CHUNK / 2) * 0.006 + 7, (z0 + CHUNK / 2) * 0.006 + 23, 2);
+    const forestAmt = Math.max(0, Math.min(1, (fmask - 0.34) / 0.3));
+    const dens = (0.30 + 0.85 * Math.max(0, moisture(x0 + CHUNK / 2, z0 + CHUNK / 2))) * (0.5 + 1.35 * forestAmt);
+    const treeTries = Math.min(54, Math.round(30 * dens));
     for (let t = 0; t < treeTries; t++) {
       const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
       const h = height(x, z);
@@ -1812,9 +1882,18 @@ export function buildSimulacrum(body: HTMLElement) {
         pois.push({ name: "the ruins", x: rx, z: rz, r: 26 });
       }
     }
+    /* a garden bed, sometimes — tended ground among the wild */
+    if (rnd() < 0.085) {
+      const gx = x0 + 8 + rnd() * (CHUNK - 16), gz = z0 + 8 + rnd() * (CHUNK - 16);
+      const gh = height(gx, gz);
+      if (gh > 1 && gh < 9 && slopeAt(gx, gz) < 0.16 && pathDist(gx, gz) > 3) {
+        gardenBed(lit, glow, gx, gh, gz, rnd() * 3.14, rnd);
+        pois.push({ name: "the garden", x: gx, z: gz, r: 22 });
+      }
+    }
     /* ground cover, baked into the land like everything else —
        static, seeded, always the same grass in the same place */
-    const grassN = Math.round(52 * detailMul);
+    const grassN = Math.round(52 * detailMul * (1 + forestAmt * 0.9));
     for (let t = 0; t < grassN; t++) {
       const x = x0 + rnd() * CHUNK, z = z0 + rnd() * CHUNK;
       const h = height(x, z);
@@ -1927,11 +2006,11 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
     return { buf, n: count };
   };
-  let motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
+  let motes = makePoints(130, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
   let rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
   let meteorPts = makePoints(170, [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
   let snowPts = makePoints(520, [70, 42, 70], [0.94, 0.96, 1.0], [1.3, 2.6], seed ^ 0x5107 & 0xffffff);
-  let firePts = makePoints(150, [48, 9, 48], [0.78, 1.0, 0.42], [1.7, 2.9], seed ^ 0xf17e & 0xffffff);
+  let firePts = makePoints(64, [48, 9, 48], [0.78, 1.0, 0.42], [1.7, 2.9], seed ^ 0xf17e & 0xffffff);
   const bindPoints = (pts: { buf: WebGLBuffer }) => {
     gl.bindBuffer(gl.ARRAY_BUFFER, pts.buf);
     const aPos = gl.getAttribLocation(ptsPr, "aPos");
@@ -2010,25 +2089,46 @@ export function buildSimulacrum(body: HTMLElement) {
       Q([cn(-L, -W, H), cn(-L, -W, -H), cn(L, -W, -H), cn(L, -W, H)]);
       Q([cn(-L, W, H), cn(L, W, H), cn(L, W, -H), cn(-L, W, -H)]);
     };
+    /* a tapered box: top face scaled and shifted against the foot —
+       how a body stops looking like a crate */
+    const tbox = (cxp: number, cyp: number, czp: number, fx: number, fz: number, L: number, W: number, H: number, topS: number, topF: number, col: [number, number, number]) => {
+      const rxv = fz, rzv = -fx;
+      const cn = (a: number, b: number, dy: number, sc: number, sh: number): [number, number, number] => [cxp + fx * (a * sc + sh) + rxv * b * sc, cyp + dy, czp + fz * (a * sc + sh) + rzv * b * sc];
+      const Q = (q: Array<[number, number, number]>) => { push(...q[0], col); push(...q[1], col); push(...q[2], col); push(...q[0], col); push(...q[2], col); push(...q[3], col); };
+      const B = (a: number, b: number) => cn(a, b, -H, 1, 0);
+      const T = (a: number, b: number) => cn(a, b, H, topS, topF);
+      Q([T(-L, -W), T(L, -W), T(L, W), T(-L, W)]);
+      Q([B(-L, -W), B(-L, W), B(L, W), B(L, -W)]);
+      Q([T(L, -W), B(L, -W), B(L, W), T(L, W)]);
+      Q([T(-L, W), B(-L, W), B(-L, -W), T(-L, -W)]);
+      Q([T(-L, -W), B(-L, -W), B(L, -W), T(L, -W)]);
+      Q([T(-L, W), T(L, W), B(L, W), B(-L, W)]);
+    };
     for (const c of critters) {
       if (c.kind === 1) {
         const gy = height(c.x, c.z);
         if (gy < 0.3) continue;
         const s = c.s;
         const fx = Math.sin(c.hdg), fz = Math.cos(c.hdg);
+        const colD: [number, number, number] = [c.col[0] * 0.78, c.col[1] * 0.78, c.col[2] * 0.78];
         const stride = c.state > 0 ? Math.sin(performance.now() * 0.009 + c.hx) : 0;
         const bobG = c.state > 0 ? Math.abs(Math.sin(performance.now() * 0.009 + c.hx)) * 0.05 * s : 0;
         const bodyCy = gy + 1.0 * s + bobG;
-        boxAt(c.x, bodyCy, c.z, fx, fz, 0.52 * s, 0.24 * s, 0.30 * s, c.col);
+        /* barrel body, a shoulder hump, a slanted neck, a muzzle
+           that narrows, ears, and a tail that hangs and widens */
+        tbox(c.x, bodyCy, c.z, fx, fz, 0.55 * s, 0.26 * s, 0.30 * s, 0.78, 0, c.col);
+        tbox(c.x + fx * 0.30 * s, bodyCy + 0.28 * s, c.z + fz * 0.30 * s, fx, fz, 0.24 * s, 0.20 * s, 0.17 * s, 0.68, 0, c.col);
         for (const [la, lb] of [[0.38, 0.16], [0.38, -0.16], [-0.38, 0.16], [-0.38, -0.16]] as Array<[number, number]>) {
           const swing = ((la > 0) === (lb > 0) ? stride : -stride) * 0.10 * s * (c.state > 0 ? 1 : 0.15);
-          boxAt(c.x + fx * la * s + fz * lb * s + fx * swing, gy + 0.36 * s, c.z + fz * la * s - fx * lb * s + fz * swing, fx, fz, 0.045 * s, 0.045 * s, 0.36 * s, c.col);
+          tbox(c.x + fx * la * s + fz * lb * s + fx * swing, gy + 0.36 * s, c.z + fz * la * s - fx * lb * s + fz * swing, fx, fz, 0.05 * s, 0.05 * s, 0.36 * s, 0.74, 0, colD);
         }
         const dipG = c.state === 0 ? -0.34 * s : 0;
         const neckX = c.x + fx * 0.55 * s, neckZ = c.z + fz * 0.55 * s;
-        boxAt(neckX, bodyCy + 0.30 * s + dipG * 0.5, neckZ, fx, fz, 0.20 * s, 0.11 * s, 0.30 * s, c.col);
-        boxAt(c.x + fx * 0.78 * s, bodyCy + 0.52 * s + dipG, c.z + fz * 0.78 * s, fx, fz, 0.17 * s, 0.10 * s, 0.13 * s, c.col);
-        boxAt(c.x - fx * 0.58 * s, bodyCy + 0.18 * s, c.z - fz * 0.58 * s, fx, fz, 0.05 * s, 0.04 * s, 0.22 * s, c.col);
+        tbox(neckX, bodyCy + 0.32 * s + dipG * 0.5, neckZ, fx, fz, 0.20 * s, 0.115 * s, 0.32 * s, 0.62, 0.15 * s, c.col);
+        const headX = c.x + fx * 0.88 * s, headZ = c.z + fz * 0.88 * s, headY = bodyCy + 0.58 * s + dipG;
+        tbox(headX, headY, headZ, fx, fz, 0.20 * s, 0.105 * s, 0.12 * s, 0.55, 0.04 * s, c.col);
+        for (const eb of [0.11, -0.11]) tbox(headX - fx * 0.08 * s + fz * eb * s, headY + 0.15 * s, headZ - fz * 0.08 * s - fx * eb * s, fx, fz, 0.045 * s, 0.028 * s, 0.085 * s, 0.35, -0.02 * s, colD);
+        tbox(c.x - fx * 0.60 * s, bodyCy + 0.02 * s, c.z - fz * 0.60 * s, fx, fz, 0.035 * s, 0.035 * s, 0.27 * s, 1.35, -0.05 * s, colD);
         continue;
       }
       const y = height(c.x, c.z);
@@ -2036,20 +2136,18 @@ export function buildSimulacrum(body: HTMLElement) {
       const bob = c.state > 0 ? Math.abs(Math.sin(performance.now() * 0.012 + c.hx)) * 0.09 : 0;
       const cy = y + 0.52 * c.s + bob;
       const fx = Math.sin(c.hdg), fz = Math.cos(c.hdg);
-      const rxv = fz, rzv = -fx;
+      const colD: [number, number, number] = [c.col[0] * 0.78, c.col[1] * 0.78, c.col[2] * 0.78];
       const L = 0.62 * c.s, W = 0.30 * c.s, H = 0.34 * c.s;
-      const corner = (a: number, b: number, dy: number): [number, number, number] => [c.x + fx * a + rxv * b, cy + dy, c.z + fz * a + rzv * b];
-      const quads: Array<[[number, number, number], [number, number, number], [number, number, number], [number, number, number]]> = [
-        [corner(-L, -W, H), corner(L, -W, H), corner(L, W, H), corner(-L, W, H)],
-        [corner(-L, -W, -H), corner(-L, W, -H), corner(L, W, -H), corner(L, -W, -H)],
-        [corner(L, -W, H), corner(L, -W, -H), corner(L, W, -H), corner(L, W, H)],
-        [corner(-L, W, H), corner(-L, W, -H), corner(-L, -W, -H), corner(-L, -W, H)],
-      ];
-      for (const q of quads) { push(...q[0], c.col); push(...q[1], c.col); push(...q[2], c.col); push(...q[0], c.col); push(...q[2], c.col); push(...q[3], c.col); }
+      /* a loaf body on real legs, a narrowing head, ears, a tail */
+      tbox(c.x, cy, c.z, fx, fz, L, W, H, 0.66, 0, c.col);
+      for (const [la, lb] of [[0.36, 0.17], [0.36, -0.17], [-0.36, 0.17], [-0.36, -0.17]] as Array<[number, number]>) {
+        tbox(c.x + fx * la * c.s + fz * lb * c.s, y + 0.15 * c.s, c.z + fz * la * c.s - fx * lb * c.s, fx, fz, 0.05 * c.s, 0.05 * c.s, 0.15 * c.s, 0.75, 0, colD);
+      }
       const dip = c.state === 0 ? -0.22 * c.s : 0;
-      const hc = corner(L + 0.26 * c.s, 0, 0.05 + dip);
-      const hb = corner(L - 0.05, 0, 0.10 + dip);
-      push(hc[0], hc[1], hc[2], c.col); push(hb[0], hb[1] + 0.16 * c.s, hb[2], c.col); push(hb[0], hb[1], hb[2], c.col);
+      const headX = c.x + fx * (L + 0.14 * c.s), headZ = c.z + fz * (L + 0.14 * c.s), headY = cy + 0.10 * c.s + dip;
+      tbox(headX, headY, headZ, fx, fz, 0.17 * c.s, 0.13 * c.s, 0.15 * c.s, 0.5, 0.04 * c.s, c.col);
+      for (const eb of [0.09, -0.09]) tbox(headX - fx * 0.06 * c.s + fz * eb * c.s, headY + 0.20 * c.s, headZ - fz * 0.06 * c.s - fx * eb * c.s, fx, fz, 0.035 * c.s, 0.025 * c.s, 0.09 * c.s, 0.3, -0.02 * c.s, colD);
+      tbox(c.x - fx * (L + 0.05 * c.s), cy + 0.12 * c.s, c.z - fz * (L + 0.05 * c.s), fx, fz, 0.04 * c.s, 0.04 * c.s, 0.13 * c.s, 1.3, -0.06 * c.s, colD);
     }
     return new Float32Array(v);
   };
@@ -2163,6 +2261,10 @@ export function buildSimulacrum(body: HTMLElement) {
     prism(v, 0, 0, 0, 0.55, 0.33, 1.15, 7, coat);
     prism(v, 0, 1.15, 0, 0.33, 0.15, 0.71, 7, hem);
     prism(v, 0, 1.86, 0, 0.15, 0.02, 0.28, 7, coat);
+    /* shoulders, and arms that hang and lean in at the top */
+    prism(v, 0, 1.50, 0, 0.35, 0.24, 0.30, 7, hem);
+    prism(v, 0.38, 0.68, 0, 0.05, 0.095, 0.88, 5, coat, -0.14, 0);
+    prism(v, -0.38, 0.68, 0, 0.05, 0.095, 0.88, 5, coat, 0.14, 0);
     octa(v, 0, 2.02, 0, 0.155, 0.20, 0.155, face);
     return makeMesh(new Float32Array(v));
   };
@@ -2436,7 +2538,7 @@ export function buildSimulacrum(body: HTMLElement) {
       chunks.clear();
       const pm = POINT_LADDER[iris.density];
       gl.deleteBuffer(motes.buf); gl.deleteBuffer(rainPts.buf); gl.deleteBuffer(meteorPts.buf);
-      motes = makePoints(Math.round(220 * pm), [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
+      motes = makePoints(Math.round(130 * pm), [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
       rainPts = makePoints(Math.round(420 * pm), [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
       meteorPts = makePoints(Math.round(170 * pm), [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
     }
@@ -2793,7 +2895,7 @@ export function buildSimulacrum(body: HTMLElement) {
     audio.dispose();
     audio = new SimAudio(seed);
     if (touched) { audio.start(); audio.ui("world"); }
-    motes = makePoints(220, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
+    motes = makePoints(130, [60, 24, 60], [0.85, 0.95, 0.60], [1.6, 3.2], seed ^ 0x9e37 & 0xffffff);
     rainPts = makePoints(420, [70, 44, 70], [0.65, 0.75, 0.95], [1.2, 1.8], seed ^ 0x7a11 & 0xffffff);
     meteorPts = makePoints(170, [90, 40, 90], [0.92, 0.96, 1.0], [1.0, 1.7], seed ^ 0x9ee7 & 0xffffff);
     edits = new Map();
@@ -3102,7 +3204,8 @@ export function buildSimulacrum(body: HTMLElement) {
     const h = height(x, z), m = moisture(x, z);
     if (h < -1.2) return "the deep";
     if (h < 0.6) return "the shore";
-    if (h > 14.5) return "the snowfields";
+    if (h > 24) return "the high snowfields";
+    if (h > 13) return "the bare heights";
     if (h > 10) return "the high pines";
     if (m > 0.58) return "the wet wilds";
     if (m < 0.30) return "the dry grass";
@@ -3114,7 +3217,7 @@ export function buildSimulacrum(body: HTMLElement) {
     /* snow where the world wears it: the high fields always, and
        wherever the turning year has brought the winter down — the
        same bargain the ground shader strikes, struck for the ear */
-    if (h > 14.5) return "snow";
+    if (h > 24) return "snow";
     if (seasonNow.cold > 0.34 && h > 0.9) return "snow";
     if (pathDist(x, z) < 1.7) return "dirt";
     const se = 1.4;
@@ -3261,12 +3364,24 @@ export function buildSimulacrum(body: HTMLElement) {
         const flap = Math.sin(t * 9 + b.ph * 3) * 0.85;
         const s = b.size;
         const P = (ox: number, oy: number, oz: number) => bv.push(bx + ox, by + oy, bz + oz, 0.05, 0.05, 0.07, 0, 1, 0);
-        const W1: [number, number, number] = [tx * 0.4 + (-tz) * s, flap * s * 0.8, tz * 0.4 + tx * s];
-        const W2: [number, number, number] = [tx * 0.4 - (-tz) * s, flap * s * 0.8, tz * 0.4 - tx * s];
-        const TAIL: [number, number, number] = [-tx * s * 0.9, 0, -tz * s * 0.9];
-        const NOSE: [number, number, number] = [tx * s * 0.9, 0, tz * s * 0.9];
-        P(...TAIL); P(...W1); P(...NOSE);
-        P(...TAIL); P(...NOSE); P(...W2);
+        /* a body with a belly and a spine, and wings with a joint:
+           the outer panel bends further than the inner */
+        const NOSE: [number, number, number] = [tx * s * 1.0, -s * 0.02, tz * s * 1.0];
+        const TAIL: [number, number, number] = [-tx * s * 0.95, s * 0.05, -tz * s * 0.95];
+        const CT: [number, number, number] = [0, s * 0.12, 0];
+        const BELLY: [number, number, number] = [tx * s * 0.05, -s * 0.20, tz * s * 0.05];
+        P(...NOSE); P(...CT); P(...TAIL);
+        P(...NOSE); P(...BELLY); P(...CT);
+        P(...TAIL); P(...BELLY); P(...NOSE);
+        for (const sg of [1, -1]) {
+          const rx = -tz * sg, rz = tx * sg;
+          const BF: [number, number, number] = [tx * s * 0.30 + rx * s * 0.14, 0, tz * s * 0.30 + rz * s * 0.14];
+          const BB: [number, number, number] = [-tx * s * 0.30 + rx * s * 0.14, 0, -tz * s * 0.30 + rz * s * 0.14];
+          const M: [number, number, number] = [tx * s * 0.02 + rx * s * 0.66, flap * s * 0.45, tz * s * 0.02 + rz * s * 0.66];
+          const TIP: [number, number, number] = [-tx * s * 0.16 + rx * s * 1.3, flap * s * 0.95, -tz * s * 0.16 + rz * s * 1.3];
+          P(...BF); P(...M); P(...BB);
+          P(...BB); P(...M); P(...TIP);
+        }
       }
       /* butterflies keep to the planted flowers */
       for (let bi = 0; bi < blooms.length && bi < 26; bi++) {
@@ -3497,12 +3612,18 @@ export function buildSimulacrum(body: HTMLElement) {
     gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 0);
     gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [60, 24, 60]);
     gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), 0.22 + sc.night * 0.6);
+    gl.uniform1f(gl.getUniformLocation(ptsPr, "uDrift"), 1.15);
+    gl.uniform1f(gl.getUniformLocation(ptsPr, "uTwinkle"), 0.3);
+    gl.uniform1f(gl.getUniformLocation(ptsPr, "uTint"), 0);
     bindPoints(motes);
     gl.drawArrays(gl.POINTS, 0, motes.n);
     if (sc.night > 0.22) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), -0.35);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [48, 9, 48]);
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), sc.night * (0.5 + 0.3 * Math.sin(nowS * 0.7)));
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uDrift"), 2.6);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTwinkle"), 1.0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTint"), 1);
       bindPoints(firePts);
       gl.drawArrays(gl.POINTS, 0, firePts.n);
     }
@@ -3510,6 +3631,9 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 52);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [90, 40, 90]);
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), showerAmt * 0.85);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uDrift"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTwinkle"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTint"), 0);
       bindPoints(meteorPts);
       gl.drawArrays(gl.POINTS, 0, meteorPts.n);
     }
@@ -3519,6 +3643,9 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 3.0);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [70, 42, 70]);
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), Math.min(1, (seasonNow.cold - 0.28) * 1.6) * (snowing && rainDraw > 0.02 ? 0.95 : 0.5));
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uDrift"), 0.35);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTwinkle"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTint"), 0);
       bindPoints(snowPts);
       gl.drawArrays(gl.POINTS, 0, snowPts.n);
     }
@@ -3526,6 +3653,9 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), anKind === "rainup" ? -24 : 26);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [70, 44, 70]);
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), rainDraw * 0.55);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uDrift"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTwinkle"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTint"), 0);
       bindPoints(rainPts);
       gl.drawArrays(gl.POINTS, 0, rainPts.n);
     }
@@ -3534,6 +3664,9 @@ export function buildSimulacrum(body: HTMLElement) {
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uFall"), 0);
       gl.uniform3fv(gl.getUniformLocation(ptsPr, "uBox"), [600, 300, 600]);
       gl.uniform1f(gl.getUniformLocation(ptsPr, "uAlpha"), 0.9);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uDrift"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTwinkle"), 0);
+      gl.uniform1f(gl.getUniformLocation(ptsPr, "uTint"), 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, partBuf);
       gl.bufferData(gl.ARRAY_BUFFER, partData.subarray(0, n * 7), gl.DYNAMIC_DRAW);
       const aPos = gl.getAttribLocation(ptsPr, "aPos");
@@ -3755,19 +3888,28 @@ export function buildSimulacrum(body: HTMLElement) {
       }
       if (Math.random() < dt * 0.05 && sunDir(dayT)[1] > 0.1) audio.chirp();
     }
-    /* chunks — while the world is being made for the first time the
-       budget is a slice of each frame, not two chunks: the whole
-       wanted field stands before the world may be taken */
+    /* chunks — while the world is being made, the budget is a slice
+       of each frame and the sets load by rings, nearest first, so
+       the ground under the walker stands before the horizon does */
     const ccx = Math.floor(px / CHUNK), ccz = Math.floor(pz / CHUNK);
-    let built = 0;
-    const buildCap = warming ? 96 : 2;
-    const buildT0 = performance.now();
-    buildLoop:
-    for (let i = -viewRadius; i <= viewRadius && built < buildCap; i++) for (let j = -viewRadius; j <= viewRadius && built < buildCap; j++) {
-      const k = keyOf(ccx + i, ccz + j);
-      if (!chunks.has(k)) {
-        chunks.set(k, buildChunk(ccx + i, ccz + j)); built++;
-        if (warming && performance.now() - buildT0 > 14) break buildLoop;
+    if (warming) {
+      const buildT0 = performance.now();
+      ringBuild:
+      for (let ring = 0; ring <= viewRadius; ring++) {
+        for (let i = -ring; i <= ring; i++) for (let j = -ring; j <= ring; j++) {
+          if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+          const k = keyOf(ccx + i, ccz + j);
+          if (!chunks.has(k)) {
+            chunks.set(k, buildChunk(ccx + i, ccz + j));
+            if (performance.now() - buildT0 > 14) break ringBuild;
+          }
+        }
+      }
+    } else {
+      let built = 0;
+      for (let i = -viewRadius; i <= viewRadius && built < 2; i++) for (let j = -viewRadius; j <= viewRadius && built < 2; j++) {
+        const k = keyOf(ccx + i, ccz + j);
+        if (!chunks.has(k)) { chunks.set(k, buildChunk(ccx + i, ccz + j)); built++; }
       }
     }
     if (warming) {
