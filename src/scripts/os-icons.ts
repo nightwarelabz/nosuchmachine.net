@@ -50,6 +50,7 @@ export const ICONS: Record<string, string> = {
   orc: wrap(`<circle cx="12" cy="12" r="8.6"/><ellipse cx="12" cy="12" rx="3.9" ry="8.6"/><path d="M3.9 9h16.2M3.9 15h16.2"/>`),
   sigint: wrap(`<path d="M4.5 20.5h15"/><path d="M6 20.5v-5.5M9.8 20.5V7.5M13.6 20.5v-8.5M17.4 20.5V4.8"/>${dot(17.4, 3.4, 1)}`),
   simulacrum: wrap(`<circle cx="17.5" cy="6.5" r="1.8"/><path d="M3 19.5l5.2-7.5 3.8 4.6 3-3.9 6 6.8"/><path d="M2.5 19.5h19"/>`),
+  bloodbath: wrap(`<path d="M12 3.2c3.4 4.5 5.8 7.9 5.8 10.8a5.8 5.8 0 1 1-11.6 0C6.2 11.1 8.6 7.7 12 3.2z"/><path d="M9.4 14.2a2.8 2.8 0 0 0 2 3.4"/>`),
   bench: wrap(`<circle cx="12" cy="12" r="6.8"/><path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21"/>${dot(12, 12, 1)}`),
   grid: wrap(`<rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/>`),
 };

@@ -496,3 +496,20 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-sim-title-keys { margin-top: 0.9rem; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(220, 238, 224, 0.5); animation: os-sim-title-in 1.8s ease 0.75s both; text-align: center; }
 @keyframes os-sim-title-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes os-sim-title-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* ————— bloodbath: the other world ————— */
+.os-bb { position: absolute; inset: 0; overflow: hidden; background: #0a0303; outline: none; }
+.os-bb-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.os-bb-shade { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 42%, rgba(190, 8, 4, 0.55) 100%); transition: opacity 0.08s linear; }
+.os-bb-hud { position: absolute; left: 14px; bottom: 12px; display: flex; flex-direction: column; gap: 0.35rem; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+.os-bb-hp { width: 210px; height: 9px; background: rgba(30, 4, 4, 0.72); border: 1px solid rgba(255, 90, 70, 0.35); border-radius: 5px; overflow: hidden; }
+.os-bb-hpbar { height: 100%; width: 100%; background: #a31616; transition: width 0.15s ease; }
+.os-bb-stats { color: rgba(255, 205, 190, 0.85); font-size: 12px; letter-spacing: 0.06em; text-shadow: 0 1px 6px rgba(0,0,0,0.8); }
+.os-bb-cross { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 5; color: rgba(255, 170, 150, 0.9); font-size: 17px; pointer-events: none; opacity: 0; transition: opacity 0.2s; text-shadow: 0 0 6px rgba(0,0,0,0.9); }
+.os-bb-banner { position: absolute; left: 0; right: 0; top: 16%; z-index: 6; text-align: center; color: #f3c1b2; font-size: clamp(20px, 4.2vw, 36px); letter-spacing: 0.34em; text-transform: uppercase; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; text-shadow: 0 2px 18px rgba(120, 0, 0, 0.8); }
+.os-bb-start, .os-bb-death { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.55rem; background: rgba(8, 2, 2, 0.58); cursor: pointer; text-align: center; padding: 1rem; }
+.os-bb-name { color: #e8b7a6; font-size: clamp(30px, 6vw, 54px); letter-spacing: 0.30em; text-shadow: 0 3px 26px rgba(150, 10, 4, 0.65); }
+.os-bb-sub { color: rgba(240, 190, 175, 0.75); font-size: 13px; letter-spacing: 0.12em; }
+.os-bb-best { color: rgba(240, 190, 175, 0.6); font-size: 12px; letter-spacing: 0.08em; margin-top: 0.4rem; }
+.os-bb-enter { color: rgba(255, 214, 200, 0.92); font-size: 13px; letter-spacing: 0.22em; margin-top: 1.1rem; animation: os-bb-pulse 2.2s ease-in-out infinite; }
+@keyframes os-bb-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
