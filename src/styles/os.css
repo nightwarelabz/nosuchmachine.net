@@ -513,3 +513,20 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-bb-best { color: rgba(240, 190, 175, 0.6); font-size: 12px; letter-spacing: 0.08em; margin-top: 0.4rem; }
 .os-bb-enter { color: rgba(255, 214, 200, 0.92); font-size: 13px; letter-spacing: 0.22em; margin-top: 1.1rem; animation: os-bb-pulse 2.2s ease-in-out infinite; }
 @keyframes os-bb-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+.os-bb-whisper { position: absolute; left: 14px; bottom: 58px; z-index: 5; pointer-events: none; font-style: italic; font-size: 13px; letter-spacing: 0.05em; color: rgba(255, 178, 158, 0.88); text-shadow: 0 1px 8px rgba(0,0,0,0.75); opacity: 0; transition: opacity 1.2s ease; }
+.os-bb-menubtn { position: absolute; right: 12px; bottom: 12px; z-index: 6; width: 40px; height: 40px; border-radius: 999px; font-size: 18px; line-height: 1; color: rgba(255, 205, 190, 0.9); background: rgba(16, 4, 4, 0.5); border: 1px solid rgba(255, 90, 70, 0.25); backdrop-filter: blur(4px); cursor: pointer; }
+.os-bb-menu { position: absolute; right: 12px; bottom: 60px; z-index: 7; width: min(308px, calc(100% - 24px)); max-height: calc(100% - 84px); overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.65rem 0.7rem; border-radius: 14px; background: rgba(14, 3, 3, 0.70); backdrop-filter: blur(12px); box-shadow: 0 14px 44px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity 0.28s ease, transform 0.28s ease, visibility 0.28s; pointer-events: none; }
+.os-bb.menu-on .os-bb-menu { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+.os-bb-mtitle { font-size: 11px; letter-spacing: 0.20em; text-transform: uppercase; color: rgba(255, 190, 170, 0.75); }
+.os-bb-mtally { font-size: 12px; line-height: 1.5; color: rgba(255, 214, 200, 0.85); }
+.os-bb-mrow { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.os-bb-mbtn { font-size: 12px; letter-spacing: 0.04em; color: rgba(255, 220, 205, 0.92); background: rgba(120, 20, 12, 0.28); border: 1px solid rgba(255, 90, 70, 0.30); border-radius: 999px; padding: 0.34rem 0.7rem; cursor: pointer; }
+.os-bb-mbtn:hover { background: rgba(150, 26, 14, 0.42); }
+.os-bb-mkeys { font-size: 11px; line-height: 1.6; color: rgba(255, 205, 190, 0.55); }
+.os-bb.photo .os-bb-hud, .os-bb.photo .os-bb-cross, .os-bb.photo .os-bb-banner, .os-bb.photo .os-bb-menubtn, .os-bb.photo .os-bb-whisper { opacity: 0 !important; pointer-events: none; }
+.os-bb-touch { display: none; }
+.os-bb.touched .os-bb-touch { display: block; }
+.os-bb-tbtn { position: absolute; z-index: 6; display: flex; align-items: center; justify-content: center; border-radius: 999px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 214, 200, 0.9); background: rgba(90, 10, 6, 0.35); border: 1px solid rgba(255, 90, 70, 0.35); backdrop-filter: blur(3px); touch-action: none; user-select: none; -webkit-user-select: none; }
+.os-bb-tfire { right: 20px; bottom: 100px; width: 66px; height: 66px; }
+.os-bb-thook { right: 104px; bottom: 34px; width: 56px; height: 56px; }
+.os-bb-tjump { right: 30px; bottom: 184px; width: 52px; height: 52px; }
