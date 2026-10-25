@@ -432,9 +432,10 @@ export function buildBloodbath(body: HTMLElement) {
   };
   const btnSound = mkBtn("sound · on");
   const btnIris = mkBtn("iris · auto");
+  const btnInput = mkBtn("input · mouse");
   const btnPhoto = mkBtn("photo");
   const btnFull = mkBtn("full screen");
-  mrow.append(btnSound, btnIris, btnPhoto, btnFull);
+  mrow.append(btnSound, btnIris, btnInput, btnPhoto, btnFull);
   const menuKeys = el("div", "os-bb-mkeys", "wasd move · mouse look · lmb fire · rmb / f — the hook · space jump — leaps off the hook · shift run · m menu");
   menu.append(menuTitle, menuTally, mrow, menuKeys);
   const menubtn = el("button", "os-bb-menubtn", "≡");
@@ -575,6 +576,11 @@ export function buildBloodbath(body: HTMLElement) {
   const bellQueue: number[] = [];
   let nextBellAt = 0, nextThumpAt = 0, thump2At = 0;
   let sndOn = true, photoOn = false, menuOn = false;
+  /* how the pit is driven: a mouse at a desk, or a laptop's own
+     trackpad and keys — chosen in the menu, kept between visits */
+  let inputMode: "mouse" | "laptop" = "mouse";
+  try { if (localStorage.getItem("bloodbath-input") === "laptop") inputMode = "laptop"; } catch { /* a desk, then */ }
+  let lastMX = -1, lastMY = -1;
   let irisMode: "auto" | "high" | "low" = "auto";
   let capIdx = 0, dprCap = 1.5, ashFrac = 1, fpsE = 60, irisAt = 0;
   const stick = { on: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
@@ -687,6 +693,10 @@ export function buildBloodbath(body: HTMLElement) {
   const refreshMenu = () => {
     btnSound.textContent = sndOn ? "sound · on" : "sound · off";
     btnIris.textContent = `iris · ${irisMode}`;
+    btnInput.textContent = `input · ${inputMode}`;
+    menuKeys.textContent = inputMode === "laptop"
+      ? "wasd move · trackpad look — no lock, just slide · space fire · e — the hook · f jump — leaps off the hook · shift run · m menu"
+      : "wasd move · mouse look · lmb fire · rmb / f — the hook · space jump — leaps off the hook · shift run · m menu";
     btnPhoto.textContent = photoOn ? "photo · on" : "photo";
     menuTally.textContent = `the pit holds ${best.total + kills} · best wave ${Math.max(best.wave, wave)} · this run — wave ${Math.max(1, wave)} · ${kills} kills · ${headshots} between the eyes`;
   };
@@ -696,9 +706,21 @@ export function buildBloodbath(body: HTMLElement) {
     if (on) {
       refreshMenu();
       if (document.pointerLockElement === canvas) document.exitPointerLock();
+    } else {
+      /* leave no button holding the keyboard — on a laptop,
+         space belongs to the rifle, not to a focused control */
+      const ae = document.activeElement as HTMLElement | null;
+      if (ae && menu.contains(ae)) ae.blur();
     }
   };
   btnSound.addEventListener("click", () => { sndOn = !sndOn; audio.start(); refreshMenu(); });
+  btnInput.addEventListener("click", () => {
+    inputMode = inputMode === "mouse" ? "laptop" : "mouse";
+    try { localStorage.setItem("bloodbath-input", inputMode); } catch { /* this visit only */ }
+    if (inputMode === "laptop" && document.pointerLockElement === canvas) document.exitPointerLock();
+    lastMX = -1; lastMY = -1;
+    refreshMenu();
+  });
   btnIris.addEventListener("click", () => { irisMode = irisMode === "auto" ? "high" : irisMode === "high" ? "low" : "auto"; refreshMenu(); });
   btnPhoto.addEventListener("click", () => { photoOn = !photoOn; wrap.classList.toggle("photo", photoOn); refreshMenu(); });
   btnFull.addEventListener("click", () => {
@@ -708,38 +730,57 @@ export function buildBloodbath(body: HTMLElement) {
   menubtn.addEventListener("click", () => { audio.start(); setMenu(!menuOn); });
 
   /* ————— input ————— */
+  /* pointer lock is a desk courtesy; a trackpad never asks for it */
+  const lockLook = () => { if (inputMode === "mouse") canvas.requestPointerLock(); };
   canvas.addEventListener("click", () => {
     wrap.focus();
-    if (state === "play" && !locked && !menuOn) canvas.requestPointerLock();
+    if (state === "play" && !locked && !menuOn) lockLook();
   });
   startScr.addEventListener("click", () => {
     wrap.focus();
     audio.start();
     if (state === "start") { state = "play"; startScr.style.display = "none"; nextWave(performance.now() / 1000); }
-    canvas.requestPointerLock();
+    lockLook();
   });
   deathScr.addEventListener("click", () => {
     wrap.focus();
     audio.start();
     respawn(performance.now() / 1000);
-    canvas.requestPointerLock();
+    lockLook();
   });
   document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
   wrap.addEventListener("mousemove", (e) => {
-    if (!locked || state !== "play" || menuOn) return;
-    yaw -= e.movementX * 0.0023;
-    pitch = clamp(pitch - e.movementY * 0.0023, -1.35, 1.35);
+    if (state !== "play" || menuOn) return;
+    if (locked) {
+      yaw -= e.movementX * 0.0023;
+      pitch = clamp(pitch - e.movementY * 0.0023, -1.35, 1.35);
+      return;
+    }
+    if (inputMode !== "laptop") return;
+    /* trackpad look: slide to look — movement deltas where the
+       browser offers them, plain travel where it does not */
+    let dx = e.movementX, dy = e.movementY;
+    if (!dx && !dy && lastMX >= 0) { dx = e.clientX - lastMX; dy = e.clientY - lastMY; }
+    lastMX = e.clientX; lastMY = e.clientY;
+    if (Math.abs(dx) > 140 || Math.abs(dy) > 140) return;
+    yaw -= dx * 0.0023;
+    pitch = clamp(pitch - dy * 0.0023, -1.35, 1.35);
   });
   wrap.addEventListener("mousedown", (e) => {
     if (state !== "play" || menuOn) return;
-    if (e.button === 0 && locked) firing = true;
+    if (e.button === 0 && (locked || inputMode === "laptop")) firing = true;
     if (e.button === 2) rmbHeld = true;
   });
   document.addEventListener("mouseup", (e) => { if (e.button === 0) firing = false; if (e.button === 2) rmbHeld = false; });
   wrap.addEventListener("contextmenu", (e) => e.preventDefault());
   wrap.addEventListener("keydown", (e) => {
     keys.add(e.code);
-    if (e.code === "Space") { if (!e.repeat) jumpReq = true; e.preventDefault(); }
+    if (e.code === "Space") {
+      /* on a laptop, space is the trigger — the leap moves to f */
+      if (!e.repeat && inputMode === "mouse") jumpReq = true;
+      e.preventDefault();
+    }
+    if (e.code === "KeyF" && inputMode === "laptop" && !e.repeat) jumpReq = true;
     if (e.code === "KeyM" && state === "play") setMenu(!menuOn);
   });
   wrap.addEventListener("keyup", (e) => { keys.delete(e.code); });
@@ -1126,7 +1167,7 @@ export function buildBloodbath(body: HTMLElement) {
       const run = keys.has("ShiftLeft") || keys.has("ShiftRight");
       const maxSpd = (run ? 8.6 : 5.2) * (wading ? 0.55 : 1);
       /* the hook: fire on the press, hold to be pulled, leap to let go flying */
-      const hookHeldNow = rmbHeld || keys.has("KeyF") || touchHook;
+      const hookHeldNow = rmbHeld || touchHook || (inputMode === "laptop" ? keys.has("KeyE") : keys.has("KeyF"));
       if (hookHeldNow && !hookWasHeld) fireHook(nowS, eyeStep, fwdStep);
       hookWasHeld = hookHeldNow;
       if (!hookHeldNow && hook.live) releaseHook(nowS);
@@ -1183,7 +1224,7 @@ export function buildBloodbath(body: HTMLElement) {
         }
       }
       /* the reaper speaks */
-      if ((firing || touchFire) && !menuOn && nowS - lastShotAt > 0.105) {
+      if ((firing || touchFire || (inputMode === "laptop" && keys.has("Space"))) && !menuOn && nowS - lastShotAt > 0.105) {
         const rgt: [number, number, number] = [Math.cos(yaw), 0, -Math.sin(yaw)];
         const sp = bloomSpread;
         const dxr = (Math.random() - 0.5) * 2 * sp, dyr = (Math.random() - 0.5) * 2 * sp * 0.7;
@@ -1452,7 +1493,7 @@ export function buildBloodbath(body: HTMLElement) {
     hpBar.style.background = hp > 34 ? "#a31616" : "#e03418";
     const hostiles = foes.filter((e) => !e.dead).length + spawnQueue.length;
     statLine.textContent = state === "play" ? `wave ${Math.max(1, wave)} · kills ${kills} · ${hostiles} still coming · the pit holds ${best.total + kills}` : "";
-    cross.style.opacity = state === "play" && (locked || wrap.classList.contains("touched")) && !menuOn ? "1" : "0";
+    cross.style.opacity = state === "play" && (locked || inputMode === "laptop" || wrap.classList.contains("touched")) && !menuOn ? "1" : "0";
     cross.style.transform = `translate(-50%, -50%) scale(${(1 + bloomSpread * 24).toFixed(2)})`;
     hud.style.opacity = state === "play" ? "1" : "0";
     const sinceDmg = nowS - dmgAt, sinceSplat = nowS - splatAt;
