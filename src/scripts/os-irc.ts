@@ -15,11 +15,26 @@ export interface IrcMessage {
   command: string;
   params: string[];
   trailing: string;
+  tags: Record<string, string>;
 }
 
-/** Parse one IRC protocol line (RFC 1459 shape). Pure — harness-tested. */
+/** Parse one IRC protocol line (RFC 1459 shape, with the IRCv3 message
+ *  tags the house bridge uses to hand the room its memory). Pure —
+ *  harness-tested. */
 export function parseIrcLine(line: string): IrcMessage {
   let rest = line.replace(/\r$/, "");
+  const tags: Record<string, string> = {};
+  if (rest.startsWith("@")) {
+    const sp = rest.indexOf(" ");
+    if (sp > 0) {
+      for (const pair of rest.slice(1, sp).split(";")) {
+        const eq = pair.indexOf("=");
+        if (eq > 0) tags[pair.slice(0, eq)] = pair.slice(eq + 1);
+        else if (pair) tags[pair] = "";
+      }
+      rest = rest.slice(sp + 1);
+    }
+  }
   let prefix = "";
   if (rest.startsWith(":")) {
     const sp = rest.indexOf(" ");
@@ -36,7 +51,7 @@ export function parseIrcLine(line: string): IrcMessage {
   const command = (parts.shift() || "").toUpperCase();
   if (trailing) parts.push(trailing);
   const nick = prefix.split("!")[0] || prefix;
-  return { prefix, nick, command, params: parts, trailing };
+  return { prefix, nick, command, params: parts, trailing, tags };
 }
 
 const NETWORKS = [
@@ -192,7 +207,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      A topic-of-the-day bar for developer messages: it ships with the
      build, so what it says is always true of the build you are looking
      at, and it never scrolls away with the conversation. */
-  const DEV_NOTE = "hard refresh to check chat if chat works. added persistence to the chat";
+  const DEV_NOTE = "the room remembers its last day now — join from any device and the conversation is there. no hard refresh needed; the os updates itself. a claimed name can /wipe the room's memory.";
   const noteEl = el("div", "os-relay-note");
   noteEl.append(el("span", "os-relay-note-tag", "dev note · pinned"), document.createTextNode(DEV_NOTE));
 
@@ -204,7 +219,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const inputRow = el("div", "os-relay-inputrow");
   const input = document.createElement("input");
   input.className = "os-relay-input";
-  input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /away · /part · /nick name";
+  input.placeholder = "say it on the wire — /join #chan · /msg nick · /me waves · /away · /part · /nick name · /wipe";
   input.maxLength = 400;
   const sendBtn = el("button", "os-btn small", "send ▸");
   sendBtn.title = "send it on the wire";
@@ -227,7 +242,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     pendingJoins = [];
     current = "server";
     renderTargets();
-    push("server", "— forgotten. This machine keeps nothing of the room now.");
+    push("server", "— forgotten on this machine. The room's own memory is a separate keeping — /wipe, on a claimed name, forgets it for everyone.");
   });
   input.setAttribute("enterkeyhint", "send");
   inputRow.append(input, sendBtn, idBtn, copyBtn, forgetBtn);
@@ -309,15 +324,22 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     scheduleSave();
   };
 
-  /* ————— retention: the room keeps its words on this machine —————
-     A refresh used to cost the whole conversation: buffers lived only
-     in the tab. Now the log — every target's lines, the name you wear,
-     the channels you sit in — persists to this device's own storage
+  /* ————— retention, in two keepings —————
+     The device keeps its log: every target's lines, the name you wear,
+     the channels you sit in — persisted to this device's own storage
      (skey: the surface keeps it, nests stay volatile, factory reset
-     wipes it). Nothing is kept server-side; the network still sees
-     only the wire. Passwords and the house claim code are NEVER part
-     of the log — they ride the visit in memory only, as always. The
-     "forget" button wipes the log on the spot. */
+     wipes it), so a refresh costs nothing.
+     And the room keeps a memory of its own, in the bridge: the last
+     day of the room's lines, capped at 300, replayed to any client as
+     it joins — so a conversation survives the device it was spoken
+     from, and nobody is a ghost for having spoken elsewhere. That
+     memory is mutable by design, not an archive: lines expire, a
+     removal purges the removed voice from it, a claimed name may
+     /wipe a channel's memory for everyone at once, and
+     credential-shaped lines never enter it. Passwords and the house
+     claim code are NEVER part of either keeping — they ride the
+     visit in memory only, as always. The "forget" button wipes this
+     device's log on the spot; /wipe is the room-level forgetting. */
   const RELAY_LOG_KEY = "blacksite-relay-v2";
   /* Conversations with the network's services are never part of the
      kept log: a NickServ window is where IDENTIFY passwords and
@@ -388,17 +410,25 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      target the operator is actually reading. */
   const joinFocus = new Set<string>();
 
-  const stamp = () => {
-    const d = new Date();
+  const stamp = (when?: number) => {
+    const d = when ? new Date(when) : new Date();
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
-  const push = (target: string, text: string) => {
+  const push = (target: string, text: string, when?: number) => {
     if (!buffers.has(target)) { buffers.set(target, []); renderTargets(); }
     const buf = buffers.get(target)!;
-    buf.push(`${stamp()} ${text}`);
+    buf.push(`${stamp(when)} ${text}`);
     if (buf.length > MAX_LINES) buf.splice(0, buf.length - MAX_LINES);
     if (target === current) renderLines();
     scheduleSave();
+  };
+  /* A line out of the room's memory (the bridge replays the recent past
+     as a client joins): it is laid in with its true time, and a line
+     this device already holds is not laid in twice. */
+  const pushMemory = (target: string, body: string, when?: number) => {
+    const rendered = `${stamp(when)} ${body}`;
+    if ((buffers.get(target) || []).includes(rendered)) return;
+    push(target, body, when);
   };
   const renderLines = () => {
     linesEl.textContent = "";
@@ -619,14 +649,27 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         if (text.startsWith("\x01PING ") && text.endsWith("\x01")) { send(`NOTICE ${m.nick} :${text}`); break; }
         const isAction = text.startsWith("\x01ACTION ") && text.endsWith("\x01");
         const said = isAction ? text.slice(8, -1) : text;
+        /* A line tagged relaymem is the room remembering, not the room
+           speaking now: it takes its true time from the tag, dedupes
+           against what this device already holds, makes no sound, and
+           never earns a strike — the past was already judged live.
+           GuardianAngel still reads it before it is shown, so a link
+           cut today is cut in the remembered line too. */
+        const mem = m.tags?.relaymem === "1";
+        const when = mem && m.tags.time ? Date.parse(m.tags.time) || undefined : undefined;
         if (target.startsWith("#") && m.nick !== myNick) {
           // GuardianAngel reads every room line before it is shown.
           const v = guardianProcess(target, m.nick, said);
-          if (v.text !== null) push(target, isAction ? `· ${m.nick} ${v.text}` : `<${m.nick}> ${v.text}`);
-          if (v.strikeWhy) addStrike(target, m.nick, v.strikeWhy);
-        } else if (isAction) push(target, `· ${m.nick} ${said}`);
+          if (v.text !== null) {
+            const body = isAction ? `· ${m.nick} ${v.text}` : `<${m.nick}> ${v.text}`;
+            if (mem) pushMemory(target, body, when);
+            else push(target, body);
+          }
+          if (!mem && v.strikeWhy) addStrike(target, m.nick, v.strikeWhy);
+        } else if (mem) pushMemory(target, isAction ? `· ${m.nick} ${said}` : `<${m.nick}> ${said}`, when);
+        else if (isAction) push(target, `· ${m.nick} ${said}`);
         else push(target, `<${m.nick}> ${said}`);
-        sfx("ping");
+        if (!mem) sfx("ping");
         break;
       }
       case "NOTICE": {
@@ -955,7 +998,19 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         case "nick": send(`NICK ${arg}`); break;
         case "topic": send(`TOPIC ${current} :${arg}`); break;
         case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); push("server", "— off the wire. The identity box is up if you want back in — any name, or none."); showIdentityBox(); break;
-        default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /topic /quit)`);
+        case "wipe": {
+          // Room-level forgetting: the bridge holds the room's memory,
+          // and only a claimed name may empty it (the bridge decides —
+          // its answer arrives as a bridge notice). This device's own
+          // lines for the room go with it, either way.
+          if (!current.startsWith("#")) { push(current, "— /wipe belongs to a room: stand in the channel whose memory you would empty."); break; }
+          send(`RELAYMEM-WIPE ${current}`);
+          buffers.set(current, []);
+          renderLines();
+          scheduleSave();
+          break;
+        }
+        default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /topic /wipe /quit)`);
       }
       return;
     }

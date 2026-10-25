@@ -198,7 +198,19 @@ assert.ok(ircSrc.includes("purgeLines"), "A GuardianAngel removal must purge the
 assert.ok(!ircSrc.includes("setGuardian"), "GuardianAngel has no off switch — it stays on (house ruling)");
 assert.ok(!ircSrc.includes("[link removed]"), "GuardianAngel carries no text: links are cut, not labelled");
 assert.ok(!ircSrc.includes("GuardianAngel warned"), "GuardianAngel never announces itself in the room");
-assert.ok(astroJs.includes("hard refresh to check chat if chat works. added persistence to the chat"), "The pinned dev note must carry the current developer message in the served bundle");
+assert.ok(astroJs.includes("the room remembers its last day now"), "The pinned dev note must carry the current developer message in the served bundle");
+// Relay room memory (Chase, 2026-10-25): the bridge holds the room's
+// recent lines in a mutable, expiring memory (KV) and replays them to
+// any joining device — nobody is a ghost for speaking from another
+// machine. Inert without the binding; armed the moment it exists.
+const memLibSrc = fs.readFileSync("functions/_lib/relay-memory.ts", "utf8");
+assert.ok(memLibSrc.includes("expirationTtl"), "Room memory lines must expire — the memory forgets on a clock, it is not an archive");
+assert.ok(memLibSrc.includes("memPurgeNick") && memLibSrc.includes("memWipe"), "Room memory must be purgeable per voice and wipeable per room (mutable by design)");
+assert.ok(bridgeSrc.includes("RELAY_MEMORY"), "The bridge must read the room-memory binding");
+assert.ok(bridgeSrc.includes("relaymem=1"), "The bridge must tag replayed lines so clients lay them in as memory, not as new speech");
+assert.ok(bridgeSrc.includes("RELAYMEM-WIPE"), "The bridge must honor the room-memory wipe control line (claimed names only)");
+assert.ok(ircSrc.includes('tags?.relaymem'), "The client must recognize memory-tagged lines");
+assert.ok(ircSrc.includes("pushMemory"), "The client must lay memory lines in deduped, with their true time");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");
