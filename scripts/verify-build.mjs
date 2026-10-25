@@ -130,6 +130,8 @@ assert.ok(/^os\.[A-Za-z0-9_-]+\.js$/.test(versionStamp.chunk || ""), "version.js
 assert.ok(fs.existsSync(path.join(root, "_astro", versionStamp.chunk)), "version.json chunk must exist in _astro");
 assert.ok(astroJs.includes("BLACKSITE has been updated"), "OS bundle must carry the update watcher");
 assert.ok(astroJs.includes("/version.json"), "OS bundle must poll /version.json");
+assert.ok(astroJs.includes("server is about to refresh for an update"), "OS bundle must carry the held update's warning toast");
+assert.ok(astroJs.includes("waiting for nexuiz to close"), "OS bundle must carry the held update's nexuiz wait");
 assert.ok(astroJs.includes("credentialless"), "orc preview frame must be credentialless (the OS page's COEP require-corp blocks plain cross-origin frames)");
 assert.ok(!astroJs.includes("Orchestration"), "ORC is never expanded in public copy (Chase: the expansion is for internal records)");
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");
