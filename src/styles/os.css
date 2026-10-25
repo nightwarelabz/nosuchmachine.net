@@ -457,6 +457,14 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-sigint-reg th, .os-sigint-reg td { text-align: left; padding: 0.14rem 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
 .os-sigint-reg tr { cursor: pointer; }
 
+/* ——— SIGINT W2: readouts, eye, log ——— */
+.os-sigint-readout { min-height: 1.1em; font-family: monospace; }
+.os-sigint-copyhead { display: flex; align-items: center; gap: 0.45rem; }
+.os-sigint-copyhead h4 { margin-right: auto; }
+.os-sigint-eye { width: 100%; max-width: 220px; height: 64px; background: #020604; border: 1px solid var(--os-line); border-radius: 6px; margin: 0.3rem 0; }
+.os-sigint-logbox { margin-top: 0.6rem; }
+.os-sigint-log { max-height: 130px; }
+
 /* ——— Simulacrum ——— */
 .os-sim { display: flex; flex-direction: column; height: 100%; background: #000; }
 .os-sim:fullscreen { background: #000; }
