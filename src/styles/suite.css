@@ -1,5 +1,5 @@
 /* BLACKSITE WEB — visual system v2.
-   One visual language with the OS: deep black glass, a violent red
+   One visual language with the OS: deep black glass, a red
    signal, phosphor-green output, hairline steel. Allocations are
    designed per class of screen — desktop (rail + stage), tablet
    (slim rail), and a dedicated mobile layout (chip rail, stacked
@@ -61,7 +61,6 @@
 .bs-brand img { width: 38px; height: 38px; filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.25)); }
 .bs-brand .bs-name { font-weight: 800; letter-spacing: 0.16em; font-size: 1rem; }
 .bs-brand .bs-name em { font-style: normal; color: var(--bs-red); text-shadow: 0 0 18px rgba(255, 59, 71, 0.55); }
-.bs-brand small { display: block; color: var(--bs-faint); letter-spacing: 0.1em; font-size: 0.6rem; margin-top: 0.15rem; }
 .bs-edge-chip { margin-left: auto; font-size: 0.66rem; letter-spacing: 0.14em; color: var(--bs-muted); border: 1px solid var(--bs-line-soft); border-radius: 999px; padding: 0.32rem 0.7rem; background: rgba(13,17,24,0.7); white-space: nowrap; }
 .bs-edge-chip b { color: var(--bs-green); font-weight: 800; }
 .bs-top-links { margin-left: 0; display: flex; gap: 1.1rem; font-size: 0.78rem; align-items: center; }
@@ -112,7 +111,6 @@
 .panel { animation: bs-rise 0.35s ease both; }
 .panel h1, .panel h2.bs-h { font-size: 1.45rem; margin: 0 0 0.35rem; letter-spacing: 0.01em; font-weight: 800; }
 .panel .bs-sub { color: var(--bs-muted); font-size: 0.88rem; margin: 0 0 1.15rem; max-width: 78ch; line-height: 1.6; }
-.bs-kicker { color: var(--bs-red); font-size: 0.66rem; letter-spacing: 0.28em; font-weight: 800; margin: 0 0 0.45rem; }
 
 /* ————— hero (overview) ————— */
 .bs-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.75fr); gap: 2rem; align-items: center; margin-bottom: 1.6rem; padding: 0.4rem 0 1.4rem; border-bottom: 1px solid var(--bs-line-soft); }
@@ -127,7 +125,6 @@
 .bs-orbit { position: absolute; width: 92%; aspect-ratio: 1; border: 1px solid rgba(147, 165, 196, 0.16); border-radius: 50%; animation: bs-orbit-spin 46s linear infinite; }
 .bs-orbit::after { content: ""; position: absolute; inset: 11%; border: 1px dashed rgba(147, 165, 196, 0.13); border-radius: 50%; }
 .bs-orbit::before { content: ""; position: absolute; top: -4px; left: 50%; width: 7px; height: 7px; border-radius: 50%; background: var(--bs-red); box-shadow: 0 0 12px var(--bs-red); }
-.bs-hero-tag { position: absolute; bottom: 0.2rem; font-size: 0.6rem; letter-spacing: 0.24em; color: var(--bs-faint); }
 
 /* ————— cards + tool grid ————— */
 .bs-card { background: var(--bs-panel); border: 1px solid var(--bs-line-soft); border-radius: 12px; padding: 1.1rem 1.15rem; margin-bottom: 1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -251,7 +248,6 @@
   .bs-topbar { padding: 0.55rem 0.8rem; gap: 0.5rem 0.8rem; }
   .bs-brand img { width: 30px; height: 30px; }
   .bs-brand .bs-name { font-size: 0.86rem; }
-  .bs-brand small { display: none; }
   .bs-top-links { gap: 0.8rem; font-size: 0.72rem; }
   .bs-edge-chip { display: none; }
   .bs-top-links a:nth-child(2), .bs-top-links a:nth-child(5) { display: none; } /* keep OS, Book, Projects */

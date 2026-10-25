@@ -1,4 +1,4 @@
-/* SIGINT bench — the wide ear.
+/* sigint bench.
  *
  * A full receive bench for Blacksite, built from the house's own
  * technologies: nightjar's listening-post pattern (a presence

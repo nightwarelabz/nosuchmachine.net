@@ -213,7 +213,7 @@ function registerHouse() {
     return `condition is now ${ctx.os.emcon.toUpperCase()}. the gates read it before every knock.`;
   });
   verb("theme", "LIVE", "theme [name] — list or switch the house theme", async (ctx) => {
-    const themes = ["violent-redteam", "phosphor", "ember", "ghost", "arctic", "plumage"];
+    const themes = ["redteam", "phosphor", "ember", "ghost", "arctic", "plumage"];
     const v = ctx.args[0];
     if (!v) return `theme: ${ctx.os.theme}\nthemes: ${themes.join(", ")}`;
     if (!themes.includes(v)) return `no such theme. themes: ${themes.join(", ")}`;
@@ -248,11 +248,11 @@ function registerHouse() {
     if (sub === "wipe") { ctx.os.tomatoes = []; ctx.os.saveSoon(); return "marks wiped."; }
     return ctx.os.tomatoes.length ? ctx.os.tomatoes.map((t, i) => `${i + 1}. ${t}`).join("\n") : "no standing marks.";
   });
-  verb("haptics", "LIVE", "haptics on|off — the house's motor (vibration, where the device offers it)", async (ctx) => {
+  verb("haptics", "LIVE", "haptics on|off — vibration, where the device offers it", async (ctx) => {
     if (ctx.args[0] === "on" || !ctx.args[0]) { navigator.vibrate?.(30); return "haptics on. (felt that? then this device has a motor the page may use.)"; }
     return "haptics off.";
   });
-  verb("fastfetch", "LIVE", "the machine's calling card — every value read live", async (ctx) => {
+  verb("fastfetch", "LIVE", "machine info, every value read live", async (ctx) => {
     const nav = navigator as any;
     const lines = [
       "        ▄▄▄▄▄        operator@blacksite-web",
@@ -266,12 +266,12 @@ function registerHouse() {
     ];
     return lines.join("\n");
   });
-  verb("neofetch", "LIVE", "the same card, under a crescent moon", async (ctx) => {
+  verb("neofetch", "LIVE", "machine info with the crescent-moon mark", async (ctx) => {
     const { VERBS: v } = await import("./os-shell");
     void v;
     return "   ☾  BLACKSITE OS — web edition\n   host nosuchmachine.net · emcon " + ctx.os.emcon + " · theme " + ctx.os.theme + "\n   the bench, under a crescent moon.";
   });
-  verb("aegis", "LIVE", "aegis [status|snapshot|restore|lift [--adopt]] — the room's immune system: snapshots, containment, the mirage", async (ctx) => {
+  verb("aegis", "LIVE", "aegis [status|snapshot|restore|lift [--adopt]] — snapshots, containment, the mirage", async (ctx) => {
     const st = ctx.os.aegisStatus();
     const sub = (ctx.args[0] || "status").toLowerCase();
     if (sub === "snapshot") { ctx.os.snapshotNow("manual"); return "aegis: snapshot kept. the room can now be returned to exactly this moment."; }
@@ -306,7 +306,7 @@ function registerHouse() {
     ctx.os.log(`skelli asked: ${words}`);
     return "Skelli (web poster): the real Skelli lives in nightjar on iPhone/Mac, where she runs this whole bench herself. Here I can point: try `help`, `eazy example.com`, or `magdump example.com` — and `limits` before you believe any of us.";
   });
-  verb("limits", "LIVE", "what this room honestly cannot do", async () => [
+  verb("limits", "LIVE", "what this room cannot do", async () => [
     "THE ROOM'S HONEST LIMITS — read once, believe always:",
     "• No ICMP, no UDP, no raw sockets, no LAN: browsers have none. ping here times real TCP connects from the edge and says so.",
     "• Every wire result is from a Cloudflare point of presence, not your network. A door open here may be shut from your chair, and the reverse.",
@@ -435,7 +435,7 @@ function registerFiles() {
     const v = identifyFile(b, ctx.args[0]);
     return JSON.stringify({ file: ctx.args[0], kind: v.kind, summary: v.summary, ...v.details }, null, 2);
   });
-  verb("hexdump", "LIVE", "hexdump <path> — the bytes, honestly", async (ctx) => { if (!need(ctx, 1, "hexdump <path>")) return; return hexdump(fileBytes(ctx, ctx.args[0])); });
+  verb("hexdump", "LIVE", "hexdump <path> — the bytes", async (ctx) => { if (!need(ctx, 1, "hexdump <path>")) return; return hexdump(fileBytes(ctx, ctx.args[0])); });
   verb("xxd", "LIVE", "xxd <path>", async (ctx) => { if (!need(ctx, 1, "xxd <path>")) return; return hexdump(fileBytes(ctx, ctx.args[0])); });
   verb("import", "LIVE", "import — bring a file from this device into the tree", async (ctx) => { ctx.io.openApp?.("files", "import"); return "the Files room is open with its importer — pick a file and it lands in your cwd."; });
   verb("strings", "LIVE", "strings <path> — the readable runs inside a binary", async (ctx) => {
@@ -472,7 +472,7 @@ function registerCrypto() {
     return decode ? td.decode(hexToB(src)) : bToHex(te.encode(src || ctx.stdin));
   });
   verb("rot13", "LIVE", "rot13 <text>", async (ctx) => (ctx.args.join(" ") || ctx.stdin).replace(/[a-zA-Z]/g, (c) => String.fromCharCode((c <= "Z" ? 65 : 97) + ((c.charCodeAt(0) - (c <= "Z" ? 65 : 97) + 13) % 26))));
-  verb("xor", "LIVE", "xor <hexkey> <hexdata> — the old handshake", async (ctx) => {
+  verb("xor", "LIVE", "xor <hexkey> <hexdata>", async (ctx) => {
     if (!need(ctx, 2, "xor <hexkey> <hexdata>")) return;
     const key = hexToB(ctx.args[0]); const data = hexToB(ctx.args[1]);
     const outBytes = new Uint8Array(data.length);

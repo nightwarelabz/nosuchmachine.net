@@ -30,11 +30,6 @@ if (isOrange && !project.sources.some((source) => source.href.includes(orangeRev
     </nav>
     <header class="project-header">
       <div>
-        <p class="eyebrow">
-          {isOrange
-            ? "CURRENT PROJECT / PRE-ALPHA"
-            : `FROM THE ARCHIVE / ${project.categories.join(" / ").toUpperCase()}`}
-        </p>
         <h1>{project.name}</h1>
         <p class="project-tagline">{project.summary}</p>
         <div class="hero-actions">
@@ -101,7 +96,6 @@ if (isOrange && !project.sources.some((source) => source.href.includes(orangeRev
         </section>
         {isOrange ? (
           <section id="non-claims" class="note" aria-labelledby="non-claims-title">
-            <p class="eyebrow">PROJECT STATUS / {project.status.toUpperCase()}</p>
             <h2 id="non-claims-title">Where it stands</h2>
             <p>{project.maturity}</p>
             {project.limitations.length > 0 && (
@@ -118,7 +112,6 @@ if (isOrange && !project.sources.some((source) => source.href.includes(orangeRev
             class="project-status-box"
             aria-labelledby="status-title"
           >
-            <p class="eyebrow">PROJECT STATUS / {project.status.toUpperCase()}</p>
             <h2 id="status-title">Where it stands</h2>
             <p>{project.maturity}</p>
             {project.limitations.length > 0 && (

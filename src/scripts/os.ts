@@ -58,26 +58,26 @@ function tdDecode(bytes: Uint8Array): string { return new TextDecoder().decode(b
 function desktop(): HTMLElement { return document.querySelector(".os-desktop")!; }
 
 const APPS: Record<string, { title: string; icon: string }> = {
-  terminal: { title: "Terminal — blacksite sh", icon: "terminal" },
-  files: { title: "Files", icon: "files" },
-  editor: { title: "Editor", icon: "editor" },
-  processes: { title: "Processes — the board", icon: "processes" },
-  journal: { title: "Journal", icon: "journal" },
-  gauntlet: { title: "Gauntlet & Diagnose", icon: "gauntlet" },
-  settings: { title: "House Settings", icon: "settings" },
-  help: { title: "Help — the 427", icon: "help" },
-  bottle: { title: "Daylight Bottle", icon: "bottle" },
-  system: { title: "System — the Noether register", icon: "system" },
+  terminal: { title: "terminal", icon: "terminal" },
+  files: { title: "files", icon: "files" },
+  editor: { title: "editor", icon: "editor" },
+  processes: { title: "processes", icon: "processes" },
+  journal: { title: "journal", icon: "journal" },
+  gauntlet: { title: "gauntlet & diagnose", icon: "gauntlet" },
+  settings: { title: "settings", icon: "settings" },
+  help: { title: "help", icon: "help" },
+  bottle: { title: "bottle", icon: "bottle" },
+  system: { title: "system", icon: "system" },
   chip8: { title: "CHIP-8 Console", icon: "chip8" },
-  ssh: { title: "SSH", icon: "ssh" },
-  relay: { title: "Relay — the house wire", icon: "relay" },
+  ssh: { title: "ssh", icon: "ssh" },
+  relay: { title: "relaychat", icon: "relay" },
   phantom: { title: "phantom", icon: "phantom" },
   wolf3d: { title: "Wolfenstein 3D", icon: "wolf3d" },
-  orc: { title: "orc — the house browser", icon: "orc" },
+  orc: { title: "orc", icon: "orc" },
   simulacrum: { title: "Simulacrum — a generated world", icon: "simulacrum" },
   bloodbath: { title: "Bloodbath — the other world", icon: "bloodbath" },
   wyrdfall: { title: "Wyrdfall", icon: "wyrdfall" },
-  sigint: { title: "SIGINT Bench — the wide ear", icon: "sigint" },
+  sigint: { title: "sigint bench", icon: "sigint" },
 };
 
 /* ————— session retention —————
@@ -596,7 +596,7 @@ function buildEditor(body: HTMLElement, arg?: string) {
   let commandLine = "";
   let dirty = false;
   const setStatus = (extra = "") => { status.textContent = `${path} — ${mode.toUpperCase()}${dirty ? " [+]" : ""}${extra ? " · " + extra : ""}`; };
-  setStatus("i for insert discipline · Esc normal · :w save · :q leave — vim manners, web-sized");
+  setStatus("i for insert · Esc normal · :w save · :q leave");
   area.addEventListener("input", () => { dirty = true; setStatus(); });
   const save = (): boolean => { try { os.write(path, area.value); dirty = false; setStatus("written"); return true; } catch (e: any) { setStatus(`write failed: ${e?.message || e} — nothing was saved, and the buffer is still here`); return false; } };
   const quit = () => { body.closest<HTMLElement>(".os-window")?.querySelector<HTMLButtonElement>(".os-win-close")?.click(); };
@@ -724,7 +724,7 @@ function buildSsh(body: HTMLElement, arg?: string) {
     const m = arg.match(/^(?:([^@]+)@)?([^:]+)(?::(\d+))?$/);
     if (m) { userIn.value = m[1] || ""; hostIn.value = m[2] || ""; if (m[3]) portIn.value = m[3]; }
   }
-  const status = el("p", "os-note", "ssh — the room's own client. curve25519 + aes-gcm; the host key's fingerprint must be trusted by your hand before any password moves. the wire rides this site's bridge as ciphertext.");
+  const status = el("p", "os-note", "the room's own client. curve25519 + aes-gcm; the host key's fingerprint must be trusted by your hand before any password moves. the wire rides this site's bridge as ciphertext.");
   const promptRow = el("div", "os-ssh-prompt"); promptRow.style.display = "none";
   const screenEl = el("div", "os-ssh-screen");
   screenEl.tabIndex = 0;
@@ -891,7 +891,7 @@ function buildSystem(body: HTMLElement) {
     [os.emcon.toUpperCase(), "EMCON CONDITION"],
   ];
   for (const [v, k] of cells) { const c = el("div", "os-sys-stat"); c.append(el("strong", "", v), el("span", "", k)); stats.appendChild(c); }
-  const h = el("h3", "", "THE COMPONENT REGISTER — every subsystem, declared");
+  const h = el("h3", "", "THE COMPONENT REGISTER");
   const table = el("table", "os-sys-table");
   const head = el("tr"); head.append(el("th", "", "COMPONENT"), el("th", "", "WHAT IT IS"), el("th", "", "STATE"));
   table.appendChild(head);
@@ -905,7 +905,7 @@ function buildSystem(body: HTMLElement) {
   const note = el("p", "os-note", "The register is the WUCI OS discipline carried to the web: components are declared, budgets are visible, and limits are named instead of hidden. Run `posture` in the terminal for the room's graded self-assessment, `register` for this table as text.");
   const refresh = el("button", "os-btn", "refresh the budgets");
   refresh.addEventListener("click", () => { body.innerHTML = ""; buildSystem(body); });
-  const ah = el("h3", "", "AEGIS — the room's immune system");
+  const ah = el("h3", "", "AEGIS");
   const ast = os.aegisStatus();
   const astate = el("p", "os-note", ast.contained
     ? "CONTAINED — the real filesystem is frozen. Everything written since the trip lives in the mirage: visible to whoever wrote it, weightless to the room. Restore, or lift and judge the mirage yourself."
@@ -927,9 +927,9 @@ function buildSystem(body: HTMLElement) {
 
 /* ---------------- Processes / Journal / Gauntlet / Settings / Help ---------------- */
 function buildProcesses(body: HTMLElement) {
-  const deskHead = el("div", "os-launch-head", "DESK PROCESSES — THE WINDOWS OF THIS ROOM, REAL");
+  const deskHead = el("div", "os-launch-head", "DESK PROCESSES");
   const desk = el("div", "os-desk-procs");
-  const shellHead = el("div", "os-launch-head", "SHELL PROCESSES — THE blacksite sh TABLE");
+  const shellHead = el("div", "os-launch-head", "SHELL PROCESSES");
   const pre = el("pre", "os-plain");
   body.append(deskHead, desk, shellHead, pre);
   const render = () => {
@@ -971,11 +971,11 @@ function buildGauntlet(body: HTMLElement) {
 }
 function buildSettings(body: HTMLElement) {
   const wrap = el("div", "os-settings");
-  const themes = ["violent-redteam", "phosphor", "ember", "ghost", "arctic", "plumage"];
+  const themes = ["redteam", "phosphor", "ember", "ghost", "arctic", "plumage"];
   const themeTitle = el("h3", "", "Theme");
   const themeRow = el("div", "os-btnrow");
   for (const t of themes) { const b = el("button", "os-btn" + (os.theme === t ? " primary" : ""), t); b.addEventListener("click", () => { applyTheme(t); buildSettingsRefresh(body); }); themeRow.appendChild(b); }
-  const emconTitle = el("h3", "", "EMCON — the house condition");
+  const emconTitle = el("h3", "", "EMCON");
   const emconRow = el("div", "os-btnrow");
   for (const c of ["open", "charlie", "bravo", "alpha"] as const) { const b = el("button", "os-btn" + (os.emcon === c ? " primary" : ""), c.toUpperCase()); b.addEventListener("click", () => { os.emcon = c; os.saveSoon(); updateEmconChip(); buildSettingsRefresh(body); }); emconRow.appendChild(b); }
   const wpTitle = el("h3", "", "Wallpaper");
@@ -997,7 +997,7 @@ function buildSettings(body: HTMLElement) {
     wpRow.appendChild(b);
   }
   { const b = el("button", "os-btn", "none — bare black"); b.addEventListener("click", () => setWallpaper("none")); wpRow.appendChild(b); }
-  const soundTitle = el("h3", "", "Sound — the room's voice");
+  const soundTitle = el("h3", "", "Sound");
   const soundRow = el("div", "os-btnrow");
   {
     const sp = soundPrefs();
@@ -1148,9 +1148,11 @@ function updateEmconChip() {
    chased again for ten minutes — a deployment still rolling across the
    edge can never reload-loop a visitor. */
 const UPDATE_ATTEMPT_KEY = "blacksite-update-attempt";
-function startUpdateWatch(): void {
+const CHUNK_RE = /^os\.[A-Za-z0-9_-]+\.js$/;
+/* The running build names its own chunk the same way a probe would:
+   from this module's URL, falling back to the resource timeline. */
+function ownChunk(): string {
   const baseName = (u: string) => { try { return new URL(u).pathname.split("/").pop() || ""; } catch { return ""; } };
-  const CHUNK_RE = /^os\.[A-Za-z0-9_-]+\.js$/;
   let mine = baseName(import.meta.url);
   if (!CHUNK_RE.test(mine)) {
     for (const e of performance.getEntriesByType("resource")) {
@@ -1158,7 +1160,55 @@ function startUpdateWatch(): void {
       if (CHUNK_RE.test(b)) { mine = b; break; }
     }
   }
-  if (!CHUNK_RE.test(mine)) return; // this build cannot name itself — stay silent
+  return CHUNK_RE.test(mine) ? mine : "";
+}
+
+/* ————— the build plate —————
+   Bare text on the desktop, top-right: which build this is, when it was
+   built, and how long this session has been up. No box, no border, no
+   pointer — it is there to be read, never clicked. It renders at once
+   with the running chunk and the session clock; the version and built
+   lines fill in from the update watcher's own /version.json reads, so
+   the plate never fetches anything itself. */
+let buildPlateEl: HTMLElement | null = null;
+let buildPlateSessionEl: HTMLElement | null = null;
+function fmtSessionClock(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+function mountBuildPlate(): void {
+  if (buildPlateEl) return;
+  const plate = el("div", "os-build-plate");
+  plate.setAttribute("aria-hidden", "true");
+  const mine = ownChunk();
+  if (mine) plate.append(el("div", "", `build ${mine}`));
+  buildPlateSessionEl = el("div", "", `session ${fmtSessionClock(Date.now() - BOOT_AT)}`);
+  plate.append(buildPlateSessionEl);
+  desktop().appendChild(plate);
+  buildPlateEl = plate;
+  setInterval(() => {
+    if (buildPlateSessionEl) buildPlateSessionEl.textContent = `session ${fmtSessionClock(Date.now() - BOOT_AT)}`;
+  }, 1000);
+}
+function renderBuildPlate(v: { version?: unknown; chunk?: unknown; built?: unknown }): void {
+  mountBuildPlate();
+  if (!buildPlateEl || !buildPlateSessionEl) return;
+  buildPlateEl.replaceChildren();
+  if (typeof v.version === "string" && v.version) buildPlateEl.append(el("div", "", `version ${v.version}`));
+  if (typeof v.chunk === "string" && v.chunk) buildPlateEl.append(el("div", "", `build ${v.chunk}`));
+  if (typeof v.built === "string" && v.built) {
+    const d = new Date(v.built);
+    if (!Number.isNaN(d.getTime())) buildPlateEl.append(el("div", "", `built ${d.toISOString().replace("T", " ").slice(0, 19)} UTC`));
+  }
+  buildPlateEl.append(buildPlateSessionEl);
+}
+
+function startUpdateWatch(): void {
+  const mine = ownChunk();
+  if (!mine) return; // this build cannot name itself — stay silent
   let taking = false;
   const check = async () => {
     if (taking || document.hidden) return;
@@ -1166,7 +1216,8 @@ function startUpdateWatch(): void {
     try {
       const r = await fetch(`/version.json?cb=${Date.now()}`, { cache: "no-store" });
       if (!r.ok) return;
-      const v = (await r.json()) as { chunk?: unknown };
+      const v = (await r.json()) as { chunk?: unknown; version?: unknown; built?: unknown };
+      renderBuildPlate(v);
       theirs = typeof v.chunk === "string" ? v.chunk : "";
     } catch { return; }
     if (!theirs || theirs === mine) {
@@ -1192,6 +1243,7 @@ function startUpdateWatch(): void {
 
 function boot() {
   startUpdateWatch();
+  mountBuildPlate();
   sweepNestKeys();
   registerCoreVerbs();
   registerWireVerbs();
@@ -1224,10 +1276,10 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "terminal", "Terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["bloodbath", "bloodbath", "Bloodbath"], ["wyrdfall", "wyrdfall", "Wyrdfall"], ["files", "files", "Files"], ["editor", "editor", "Editor"],
-    ["processes", "processes", "Processes"], ["gauntlet", "gauntlet", "Gauntlet"], ["journal", "journal", "Journal"],
-    ["help", "help", "Help — 427"], ["settings", "settings", "Settings"], ["bottle", "bottle", "Daylight Bottle"], ["system", "system", "System"],
-    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "SSH"], ["sigint", "sigint", "SIGINT"], ["relay", "relay", "Relay"], ["phantom", "phantom", "phantom"],
+    ["terminal", "terminal", "terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["bloodbath", "bloodbath", "Bloodbath"], ["wyrdfall", "wyrdfall", "Wyrdfall"], ["files", "files", "files"], ["editor", "editor", "editor"],
+    ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
+    ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
+    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
     ["wolf3d", "wolf3d", "Wolfenstein 3D"], ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
@@ -1238,7 +1290,7 @@ function boot() {
     icons.appendChild(b);
   }
   const suiteIcon = el("button", "os-icon");
-  suiteIcon.append(iconEl("bench", "os-icon-glyph"), el("span", "os-icon-label", "Bench (web suite)"));
+  suiteIcon.append(iconEl("bench", "os-icon-glyph"), el("span", "os-icon-label", "bench"));
   suiteIcon.addEventListener("click", () => { window.location.href = "/bench/"; });
   icons.appendChild(suiteIcon);
   // clock
@@ -1354,7 +1406,7 @@ function openLauncher() {
     for (const [key, label, icon] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: "APP", icon, section: "APPS", go: () => openApp(key) });
     if (!q) {
       items.push({ label: "tile all windows", small: "ACTION", icon: "grid", section: "ACTIONS", go: tileWindows });
-      items.push({ label: "cascade — re-center every window", small: "ACTION", icon: "system", section: "ACTIONS", go: cascadeWindows });
+      items.push({ label: "cascade all windows", small: "ACTION", icon: "system", section: "ACTIONS", go: cascadeWindows });
       items.push({ label: "close all windows", small: "ACTION", icon: "gauntlet", section: "ACTIONS", go: closeAllWindows });
     }
     if (q) {

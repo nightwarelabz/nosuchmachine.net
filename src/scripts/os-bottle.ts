@@ -278,7 +278,7 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
   body.innerHTML = "";
   const out = el("pre", "os-plain");
   const say = (t: string) => { out.textContent = t; };
-  const head = el("p", "os-note", "Daylight Bottle — age-encrypted messages in a bottle. Encryption and decryption happen in this window; the service stores ciphertext and public metadata only, and your private identity never leaves this browser.");
+  const head = el("p", "os-note", "age-encrypted messages in a bottle. Encryption and decryption happen in this window; the service stores ciphertext and public metadata only, and your private identity never leaves this browser.");
   const serviceLink = el("a", "os-task-link", "bottle.nosuchmachine.net ↗");
   serviceLink.href = SERVICE; serviceLink.target = "_blank"; serviceLink.rel = "noreferrer";
   head.append(" ", serviceLink);

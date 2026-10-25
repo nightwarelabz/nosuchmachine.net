@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { sfx } from "./os-sound";
 import { skey } from "./os-depth";
-/* Relay — the house wire. A real IRC client in the tab: it speaks the IRC
+/* relaychat. A real IRC client in the tab: it speaks the IRC
    protocol itself (registration, PING/PONG, channels, private messages,
    NAMES) over a WebSocket to the site's own bridge, which pipes it to a
    public network — OFTC, Libera.Chat, or hackint — over TLS. No account,
@@ -55,7 +55,7 @@ export function parseIrcLine(line: string): IrcMessage {
 }
 
 const NETWORKS = [
-  { host: "irc.oftc.net", label: "OFTC — the house network" },
+  { host: "irc.oftc.net", label: "OFTC" },
   { host: "irc.libera.chat", label: "Libera.Chat — refuses bridged guests (SASL wall)" },
   { host: "irc.hackint.org", label: "hackint" },
 ];
@@ -207,7 +207,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
      A topic-of-the-day bar for developer messages: it ships with the
      build, so what it says is always true of the build you are looking
      at, and it never scrolls away with the conversation. */
-  const DEV_NOTE = "the room remembers its last day now — join from any device and the conversation is there. no hard refresh needed; the os updates itself. /wipe takes back only what you yourself said.";
+  const DEV_NOTE = "happy halloween hackerz!";
   const noteEl = el("div", "os-relay-note");
   noteEl.append(el("span", "os-relay-note-tag", "dev note · pinned"), document.createTextNode(DEV_NOTE));
 
@@ -671,7 +671,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       case "PRIVMSG": {
         const target = m.params[0] === myNick ? m.nick : m.params[0];
         const text = m.params[1] || "";
-        if (text === "\x01VERSION\x01") { send(`NOTICE ${m.nick} :\x01VERSION BLACKSITE Relay — the house wire, nosuchmachine.net\x01`); break; }
+        if (text === "\x01VERSION\x01") { send(`NOTICE ${m.nick} :\x01VERSION BLACKSITE relaychat, nosuchmachine.net\x01`); break; }
         if (text.startsWith("\x01PING ") && text.endsWith("\x01")) { send(`NOTICE ${m.nick} :${text}`); break; }
         const isAction = text.startsWith("\x01ACTION ") && text.endsWith("\x01");
         const said = isAction ? text.slice(8, -1) : text;

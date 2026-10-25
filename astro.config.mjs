@@ -7,16 +7,19 @@ import { fileURLToPath } from "node:url";
 
 /* Live-service stamp: after every build, dist/version.json names the OS
    chunk this build produced (found the same way a probe finds it: the
-   homepage's script shim imports it). The running OS polls that stamp —
-   served no-store — and reloads itself onto a newer build, so no visitor
-   sits on a stale BLACKSITE. See startUpdateWatch in src/scripts/os.ts.
-   A stamp that cannot be read stays null, and null means silence. */
+   homepage's script shim imports it), when it was built, and the repo
+   version from package.json. The running OS polls that stamp — served
+   no-store — and reloads itself onto a newer build, so no visitor sits
+   on a stale BLACKSITE; the desktop build plate reads the same stamp.
+   See startUpdateWatch in src/scripts/os.ts. A stamp that cannot be
+   read stays null, and null means silence. */
 const stampVersion = {
   name: "stamp-version",
   hooks: {
     "astro:build:done": ({ dir }) => {
       const distDir = fileURLToPath(dir);
       let chunk = null;
+      let version = null;
       try {
         const html = readFileSync(join(distDir, "index.html"), "utf8");
         const refs = [...html.matchAll(/(?:src|href)="\/_astro\/([^"]+\.js)"/g)].map((m) => m[1]);
@@ -26,7 +29,11 @@ const stampVersion = {
           if (hit) { chunk = hit[0]; break; }
         }
       } catch { /* the stamp stays null and every client stays silent */ }
-      writeFileSync(join(distDir, "version.json"), JSON.stringify({ chunk, built: new Date().toISOString() }) + "\n");
+      try {
+        const pkg = JSON.parse(readFileSync(join(fileURLToPath(new URL(".", import.meta.url)), "package.json"), "utf8"));
+        if (typeof pkg.version === "string" && pkg.version) version = pkg.version;
+      } catch { /* no version line — the plate shows chunk + built only */ }
+      writeFileSync(join(distDir, "version.json"), JSON.stringify({ chunk, built: new Date().toISOString(), version }) + "\n");
     },
   },
 };
