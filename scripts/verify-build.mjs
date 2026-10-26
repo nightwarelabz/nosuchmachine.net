@@ -123,6 +123,15 @@ for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4b
 for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "thisissparta2!", "blacksite-relay-v2"]) {
   assert.ok(astroJs.includes(marker), `OS bundle missing nexuiz marker: ${marker}`);
 }
+// Nexuiz fullscreen law: Esc is the game's menu key — the OS bundle
+// must carry the frame's Esc report and the 4.5 s hold-exit clock,
+// and the play frame must carry its half (watching the key, holding
+// the pointer lock for the session).
+assert.ok(astroJs.includes("esc-down"), "OS bundle must carry the nexuiz Esc hold-exit clock");
+assert.ok(astroJs.includes("4500"), "OS bundle must carry the 4.5 s Esc hold");
+const nexPlay = fs.readFileSync(path.join(root, "nexuiz/play.js"), "utf8");
+assert.ok(nexPlay.includes("esc-down"), "nexuiz play frame must report Esc edges to the house");
+assert.ok(nexPlay.includes("requestPointerLock"), "nexuiz play frame must hold pointer lock in fullscreen");
 // Live update: the build stamp must name the OS chunk this build made,
 // and the bundle must carry the watcher that polls it.
 const versionStamp = JSON.parse(fs.readFileSync(path.join(root, "version.json"), "utf8"));

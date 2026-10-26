@@ -87,6 +87,7 @@ const moduleDef = {
     if (engineDead) return;
     plate.hidden = true;
     post({ type: "started", mode });
+    engineStarted();
   },
   onAbort(what) { engineError("aborted (" + String(what) + ")"); },
   onExit(code) { if (code) engineError("exit code " + code); },
@@ -177,6 +178,90 @@ if (typeof ResizeObserver === "function") new ResizeObserver(fitSoon).observe(st
 window.addEventListener("resize", fitSoon);
 fitCanvas();
 
+/* Escape, watched — never touched. In true fullscreen a press
+ * of Esc is the game's menu key: it must reach the engine
+ * exactly as pressed, so these listeners only observe the edges
+ * (no preventDefault, no stopPropagation, ever) and report them
+ * to the house, which runs the hold clock — the fullscreen
+ * element, and with it the only exit, is the OS frame's stage.
+ * A continuous 4.5-second hold is the one way out; a press or a
+ * shorter hold is the game's, whole. A blur mid-hold reads as a
+ * release: a hold nobody is still making must not fire. */
+let escHeld = false;
+window.addEventListener("keydown", (e) => {
+  /* A key press in the frame is a live gesture — the one moment
+   * the platform reliably grants pointer lock (see takeLock). */
+  if (e.key !== "Escape" && fsOn) takeLock();
+  if (e.key !== "Escape" || e.repeat || escHeld) return;
+  escHeld = true;
+  post({ type: "esc-down" });
+});
+window.addEventListener("keyup", (e) => {
+  if (e.key !== "Escape" || !escHeld) return;
+  escHeld = false;
+  post({ type: "esc-up" });
+  /* A press can cost the lock at its start — the platform still
+   * treats Esc as its own key on the way in — and the hold
+   * standing down is what re-arms the keeper: schedule the
+   * re-take now, past the cooldown, if the session lost it. */
+  if (fsOn && document.pointerLockElement !== canvasEl) scheduleRelock();
+});
+window.addEventListener("blur", () => {
+  if (!escHeld) return;
+  escHeld = false;
+  post({ type: "esc-up" });
+});
+
+/* The mouse, held. In true fullscreen the external cursor is
+ * disabled for the whole session: the canvas holds pointer lock
+ * from the moment the house says the screen is taken until the
+ * hold-exit drops lock and fullscreen together, and the game's
+ * own software cursor does the menu work under it, the way
+ * DarkPlaces renders it. The lock is asked for at fullscreen
+ * entry and re-asked whenever it is lost while the session
+ * stands — a short Esc can cost it, and the engine's own
+ * relative-mouse toggles in its menus can too — after the
+ * browser's re-lock cooldown (Chromium refuses a re-lock for
+ * ~1.25 s after an Esc-cost loss). One stand-down: while an Esc
+ * hold is underway nothing re-locks, so the hold-exit is one act
+ * and no race undoes it. A failed ask is retried a few times,
+ * never in a loop. And because the platform grants the lock
+ * only to a live gesture inside the frame (a message from the
+ * house carries none — Chromium answers NotAllowedError), the
+ * asks are anchored where gestures happen: the press that
+ * raises the engine, and any key or press in the frame after.
+ * Windowed play is untouched: there, the lock stays the
+ * engine's click-to-play business, as shipped. */
+let fsOn = false;
+let lockFails = 0;
+let relockTimer = 0;
+const RELOCK_MS = 1400;
+function engineStarted() { lockFails = 0; takeLock(); }
+function houseFullscreen(on) {
+  fsOn = on;
+  if (on) { lockFails = 0; takeLock(); }
+  else clearTimeout(relockTimer);
+}
+function takeLock() {
+  if (!fsOn || escHeld || engineDead) return;
+  if (document.pointerLockElement === canvasEl) return;
+  if (lockFails >= 4) return;
+  try {
+    const p = canvasEl.requestPointerLock();
+    if (p && typeof p.catch === "function") p.catch(() => { lockFails++; scheduleRelock(); });
+  } catch { lockFails++; scheduleRelock(); }
+}
+function scheduleRelock() {
+  if (!fsOn || escHeld || engineDead) return;
+  clearTimeout(relockTimer);
+  relockTimer = setTimeout(takeLock, RELOCK_MS);
+}
+document.addEventListener("pointerlockchange", () => {
+  if (document.pointerLockElement === canvasEl) { lockFails = 0; return; }
+  scheduleRelock();
+});
+document.addEventListener("pointerlockerror", () => { lockFails++; scheduleRelock(); });
+
 /* The house word on fullscreen (the OS stage owns the state; the
  * frame only hears of it): the canvas refits, so the game takes
  * the whole display. */
@@ -184,6 +269,7 @@ window.addEventListener("message", (ev) => {
   const m = ev.data;
   if (!m || m.from !== "house" || m.type !== "fullscreen") return;
   document.body.classList.toggle("fs", !!m.on);
+  houseFullscreen(!!m.on);
   fitSoon();
 });
 
@@ -197,7 +283,10 @@ window.addEventListener("pagehide", () => {
   if (M && typeof M.houseSyncFS === "function") { try { M.houseSyncFS(); } catch {} }
 });
 
-plateBtn.addEventListener("click", () => {
+let engineRaised = false;
+function raiseEngine() {
+  if (engineRaised) return;
+  engineRaised = true;
   fitCanvas();
   plateBtn.hidden = true;
   plateText.textContent = mode === "join"
@@ -219,4 +308,15 @@ plateBtn.addEventListener("click", () => {
   };
   document.body.appendChild(s);
   post({ type: "booting", mode });
+}
+plateBtn.addEventListener("click", raiseEngine);
+/* Under pointer lock a press lands on the canvas, never on the
+ * plate button — the same press raises the engine, so the door
+ * is never locked shut. The press is also a live gesture inside
+ * the frame, the moment the platform reliably grants the lock,
+ * so it asks for the lock too, engine raising or not (the
+ * engine's own click-to-lock rides the same press either way). */
+canvasEl.addEventListener("mousedown", () => {
+  if (!engineRaised && !engineDead && !plateBtn.hidden) raiseEngine();
+  takeLock();
 });
