@@ -518,6 +518,7 @@ export class SimAudio {
     this.tone(this.ambBus, 295, t, 2.2, 0.016, "sine");
   }
   kick() { if (this.ctx && this.ctx.state !== "running") void this.ctx.resume(); }
+  suspend() { if (this.ctx && this.ctx.state === "running") void this.ctx.suspend(); }
   setGate(g: number) { if (g !== this.gate) { this.gate = g; this.applyGain(0.4); } }
   setMuted(m: boolean) { this.muted = m; this.applyGain(0.1); }
   setUnderwater(u: boolean) {
@@ -2861,8 +2862,9 @@ export function buildSimulacrum(body: HTMLElement) {
   wrap.addEventListener("pointerdown", () => audio.kick(), true);
   const visKick = () => { if (!document.hidden) audio.kick(); };
   document.addEventListener("visibilitychange", visKick);
-  document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
-  document.addEventListener("mousemove", (e) => {
+  const lockChange = () => { locked = document.pointerLockElement === canvas; };
+  document.addEventListener("pointerlockchange", lockChange);
+  const mouseMove = (e: MouseEvent) => {
     if (!locked) return;
     /* dead zone + clamp: pointer-lock deltas trickle on some
        browsers (Safari synthesizes them at screen edges) and a
@@ -2872,7 +2874,8 @@ export function buildSimulacrum(body: HTMLElement) {
     const my = Math.abs(e.movementY) < 1 ? 0 : Math.max(-80, Math.min(80, e.movementY));
     yaw -= mx * 0.0024;
     pitch = Math.max(-1.35, Math.min(1.35, pitch - my * 0.0024));
-  });
+  };
+  document.addEventListener("mousemove", mouseMove);
   const kd = (e: KeyboardEvent) => {
     if (!body.isConnected) return;
     audio.kick();
@@ -3325,11 +3328,12 @@ export function buildSimulacrum(body: HTMLElement) {
     if (seed !== HOME_SEED) swapWorld(HOME_SEED); else refreshLabel();
     peerSay("you are home again");
   };
-  document.addEventListener("visibilitychange", () => {
+  const visCommons = () => {
     if (!document.hidden && netPhase === "on" && mqtt && mqtt.connected) {
       mqtt.publish(hereTopic(), JSON.stringify({ name: myName, hue: myHue, ts: Date.now() }), true);
     }
-  });
+  };
+  document.addEventListener("visibilitychange", visCommons);
   const sendPresence = () => {
     if (mqtt && mqtt.connected) mqtt.publish(stateTopic(), JSON.stringify({ t: "s", id: myId, x: Math.round(px * 10) / 10, z: Math.round(pz * 10) / 10, y: Math.round(py * 10) / 10, yaw: Math.round(yaw * 100) / 100, fly: flying }));
   };
@@ -4216,20 +4220,15 @@ export function buildSimulacrum(body: HTMLElement) {
   };
 
   let frameLast = performance.now();
+  let lifeSuspended = false, lifeDisposed = false, frameHandle = 0;
   const frame = () => {
+    frameHandle = 0;
+    if (!body.isConnected) { teardown(); return; }
+    if (lifeSuspended || lifeDisposed) return;
     const fNow = performance.now();
     irisTick(Math.max(0.01, fNow - frameLast), fNow / 1000);
     frameLast = fNow;
-    if (!body.isConnected) {
-      document.removeEventListener("keydown", kd);
-      document.removeEventListener("keyup", ku);
-      document.removeEventListener("visibilitychange", visKick);
-      stopPulse();
-      if (mqtt) { try { mqtt.close(); } catch { /* already gone */ } mqtt = null; }
-      audio.dispose();
-      return;
-    }
-    if (!begun) { requestAnimationFrame(frame); return; }
+    if (!begun) { frameHandle = requestAnimationFrame(frame); return; }
     step();
     if (!(xrSession && xrRef)) {
       /* the viewport is stated, never inherited: some engines keep the
@@ -4245,11 +4244,12 @@ export function buildSimulacrum(body: HTMLElement) {
       render(proj, view, [px, py + bobY, pz]);
     }
     try { if (localStorage.getItem(skey("simulacrum-commons")) === "1") enterCommons(); } catch { /* private mode */ }
-  requestAnimationFrame(frame);
+    frameHandle = requestAnimationFrame(frame);
   };
-  requestAnimationFrame(frame);
+  frameHandle = requestAnimationFrame(frame);
 
   const xrFrame = (_t: number, frameObj: XRFrameLike) => {
+    if (lifeSuspended || lifeDisposed) return;
     if (!xrSession || !xrRef) return;
     const pose = frameObj.getViewerPose(xrRef);
     if (pose) {
@@ -4269,6 +4269,44 @@ export function buildSimulacrum(body: HTMLElement) {
   };
   const xrWatch = window.setInterval(() => {
     if (!body.isConnected) { window.clearInterval(xrWatch); return; }
+    if (lifeSuspended || lifeDisposed) return;
     if (xrSession && xrRef) xrSession.requestAnimationFrame(xrFrame);
   }, 800);
+
+  /* ---- window lifecycle (os:suspend / os:resume / os:dispose) ----
+     Suspend stops the render chain and silences audio but leaves the
+     world — and Commons presence — intact: netPulse and the MQTT
+     socket are NOT stopped here, only dispose closes them. */
+  const teardown = () => {
+    if (lifeDisposed) return;
+    lifeDisposed = true;
+    if (frameHandle) { cancelAnimationFrame(frameHandle); frameHandle = 0; }
+    document.removeEventListener("keydown", kd);
+    document.removeEventListener("keyup", ku);
+    document.removeEventListener("visibilitychange", visKick);
+    document.removeEventListener("pointerlockchange", lockChange);
+    document.removeEventListener("mousemove", mouseMove);
+    document.removeEventListener("visibilitychange", visCommons);
+    window.clearInterval(xrWatch);
+    try { if (xrSession) void (xrSession as unknown as { end?: () => Promise<void> }).end?.(); } catch { /* already gone */ }
+    stopPulse();
+    if (mqtt) { try { mqtt.close(); } catch { /* already gone */ } mqtt = null; }
+    audio.dispose();
+  };
+  body.addEventListener("os:suspend", () => {
+    if (lifeDisposed) return;
+    lifeSuspended = true;
+    if (frameHandle) { cancelAnimationFrame(frameHandle); frameHandle = 0; }
+    audio.suspend();
+  });
+  body.addEventListener("os:resume", () => {
+    if (lifeDisposed || !lifeSuspended) return;
+    lifeSuspended = false;
+    last = performance.now();
+    frameLast = performance.now();
+    audio.kick();
+    if (!frameHandle && body.isConnected) frameHandle = requestAnimationFrame(frame);
+    if (xrSession && xrRef) { try { xrSession.requestAnimationFrame(xrFrame); } catch { /* no session */ } }
+  });
+  body.addEventListener("os:dispose", () => teardown());
 }
