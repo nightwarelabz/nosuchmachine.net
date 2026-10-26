@@ -136,6 +136,14 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
   sha256 `0ea5a57597c4d045d8dd8365fa439d19e6ece3392bfa46091d56cebe8c1fd1a2`,
   `darkplaces-wasm.wasm` sha256
   `9af941032880ad7482ecda43a2f0a03defc5d57e6eae21ebd7bd3cb4c32bccec`.
+  The glue was **relinked the same day** with the caching loader
+  (the `tools/nexuiz/pre.js` in this tree — persisted packs, local
+  verification; see "Storage and caching" below): same objects,
+  same flags, same command, only the `--pre-js` input changed.
+  The build is deterministic — a control relink with the original
+  pre.js reproduced both artifacts byte-for-byte — and the wasm
+  is unchanged. Current glue sha256:
+  `8d3f2138c8e87e33ecd402a13ae5eb1ffdb0643d0bba7dc5fd565ee2cab9f59c`.
 
 ## Deviation register (engine + data)
 
@@ -196,3 +204,65 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
 - The generic engine build reports its game as "DarkPlaces-Quake"
   in the console (the Nexuiz data dir rides as `-game data`); the
   game itself — menus, progs, media — is Nexuiz's own.
+
+## Storage and caching — what a player's machine keeps
+
+The rule (Chase's): nobody re-downloads what the machine already
+has, and the OS owns the storage story. The loader
+(`tools/nexuiz/pre.js`) and the play frame (`public/nexuiz/play.js`)
+keep it together:
+
+- **One copy at rest.** The Cache API (`nexuiz-data-v1`) holds the
+  data in two shapes, never both at rest: the compressed chunks
+  are transport staging for the first download (they keep an
+  interrupted download resumable), and once a pack is verified
+  whole, the pack itself is stored as one entry and its staging
+  chunks are deleted. Chunk fetches go out with
+  `cache: "no-store"` so the browser's HTTP cache does not quietly
+  keep a second copy of the spans (it did: ~850 MB duplicated,
+  measured in the cache audit,
+  `~/workspace/nexuiz-research/cache-audit/`). The packs
+  deliberately do NOT ride an IDBFS mount: IDBFS whole-file sync
+  hands IndexedDB one ~900 MB record per file, and the store
+  refused it in the audit rig (the loader's fallback fired; the
+  game played from the staging cache) — IDBFS keeps the engine's
+  user dir, whose files are small.
+- **Warm boot verifies locally.** A kept pack that matches its
+  pinned size is SHA-256-verified from the kept bytes and written
+  into the filesystem — no wire, no inflater. A pack that fails
+  size or hash is deleted and fetched fresh — the refusal
+  discipline is unchanged, the verdict just comes from local
+  bytes.
+- **Degradation is honest.** If any store refuses (quota,
+  private mode), the loader falls a rung — kept pack, then
+  staging chunks, then the wire — and says so in the console.
+  Storage failure never closes the game.
+- **The OS asks for persistence.** `buildNexuiz`
+  (`src/scripts/os-nexuiz.ts`) calls `navigator.storage.persist()`
+  when the game window is first built. The grant is the browser's
+  heuristic, not a promise — where it is refused, eviction remains
+  possible under storage pressure, which is the platform's limit,
+  not the design's.
+- **In-session downloads commit.** The user dir's IDBFS mount
+  runs with `autoPersist: true` — without it the mount syncs only
+  on an explicit `FS.syncfs` (a clean engine shutdown, in
+  practice), and a mid-session download would die with the tab;
+  with it, the filesystem queues a sync at the end of any frame
+  that changed a file, so a finished download commits itself
+  (audit-proven: an engine-written file survives a SIGKILL of the
+  browser). The play frame additionally flushes on `pagehide`
+  (`Module.houseSyncFS`) — belt over braces for the graceful
+  close.
+- **Engine binaries are immutable — under a stamp.** The two
+  engine files are served `Cache-Control: public,
+  max-age=31536000, immutable` (see `public/_headers`). That is
+  only safe because `play.js` carries `NX_ENGINE_STAMP` and
+  appends it to both engine URLs (the glue script's `src`, and the
+  wasm via `Module.locateFile`). **Rule: whenever
+  `darkplaces-wasm.js` or `darkplaces-wasm.wasm` is rebuilt or
+  replaced, bump `NX_ENGINE_STAMP` in `public/nexuiz/play.js` in
+  the same change.** play.js, play.html and `autoexec.cfg` are
+  deliberately NOT immutable — they revalidate every visit, which
+  is how loader and tuning changes reach players; the autoexec is
+  re-fetched each boot, with a fall back to the kept copy when the
+  fetch fails.

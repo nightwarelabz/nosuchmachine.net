@@ -69,3 +69,20 @@
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'self'; upgrade-insecure-requests
   Cross-Origin-Embedder-Policy: require-corp
+
+# The engine binaries are the heavy static files of the subtree, and
+# they only change when the engine is rebuilt. play.js stamps their
+# URLs with its NX_ENGINE_STAMP (the glue via its script URL, the
+# wasm via Module.locateFile), so an immutable year is safe: a
+# rebuilt engine wears a new stamp and is fetched fresh, and a
+# returning player's copies are served from disk with no
+# revalidation round-trip. Everything else in the subtree (the play
+# page, its script, the autoexec) keeps the revalidate-always rule
+# above — small files, and they are how the house ships changes.
+/nexuiz/darkplaces-wasm.js
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+
+/nexuiz/darkplaces-wasm.wasm
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable

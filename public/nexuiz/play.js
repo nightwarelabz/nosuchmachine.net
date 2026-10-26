@@ -4,6 +4,13 @@ const rawMode = q.get("mode");
 const mode = rawMode === "minsta" || rawMode === "join" ? rawMode : "menu";
 const rawName = (q.get("name") || "").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "").slice(0, 24);
 const dataBase = q.get("base") || "/api/nexuiz-data";
+/* The engine build stamp. The glue script and the wasm are served
+ * immutable (see public/_headers), so their URLs must change when
+ * the engine does: this stamp rides both URLs, and play.js itself
+ * stays revalidated, so a new stamp is always picked up. Bump it
+ * whenever darkplaces-wasm.js or darkplaces-wasm.wasm is rebuilt
+ * (the rule is written down in tools/nexuiz/BUILD.md). */
+const NX_ENGINE_STAMP = "4";
 /* The house bridge (sparta-bridge contract): a wss URL used VERBATIM
  * by the engine's socket layer — one WebSocket session there is one
  * player on the house server. The token is what the engine dials;
@@ -52,6 +59,7 @@ if (extra) {
 
 const moduleDef = {
   canvas: document.getElementById("canvas"),
+  locateFile(path) { return path.endsWith(".wasm") ? path + "?v=" + NX_ENGINE_STAMP : path; },
   dataBase,
   files: {
     "data/data20091001.pk3": {
@@ -76,6 +84,9 @@ const moduleDef = {
     plateBar.hidden = false;
     plateStatus.textContent = "fetching " + file + " — first visit crosses the wire; after that it is kept locally.";
     post({ type: "progress", file, done: 0, total: 1 });
+  },
+  onDataLocal(file) {
+    plateStatus.textContent = file + " is kept on this machine — no download.";
   },
   onDataProgress(file, done, total) {
     plateFill.style.width = (100 * done / total).toFixed(1) + "%";
@@ -166,6 +177,16 @@ window.addEventListener("message", (ev) => {
   fitSoon();
 });
 
+/* When this frame goes away — the OS window closed, the tab closed,
+ * navigation — ask the loader to commit the engine's filesystem to
+ * the machine's storage, so what the engine downloaded in-session
+ * (maps, house packs) is still there next visit. Best effort at the
+ * door, on top of the filesystem's own auto-persist. */
+window.addEventListener("pagehide", () => {
+  const M = window.Module;
+  if (M && typeof M.houseSyncFS === "function") { try { M.houseSyncFS(); } catch {} }
+});
+
 plateBtn.addEventListener("click", () => {
   fitCanvas();
   plateBtn.hidden = true;
@@ -173,7 +194,7 @@ plateBtn.addEventListener("click", () => {
     ? "raising the engine — it deals you into thisissparta2! when the table is up…"
     : "raising the engine…";
   const s = document.createElement("script");
-  s.src = "darkplaces-wasm.js";
+  s.src = "darkplaces-wasm.js?v=" + NX_ENGINE_STAMP;
   s.onerror = () => {
     plateStatus.className = "err";
     plateStatus.textContent = "the engine file did not load — the game stays closed.";

@@ -21,9 +21,28 @@
  * with DecompressionStream, writes it into the FS as it lands, and
  * verifies an incremental SHA-256 over the inflated bytes. A pack
  * whose bytes do not match its pinned hash is REFUSED — the engine
- * is never started on wrong data. Chunks are kept in the Cache API
- * between visits so the wire is crossed once, not every session.
- * Plain-string entries keep upstream's fetch-and-write behavior.
+ * is never started on wrong data.
+ *
+ * Storage is the OS's side of the bargain: a returning player never
+ * crosses the wire twice for the same bytes. The Cache API holds
+ * the data in two shapes, never both at rest: the compressed
+ * chunks are transport staging (they keep an interrupted first
+ * download resumable), and once a pack is verified whole, the pack
+ * itself is stored as one entry and the staged chunks are
+ * dropped — at rest there is exactly one copy, the verified pack,
+ * ready to load without touching the wire or the inflater. A warm
+ * boot verifies the LOCAL bytes against the same pinned hash
+ * before writing them into the filesystem; the hash is always
+ * checked against bytes already on the machine. (The packs do not
+ * ride the IDBFS mount: its whole-file sync hands the store one
+ * ~900 MB record per file, which browsers refuse in practice —
+ * measured, see the cache audit. IDBFS keeps what it is good at:
+ * the engine's own small files in the user dir.) If any store
+ * refuses, the loader degrades a rung — kept pack, then staging
+ * chunks, then the wire — and the game is never refused for a
+ * storage failure. Plain-string entries keep upstream's
+ * fetch-and-write behavior, with one addition: a failed fetch
+ * falls back to the copy the cache kept instead of closing.
  *
  * Everything else — engine, gamecode, media — is the original game.
  */
@@ -133,11 +152,41 @@ Module['preRun'] = [
 			throw new Error(message);
 		}
 
+		// FS.syncfs as a promise: resolves true when the sync
+		// completed, false when the platform refused it (quota,
+		// storage pressure) — or when it simply never answers: a
+		// browser killed mid-transaction can leave the database
+		// blocked, and a loader parked on it would hold the whole
+		// game hostage to a storage hiccup. Ten seconds is
+		// generous; past that, the boot proceeds without the sync
+		// and says so. Storage trouble must never read as game
+		// trouble — callers degrade, they do not fail.
+		function syncfsP(populate) {
+			return new Promise((resolve) => {
+				let settled = false;
+				const done = (ok) => { if (!settled) { settled = true; resolve(ok); } };
+				try {
+					FS.syncfs(populate, (err) => done(!err));
+				} catch {
+					done(false);
+					return;
+				}
+				setTimeout(() => {
+					if (!settled) console.log("nexuiz data: the storage sync did not answer in time — proceeding without it this boot.");
+					done(false);
+				}, 10000);
+			});
+		}
+
 		// Fetch one fixed chunk of a pack's compressed span, from the
-		// browser cache when it is already there.
+		// staging cache when it is already there. The wire fetch asks
+		// the HTTP cache to keep nothing (cache: "no-store"): the
+		// staging cache is the one deliberate copy, and a second,
+		// silent copy in the HTTP disk cache is ~850 MB of the
+		// player's disk spent on bytes nothing ever reads back.
 		const CHUNK = 16 * 1024 * 1024;
 		async function fetchChunk(cache, part, idx, expectLen) {
-			const url = Module['dataBase'] + "?part=" + encodeURIComponent(part) + "&chunk=" + idx;
+			const url = chunkUrl(part, idx);
 			if (cache) {
 				const hit = await cache.match(url);
 				if (hit) {
@@ -149,7 +198,7 @@ Module['preRun'] = [
 			let lastErr = null;
 			for (let attempt = 0; attempt < 3 && !res; attempt++) {
 				try {
-					const r = await fetch(url);
+					const r = await fetch(url, { cache: "no-store" });
 					if (r.ok) res = r; else lastErr = new Error("the data pipe answered " + r.status + " for chunk " + idx);
 				} catch (e) { lastErr = e; }
 				if (!res && attempt < 2) await new Promise((done) => setTimeout(done, 1500 * (attempt + 1)));
@@ -163,12 +212,83 @@ Module['preRun'] = [
 			return new Uint8Array(body);
 		}
 
+		// The one cache for everything the loader keeps: chunk
+		// staging, the verified packs, the small house files.
+		async function openDataCache() {
+			return (typeof caches !== "undefined") ? await caches.open("nexuiz-data-v1").catch(() => null) : null;
+		}
+		function chunkUrl(part, idx) {
+			return Module['dataBase'] + "?part=" + encodeURIComponent(part) + "&chunk=" + idx;
+		}
+		function packUrl(part) {
+			return Module['dataBase'] + "?part=" + encodeURIComponent(part) + "&pack=1";
+		}
+		function keptUrl(localPath) {
+			return "/nexuiz/kept/" + localPath;
+		}
+
+		// Drop one pack's staging chunks — called once the verified
+		// pack itself is stored, so at rest there is one copy.
+		async function dropChunks(cache, part, chunks) {
+			if (!cache) return;
+			for (let i = 0; i < chunks; i++) {
+				try { await cache.delete(chunkUrl(part, i)); } catch { /* already gone is fine */ }
+			}
+		}
+
+		// Is the verified pack already kept on this machine? Reads
+		// the kept pack entry, checks exact size, then the full
+		// SHA-256 over the kept bytes, and only then writes them
+		// into the filesystem. Local bytes only — this path never
+		// touches the network, so a warm boot's verdict is the
+		// machine's own. A kept pack that fails any check is
+		// deleted on the spot, never trusted twice.
+		async function loadKeptPack(cache, localPath, desc) {
+			if (!cache) return false;
+			const hit = await cache.match(packUrl(desc.part)).catch(() => null);
+			if (!hit) return false;
+			Module['addRunDependency'](localPath);
+			try {
+				const body = await hit.arrayBuffer();
+				if (body.byteLength !== desc.size) {
+					try { await cache.delete(packUrl(desc.part)); } catch { /* ignore */ }
+					return false;
+				}
+				const bytes = new Uint8Array(body);
+				let digest;
+				if (typeof crypto !== "undefined" && crypto.subtle) {
+					const buf = await crypto.subtle.digest("SHA-256", bytes);
+					digest = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+				} else {
+					const hasher = new Sha256();
+					for (let pos = 0; pos < bytes.length; pos += CHUNK) hasher.update(bytes.subarray(pos, Math.min(pos + CHUNK, bytes.length)));
+					digest = hasher.hex();
+				}
+				if (digest !== desc.sha256) {
+					console.log("nexuiz data: the kept copy of " + localPath + " fails its hash — fetching it fresh.");
+					try { await cache.delete(packUrl(desc.part)); } catch { /* ignore */ }
+					return false;
+				}
+				const stream = FS.open("/game/" + localPath, "w");
+				for (let pos = 0; pos < bytes.length; pos += CHUNK) {
+					FS.write(stream, bytes, pos, Math.min(CHUNK, bytes.length - pos));
+					if (Module['onDataProgress']) Module['onDataProgress'](localPath, Math.min(pos + CHUNK, bytes.length), desc.size);
+				}
+				FS.close(stream);
+				console.log("Verified " + localPath + " from this machine's own storage — no download.");
+				if (Module['onDataLocal']) Module['onDataLocal'](localPath);
+				return true;
+			} finally {
+				Module['removeRunDependency'](localPath);
+			}
+		}
+
 		async function downloadSpanFile(localPath, desc) {
 			if (typeof DecompressionStream === "undefined") {
 				fail(localPath, "this browser cannot unpack the game data (no DecompressionStream) — the game stays closed rather than improvise.");
 			}
 			Module['addRunDependency'](localPath);
-			const cache = (typeof caches !== "undefined") ? await caches.open("nexuiz-data-v1").catch(() => null) : null;
+			const cache = await openDataCache();
 			const chunks = Math.ceil(desc.spanLength / CHUNK);
 			// The pack is assembled whole: the SHA-256 verdict must be
 			// over the reassembled bytes themselves, not a stand-in.
@@ -222,32 +342,80 @@ Module['preRun'] = [
 			if (digest !== desc.sha256) fail(localPath, "the pack's SHA-256 is " + digest + "; the real pack is " + desc.sha256 + ". Refusing wrong bytes.");
 			console.log("Downloaded and verified " + localPath);
 			Module['removeRunDependency'](localPath);
+			return { assembled, cache, chunks };
 		}
 
-		function startDownload(localPath, remotePath) {
+		async function startDownload(localPath, remotePath) {
 			Module['addRunDependency'](localPath);
-			return fetch(remotePath)
-				.then(response => {
-					return response.arrayBuffer();
-				})
-				.then(arrayBuffer => {
-					const buffer = new Uint8Array(arrayBuffer);
-					stream = FS.open("/game/" + localPath, "w");
-					FS.write(stream, buffer, 0, buffer.byteLength);
-					FS.close(stream);
-					console.log("Downloaded " + localPath);
-					Module['removeRunDependency'](localPath);
-				});
+			try {
+				const response = await fetch(remotePath);
+				if (!response.ok) throw new Error("answered " + response.status);
+				const arrayBuffer = await response.arrayBuffer();
+				const buffer = new Uint8Array(arrayBuffer);
+				const stream = FS.open("/game/" + localPath, "w");
+				FS.write(stream, buffer, 0, buffer.byteLength);
+				FS.close(stream);
+				console.log("Downloaded " + localPath);
+				// Keep a copy in the cache: if a later boot cannot
+				// reach the file, the kept copy plays instead.
+				try {
+					const c = await openDataCache();
+					if (c) await c.put(keptUrl(localPath), new Response(buffer, { headers: { "content-type": "text/plain" } }));
+				} catch { /* a kindness, not a promise */ }
+			} catch (e) {
+				// A small house file (the autoexec) is re-fetched each
+				// boot so house tuning reaches players — but a failed
+				// fetch must not close the game when the machine
+				// already keeps a copy: play the kept one.
+				let kept = 0;
+				try { kept = FS.stat("/game/" + localPath).size; } catch { /* nothing on disk */ }
+				if (kept <= 0) {
+					try {
+						const c = await openDataCache();
+						const hit = c ? await c.match(keptUrl(localPath)) : null;
+						if (hit) {
+							const buf = new Uint8Array(await hit.arrayBuffer());
+							const stream = FS.open("/game/" + localPath, "w");
+							FS.write(stream, buf, 0, buf.byteLength);
+							FS.close(stream);
+							kept = buf.byteLength;
+						}
+					} catch { /* no kept copy either */ }
+				}
+				if (kept > 0) {
+					console.log("nexuiz data: " + localPath + " could not be refreshed (" + (e && e.message ? e.message : e) + ") — playing the copy kept on this machine.");
+				} else {
+					throw e;
+				}
+			}
+			Module['removeRunDependency'](localPath);
 		}
 
 		function createBaseDir() {
 			FS.mkdir('/game');
-			//mounts IDBFS to where the game would save
-			FS.mount(IDBFS, {}, '/home/web_user/');
+			// Mounts IDBFS to where the game would save — with
+			// autoPersist ON: the plain mount only ever syncs when
+			// someone calls FS.syncfs (a clean engine shutdown, in
+			// practice), so anything the engine downloads mid-
+			// session would live in memory and die with the tab.
+			// With autoPersist, the filesystem queues a sync at the
+			// end of any frame that changed a file — a finished
+			// download commits itself, kill or no kill.
+			FS.mount(IDBFS, { autoPersist: true }, '/home/web_user/');
+			// The play frame also asks for a flush when it goes
+			// away (pagehide): whatever the engine wrote is
+			// committed then too, belt over the auto-persist's
+			// braces.
+			Module['houseSyncFS'] = function () {
+				try { FS.syncfs(false, function () {}); } catch { /* best effort at the door */ }
+			};
 		}
 
 		async function downloadGameFiles() {
 			createBaseDir();
+			// Bring everything the machine already keeps into the
+			// filesystem BEFORE deciding anything needs the wire.
+			await syncfsP(true);
 			let downloads = [];
 			for (const [localPath, desc] of Object.entries(Module.files)) {
 				createParentDirectory(localPath);
@@ -255,9 +423,27 @@ Module['preRun'] = [
 					console.log("Downloading " + desc + " to " + localPath);
 					downloads.push(startDownload(localPath, desc));
 				} else {
-					console.log("Downloading pack " + desc.part + " to " + localPath);
-					if (Module['onDataFile']) Module['onDataFile'](localPath);
-					downloads.push(downloadSpanFile(localPath, desc));
+					downloads.push((async () => {
+						const cache = await openDataCache();
+						if (await loadKeptPack(cache, localPath, desc)) return;
+						console.log("Downloading pack " + desc.part + " to " + localPath);
+						if (Module['onDataFile']) Module['onDataFile'](localPath);
+						const got = await downloadSpanFile(localPath, desc);
+						// Store the verified pack itself; only then
+						// may its staging chunks go. If the store
+						// refuses, the chunks stay as the kept copy
+						// and the next boot rebuilds from them —
+						// slower, never broken.
+						if (got && got.cache) {
+							try {
+								await got.cache.put(packUrl(desc.part), new Response(got.assembled, { headers: { "content-type": "application/octet-stream" } }));
+								await dropChunks(got.cache, desc.part, got.chunks);
+								console.log("Kept " + localPath + " on this machine for next time.");
+							} catch (e) {
+								console.log("nexuiz data: the kept-pack store refused " + localPath + " (" + (e && e.message ? e.message : e) + ") — the staging chunks stay as the copy.");
+							}
+						}
+					})());
 				}
 			}
 			try {
@@ -267,11 +453,13 @@ Module['preRun'] = [
 				// pending so the engine never starts on wrong data.
 				return;
 			}
-			FS.syncfs(true, function (err) {
-				assert(!err);
-				if (Module['onEngineStart']) Module['onEngineStart']();
-				Module.callMain(Module.arguments);
-			});
+			// Flush the engine's user dir (small files — the class
+			// the IDBFS sync handles) and start. The result is
+			// ignored on purpose: storage trouble must not gate
+			// the engine.
+			await syncfsP(false);
+			if (Module['onEngineStart']) Module['onEngineStart']();
+			Module.callMain(Module.arguments);
 		}
 
 		downloadGameFiles();
