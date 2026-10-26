@@ -124,6 +124,17 @@ export function buildNexuiz(body: HTMLElement) {
     return;
   }
 
+  /* The OS owns the game's storage story: ask the browser to keep
+   * the origin's storage (the verified game packs, the engine's
+   * user dir) instead of treating it as evictable cache. The grant
+   * is the browser's call — where it refuses, the cache still
+   * works, just without the promise. */
+  try {
+    if (navigator.storage && typeof navigator.storage.persist === "function") {
+      navigator.storage.persist().catch(() => {});
+    }
+  } catch { /* storage persistence is a kindness, not a gate */ }
+
   const name = relayName();
   const bridge = bridgeUrl();
   let botsOn = true;
