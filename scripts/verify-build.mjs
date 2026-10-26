@@ -158,6 +158,26 @@ assert.ok(nexPlay.includes("NX_RTC_BUDGET_MS = 8000"), "the RTC setup budget mus
 assert.ok(nexPlay.includes('"stun:stun.l.google.com:19302"'), "the fast road must learn its address from the house STUN server only (no TURN)");
 assert.ok(nexPlay.includes("new RealWebSocket(this.url, this._protocols)"), "the fallback must construct the original WebSocket with the original URL and protocols");
 assert.ok(nexPlay.includes("new RealWebSocket(url, protocols)"), "a construction for any other URL must return a real WebSocket, untouched");
+// Nexuiz session diagnostics (review §2): opt-in per deal and off
+// by default. The frame samples only when dealt diag=1; every
+// figure comes from the session's own connection — the shim's
+// registry of the sockets the engine actually made, and the
+// active peer connection's own getStats — never a second peer
+// opened to measure. Engine frames are counted from the glue's
+// own main-loop counter, reached only by the descriptor probe.
+assert.ok(nexPlay.includes('q.get("diag")'), "nexuiz diagnostics must be gated on the dealt diag parameter");
+assert.ok(nexPlay.includes("NxSpartaSocket.DIAG = NX_DIAG"), "the socket instrumentation must arm only with the deal's diag flag");
+assert.ok(nexPlay.includes("NxSpartaSocket.REGISTRY"), "diagnostics must read the session's own sockets from the shim registry");
+assert.ok(nexPlay.includes("getStats"), "webrtc figures must come from the active peer connection's getStats");
+assert.ok(nexPlay.includes("currentFrameNumber"), "engine frames must be counted from the glue's main-loop frame counter");
+assert.ok(nexPlay.includes('Object.getOwnPropertyDescriptor(window, "MainLoop")'), "the engine frame counter must be reached by the descriptor probe, never a direct read");
+assert.ok(nexPlay.includes("diag-export"), "the frame must answer the house's diagnostics export request");
+assert.ok(nexPlay.includes("session: NX_SESSION"), "every frame word must carry the deal's session tag");
+assert.ok(nexPlay.includes("ev.origin !== location.origin") && nexPlay.includes("ev.source !== window.parent"), "the frame must believe house words only from this origin and the parent window");
+assert.ok(astroJs.includes("blacksite-nexuiz-diag"), "the OS window must honor the diagnostics opt-in flag");
+assert.ok(astroJs.includes("session diagnostics"), "the OS window must stand the diagnostics panel when armed");
+assert.ok(astroJs.includes("diag-export"), "the OS window must ask the frame for its diagnostics export");
+assert.ok(astroJs.includes("origin!==location.origin"), "the OS window must check the origin of frame words, not only the source window");
 // Live update: the build stamp must name the OS chunk this build made,
 // and the bundle must carry the watcher that polls it.
 const versionStamp = JSON.parse(fs.readFileSync(path.join(root, "version.json"), "utf8"));

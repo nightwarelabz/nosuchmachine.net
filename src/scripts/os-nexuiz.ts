@@ -51,6 +51,22 @@ function bridgeUrl(): string {
   return HOUSE_BRIDGE;
 }
 
+/* Session diagnostics are opt-in (review §2): armed only when the
+ * operator has set the local-storage flag (the same storage seam
+ * as the bridge override above) or the page's own query carries
+ * the word. Armed, the window mints a session per deal, deals
+ * diag=1 to the frame and stands the diagnostics panel; unarmed,
+ * nothing about the window changes — no panel, no sampling, no
+ * statistics calls in the frame. */
+function diagEnabled(): boolean {
+  try {
+    if (new URLSearchParams(location.search).get("nexuiz-diag") === "1") return true;
+    return localStorage.getItem(skey("blacksite-nexuiz-diag")) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -142,7 +158,20 @@ export function buildNexuiz(body: HTMLElement) {
 
   const name = relayName();
   const bridge = bridgeUrl();
+  const diag = diagEnabled();
   let botsOn = true;
+  /* Every deal carries a session the window minted for it alone.
+   * The frame echoes the tag on every word it sends up, and the
+   * window believes only its live deal's words — a frame from an
+   * earlier deal (a re-deal, a restored window) cannot move the
+   * status line or the diagnostics of the session that replaced
+   * it (review §8's stale-callback rule, at this channel). */
+  let session = "";
+  let dealSeq = 0;
+  const mintSession = () => {
+    dealSeq += 1;
+    return `${Date.now().toString(36)}-${dealSeq.toString(36)}-${Math.floor(Math.random() * 0xffffffff).toString(36)}`;
+  };
   const src = (mode: string) => {
     const q = new URLSearchParams({ mode });
     if (name) q.set("name", name);
@@ -154,11 +183,14 @@ export function buildNexuiz(body: HTMLElement) {
      * dealt (the menu a local match disconnects back to carries
      * the same door). */
     if (bridge) q.set("bridge", bridge);
+    q.set("session", session);
+    if (diag) q.set("diag", "1");
     return `/nexuiz/play.html?${q.toString()}`;
   };
   let mode = "";
   const deal = (next: string, note: string) => {
     mode = next;
+    session = mintSession();
     status.textContent = note;
     frame.src = src(next);
   };
@@ -192,6 +224,61 @@ export function buildNexuiz(body: HTMLElement) {
 
   const keys = el("p", "os-note", "wasd move · mouse look (click the game to lock) · e: hook · space jump · esc menu");
   wrap.append(bar, stage, status, keys);
+
+  /* The diagnostics panel (review §2) — stands only when armed.
+   * It renders the frame's own account of its live session: the
+   * transport that actually carried it and why, its timing, its
+   * frames — sampled in the frame from the session's own
+   * connection, never from a second peer opened to measure. The
+   * export button asks the frame for its bounded history and
+   * saves the answer as JSON. Local deals (the bot match) are
+   * labelled by their mode in the record; they are outside the
+   * performance target, but the panel reads them the same way. */
+  let diagPre: HTMLPreElement | null = null;
+  const diagText = (s: Record<string, unknown>): string => {
+    const num = (v: unknown, unit = "") => (typeof v === "number" ? `${Math.round(v)}${unit}` : "—");
+    const lines: string[] = [];
+    const transport = typeof s.transport === "string" ? s.transport
+      : s.sockState === "none" ? "no connection yet" : String(s.sockState ?? "—");
+    lines.push(`transport: ${transport}`
+      + (s.rtcFailReason ? ` (rtc did not carry it: ${String(s.rtcFailReason)})` : "")
+      + (typeof s.setupMs === "number" ? ` · setup ${num(s.setupMs, " ms")}` : ""));
+    if (typeof s.ice === "string") lines.push(`ice: ${s.ice}`);
+    lines.push(`rtt ${num(s.rttMs, " ms")} · packets in ${num(s.framesIn)} (${num(s.pktInPerSec)}/s) · out ${num(s.framesOut)} (${num(s.pktOutPerSec)}/s) · buffered ${num(s.buffered)} B`);
+    lines.push(`page frames p50 ${num(s.rafP50)} · p95 ${num(s.rafP95)} · p99 ${num(s.rafP99)} ms · gaps >50 ms ${num(s.rafGaps50)}`);
+    lines.push(`engine frames ${typeof s.engineFps === "number" ? `${s.engineFps.toFixed(1)}/s` : "— (counter unreachable)"} · display ≈${num(s.refreshHz)} Hz`);
+    const canvas = Array.isArray(s.canvas) ? `${s.canvas[0]}×${s.canvas[1]}` : "—";
+    lines.push(`canvas ${canvas} · focus ${s.focus ? "held" : "elsewhere"} · fullscreen ${s.fullscreen ? "yes" : "no"} · pointer lock ${s.pointerLock ? "held" : "no"} · samples ${num(s.sampleCount)}`);
+    return lines.join("\n");
+  };
+  const downloadDiag = (data: unknown) => {
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nexuiz-diagnostics-${session || "session"}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      status.textContent = "diagnostics exported — the frame's own record of this session.";
+    } catch { /* the export is a kindness, not a gate */ }
+  };
+  if (diag) {
+    const box = el("div", "os-nexuiz-diag");
+    const head = el("p", "os-note", "session diagnostics — this window's game, read from its own connection.");
+    diagPre = el("pre", "os-nexuiz-diag-body", "waiting for the frame…");
+    diagPre.style.margin = "0";
+    diagPre.style.whiteSpace = "pre-wrap";
+    diagPre.style.fontSize = "0.78rem";
+    diagPre.style.opacity = "0.85";
+    const exportBtn = el("button", "os-btn small", "export diagnostics (json)");
+    exportBtn.addEventListener("click", () => {
+      try { frame.contentWindow?.postMessage({ from: "house", type: "diag-export" }, location.origin); } catch { /* no frame, no export */ }
+      if (diagPre) diagPre.textContent = "export asked of the frame…";
+    });
+    box.append(head, diagPre, exportBtn);
+    wrap.appendChild(box);
+  }
   body.appendChild(wrap);
 
   /* Escape in true fullscreen belongs to the game. By the game's
@@ -255,9 +342,21 @@ export function buildNexuiz(body: HTMLElement) {
   document.addEventListener("keyup", onKeyUp);
 
   const onMsg = (ev: MessageEvent) => {
-    if (ev.source !== frame.contentWindow || !ev.data || ev.data.from !== "nexuiz") return;
+    /* The frame's words are believed only from the frame itself:
+     * this origin AND this window's frame — the source check
+     * stood here already; the origin check joins it, because a
+     * data field alone is not a credential (review §8). And only
+     * the live deal's words count: a message carrying another
+     * deal's session tag is a stale frame speaking out of turn
+     * and is ignored whole. */
+    if (ev.origin !== location.origin || ev.source !== frame.contentWindow || !ev.data || ev.data.from !== "nexuiz") return;
     const m = ev.data;
-    if (m.type === "progress" && m.total > 1) {
+    if (typeof m.session === "string" && session && m.session !== session) return;
+    if (m.type === "diag" && diagPre && m.summary) {
+      diagPre.textContent = diagText(m.summary as Record<string, unknown>);
+    } else if (m.type === "diag-export" && m.export) {
+      downloadDiag(m.export);
+    } else if (m.type === "progress" && m.total > 1) {
       status.textContent = `fetching the game data — ${(m.done / 1048576).toFixed(0)} of ${(m.total / 1048576).toFixed(0)} MB. it is verified whole before the engine starts.`;
     } else if (m.type === "error") {
       status.textContent = m.file === "engine" ? `the engine stopped: ${m.message}` : `the game data was refused: ${m.message}`;
