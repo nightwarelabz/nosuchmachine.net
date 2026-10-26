@@ -272,25 +272,57 @@ export function buildNexuiz(body: HTMLElement) {
   };
   document.addEventListener("fullscreenchange", tellFs);
   frame.addEventListener("load", tellFs);
-  /* The lock follows the screen: taken whenever this stage
-   * becomes the fullscreen element (either door in — the opening
-   * click or the fullscreen button), released whenever it stops
-   * being, with any standing hold cancelled alongside. */
+  /* The lock follows the screen: wanted whenever this stage is
+   * the fullscreen element (either door in — the opening click or
+   * the fullscreen button), released whenever it stops being,
+   * with any standing hold cancelled alongside. The asking is
+   * tracked, not fire-and-forget: Chrome answers lock() only
+   * within a live user gesture's reach, and the fullscreenchange
+   * after the opening click can land outside it — the first cut
+   * swallowed that refusal whole, so on the operator's real
+   * Chrome the lock never held and Esc stayed the browser's key
+   * (his live test, 2026-10-26). Now a grant counts only when
+   * the promise resolves, a refusal is retried on the next
+   * gesture inside fullscreen (a pointer press is always fresh
+   * activation), and either outcome reaches the console, so a
+   * refusal is a diagnosis instead of a silence. */
+  let lockWanted = false;
+  let lockHeld = false;
+  const takeLock = () => {
+    if (!lockWanted || lockHeld) return;
+    let p: Promise<void> | undefined;
+    try { p = keyboard()?.lock?.(["Escape"]); } catch { p = undefined; }
+    if (!p) return;
+    p.then(
+      () => { lockHeld = true; console.info("[house] escape is the game's key — keyboard lock held"); },
+      (err: unknown) => { lockHeld = false; console.warn("[house] keyboard lock refused — esc stays the browser's until the next gesture", err); },
+    );
+  };
   const onFsLock = () => {
     if (document.fullscreenElement === stage) {
-      try { void keyboard()?.lock?.(["Escape"])?.catch(() => undefined); } catch { /* no lock to take */ }
+      lockWanted = true;
+      takeLock();
     } else {
+      lockWanted = false;
+      lockHeld = false;
       escCancel();
       try { keyboard()?.unlock?.(); } catch { /* nothing was held */ }
     }
   };
   document.addEventListener("fullscreenchange", onFsLock);
+  const onGestureForLock = () => { takeLock(); };
+  document.addEventListener("pointerdown", onGestureForLock, true);
+  document.addEventListener("keydown", onGestureForLock, true);
   const obs = new MutationObserver(() => {
     if (!document.body.contains(wrap)) {
       obs.disconnect();
       window.removeEventListener("message", onMsg);
       document.removeEventListener("fullscreenchange", tellFs);
       document.removeEventListener("fullscreenchange", onFsLock);
+      document.removeEventListener("pointerdown", onGestureForLock, true);
+      document.removeEventListener("keydown", onGestureForLock, true);
+      lockWanted = false;
+      lockHeld = false;
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
       escCancel();
