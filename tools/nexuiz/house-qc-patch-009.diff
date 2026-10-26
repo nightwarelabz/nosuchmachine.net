@@ -1,0 +1,41 @@
+--- a/qcsrc/menu/nexuiz/dialog_multiplayer.c
++++ b/qcsrc/menu/nexuiz/dialog_multiplayer.c
+@@ -4,7 +4,7 @@
+ 	ATTRIB(NexuizMultiplayerDialog, title, string, "Multiplayer")
+ 	ATTRIB(NexuizMultiplayerDialog, color, vector, SKINCOLOR_DIALOG_MULTIPLAYER)
+ 	ATTRIB(NexuizMultiplayerDialog, intendedWidth, float, 0.96)
+-	ATTRIB(NexuizMultiplayerDialog, rows, float, 24)
++	ATTRIB(NexuizMultiplayerDialog, rows, float, 25)
+ 	ATTRIB(NexuizMultiplayerDialog, columns, float, 6)
+ ENDCLASS(NexuizMultiplayerDialog)
+ #endif
+@@ -13,7 +13,20 @@
+ void fillNexuizMultiplayerDialog(entity me)
+ {
+ 	entity mc, e;
+-	mc = makeNexuizTabController(me.rows - 2);
++	mc = makeNexuizTabController(me.rows - 3);
++	me.TR(me);
++		// house (patch 009): the room's front door. The web build
++		// boots to this menu now, and thisissparta2! — the house
++		// room — stands at the head of its multiplayer side, above
++		// the server browser. The command is the very one the boot
++		// used to deal sight unseen: the engine's socket layer
++		// dials the dealt bridge for any connect, so the door and
++		// the old auto-join are the same road, taken by the
++		// player's own hand. No name dependency, unlike the tabs
++		// below: the web build deals the player's name to the
++		// engine itself, and _cl_name is only the menu's staging
++		// cvar — gating on it would bar the dealt-name player.
++		me.TD(me, 1, me.columns, e = makeNexuizCommandButton("thisissparta2!", '0 0 0', "connect thisissparta2", 0));
+ 	me.TR(me);
+ 		me.TD(me, 1, 1, e = mc.makeTabButton(mc, "Servers",  makeNexuizServerListTab()));
+ 			setDependentStringNotEqual(e, "_cl_name", "Player");
+@@ -26,6 +39,6 @@
+ 
+ 	me.TR(me);
+ 	me.TR(me);
+-		me.TD(me, me.rows - 2, me.columns, mc);
++		me.TD(me, me.rows - 3, me.columns, mc);
+ }
+ #endif

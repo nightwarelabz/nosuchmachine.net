@@ -1,7 +1,13 @@
 "use strict";
 const q = new URLSearchParams(location.search);
 const rawMode = q.get("mode");
-const mode = rawMode === "minsta" || rawMode === "join" ? rawMode : "menu";
+/* "join" is the retired auto-join's name: a dealt URL carrying
+ * it (an older OS bundle, a kept link) now means what every room
+ * deal means — the game's own menu, with the transport dealt —
+ * never a connection made for the player. The room is entered
+ * by hand, at the door the menu itself carries
+ * (tools/nexuiz/house-qc-patch-009.diff). */
+const mode = rawMode === "minsta" ? "minsta" : "menu";
 const rawName = (q.get("name") || "").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "").slice(0, 24);
 const dataBase = q.get("base") || "/api/nexuiz-data";
 /* The engine build stamp. The glue script and the wasm are served
@@ -13,10 +19,13 @@ const dataBase = q.get("base") || "/api/nexuiz-data";
 const NX_ENGINE_STAMP = "4";
 /* The house bridge (sparta-bridge contract): a wss URL used VERBATIM
  * by the engine's socket layer — one WebSocket session there is one
- * player on the house server. The token is what the engine dials;
- * the bridge carries the datagrams to the real server either way. */
+ * player on the house server. The address is dealt as a transport,
+ * nothing more: the socket layer dials it for ANY connection the
+ * engine makes (verified in the shipped glue — SOCKFS's createPeer
+ * takes the dealt URL whole whenever one is dealt, and builds an
+ * address only out of the bare-scheme form), so the menu's own
+ * connect reaches the room through it. Nothing dials at boot. */
 const bridge = q.get("bridge") || "";
-const server = (q.get("server") || "thisissparta2").replace(/[^A-Za-z0-9_!.\-:]/g, "").slice(0, 64) || "thisissparta2";
 const botsRaw = parseInt(q.get("bots") || "5", 10);
 const bots = Number.isFinite(botsRaw) ? Math.max(0, Math.min(15, botsRaw)) : 5;
 
@@ -25,7 +34,6 @@ const plateText = document.getElementById("plate-text");
 const plateBar = document.getElementById("plate-bar");
 const plateFill = document.getElementById("plate-fill");
 const plateStatus = document.getElementById("plate-status");
-const plateBtn = document.getElementById("plate-btn");
 const con = document.getElementById("con");
 const post = (m) => { try { parent.postMessage(Object.assign({ from: "nexuiz" }, m), location.origin); } catch {} };
 const fmtMB = (b) => (b / 1048576).toFixed(0) + " MB";
@@ -35,7 +43,7 @@ function engineError(message) {
   if (engineDead) return;
   engineDead = true;
   plate.hidden = false;
-  plateText.hidden = true; plateBar.hidden = true; plateBtn.hidden = true;
+  plateText.hidden = true; plateBar.hidden = true;
   plateStatus.className = "err";
   plateStatus.textContent = "the engine stopped: " + message;
   post({ type: "error", file: "engine", message });
@@ -46,10 +54,11 @@ if (rawName) args.push("+set", "name", rawName);
 if (mode === "minsta") {
   args.push("+maxplayers", "16", "+bot_number", String(bots), "+gametype", "dm", "+map", "aggressor");
 }
-const joinLive = mode === "join" && /^(ws|wss):\/\/[^\s"']+$/.test(bridge);
-if (mode === "join" && joinLive) {
-  args.push("+connect", server);
-}
+/* No connect is dealt, for any mode: the engine boots to its
+ * main menu and the connection is the player's to make, at the
+ * door the menu carries. A usable bridge address riding along
+ * deals the transport below — that is all it does. */
+const bridgeLive = bridge !== "" && /^(ws|wss):\/\/[^\s"']+$/.test(bridge);
 /* Extra engine arguments (comma-separated) — the game's own
  * command line, for tuning and diagnosis. */
 const extra = q.get("extra");
@@ -105,7 +114,7 @@ const moduleDef = {
     post({ type: "progress", file, done, total });
   },
   onDataError(file, message) {
-    plateText.hidden = true; plateBar.hidden = true; plateBtn.hidden = true;
+    plateText.hidden = true; plateBar.hidden = true;
     plateStatus.className = "err";
     plateStatus.textContent = "the game data was refused: " + message;
     post({ type: "error", file, message });
@@ -562,7 +571,7 @@ NxSpartaSocket.CLOSING = 2;
 NxSpartaSocket.CLOSED = 3;
 
 /* The replacement for the page-global WebSocket, installed only
- * on a live join, before the engine script can look the
+ * when a bridge is dealt, before the engine script can look the
  * constructor up. The original is captured first and kept: a
  * construction for the dealt house URL returns a shim socket;
  * a construction for any other URL returns a real WebSocket,
@@ -588,23 +597,22 @@ function nxInstallSpartaWebSocket(houseUrl) {
 
 /* Emscripten's socket layer (SOCKFS) dials this URL verbatim for
  * every connection and offers the "sparta" subprotocol — exactly the
- * bridge's contract. Set before the engine script loads. On a live
- * join the page-global WebSocket is the shim's first (see the
- * sparta-rtc-shim block above): the dealt values below do not
+ * bridge's contract. Set before the engine script loads. When a
+ * bridge is dealt the page-global WebSocket is the shim's first (see
+ * the sparta-rtc-shim block above): the dealt values below do not
  * change — the URL SOCKFS dials is still the bridge's, word for
  * word — only the construction behind them tries the fast road
- * first and falls back to a real socket on the same URL. */
-if (joinLive) {
+ * first and falls back to a real socket on the same URL. Dealt
+ * whenever the address rides along, for every mode: the socket
+ * stands ready from the menu on, and dials only when the player
+ * takes the menu's door (or any connect of their own). A frame
+ * dealt no bridge boots the same menu with no road out — local
+ * play needs none, and the room is simply not reachable from it. */
+if (bridgeLive) {
   moduleDef.websocket = { url: bridge, subprotocol: "sparta" };
   nxInstallSpartaWebSocket(bridge);
 }
 window.Module = moduleDef;
-
-if (mode === "join" && !joinLive) {
-  plateText.textContent = "the house room needs its bridge address, and none was given — the game stays closed rather than dial a stranger.";
-  plateBtn.hidden = true;
-  post({ type: "error", file: "bridge", message: "join asked for without a bridge address" });
-}
 
 /* The canvas is the engine's window: its backing store is the
  * video mode. Keep it matched to the stage it stands in — before
@@ -758,9 +766,8 @@ function raiseEngine() {
   if (engineRaised) return;
   engineRaised = true;
   fitCanvas();
-  plateBtn.hidden = true;
-  plateText.textContent = mode === "join"
-    ? "raising the engine — it deals you into thisissparta2! when the table is up…"
+  plateText.textContent = bridgeLive
+    ? "raising the engine — it stands up on its own menu; thisissparta2!'s door is in it, on the multiplayer side…"
     : "raising the engine…";
   const s = document.createElement("script");
   s.src = "darkplaces-wasm.js?v=" + NX_ENGINE_STAMP;
@@ -779,14 +786,21 @@ function raiseEngine() {
   document.body.appendChild(s);
   post({ type: "booting", mode });
 }
-plateBtn.addEventListener("click", raiseEngine);
-/* Under pointer lock a press lands on the canvas, never on the
- * plate button — the same press raises the engine, so the door
- * is never locked shut. The press is also a live gesture inside
- * the frame, the moment the platform reliably grants the lock,
- * so it asks for the lock too, engine raising or not (the
- * engine's own click-to-lock rides the same press either way). */
+/* The engine raises itself. The click-to-play plate belonged to
+ * the auto-join: its press dealt the player into the room, so a
+ * press was the honest moment to stand the engine up. The menu
+ * is the front door now, and reaching it asks for no press at
+ * all — the frame deals the game, the game stands up on its
+ * menu. (A press on the game still takes the pointer lock, per
+ * the keeper above; that was always the game's own business.) */
+raiseEngine();
+/* A press on the canvas is a live gesture inside the frame, the
+ * moment the platform reliably grants the lock, so it asks for
+ * the lock (the engine's own click-to-lock rides the same press
+ * either way). The raise guard rides along as a belt: should
+ * the self-raise above ever be refused, a press still stands
+ * the engine up rather than leaving a dead plate. */
 canvasEl.addEventListener("mousedown", () => {
-  if (!engineRaised && !engineDead && !plateBtn.hidden) raiseEngine();
+  if (!engineRaised && !engineDead) raiseEngine();
   takeLock();
 });

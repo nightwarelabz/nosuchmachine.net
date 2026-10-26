@@ -93,13 +93,16 @@ public/nexuiz/autoexec.cfg — cvars only, the way real servers were
 configured. It makes local games MinstaHook instagib (g_minstagib 1,
 g_grappling_hook 1 — the "thisissparta" flavor) with the era's
 tunings. The house server is named thisissparta2! — it runs natively
-at the house; when its public bridge address is published, the
-client's join door deals you straight into the shared room.
+at the house, and its public bridge address is published (it is
+the constant the OS window deals with the game frame). The game
+boots to its own main menu; the room's door stands in that menu,
+and entering the room is the player's own press there — no
+connection is ever made for the player at boot.
 Bots are a switch, never a condition of the room: the local
 match's toggle sets bot_number at the table; the house room's fill
 is the host's server-side switch (bot_join_empty / minplayers).
 
-HOUSE MENU OVERRIDE — SETTINGS LOCKED TO THE PLAYER NAME
+HOUSE MENU OVERRIDE — SETTINGS LOCKED, THE ROOM'S DOOR IN THE MENU
 --------------------------------------------------------------
 Every player here runs the same build specs and configs (the house
 configuration above is dealt to everyone identically), so the
@@ -112,21 +115,35 @@ the same surface and is locked the same way. The name field works
 exactly as stock (type, Apply, and that name is the one you wear
 in the room).
 
+The same override carries the room's front door: the game boots
+to its main menu, and at the head of the Multiplayer dialog —
+above the server browser — stands a button labeled
+"thisissparta2!", a stock command button whose command is
+"connect thisissparta2": the very connect the boot used to deal
+sight unseen, now pressed by the player's own hand. It is the
+same road, not a new one — the engine's socket layer dials the
+dealt bridge address for any connect (the shipped glue's peer
+construction takes the dealt URL whole), so the door and the
+retired auto-join differ only in whose hand presses. The
+Singleplayer dialog and the stock server browser are untouched
+and work as shipped.
+
 Mechanism: the override pack public/nexuiz/sparta-menu.pk3
-(160,451 bytes, one entry: menu.dat) rides in the game directory
+(160,556 bytes, one entry: menu.dat) rides in the game directory
 beside the release packs; the engine's own directory order makes
 its menu.dat the one that loads — the same route as the house
 room's sparta-progs / sparta-csprogs overrides. Nothing in the
 release packs is modified.
 
-  sparta-menu.pk3  SHA-256 1604c930532459322314edfffb694111be96b31e17703e72a98066fbc154fdc5
-  menu.dat inside  SHA-256 1b81e2b278fb710bcd2bd27829259894149a1293d42fa4541671886b03598f9b
+  sparta-menu.pk3  SHA-256 1ecf5d09ff61c5b614685dfe7d66710b0484272b22b159db1e8ac031d8c1435a
+  menu.dat inside  SHA-256 2444a040d1780cc7f960918c2e2db989cd745357ba658a8b00179e8b5acb9a53
 
 The menu.dat is compiled from the release's own menu sources
 (qcsrc/menu in gamesource20091001.zip) with the era's own fteqcc
 (the rev1253299209 binary the release archive ships), flags
--O1 -Oreturn_only -Ostrip_functions, plus the one tracked patch —
-tools/nexuiz/house-qc-patch-008.diff, three files:
+-O1 -Oreturn_only -Ostrip_functions, plus the tracked patches —
+tools/nexuiz/house-qc-patch-008.diff (three files) and, stacked
+on it, tools/nexuiz/house-qc-patch-009.diff (one file):
 
   dialog_settings.c: the Settings dialog's six tabs (Input,
     Video, Effects, Audio, Network, Misc) are replaced by the
@@ -150,6 +167,18 @@ tools/nexuiz/house-qc-patch-008.diff, three files:
     background, under every dialog; the in-game menu background
     stays stock, as on the native build. The version tag lives
     here, in the game — not on the site around it.
+  dialog_multiplayer.c (patch 009): the Multiplayer dialog
+    gains the room's door — a full-width stock command button
+    labeled "thisissparta2!" at its head, issuing
+    "connect thisissparta2" with no close flag, exactly as the
+    stock server browser's own Join does. The dialog grows one
+    row (24 to 25) and its tab controller's height drops the
+    same row, so the controller stays level with its four
+    22-row tabs. The door carries no name dependency, unlike
+    the stock tabs below it: the web build deals the player's
+    name to the engine itself, and the cvar those tabs gate on
+    is only the menu's staging name — gating the door on it
+    would bar the dealt-name player it serves.
 
 Parity of the base build, stated exactly: rebuilt from the
 unmodified sources, the menu program's header CRC is 10020 —
@@ -168,6 +197,15 @@ the code section is not claimed. What is claimed: same defs,
 same strings, same globals, same CRC — and the same behavior,
 driven and screenshotted against the real client.
 
+Parity of patch 009 against the patch-008 build, measured the
+same way: header CRC still 10020; 1,010 functions, same names
+and order; field definitions identical; exactly one function's
+statement stream changes — fillNexuizMultiplayerDialog, 91 to
+107 statements (+16, the net program delta) — plus the global
+renumbering two new anonymous string globals cause (the door's
+label and its command; every other stream shift is that
+renumbering, not new code).
+
 One honest limit: this lock governs the menu surface. The
 engine's developer console — a stock part of the game — can
 still set cvars directly, as it could for any player of the
@@ -180,7 +218,11 @@ DarkPlaces speaks UDP (lhnet.c, stock). A browser has no UDP: the
 engine's socket layer (Emscripten SOCKFS) dials a WebSocket address
 verbatim, and the house bridge (sparta-bridge) carries each binary
 frame as one datagram to the real server — one WebSocket session is
-one player. The client supports that contract now (join mode, the
-"sparta" subprotocol); what remains is the public bridge address.
-Local play needs none of it: menus, the single-player ladder, and
-bot matches run on the engine's own in-process server.
+one player. The bridge's public address is dealt with the game
+frame as a standing transport (the "sparta" subprotocol; a WebRTC
+DataChannel is tried first on the same door, every failure landing
+on the WebSocket — see play.js). It dials nothing on its own: the
+socket opens when the player takes the menu's door, or makes any
+connect of their own. Local play needs none of it: menus, the
+single-player ladder, and bot matches run on the engine's own
+in-process server.

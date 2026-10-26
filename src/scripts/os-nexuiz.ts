@@ -10,10 +10,15 @@
  * runs natively at the house, and a browser client reaches it
  * through the house bridge (one WebSocket session there is one
  * player on the server; the engine's own socket layer dials the
- * bridge address verbatim — see public/nexuiz/play.js). When the
- * bridge address is known, opening this window deals you straight
- * into the shared room. Local play rides along: the game's own
- * menus and ladder, and a local MinstaHook bot match — house
+ * bridge address verbatim — see public/nexuiz/play.js). Opening
+ * this window stands the game up on its own main menu, in true
+ * fullscreen, and deals the bridge address with the frame: the
+ * room's door is in that menu, at the head of its multiplayer
+ * side (a tracked house patch to the menu progs —
+ * tools/nexuiz/house-qc-patch-009.diff), and taking it dials the
+ * room through the dealt transport. No connection is made for
+ * the player. Local play rides along: the game's own menus and
+ * ladder, and a local MinstaHook bot match — house
  * configuration is config-only, the way real Nexuiz servers were
  * run (public/nexuiz/autoexec.cfg).
  *
@@ -101,7 +106,7 @@ export function buildNexuiz(body: HTMLElement) {
   const wrap = el("div", "os-nexuiz");
   const bar = el("div", "os-files-bar");
   const stage = el("div", "os-nexuiz-stage");
-  const status = el("p", "os-note", "the table is minsta hook. pick a door.");
+  const status = el("p", "os-note", "nexuiz — standing the game up on its menu.");
   const frame = document.createElement("iframe");
   frame.className = "os-nexuiz-frame";
   frame.setAttribute("title", "nexuiz");
@@ -142,7 +147,13 @@ export function buildNexuiz(body: HTMLElement) {
     const q = new URLSearchParams({ mode });
     if (name) q.set("name", name);
     if (mode === "minsta") q.set("bots", botsOn ? "5" : "0");
-    if (mode === "join") { q.set("bridge", bridge); q.set("server", "thisissparta2"); }
+    /* The bridge rides with every deal, not just the room's: it
+     * is a transport, not a destination — the frame installs the
+     * socket layer from it and dials only when the player takes
+     * the menu's door, from whichever engine session this window
+     * dealt (the menu a local match disconnects back to carries
+     * the same door). */
+    if (bridge) q.set("bridge", bridge);
     return `/nexuiz/play.html?${q.toString()}`;
   };
   let mode = "";
@@ -152,20 +163,16 @@ export function buildNexuiz(body: HTMLElement) {
     frame.src = src(next);
   };
 
-  const spartaBtn = el("button", "os-btn small", "join thisissparta2!");
-  spartaBtn.addEventListener("click", () => {
-    if (!bridge) {
-      status.textContent = "thisissparta2! is live at the house — its public bridge address is not published yet, so this door waits. local minsta hook is ready now.";
-      return;
-    }
-    deal("join", "joining thisissparta2! — the shared room. other players arrive the same way you do.");
-  });
+  /* No join button stands here anymore: the room's door moved
+   * into the game (the menu's multiplayer side), and a window
+   * button promising the join would be copy the window cannot
+   * keep — the join is the player's press, in the game. */
   const minstaBtn = el("button", "os-btn small", "minsta hook — instant match");
   minstaBtn.addEventListener("click", () => deal("minsta", botsOn
     ? "minsta hook on aggressor, five bots. one shot, one kill — hook is your other hand."
     : "minsta hook on aggressor, no bots — the map is yours alone."));
   const menuBtn = el("button", "os-btn small", "nexuiz menu");
-  menuBtn.addEventListener("click", () => deal("menu", "the game's own menu. single player ladder, create a match, options — as shipped in 2009."));
+  menuBtn.addEventListener("click", () => deal("menu", "the game's own menu — single player, the server browser, and thisissparta2!'s door at the head of the multiplayer side."));
   const botsBtn = el("button", "os-btn small", "bots: on");
   botsBtn.addEventListener("click", () => {
     botsOn = !botsOn;
@@ -181,7 +188,7 @@ export function buildNexuiz(body: HTMLElement) {
   notice.setAttribute("href", "/nexuiz/NOTICE.txt");
   notice.setAttribute("target", "_blank");
   notice.setAttribute("rel", "noreferrer");
-  bar.append(spartaBtn, minstaBtn, menuBtn, botsBtn, full, notice);
+  bar.append(minstaBtn, menuBtn, botsBtn, full, notice);
 
   const keys = el("p", "os-note", "wasd move · mouse look (click the game to lock) · e: hook · space jump · esc menu");
   wrap.append(bar, stage, status, keys);
@@ -259,9 +266,9 @@ export function buildNexuiz(body: HTMLElement) {
     } else if (m.type === "esc-up") {
       escUp();
     } else if (m.type === "started") {
-      status.textContent = mode === "join"
-        ? "thisissparta2! — live. click the game to take the mouse."
-        : mode === "minsta" ? "minsta hook — live." : "nexuiz — live. click the game to take the mouse.";
+      status.textContent = mode === "minsta"
+        ? "minsta hook — live."
+        : "nexuiz — live, on its menu. click the game to take the mouse; thisissparta2! is the multiplayer side's first door.";
     }
   };
   window.addEventListener("message", onMsg);
@@ -376,10 +383,11 @@ export function buildNexuiz(body: HTMLElement) {
   });
   obs.observe(document.body, { childList: true, subtree: true });
 
-  if (bridge) {
-    deal("join", "joining thisissparta2! — the shared room. other players arrive the same way you do.");
-  } else {
-    deal("menu", "the game's own menu. single player ladder, create a match, options — as shipped in 2009.");
-  }
+  /* The icon press is the whole ceremony: the game stands up on
+   * its own main menu (the frame raises the engine itself — no
+   * further press is asked), and the fullscreen follows on this
+   * same gesture below. The room is one more press away, inside
+   * the game, where its door stands. */
+  deal("menu", "the game's own menu — thisissparta2!'s door stands in it, on the multiplayer side. the room is entered there now, by hand.");
   nexuizStageFullscreen(body);
 }

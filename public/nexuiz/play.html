@@ -17,9 +17,6 @@
   #plate p { margin: 0; max-width: 34rem; color: #93a1b3; }
   #plate .bar { width: min(30rem, 80%); height: 6px; border: 1px solid #3a4353; border-radius: 3px; overflow: hidden; }
   #plate .fill { height: 100%; width: 0%; background: #e5484d; transition: width 0.2s; }
-  #plate button { background: #171c24; color: #e8edf3; border: 1px solid #3a4353; border-radius: 7px;
-    padding: 0.5rem 1.1rem; font: inherit; cursor: pointer; }
-  #plate button:hover { border-color: #e5484d; }
   #plate .err { color: #ff8589; max-width: 36rem; white-space: pre-wrap; }
   /* The engine console is an internal log only — it is never
      rendered: not in the window, not in fullscreen, not during
@@ -40,7 +37,6 @@
       SHA-256, and kept in your browser for next time.</p>
       <div class="bar" id="plate-bar" hidden><div class="fill" id="plate-fill"></div></div>
       <p id="plate-status"></p>
-      <button id="plate-btn">click to play</button>
     </div>
   </div>
   <pre id="con" aria-label="engine console"></pre>

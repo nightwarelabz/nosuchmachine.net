@@ -184,11 +184,14 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
   verified in the loader before the engine starts.
 - Game logic (QuakeC progs): the server and client progs are the
   ones inside the release pack, untouched. The **menu** progs
-  carries one tracked house patch — `house-qc-patch-008.diff`
-  beside this file — shipped as the override pack
+  carries two tracked house patches — `house-qc-patch-008.diff`
+  and, stacked on it, `house-qc-patch-009.diff`, both beside
+  this file — shipped as the override pack
   `public/nexuiz/sparta-menu.pk3` (see the menu section below
   and NOTICE.txt): the Settings surface is locked to the player
-  name, and the main menu draws the build's rezzmodV1 tag.
+  name, the main menu draws the build's rezzmodV1 tag, and the
+  Multiplayer dialog carries the house room's front door — the
+  game boots to its menu, and the room is entered there.
 - House layer: configuration only — `public/nexuiz/autoexec.cfg`
   (MinstaHook cvars, the way real servers were run), the loader
   transport, and the OS window. One platform cvar rides in it:
@@ -286,13 +289,21 @@ fteqcc -O1 -Oreturn_only -Ostrip_functions   # writes ../../menu.dat
 zip -9 sparta-menu.pk3 menu.dat              # single entry, at the root
 ```
 
-With `house-qc-patch-008.diff` applied to the sources first
-(`patch -p1`, from the qcsrc root's parent — it applies clean
-and reproduces the compiled tree exactly), the output is the
-shipped override: menu.dat SHA-256
-`1b81e2b278fb710bcd2bd27829259894149a1293d42fa4541671886b03598f9b`,
+With `house-qc-patch-008.diff` and then `house-qc-patch-009.diff`
+applied to the sources first (`patch -p1`, from the qcsrc root's
+parent — they apply clean in order and reproduce the compiled
+tree exactly), the output is the shipped override: menu.dat
+SHA-256
+`2444a040d1780cc7f960918c2e2db989cd745357ba658a8b00179e8b5acb9a53`,
 pk3 SHA-256
-`1604c930532459322314edfffb694111be96b31e17703e72a98066fbc154fdc5`.
+`1ecf5d09ff61c5b614685dfe7d66710b0484272b22b159db1e8ac031d8c1435a`.
+Patch 009 alone (one file, `dialog_multiplayer.c`) adds the
+room's door to the Multiplayer dialog; measured against the
+patch-008 build it moves the header CRC not at all (still
+10020), changes exactly one function's statement stream
+(fillNexuizMultiplayerDialog, +16 statements — the net program
+delta), adds two anonymous string globals (the door's label and
+command), and leaves the field definitions identical.
 
 Unpatched, the same recipe reproduces the shipped menu.dat's
 engine-visible contract exactly — header CRC 10020, and the
