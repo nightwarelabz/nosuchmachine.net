@@ -124,10 +124,480 @@ const moduleDef = {
     if (/Engine Error|Host_Error|Sys_Error|Aborted\(|RuntimeError/.test(text)) engineError(text.slice(0, 220));
   },
 };
+/* sparta-rtc-shim:start — one self-contained block: the socket
+ * below, its signaling-URL derivation, and the installer are the
+ * whole of it, so the block can be lifted verbatim and exercised
+ * on its own (the code-path proof does exactly that).
+ *
+ * The fast road, and the road that is already there.
+ *
+ * SOCKFS dials the dealt bridge URL for every peer through the
+ * page-global WebSocket constructor, looked up at call time, and
+ * uses only the plain socket face: onopen/onclose/onmessage/
+ * onerror, send(), close(), readyState against the instance's
+ * own CONNECTING/OPEN/CLOSING/CLOSED constants, and onmessage
+ * events whose .data is an ArrayBuffer. A house peer — the dealt
+ * URL, the "sparta" subprotocol — deserves a faster road than a
+ * relayed TCP stream where one is honestly available, so a house
+ * construction returns the shim socket below instead of a real
+ * WebSocket. The shim first tries WebRTC: a DataChannel named
+ * "sparta", unordered with no retransmits (the game's datagrams
+ * are exactly that), negotiated over a signaling socket to the
+ * same door at the /rtc path, with one public STUN server to
+ * learn its own address from. There is no TURN relay: a NAT that
+ * refuses UDP outright cannot be crossed without one, and that
+ * is the honest limit of the fast road — it is not a dead end,
+ * because every failure on it lands on the road below.
+ *
+ * The other road: if the channel is not open within the setup
+ * budget — signaling refused or closed, ICE failed or
+ * disconnected, a negotiation error, the budget itself expiring,
+ * or a browser with no RTCPeerConnection at all — the shim
+ * silently substitutes the exact current road: a real WebSocket
+ * to the original URL with the original protocols, delegated
+ * 1:1. The switch happens only before a transport has opened.
+ * Once the channel is open, a failure is a dropped connection
+ * and the socket closes like a real one — a fresh WebSocket
+ * mid-game would be a new player wearing the old one's name,
+ * and its opening messages are not game datagrams. Once a shim
+ * has fallen back it never retries RTC; the engine cannot tell
+ * the difference either way, and needs not.
+ */
+const NX_RTC_BUDGET_MS = 8000;
+
+/* The signaling door: the bridge's own URL with /rtc at the end
+ * of its path (a trailing slash is the path's end, not part of
+ * the name — the root path takes /rtc whole). */
+function nxSpartaSignalUrl(houseUrl) {
+  const u = new URL(houseUrl);
+  u.pathname = (u.pathname.endsWith("/") ? u.pathname.slice(0, -1) : u.pathname) + "/rtc";
+  return u.toString();
+}
+
+/* A remote ice line from the signaling socket, in the shape
+ * addIceCandidate takes: a candidate object rides as dealt; a
+ * candidate string rides with its mid and line index beside it.
+ * An empty candidate is the end-of-candidates mark, not a
+ * candidate — there is nothing to add for it. */
+function nxSpartaRemoteIce(msg) {
+  if (msg.candidate && typeof msg.candidate === "object") return msg.candidate;
+  if (typeof msg.candidate !== "string" || !msg.candidate) return null;
+  return {
+    candidate: msg.candidate,
+    sdpMid: msg.sdpMid ?? null,
+    sdpMLineIndex: msg.sdpMLineIndex ?? null,
+  };
+}
+
+class NxSpartaSocket {
+  constructor(url, protocols, RealWebSocket) {
+    this.url = String(url);
+    this.protocol = "sparta";
+    this._protocols = protocols;
+    this._realCtor = RealWebSocket;
+    this._binaryType = "arraybuffer";
+    this.readyState = NxSpartaSocket.CONNECTING;
+    this.CONNECTING = NxSpartaSocket.CONNECTING;
+    this.OPEN = NxSpartaSocket.OPEN;
+    this.CLOSING = NxSpartaSocket.CLOSING;
+    this.CLOSED = NxSpartaSocket.CLOSED;
+    this.onopen = null;
+    this.onclose = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this._listeners = new Map();
+    this._queue = [];
+    this._sigQueue = [];
+    this._pendingIce = [];
+    this._pendingRemoteIce = [];
+    this._pc = null;
+    this._dc = null;
+    this._sig = null;
+    this._fb = null;
+    this._offerSent = false;
+    this._remoteSet = false;
+    this._opened = false;
+    this._closed = false;
+    this._closeFired = false;
+    this._fallbackStarted = false;
+    /* The setup budget runs from construction: the fast road
+     * proves itself in this window or the other road is taken. */
+    this._budgetTimer = setTimeout(() => this._failRtc(), NX_RTC_BUDGET_MS);
+    if (this._budgetTimer && typeof this._budgetTimer.unref === "function") this._budgetTimer.unref();
+    this._startRtc();
+  }
+
+  get binaryType() { return this._binaryType; }
+  set binaryType(value) {
+    this._binaryType = String(value);
+    try { if (this._dc) this._dc.binaryType = this._binaryType; } catch { /* the channel keeps its type */ }
+    try { if (this._fb) this._fb.binaryType = this._binaryType; } catch { /* the socket keeps its type */ }
+  }
+
+  get bufferedAmount() {
+    let n = 0;
+    for (const data of this._queue) n += (data && (data.byteLength ?? data.length)) || 0;
+    try { if (this._dc) n += this._dc.bufferedAmount || 0; } catch { /* the queue's word stands */ }
+    try { if (this._fb) n += this._fb.bufferedAmount || 0; } catch { /* the queue's word stands */ }
+    return n;
+  }
+
+  addEventListener(type, listener) {
+    if (typeof listener !== "function") return;
+    let set = this._listeners.get(type);
+    if (!set) { set = new Set(); this._listeners.set(type, set); }
+    set.add(listener);
+  }
+  removeEventListener(type, listener) {
+    const set = this._listeners.get(type);
+    if (set) set.delete(listener);
+  }
+  dispatchEvent(event) {
+    if (!event || typeof event.type !== "string") return false;
+    this._emit(event.type, event);
+    return true;
+  }
+
+  /* One event, both doors the face offers: the property handler
+   * SOCKFS sets, and any listener added beside it. A throwing
+   * handler is the handler's business, as on a real socket — it
+   * does not take the dispatch, or the engine, down with it. */
+  _emit(type, event) {
+    const ev = event && typeof event === "object" ? event : {};
+    try { if (!ev.type) ev.type = type; } catch { /* a native event carries its own */ }
+    try { if (!ev.target) ev.target = this; } catch { /* a native event carries its own */ }
+    try { ev.currentTarget = this; } catch { /* a native event carries its own */ }
+    const handler = this["on" + type];
+    if (typeof handler === "function") { try { handler.call(this, ev); } catch { /* the handler's business */ } }
+    const set = this._listeners.get(type);
+    if (set) for (const listener of [...set]) { try { listener.call(this, ev); } catch { /* the listener's business */ } }
+  }
+  _emitMessage(data) { this._emit("message", { data }); }
+
+  send(data) {
+    if (this._closed || this.readyState === NxSpartaSocket.CLOSING || this.readyState === NxSpartaSocket.CLOSED) return;
+    if (this._opened) {
+      /* Open is open: a transport's refusal here is the caller's
+       * word to hear — SOCKFS turns it into its own errno. */
+      this._sendNow(data);
+      return;
+    }
+    /* While CONNECTING the shim queues too. SOCKFS already queues
+     * its own sends and flushes them at onopen, but a send that
+     * lands in the fallback race must never be dropped, and a real
+     * WebSocket throws on send-while-CONNECTING — swallowing the
+     * call into the queue is strictly safer than either. */
+    this._queue.push(data);
+  }
+  _sendNow(data) {
+    if (this._dc && this._dc.readyState === "open") { this._dc.send(data); return; }
+    if (this._fb && this._fb.readyState === NxSpartaSocket.OPEN) { this._fb.send(data); return; }
+    throw new Error("sparta socket: no transport is open");
+  }
+  _flushQueue() {
+    const queued = this._queue;
+    this._queue = [];
+    for (let i = 0; i < queued.length; i++) {
+      try { this._sendNow(queued[i]); }
+      catch {
+        /* What would not go stays queued, in order, at the front. */
+        this._queue = queued.slice(i).concat(this._queue);
+        return;
+      }
+    }
+  }
+
+  close(code, reason) {
+    if (this.readyState === NxSpartaSocket.CLOSING || this.readyState === NxSpartaSocket.CLOSED) return;
+    this._finishClose(
+      typeof code === "number" ? code : 1000,
+      typeof reason === "string" ? reason : "",
+      true,
+    );
+  }
+  /* The one close door: every ending — the caller's close(), a
+   * transport dying, the fallback road closing — passes through
+   * here, tears every transport down with its handlers already
+   * lifted (so a teardown cannot re-enter), and fires onclose
+   * exactly once, as the socket had opened or was connecting in
+   * every case that reaches this line. */
+  _finishClose(code, reason, wasClean) {
+    this._closed = true;
+    this._clearBudget();
+    this.readyState = NxSpartaSocket.CLOSING;
+    this._teardownRtc();
+    const fb = this._fb;
+    this._fb = null;
+    if (fb) {
+      try { fb.onopen = fb.onmessage = fb.onerror = fb.onclose = null; } catch { /* already still */ }
+      try { fb.close(); } catch { /* already closed */ }
+    }
+    this.readyState = NxSpartaSocket.CLOSED;
+    if (!this._closeFired) {
+      this._closeFired = true;
+      this._emit("close", { code, reason, wasClean });
+    }
+  }
+
+  _clearBudget() {
+    if (this._budgetTimer) { clearTimeout(this._budgetTimer); this._budgetTimer = null; }
+  }
+
+  _startRtc() {
+    const RTC = globalThis.RTCPeerConnection;
+    /* No RTCPeerConnection, no fast road — the old browser takes
+     * the current road directly and is none the worse for it. */
+    if (typeof RTC !== "function") { this._startFallback(); return; }
+    let sigUrl;
+    try { sigUrl = nxSpartaSignalUrl(this.url); } catch { this._startFallback(); return; }
+    let pc, dc, sig;
+    try {
+      pc = new RTC({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      this._pc = pc;
+      /* The channel is created before the offer, so the offer
+       * carries it: its name is the contract's word, and its
+       * shape is the game's — datagrams, unordered, never
+       * retransmitted. */
+      dc = pc.createDataChannel("sparta", { ordered: false, maxRetransmits: 0 });
+      this._dc = dc;
+      try { dc.binaryType = this._binaryType; } catch { /* the channel's default is arraybuffer too */ }
+      const RealWebSocket = this._realCtor;
+      sig = new RealWebSocket(sigUrl);
+      this._sig = sig;
+    } catch { this._startFallback(); return; }
+
+    dc.onopen = () => this._transportOpened();
+    dc.onmessage = (ev) => { if (!this._closed) this._deliverDcData(ev ? ev.data : undefined); };
+    dc.onclose = () => {
+      if (this._closed) return;
+      if (!this._opened) this._failRtc();
+      else this._finishClose(1006, "", false);
+    };
+    dc.onerror = () => { if (!this._opened) this._failRtc(); };
+
+    pc.onicecandidate = (ev) => {
+      const cand = ev && ev.candidate;
+      if (!cand) return;
+      const msg = { type: "ice", candidate: cand.candidate, sdpMid: cand.sdpMid, sdpMLineIndex: cand.sdpMLineIndex };
+      /* Candidates are trickled as they come — but never ahead of
+       * the offer they belong to; those wait beside it. */
+      if (this._offerSent) this._sigSend(msg);
+      else this._pendingIce.push(msg);
+    };
+    pc.oniceconnectionstatechange = () => {
+      const state = pc.iceConnectionState;
+      if (state !== "failed" && state !== "disconnected") return;
+      if (!this._opened) this._failRtc();
+      else if (state === "failed") this._finishClose(1006, "", false);
+    };
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      if (state !== "failed" && state !== "disconnected") return;
+      if (!this._opened) this._failRtc();
+      else if (state === "failed") this._finishClose(1006, "", false);
+    };
+
+    sig.onopen = () => {
+      const queued = this._sigQueue;
+      this._sigQueue = [];
+      for (const text of queued) { try { sig.send(text); } catch { /* a dead signaling socket is the RTC road's failure, handled by its own handlers */ } }
+    };
+    sig.onmessage = (ev) => this._onSignal(ev ? ev.data : undefined);
+    sig.onerror = () => { if (!this._opened) this._failRtc(); };
+    sig.onclose = () => { if (!this._opened && !this._closed) this._failRtc(); };
+
+    (async () => {
+      try {
+        const offer = await pc.createOffer();
+        if (this._closed || this._fallbackStarted || this._opened) return;
+        await pc.setLocalDescription(offer);
+        if (this._closed || this._fallbackStarted || this._opened) return;
+        this._offerSent = true;
+        this._sigSend({ type: "offer", sdp: (pc.localDescription && pc.localDescription.sdp) || offer.sdp });
+        const pending = this._pendingIce;
+        this._pendingIce = [];
+        for (const msg of pending) this._sigSend(msg);
+      } catch { this._failRtc(); }
+    })();
+  }
+
+  /* Signaling words wait for the signaling socket exactly as
+   * game words wait for the shim: queued while it connects,
+   * sent in order once it stands. */
+  _sigSend(obj) {
+    const sig = this._sig;
+    if (!sig) return;
+    let text;
+    try { text = JSON.stringify(obj); } catch { return; }
+    if (sig.readyState === NxSpartaSocket.OPEN) { try { sig.send(text); } catch { /* the socket's handlers carry its failure */ } }
+    else if (sig.readyState === NxSpartaSocket.CONNECTING) this._sigQueue.push(text);
+  }
+
+  _onSignal(data) {
+    if (this._closed || this._fallbackStarted) return;
+    let msg;
+    try { msg = JSON.parse(typeof data === "string" ? data : ""); } catch { return; }
+    if (!msg || typeof msg !== "object") return;
+    const pc = this._pc;
+    if (!pc) return;
+    if (msg.type === "answer" && typeof msg.sdp === "string") {
+      if (this._opened || this._remoteSet) return;
+      (async () => {
+        try {
+          await pc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
+          this._remoteSet = true;
+          const queued = this._pendingRemoteIce;
+          this._pendingRemoteIce = [];
+          for (const cand of queued) { try { await pc.addIceCandidate(cand); } catch { /* a refused candidate is not the negotiation's failure */ } }
+        } catch { this._failRtc(); }
+      })();
+    } else if (msg.type === "ice") {
+      const cand = nxSpartaRemoteIce(msg);
+      if (!cand) return;
+      /* A candidate that arrives before the answer stands waits
+       * for it: a peer connection refuses candidates dealt to it
+       * before its remote description, and the refusal is ours
+       * to avoid, not the gateway's to forgive. */
+      if (!this._remoteSet) { this._pendingRemoteIce.push(cand); return; }
+      try {
+        const p = pc.addIceCandidate(cand);
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch { /* a refused candidate is not the negotiation's failure */ }
+    }
+  }
+
+  /* Channel words, delivered as the face promises: with
+   * binaryType "arraybuffer" (the type SOCKFS deals the shim)
+   * onmessage carries an ArrayBuffer whose bytes are the
+   * datagram's, untouched — one channel message, one event. */
+  _deliverDcData(data) {
+    if (data === undefined || data === null) return;
+    if (typeof data === "string" || data instanceof ArrayBuffer) {
+      this._emitMessage(this._binaryType === "blob" && data instanceof ArrayBuffer ? new Blob([data]) : data);
+      return;
+    }
+    if (typeof Blob !== "undefined" && data instanceof Blob) {
+      if (this._binaryType === "blob") { this._emitMessage(data); return; }
+      data.arrayBuffer().then((ab) => { if (!this._closed) this._emitMessage(ab); }).catch(() => {});
+      return;
+    }
+    if (ArrayBuffer.isView(data)) {
+      const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+      this._emitMessage(this._binaryType === "blob" ? new Blob([ab]) : ab);
+      return;
+    }
+    this._emitMessage(data);
+  }
+
+  _transportOpened() {
+    if (this._closed || this._opened) return;
+    this._opened = true;
+    this._clearBudget();
+    this.readyState = NxSpartaSocket.OPEN;
+    /* The shim's own queue goes first, in order: those sends were
+     * dealt before the ones SOCKFS flushes in answer to onopen. */
+    this._flushQueue();
+    this._emit("open", {});
+  }
+
+  /* The RTC road failed before a transport opened. Its handlers
+   * come off and its pieces close before the other road is taken,
+   * so nothing from the attempt can speak after the switch. */
+  _failRtc() {
+    if (this._closed || this._opened || this._fallbackStarted) return;
+    this._startFallback();
+  }
+  _teardownRtc() {
+    const sig = this._sig, dc = this._dc, pc = this._pc;
+    this._sig = null;
+    this._dc = null;
+    this._pc = null;
+    if (sig) {
+      try { sig.onopen = sig.onmessage = sig.onerror = sig.onclose = null; } catch { /* already still */ }
+      try { sig.close(); } catch { /* already closed */ }
+    }
+    if (dc) {
+      try { dc.onopen = dc.onmessage = dc.onclose = dc.onerror = null; } catch { /* already still */ }
+      try { dc.close(); } catch { /* already closed */ }
+    }
+    if (pc) {
+      try { pc.onicecandidate = pc.oniceconnectionstatechange = pc.onconnectionstatechange = null; } catch { /* already still */ }
+      try { pc.close(); } catch { /* already closed */ }
+    }
+  }
+
+  /* The exact current road: a real WebSocket to the original URL
+   * with the original protocols, delegated 1:1 — its onopen is
+   * the shim's onopen, its messages and errors are the shim's,
+   * its close is the shim's close, code and all. */
+  _startFallback() {
+    if (this._closed || this._opened || this._fallbackStarted) return;
+    this._fallbackStarted = true;
+    this._clearBudget();
+    this._teardownRtc();
+    const RealWebSocket = this._realCtor;
+    let ws;
+    try { ws = new RealWebSocket(this.url, this._protocols); }
+    catch { this._finishClose(1006, "", false); return; }
+    this._fb = ws;
+    try { ws.binaryType = this._binaryType; } catch { /* the socket's default stands */ }
+    ws.onopen = () => {
+      if (this._closed) { try { ws.close(); } catch { /* already closed */ } return; }
+      this._transportOpened();
+    };
+    ws.onmessage = (ev) => { if (!this._closed) this._emitMessage(ev ? ev.data : undefined); };
+    ws.onerror = (ev) => { if (!this._closed) this._emit("error", ev || {}); };
+    ws.onclose = (ev) => {
+      this._finishClose(
+        ev && typeof ev.code === "number" ? ev.code : 1006,
+        ev && ev.reason ? String(ev.reason) : "",
+        !!(ev && ev.wasClean),
+      );
+    };
+  }
+}
+NxSpartaSocket.CONNECTING = 0;
+NxSpartaSocket.OPEN = 1;
+NxSpartaSocket.CLOSING = 2;
+NxSpartaSocket.CLOSED = 3;
+
+/* The replacement for the page-global WebSocket, installed only
+ * on a live join, before the engine script can look the
+ * constructor up. The original is captured first and kept: a
+ * construction for the dealt house URL returns a shim socket;
+ * a construction for any other URL returns a real WebSocket,
+ * untouched in behaviour — the replacement spends itself only
+ * on the house's own peers, and every peer SOCKFS makes dials
+ * the dealt URL. */
+function nxInstallSpartaWebSocket(houseUrl) {
+  const RealWebSocket = globalThis.WebSocket;
+  if (typeof RealWebSocket !== "function") return null;
+  function SpartaWebSocket(url, protocols) {
+    if (String(url) === houseUrl) return new NxSpartaSocket(url, protocols, RealWebSocket);
+    return new RealWebSocket(url, protocols);
+  }
+  SpartaWebSocket.CONNECTING = NxSpartaSocket.CONNECTING;
+  SpartaWebSocket.OPEN = NxSpartaSocket.OPEN;
+  SpartaWebSocket.CLOSING = NxSpartaSocket.CLOSING;
+  SpartaWebSocket.CLOSED = NxSpartaSocket.CLOSED;
+  try { SpartaWebSocket.prototype = RealWebSocket.prototype; } catch { /* the face stands without it */ }
+  globalThis.WebSocket = SpartaWebSocket;
+  return SpartaWebSocket;
+}
+/* sparta-rtc-shim:end */
+
 /* Emscripten's socket layer (SOCKFS) dials this URL verbatim for
  * every connection and offers the "sparta" subprotocol — exactly the
- * bridge's contract. Set before the engine script loads. */
-if (joinLive) moduleDef.websocket = { url: bridge, subprotocol: "sparta" };
+ * bridge's contract. Set before the engine script loads. On a live
+ * join the page-global WebSocket is the shim's first (see the
+ * sparta-rtc-shim block above): the dealt values below do not
+ * change — the URL SOCKFS dials is still the bridge's, word for
+ * word — only the construction behind them tries the fast road
+ * first and falls back to a real socket on the same URL. */
+if (joinLive) {
+  moduleDef.websocket = { url: bridge, subprotocol: "sparta" };
+  nxInstallSpartaWebSocket(bridge);
+}
 window.Module = moduleDef;
 
 if (mode === "join" && !joinLive) {

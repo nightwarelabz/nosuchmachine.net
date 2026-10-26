@@ -132,6 +132,25 @@ assert.ok(astroJs.includes("4500"), "OS bundle must carry the 4.5 s Esc hold");
 const nexPlay = fs.readFileSync(path.join(root, "nexuiz/play.js"), "utf8");
 assert.ok(nexPlay.includes("esc-down"), "nexuiz play frame must report Esc edges to the house");
 assert.ok(nexPlay.includes("requestPointerLock"), "nexuiz play frame must hold pointer lock in fullscreen");
+// Nexuiz WebRTC transport: a house peer's construction must try the
+// fast road first — a DataChannel negotiated over the /rtc
+// signaling path on the dealt door, STUN only, no TURN, inside the
+// setup budget — and every failure on it must land on the exact
+// current road, a real WebSocket to the original URL. These pins
+// are the ship-markers of that contract in the built play frame.
+assert.ok(nexPlay.includes("nxInstallSpartaWebSocket(bridge)"), "nexuiz play frame must install the RTC shim on a live join");
+assert.ok(
+  nexPlay.indexOf("nxInstallSpartaWebSocket(bridge)") > nexPlay.indexOf("moduleDef.websocket") &&
+  nexPlay.indexOf("nxInstallSpartaWebSocket(bridge)") < nexPlay.indexOf("window.Module = moduleDef"),
+  "the RTC shim must be installed where the websocket is dealt, before window.Module is set",
+);
+assert.ok(nexPlay.includes('"/rtc"') && nexPlay.includes("nxSpartaSignalUrl"), "the shim must derive its signaling path as /rtc on the dealt door");
+assert.ok(nexPlay.includes("new URL(houseUrl)"), "the signaling URL must be derived from the dealt bridge URL, not rebuilt from parts");
+assert.ok(nexPlay.includes('createDataChannel("sparta", { ordered: false, maxRetransmits: 0 })'), "the fast road's channel must be sparta, unordered, with no retransmits");
+assert.ok(nexPlay.includes("NX_RTC_BUDGET_MS = 8000"), "the RTC setup budget must be 8000 ms from construction");
+assert.ok(nexPlay.includes('"stun:stun.l.google.com:19302"'), "the fast road must learn its address from the house STUN server only (no TURN)");
+assert.ok(nexPlay.includes("new RealWebSocket(this.url, this._protocols)"), "the fallback must construct the original WebSocket with the original URL and protocols");
+assert.ok(nexPlay.includes("new RealWebSocket(url, protocols)"), "a construction for any other URL must return a real WebSocket, untouched");
 // Live update: the build stamp must name the OS chunk this build made,
 // and the bundle must carry the watcher that polls it.
 const versionStamp = JSON.parse(fs.readFileSync(path.join(root, "version.json"), "utf8"));
