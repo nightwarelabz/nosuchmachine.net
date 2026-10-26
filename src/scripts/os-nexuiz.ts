@@ -220,6 +220,7 @@ export function buildNexuiz(body: HTMLElement) {
     escTimer = window.setTimeout(() => {
       escCancel();
       if (document.fullscreenElement === stage) {
+        fsExitEarned = true; // the heal below never fights an earned exit
         try { void document.exitFullscreen().catch(() => undefined); } catch { /* the screen is already ours again */ }
       }
     }, ESC_HOLD_MS);
@@ -313,6 +314,44 @@ export function buildNexuiz(body: HTMLElement) {
   const onGestureForLock = () => { takeLock(); };
   document.addEventListener("pointerdown", onGestureForLock, true);
   document.addEventListener("keydown", onGestureForLock, true);
+  /* The self-heal (the operator's ruling, 2026-10-26, chosen over
+   * dropping the menu pointer lock): while a fullscreen session
+   * stands, an exit the hold clock did not earn is the browser
+   * taking the screen, not the player leaving — so the stage
+   * takes it back. Both convicted shapes land here: Chrome on
+   * the operator's Mac dropping fullscreen on an Esc tap under a
+   * granted keyboard lock, and the engine's own start-up knocking
+   * the stage out of fullscreen once on the way in (the recorded
+   * +179 ms flap). Asking for the screen needs a live gesture, so
+   * the heal asks at once — a drop just after a gesture can still
+   * spend it — and again on every following key or pointer press
+   * until the screen is the stage's again: it returns on the
+   * player's next touch, never by seizure in the dark. An earned
+   * exit (the hold clock's, marked above) and a closed window
+   * are never fought. */
+  let fsSession = false;
+  let fsExitEarned = false;
+  const healFs = () => {
+    if (!fsSession || fsExitEarned || document.fullscreenElement === stage) return;
+    try {
+      const r = stage.requestFullscreen() as unknown as Promise<void> | undefined;
+      if (r) void r.catch(() => undefined);
+    } catch { /* the next press asks again */ }
+  };
+  const onFsHeal = () => {
+    if (document.fullscreenElement === stage) {
+      fsSession = true;
+      fsExitEarned = false;
+    } else if (fsSession && !fsExitEarned) {
+      healFs();
+    } else {
+      fsSession = false;
+    }
+  };
+  document.addEventListener("fullscreenchange", onFsHeal);
+  const onGestureForHeal = () => { healFs(); };
+  document.addEventListener("pointerdown", onGestureForHeal, true);
+  document.addEventListener("keydown", onGestureForHeal, true);
   const obs = new MutationObserver(() => {
     if (!document.body.contains(wrap)) {
       obs.disconnect();
@@ -321,6 +360,11 @@ export function buildNexuiz(body: HTMLElement) {
       document.removeEventListener("fullscreenchange", onFsLock);
       document.removeEventListener("pointerdown", onGestureForLock, true);
       document.removeEventListener("keydown", onGestureForLock, true);
+      document.removeEventListener("fullscreenchange", onFsHeal);
+      document.removeEventListener("pointerdown", onGestureForHeal, true);
+      document.removeEventListener("keydown", onGestureForHeal, true);
+      fsSession = false;
+      fsExitEarned = false;
       lockWanted = false;
       lockHeld = false;
       document.removeEventListener("keydown", onKeyDown);
