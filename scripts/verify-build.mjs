@@ -129,6 +129,15 @@ for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "thisissparta2!", 
 // the pointer lock for the session).
 assert.ok(astroJs.includes("esc-down"), "OS bundle must carry the nexuiz Esc hold-exit clock");
 assert.ok(astroJs.includes("4500"), "OS bundle must carry the 4.5 s Esc hold");
+// Window lifecycle (review §3/§5): the OS bundle must carry the
+// running/suspended/disposed contract words the windows speak, the
+// state the window body wears, and the lazy build a restored
+// minimized window is dealt instead of its content.
+for (const marker of ["os:suspend", "os:resume", "os:dispose"]) {
+  assert.ok(astroJs.includes(marker), `OS bundle missing lifecycle word: ${marker}`);
+}
+assert.ok(astroJs.includes("osState"), "OS bundle must stamp each window's lifecycle state on its body");
+assert.ok(astroJs.includes("deferBuild"), "OS bundle must carry the deferred build session restore deals a minimized window");
 const nexPlay = fs.readFileSync(path.join(root, "nexuiz/play.js"), "utf8");
 assert.ok(nexPlay.includes("esc-down"), "nexuiz play frame must report Esc edges to the house");
 assert.ok(nexPlay.includes("requestPointerLock"), "nexuiz play frame must hold pointer lock in fullscreen");

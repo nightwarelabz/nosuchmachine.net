@@ -458,29 +458,70 @@ export function buildNexuiz(body: HTMLElement) {
   const onGestureForHeal = () => { healFs(); };
   document.addEventListener("pointerdown", onGestureForHeal, true);
   document.addEventListener("keydown", onGestureForHeal, true);
-  const obs = new MutationObserver(() => {
-    if (!document.body.contains(wrap)) {
-      obs.disconnect();
-      window.removeEventListener("message", onMsg);
-      document.removeEventListener("fullscreenchange", tellFs);
-      document.removeEventListener("fullscreenchange", onFsLock);
-      document.removeEventListener("pointerdown", onGestureForLock, true);
-      document.removeEventListener("keydown", onGestureForLock, true);
-      document.removeEventListener("fullscreenchange", onFsHeal);
-      document.removeEventListener("pointerdown", onGestureForHeal, true);
-      document.removeEventListener("keydown", onGestureForHeal, true);
-      fsSession = false;
-      fsExitEarned = false;
-      lockWanted = false;
-      lockHeld = false;
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("keyup", onKeyUp);
-      escCancel();
-      try { keyboard()?.unlock?.(); } catch { /* nothing was held */ }
-      frame.src = "about:blank";
+  /* Teardown — the session's end, run once and run whole. It
+   * used to live only inside the removal observer below, ~150 ms
+   * behind the close click and only when the window truly left
+   * the document; now the lifecycle's dispose word runs it the
+   * moment the window is closed, and the observer stands as the
+   * backstop for any removal the desk did not announce. Every
+   * listener this room put on the window or the document comes
+   * off, the hold clock stops, the keyboard lock is released, a
+   * stage still holding the screen gives it back, and the frame
+   * is navigated away — its document's destruction is what ends
+   * the engine and its transport, so it is made certain here
+   * rather than left to the removal to imply. */
+  let torn = false;
+  const teardown = () => {
+    if (torn) return;
+    torn = true;
+    obs.disconnect();
+    window.removeEventListener("message", onMsg);
+    document.removeEventListener("fullscreenchange", tellFs);
+    document.removeEventListener("fullscreenchange", onFsLock);
+    document.removeEventListener("pointerdown", onGestureForLock, true);
+    document.removeEventListener("keydown", onGestureForLock, true);
+    document.removeEventListener("fullscreenchange", onFsHeal);
+    document.removeEventListener("pointerdown", onGestureForHeal, true);
+    document.removeEventListener("keydown", onGestureForHeal, true);
+    frame.removeEventListener("load", tellFs);
+    fsSession = false;
+    fsExitEarned = false;
+    lockWanted = false;
+    lockHeld = false;
+    document.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("keyup", onKeyUp);
+    escCancel();
+    try { keyboard()?.unlock?.(); } catch { /* nothing was held */ }
+    if (document.fullscreenElement === stage) {
+      try { void document.exitFullscreen().catch(() => undefined); } catch { /* the screen is already the desk's */ }
     }
+    frame.src = "about:blank";
+  };
+  const obs = new MutationObserver(() => {
+    if (!document.body.contains(wrap)) teardown();
   });
   obs.observe(document.body, { childList: true, subtree: true });
+
+  /* ——— the window lifecycle (review §3), this room's shape ———
+   * The general contract suspends a put-away window's work. This
+   * room is the standing exception, and the exception is physics,
+   * not preference: in this engine the frame loop IS the network
+   * — input, packet processing and rendering share one loop, and
+   * no lever in the shipped build separates them (no runtime
+   * console or cvar path is reachable from the page; the only
+   * housings are boot arguments and the static autoexec). Pausing
+   * the frame would not rest the game; it would strangle its
+   * connection silently, the server's timeout ending the session
+   * while the window claimed to hold it. So a minimized nexuiz
+   * keeps its session exactly as dealt — the lifecycle marks the
+   * window, and this room stops nothing — and a closed one ends
+   * outright, above. One hazard the marking does retire: putting
+   * the window away can make the browser drop the stage's
+   * fullscreen, and a drop the desk itself caused is the
+   * operator's own act — earned, like the hold clock's exit — so
+   * the heal above never fights a minimize. */
+  body.addEventListener("os:suspend", () => { if (fsSession) fsExitEarned = true; });
+  body.addEventListener("os:dispose", teardown);
 
   /* The icon press is the whole ceremony: the game stands up on
    * its own main menu (the frame raises the engine itself — no

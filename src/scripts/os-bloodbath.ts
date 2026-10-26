@@ -755,7 +755,8 @@ export function buildBloodbath(body: HTMLElement) {
     respawn(performance.now() / 1000);
     lockLook();
   });
-  document.addEventListener("pointerlockchange", () => { locked = document.pointerLockElement === canvas; });
+  const onLockChange = () => { locked = document.pointerLockElement === canvas; };
+  document.addEventListener("pointerlockchange", onLockChange);
   wrap.addEventListener("mousemove", (e) => {
     if (!locked || state !== "play" || menuOn) return;
     yaw -= e.movementX * 0.0023;
@@ -766,7 +767,8 @@ export function buildBloodbath(body: HTMLElement) {
     if (e.button === 0 && locked) firing = true;
     if (e.button === 2) rmbHeld = true;
   });
-  document.addEventListener("mouseup", (e) => { if (e.button === 0) firing = false; if (e.button === 2) rmbHeld = false; });
+  const onMouseUp = (e: MouseEvent) => { if (e.button === 0) firing = false; if (e.button === 2) rmbHeld = false; };
+  document.addEventListener("mouseup", onMouseUp);
   wrap.addEventListener("contextmenu", (e) => e.preventDefault());
   wrap.addEventListener("keydown", (e) => {
     keys.add(e.code);
@@ -1119,9 +1121,13 @@ export function buildBloodbath(body: HTMLElement) {
 
   /* ————— the frame ————— */
   let lastT = performance.now();
+  let raf = 0, suspended = false, disposed = false;
   const frame = () => {
-    requestAnimationFrame(frame);
-    if (!wrap.isConnected) { audio.shutdown(); return; }
+    raf = 0;
+    if (disposed) return;
+    if (!wrap.isConnected) { disposed = true; audio.shutdown(); return; }
+    if (suspended) return;
+    raf = requestAnimationFrame(frame);
     const now = performance.now();
     const nowS = now / 1000;
     const dt = Math.min(0.05, (now - lastT) / 1000);
@@ -1498,5 +1504,33 @@ export function buildBloodbath(body: HTMLElement) {
     if (hp < 34 && state === "play") shO = Math.max(shO, 0.16 + 0.08 * Math.sin(nowS * 5));
     shade.style.opacity = String(shO);
   };
-  requestAnimationFrame(frame);
+  /* one teardown, however the window goes: the OS disposing it, or the
+     frame itself finding the wrap gone from the document */
+  const teardown = () => {
+    if (disposed) return;
+    disposed = true;
+    cancelAnimationFrame(raf);
+    raf = 0;
+    audio.shutdown();
+    document.removeEventListener("pointerlockchange", onLockChange);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+  /* the window lifecycle: suspend stills the frame and the sound with
+     every state left intact; resume restarts the clock where it stopped
+     so the quiet time is never a step in the pit */
+  body.addEventListener("os:suspend", () => {
+    if (disposed) return;
+    suspended = true;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (audio.ctx && audio.ctx.state === "running") void audio.ctx.suspend();
+  });
+  body.addEventListener("os:resume", () => {
+    if (disposed || !suspended) return;
+    suspended = false;
+    lastT = performance.now();
+    if (audio.ctx && audio.ctx.state === "suspended") void audio.ctx.resume();
+    if (!raf) frame();
+  });
+  body.addEventListener("os:dispose", teardown);
+  raf = requestAnimationFrame(frame);
 }

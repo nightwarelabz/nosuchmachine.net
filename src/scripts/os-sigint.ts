@@ -298,6 +298,7 @@ export function buildSigint(body: HTMLElement) {
   let micStream: MediaStream | null = null;
   let bandBuffer: AudioBuffer | null = null;
   let freq = 3200, mode = "cw", running = false;
+  let liveOn = false;
   let latestMag: Float32Array | null = null;
   const hist = document.createElement("canvas");
   hist.width = 1024; hist.height = 226;
@@ -410,6 +411,7 @@ export function buildSigint(body: HTMLElement) {
 
   /* ---------------- audio graph ---------------- */
   const stopSource = () => {
+    liveOn = false;
     live.deactivate();
     try { liveSrc?.disconnect(); } catch { /* already gone */ }
     if (liveSrc instanceof AudioBufferSourceNode) { try { liveSrc.stop(); } catch { /* noop */ } }
@@ -443,6 +445,7 @@ export function buildSigint(body: HTMLElement) {
       } catch { status.textContent = "microphone refused — the bench hears nothing from it"; }
     } else if (kind === "stations") {
       live.activate();
+      liveOn = true;
     } else if (kind === "file" && file) {
       try {
         const buf = await ctx.decodeAudioData(await file.arrayBuffer());
@@ -978,8 +981,12 @@ export function buildSigint(body: HTMLElement) {
 
   /* ---------------- draw loop + housekeeping ---------------- */
   const fx = fall.getContext("2d")!;
+  let suspended = false, benchDisposed = false, drawHandle = 0;
+  let ctxWasRunning = false, liveWasOn = false;
   const draw = () => {
+    drawHandle = 0;
     if (!body.isConnected) return;
+    if (suspended || benchDisposed) return;
     const W = fall.width, H = fall.height, specH = 74;
     fx.drawImage(hist, 0, specH);
     if (latestMag) {
@@ -1035,21 +1042,47 @@ export function buildSigint(body: HTMLElement) {
       const txt = parts.join(" · ");
       if (readout.textContent !== txt) readout.textContent = txt;
     }
-    requestAnimationFrame(draw);
+    drawHandle = requestAnimationFrame(draw);
   };
-  requestAnimationFrame(draw);
+  drawHandle = requestAnimationFrame(draw);
 
   const housekeep = window.setInterval(() => {
-    if (!body.isConnected) {
-      window.clearInterval(housekeep);
-      stopSource();
-      void ctx?.close();
-      try { localStorage.setItem(skey(REG_KEY), JSON.stringify(stations.map(({ trail, freqHist, dbHist, ring, wHist, mergeW, extLo, extHi, lifeLo, lifeHi, ...rest }) => rest))); } catch { /* private mode */ }
-      return;
-    }
-    renderRegistry();
+    if (!body.isConnected) { teardownBench(); return; }
+    if (!suspended) renderRegistry();
     const chip = document.getElementById("os-emcon-chip");
     if (master && chip) master.gain.value = chip.dataset.level === "alpha" ? 0 : 1;
   }, 1500);
+
+  /* ---- window lifecycle (os:suspend / os:resume / os:dispose) ----
+     Suspend is not power-off: sources survive, only the draw chain
+     stops and the audio clock halts (which pauses the worklet's DSP
+     with it). The live-stations source routes around ctx, so it is
+     deactivated separately and restored on resume. */
+  const teardownBench = () => {
+    if (benchDisposed) return;
+    benchDisposed = true;
+    window.clearInterval(housekeep);
+    stopSource();
+    if (ctx) { const c = ctx; ctx = null; void c.close().catch(() => {}); }
+    try { localStorage.setItem(skey(REG_KEY), JSON.stringify(stations.map(({ trail, freqHist, dbHist, ring, wHist, mergeW, extLo, extHi, lifeLo, lifeHi, ...rest }) => rest))); } catch { /* private mode */ }
+  };
+  body.addEventListener("os:suspend", () => {
+    if (benchDisposed) return;
+    suspended = true;
+    if (drawHandle) { cancelAnimationFrame(drawHandle); drawHandle = 0; }
+    ctxWasRunning = !!(ctx && ctx.state === "running");
+    if (ctxWasRunning && ctx) void ctx.suspend();
+    liveWasOn = liveOn;
+    if (liveOn) { live.deactivate(); liveOn = false; }
+  });
+  body.addEventListener("os:resume", () => {
+    if (benchDisposed || !suspended) return;
+    suspended = false;
+    if (ctxWasRunning && ctx && ctx.state === "suspended") void ctx.resume();
+    ctxWasRunning = false;
+    if (liveWasOn) { live.activate(); liveOn = true; liveWasOn = false; }
+    if (!drawHandle && body.isConnected) drawHandle = requestAnimationFrame(draw);
+  });
+  body.addEventListener("os:dispose", () => teardownBench());
 
 }

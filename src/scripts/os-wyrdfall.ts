@@ -943,10 +943,11 @@ export function buildWyrdfall(body: HTMLElement): void {
   const onKeyDown = onKey(true), onKeyUp = onKey(false);
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
-  document.addEventListener("pointerlockchange", () => {
+  const onLockChange = () => {
     locked = document.pointerLockElement === canvas;
     if (!locked && playing() && cfg.mode === "mouse" && !dlgOpen && menuEl.hidden && sheetEl.hidden && mapEl2.hidden) openPanel(menuEl);
-  });
+  };
+  document.addEventListener("pointerlockchange", onLockChange);
   canvas.addEventListener("click", () => {
     if (playing() && cfg.mode === "mouse" && !locked && !panelsOpen()) canvas.requestPointerLock();
   });
@@ -1225,6 +1226,10 @@ export function buildWyrdfall(body: HTMLElement): void {
         noise(t, surface === "water" ? 0.16 : 0.07, "lowpass", f, f * 0.5, run ? 0.075 : 0.05);
       },
       splash() { if (ac) noise(ac.currentTime, 0.3, "lowpass", 700, 250, 0.12); },
+      /* the OS may suspend this window: quiet the context if there is
+         one, and never wake (or create) one to do it */
+      suspend() { if (ac && ac.state === "running") void ac.suspend(); },
+      resume() { if (ac && ac.state === "suspended") void ac.resume(); },
       shutdown() {
         if (!ac) return;
         try { windSrc?.stop(); } catch { /* already */ }
@@ -2711,7 +2716,10 @@ export function buildWyrdfall(body: HTMLElement): void {
 
   /* ——— the frame ——— */
   let raf = 0, lastT = performance.now() / 1000, renderErrs = 0;
+  let suspended = false, disposed = false;
   const frame = () => {
+    raf = 0;
+    if (disposed || suspended) return;
     raf = requestAnimationFrame(frame);
     const now = performance.now() / 1000;
     let dt = Math.min(0.05, now - lastT);
@@ -2741,15 +2749,39 @@ export function buildWyrdfall(body: HTMLElement): void {
   }
   createEl.hidden = false;
   frame();
+  /* one teardown, however the window goes: the OS disposing it, or the
+     wrap vanishing from the document and the observer noticing */
+  const teardown = () => {
+    if (disposed) return;
+    disposed = true;
+    cancelAnimationFrame(raf);
+    raf = 0;
+    audio.shutdown();
+    window.removeEventListener("keydown", onKeyDown);
+    window.removeEventListener("keyup", onKeyUp);
+    window.removeEventListener("keydown", onActKey);
+    document.removeEventListener("pointerlockchange", onLockChange);
+    obs.disconnect();
+  };
   const obs = new MutationObserver(() => {
-    if (!wrap.isConnected) {
-      cancelAnimationFrame(raf);
-      audio.shutdown();
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("keydown", onActKey);
-      obs.disconnect();
-    }
+    if (!wrap.isConnected) teardown();
   });
   obs.observe(document.body, { childList: true, subtree: true });
+  /* the window lifecycle: suspend stills the frame and the sound with
+     every state left intact; resume restarts the clock where it stopped
+     so the quiet time is never a step in the world */
+  body.addEventListener("os:suspend", () => {
+    if (disposed) return;
+    suspended = true;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    audio.suspend();
+  });
+  body.addEventListener("os:resume", () => {
+    if (disposed || !suspended) return;
+    suspended = false;
+    lastT = performance.now() / 1000;
+    audio.resume();
+    if (!raf) frame();
+  });
+  body.addEventListener("os:dispose", teardown);
 }

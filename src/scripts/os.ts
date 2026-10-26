@@ -112,7 +112,7 @@ function restoreSession() {
     if (!r) continue;
     const appId = r.app === "phase2" ? "phantom" : r.app; // renamed 2026-10-24: Phase2 — PHANTOM is just phantom now
     if (!APPS[appId]) continue;
-    openApp(appId, r.arg);
+    openApp(appId, r.arg, r.min ? { deferBuild: true } : undefined);
     const key = r.app === "editor" ? `editor:${r.arg || ""}` : r.app;
     const win = windows.get(key);
     if (!win) continue;
@@ -123,6 +123,7 @@ function restoreSession() {
     if (r.maxed && !win.classList.contains("maxed")) toggleMaximize(win);
     if (r.min) win.style.display = "none";
   }
+  refreshLifecycles();
   saveSession();
 }
 
@@ -166,14 +167,14 @@ function serveBuild(app: string, body: HTMLElement, arg?: string) {
     }
   }
 }
-export function openApp(app: string, arg?: string) {
+export function openApp(app: string, arg?: string, opts?: { deferBuild?: boolean }) {
   if (app === "bench" || app === "suite") { window.location.href = "/bench/"; return; }
   const meta = APPS[app];
   if (!meta) return;
   sub?.noteOpen(app);
   const key = app === "editor" ? `editor:${arg || ""}` : app;
   const existing = windows.get(key);
-  if (existing) { focusWindow(existing); const body = existing.querySelector<HTMLElement>(".os-win-body"); if (app === "nexuiz" && body) nexuizStageFullscreen(body); body?.dispatchEvent(new CustomEvent("os:focus-arg", { detail: arg })); return; }
+  if (existing) { ensureBuilt(existing); focusWindow(existing); const body = existing.querySelector<HTMLElement>(".os-win-body"); if (app === "nexuiz" && body) nexuizStageFullscreen(body); body?.dispatchEvent(new CustomEvent("os:focus-arg", { detail: arg })); return; }
   const win = el("section", "os-window");
   win.dataset.app = app;
   win.style.zIndex = String(++zTop);
@@ -197,22 +198,37 @@ export function openApp(app: string, arg?: string) {
   placeNewWindow(win);
   windows.set(key, win);
   deskProcs.set(key, { pid: ++pidTop, key, app, since: Date.now(), win });
+  const life: LifeRec = { key, app, arg, win, body, state: "suspended", built: false, disposed: false };
+  lifecycles.set(key, life);
+  (win as any)._life = life;
+  body.dataset.osState = "suspended";
   sfx("open");
   addTaskbarButton(key, meta.title, win);
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
-  closeBtn.addEventListener("click", () => { sfx("close"); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => { win.remove(); }, 150); });
-  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130); });
+  closeBtn.addEventListener("click", () => { sfx("close"); disposeWindow(life); lifecycles.delete(key); windows.delete(key); deskProcs.delete(key); document.querySelector(`[data-task="${CSS.escape(key)}"]`)?.remove(); saveSession(); syncWinMenu(); if (REDUCED) { win.remove(); return; } win.classList.add("os-win-out"); setTimeout(() => { win.remove(); }, 150); });
+  minBtn.addEventListener("click", () => { sfx("min"); if (REDUCED) { win.style.display = "none"; refreshLifecycles(); saveSession(); return; } win.classList.add("os-win-min"); setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); refreshLifecycles(); saveSession(); }, 130); });
   const toggleMax = () => toggleMaximize(win);
   maxBtn.addEventListener("click", toggleMax);
   head.addEventListener("dblclick", (e) => { if (!(e.target as HTMLElement).closest("button")) toggleMax(); });
   win.classList.add("os-win-in");
+  if (opts?.deferBuild) {
+    /* Session restore of a minimized window: the chrome stands,
+       the room does not. Its content is built by ensureBuilt on
+       the first true opening — a desk restored around a put-away
+       game does not start the game in order to hide it. */
+    win.style.display = "none";
+    saveSession();
+    return;
+  }
   focusWindow(win);
   serveBuild(app, body, arg);
+  life.built = true;
   /* the nexuiz room opens onto the whole screen — the click that
      opened it is the gesture; see nexuizStageFullscreen. */
   if (app === "nexuiz") nexuizStageFullscreen(body);
+  applyWinState(life, true);
   saveSession();
 }
 /* The mobile bar has no room for a button per window: one button
@@ -235,7 +251,7 @@ function toggleWinMenu() {
     const key = b.dataset.task || "";
     const row = el("div", "os-winmenu-row");
     const go = el("button", "os-winmenu-go", b.textContent || key);
-    go.addEventListener("click", () => { const w = windows.get(key); if (w) { w.style.display = ""; focusWindow(w); } toggleWinMenu(); });
+    go.addEventListener("click", () => { const w = windows.get(key); if (w) { ensureBuilt(w); w.style.display = ""; focusWindow(w); } toggleWinMenu(); });
     const x = el("button", "os-winmenu-x", "×");
     x.title = "close the window";
     x.addEventListener("click", () => { windows.get(key)?.querySelector<HTMLElement>(".os-win-close")?.click(); toggleWinMenu(); });
@@ -255,6 +271,62 @@ function toggleWinMenu() {
 interface DeskProc { pid: number; key: string; app: string; since: number; win: HTMLElement }
 let pidTop = 200;
 const deskProcs = new Map<string, DeskProc>();
+/* ——— the window lifecycle (review §3) ———
+   Every window stands in one of three states and the desk keeps
+   them honestly: RUNNING (visible and at work), SUSPENDED (put
+   away — minimized, covered by another room's fullscreen, or
+   under a hidden tab — its expensive work stopped), DISPOSED
+   (closed; its cleanup run, once). The manager derives the state
+   from the desk's own facts and speaks it to the window's body as
+   events — os:resume / os:suspend / os:dispose, mirrored in the
+   body's data-os-state — and each room's builder answers for its
+   own loops, sounds and sockets. Services that are meant to stay
+   connected (relay, ssh) hold no render loop and simply let the
+   words pass. Disposal is idempotent: it is spoken once, and a
+   room that hears it twice does nothing the second time. A window
+   restored minimized is registered unbuilt — chrome only — and
+   its room is built by ensureBuilt on its first true opening, so
+   a restored desk never starts a game just to hide it again. */
+type WinState = "running" | "suspended" | "disposed";
+interface LifeRec { key: string; app: string; arg?: string; win: HTMLElement; body: HTMLElement; state: WinState; built: boolean; disposed: boolean }
+const lifecycles = new Map<string, LifeRec>();
+function desiredWinState(rec: LifeRec): WinState {
+  if (rec.disposed) return "disposed";
+  if (rec.win.style.display === "none") return "suspended";
+  if (document.hidden) return "suspended";
+  const fs = document.fullscreenElement;
+  if (fs && !rec.win.contains(fs)) return "suspended";
+  return "running";
+}
+function applyWinState(rec: LifeRec, force = false) {
+  const next = desiredWinState(rec);
+  if (!force && next === rec.state) return;
+  rec.state = next;
+  rec.body.dataset.osState = next;
+  rec.body.dispatchEvent(new CustomEvent(next === "suspended" ? "os:suspend" : "os:resume", { detail: { app: rec.app, key: rec.key, state: next } }));
+}
+function refreshLifecycles() { for (const rec of lifecycles.values()) applyWinState(rec); }
+function disposeWindow(rec: LifeRec) {
+  if (rec.disposed) return;
+  rec.disposed = true;
+  rec.state = "disposed";
+  rec.body.dataset.osState = "disposed";
+  rec.body.dispatchEvent(new CustomEvent("os:dispose", { detail: { app: rec.app, key: rec.key, state: "disposed" } }));
+}
+/* A restored-minimized window's first true opening: build its
+   room now — the same serveBuild an ordinary opening runs — and
+   give nexuiz its fullscreen ceremony, as openApp does. The word
+   for the desk as it stands is spoken forced: a room built while
+   the tab is hidden or another room holds the screen must hear
+   that it starts out suspended, though the record never changed. */
+function ensureBuilt(win: HTMLElement) {
+  const rec = (win as any)._life as LifeRec | undefined;
+  if (!rec || rec.built || rec.disposed) return;
+  rec.built = true;
+  serveBuild(rec.app, rec.body, rec.arg);
+  if (rec.app === "nexuiz") nexuizStageFullscreen(rec.body);
+  applyWinState(rec, true);
+}
 function visibleWindows(): HTMLElement[] { return [...windows.values()].filter((w) => w.style.display !== "none"); }
 function restorePrevRect(win: HTMLElement) {
   const prev = (win as any)._prevRect as { l: string; t: string; w: string; h: string } | undefined;
@@ -281,8 +353,9 @@ function focusWindow(win: HTMLElement) {
   win.style.display = "";
   if (wasHidden) { sfx("back"); if (!REDUCED) { win.classList.remove("os-win-min"); win.classList.add("os-win-back"); setTimeout(() => win.classList.remove("os-win-back"), 220); } }
   document.querySelectorAll(".os-window").forEach((w) => w.classList.toggle("focused", w === win));
+  refreshLifecycles();
   saveSession();
-  
+
 }
 function addTaskbarButton(key: string, title: string, win: HTMLElement) {
   const bar = document.getElementById("os-taskbar-apps")!;
@@ -298,11 +371,12 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
     // or a hidden one's — brings it forward.
     if (win.classList.contains("focused") && win.style.display !== "none") {
       sfx("min");
-      if (REDUCED) { win.style.display = "none"; saveSession(); return; }
+      if (REDUCED) { win.style.display = "none"; refreshLifecycles(); saveSession(); return; }
       win.classList.add("os-win-min");
-      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); saveSession(); }, 130);
+      setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); refreshLifecycles(); saveSession(); }, 130);
       return;
     }
+    ensureBuilt(win);
     focusWindow(win);
   });
   bar.appendChild(btn);
@@ -696,12 +770,15 @@ function buildChip8(body: HTMLElement, arg?: string) {
   canvas.addEventListener("pointerdown", () => canvas.focus());
   load();
   let dead = false;
+  let suspended = false;
+  let chainOn = false;
   const obs = new MutationObserver(() => { if (!document.body.contains(wrap)) { dead = true; obs.disconnect(); } });
   obs.observe(document.body, { childList: true, subtree: true });
   const ctx2 = canvas.getContext("2d")!;
   let lastTimer = performance.now();
   const frame = () => {
-    if (dead) return;
+    chainOn = false;
+    if (dead || suspended) return;
     for (let i = 0; i < 10; i++) cpu.cycle();
     const now = performance.now();
     if (now - lastTimer > 16) { cpu.tickTimers(); lastTimer = now; }
@@ -711,9 +788,22 @@ function buildChip8(body: HTMLElement, arg?: string) {
       for (let i = 0; i < 64 * 32; i++) { const on = cpu.gfx[i]; img.data[i * 4] = on ? 120 : 8; img.data[i * 4 + 1] = on ? 255 : 14; img.data[i * 4 + 2] = on ? 170 : 10; img.data[i * 4 + 3] = 255; }
       ctx2.putImageData(img, 0, 0);
     }
+    chainOn = true;
     requestAnimationFrame(frame);
   };
+  chainOn = true;
   requestAnimationFrame(frame);
+  /* the lifecycle (review §3): put away, the machine halts —
+     no cycles, no draws; brought back, its timer clock restarts
+     from now so the quiet costs it no burst of ticks. */
+  body.addEventListener("os:suspend", () => { suspended = true; });
+  body.addEventListener("os:resume", () => {
+    if (dead) return;
+    suspended = false;
+    lastTimer = performance.now();
+    if (!chainOn) { chainOn = true; requestAnimationFrame(frame); }
+  });
+  body.addEventListener("os:dispose", () => { dead = true; obs.disconnect(); });
   setTimeout(() => canvas.focus(), 80);
 }
 
@@ -943,11 +1033,12 @@ function buildProcesses(body: HTMLElement) {
     desk.innerHTML = "";
     if (!deskProcs.size) desk.append(el("div", "os-desk-proc", "no windows stand open."));
     for (const p of deskProcs.values()) {
-      const st = p.win.style.display === "none" ? "minimized" : p.win.classList.contains("focused") ? "focused" : "running";
+      const life = (p.win as any)._life as LifeRec | undefined;
+      const st = p.win.style.display === "none" ? "minimized" : life?.state === "suspended" ? "suspended" : p.win.classList.contains("focused") ? "focused" : "running";
       const row = el("div", "os-desk-proc");
       row.append(el("span", "os-desk-proc-main", `${p.pid}  ${p.app} — ${st} · ${Math.floor((Date.now() - p.since) / 1000)}s`));
       const go = el("button", "os-btn small", "focus");
-      go.addEventListener("click", () => focusWindow(p.win));
+      go.addEventListener("click", () => { ensureBuilt(p.win); focusWindow(p.win); });
       const kill = el("button", "os-btn small", "close");
       kill.addEventListener("click", () => p.win.querySelector<HTMLElement>(".os-win-close")?.click());
       row.append(go, kill);
@@ -1217,8 +1308,12 @@ function startUpdateWatch(): void {
   };
   const evaluate = () => {
     if (!pending || taking) return;
-    if (windows.has("nexuiz")) {
-      // the hard exception: no countdown, no landing — the update waits
+    const nxWin = windows.get("nexuiz");
+    const nxLife = nxWin ? ((nxWin as any)._life as LifeRec | undefined) : undefined;
+    if (nxWin && (nxLife ? nxLife.built : true)) {
+      // the hard exception: no countdown, no landing — the update waits.
+      // A nexuiz window restored minimized and never opened holds no
+      // game (it was never built), so it does not hold the update.
       holdMode = "wait"; deadline = 0;
       showToast("server is about to refresh for an update… waiting for nexuiz to close.");
       return;
@@ -1326,6 +1421,11 @@ function boot() {
   syncWinMenu();
   document.addEventListener("blacksite:openapp", (e) => { const d = (e as CustomEvent).detail || {}; if (d.app) openApp(d.app, d.arg); });
   window.addEventListener("hashchange", () => { const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); });
+  /* the lifecycle follows the tab and the screen: a hidden tab
+     suspends every window; a fullscreen session suspends every
+     window it covers and restores them as it lets go. */
+  document.addEventListener("visibilitychange", refreshLifecycles);
+  document.addEventListener("fullscreenchange", refreshLifecycles);
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); toggleLauncher(); }
     if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
@@ -1337,7 +1437,7 @@ function boot() {
         else if (e.key === "ArrowUp") { if (!win.classList.contains("maxed")) toggleMaximize(win); }
         else if (win.classList.contains("maxed")) toggleMaximize(win);
         else if (win.dataset.snap) { restorePrevRect(win); win.dataset.snap = ""; focusWindow(win); }
-        else { win.style.display = "none"; saveSession(); }
+        else { win.style.display = "none"; refreshLifecycles(); saveSession(); }
       }
     }
     if (e.altKey && e.key === "Tab") {
@@ -1345,6 +1445,7 @@ function boot() {
       const wins = [...windows.values()].filter((w) => w.style.display !== "none");
       if (wins.length > 1) {
         const sorted = wins.sort((a, b) => Number(a.style.zIndex || 0) - Number(b.style.zIndex || 0));
+        ensureBuilt(sorted[0]);
         focusWindow(sorted[0]);
       }
     }
