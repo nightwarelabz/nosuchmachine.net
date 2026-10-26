@@ -119,8 +119,26 @@ if (mode === "join" && !joinLive) {
  * the engine boots, so it opens at the size it was dealt, and on
  * every resize after (the OS stage taking the whole screen, a
  * window dragged) — through the runtime's own sizing call where
- * it stands, so SDL hears of the change and re-modes; the plain
- * attribute set is what SDL reads at boot. */
+ * it genuinely stands exported, so SDL hears of the change and
+ * re-modes; the plain attribute set is what SDL reads at boot,
+ * and it is the fallback wherever the call is not exported.
+ *
+ * A runtime method is NEVER read off Module directly — not even
+ * for a typeof. The shipped glue defines an aborting getter for
+ * every runtime name it did not export (setCanvasSize among
+ * them): touching the property runs the getter, and the getter
+ * aborts the whole engine on the spot — a guard that reads the
+ * method to check for it is the very thing that kills the game.
+ * The own-property descriptor is the only safe probe: it never
+ * runs a getter, and it tells the two cases apart — an exported
+ * method stands as a plain function value, an unexported one as
+ * a getter with no value, to be left strictly alone. */
+function runtimeMethod(name) {
+  try {
+    const d = Object.getOwnPropertyDescriptor(window.Module || {}, name);
+    return d && typeof d.value === "function" ? d.value : null;
+  } catch { return null; }
+}
 const stageEl = document.getElementById("stage");
 const canvasEl = moduleDef.canvas;
 let fitTimer = 0;
@@ -128,8 +146,8 @@ function fitCanvas() {
   const w = stageEl.clientWidth, h = stageEl.clientHeight;
   if (!w || !h) return;
   if (canvasEl.width === w && canvasEl.height === h) return;
-  const M = window.Module;
-  if (M && typeof M.setCanvasSize === "function") { try { M.setCanvasSize(w, h); return; } catch { /* the plain set below */ } }
+  const setCanvasSize = runtimeMethod("setCanvasSize");
+  if (setCanvasSize) { try { setCanvasSize.call(window.Module, w, h); return; } catch { /* the plain set below */ } }
   canvasEl.width = w;
   canvasEl.height = h;
 }
