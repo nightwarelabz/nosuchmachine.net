@@ -187,6 +187,65 @@ export function buildNexuiz(body: HTMLElement) {
   wrap.append(bar, stage, status, keys);
   body.appendChild(wrap);
 
+  /* Escape in true fullscreen belongs to the game. By the game's
+   * own design Esc is its menu key, so a press — and any hold
+   * shorter than the exit hold — must reach the engine exactly
+   * as pressed; the only way out of the fullscreen room is Esc
+   * held continuously for 4.5 seconds. The Keyboard Lock API is
+   * what makes that possible: while the stage holds the screen,
+   * the lock captures Escape, so presses arrive here as ordinary
+   * key events instead of the browser leaving fullscreen on the
+   * first touch. Where the API is absent, nothing here engages
+   * and the browser's stock behaviour stands.
+   *
+   * The clock lives in this frame: the fullscreen element — and
+   * so the only exit — is the stage. The play frame watches the
+   * key where the engine hears it and reports the edges
+   * (esc-down / esc-up); a hold that starts here instead (focus
+   * on the OS side of the stage) is forwarded into the frame as a
+   * synthetic press, so the game still gets its menu key. A
+   * second edge while a hold stands is the same press seen from
+   * the other side of the glass and is ignored. */
+  const ESC_HOLD_MS = 4500;
+  let escSince = 0;
+  let escTimer: number | undefined;
+  const keyboard = () => (navigator as { keyboard?: { lock?: (keys: string[]) => Promise<void>; unlock?: () => void } }).keyboard;
+  const escCancel = () => {
+    escSince = 0;
+    if (escTimer !== undefined) { clearTimeout(escTimer); escTimer = undefined; }
+  };
+  const escDown = () => {
+    if (document.fullscreenElement !== stage || escSince) return;
+    escSince = performance.now();
+    escTimer = window.setTimeout(() => {
+      escCancel();
+      if (document.fullscreenElement === stage) {
+        try { void document.exitFullscreen().catch(() => undefined); } catch { /* the screen is already ours again */ }
+      }
+    }, ESC_HOLD_MS);
+  };
+  const escUp = () => escCancel();
+  const fwdEsc = (type: "keydown" | "keyup") => {
+    try {
+      const cw = frame.contentWindow as (Window & { KeyboardEvent: typeof KeyboardEvent }) | null;
+      const canvas = frame.contentDocument?.getElementById("canvas");
+      if (!cw || !canvas) return;
+      canvas.dispatchEvent(new cw.KeyboardEvent(type, { key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true, cancelable: true }));
+    } catch { /* the frame is not ready to hear it */ }
+  };
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape" || e.repeat || document.fullscreenElement !== stage) return;
+    escDown();
+    fwdEsc("keydown");
+  };
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (e.key !== "Escape" || document.fullscreenElement !== stage) return;
+    escUp();
+    fwdEsc("keyup");
+  };
+  document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keyup", onKeyUp);
+
   const onMsg = (ev: MessageEvent) => {
     if (ev.source !== frame.contentWindow || !ev.data || ev.data.from !== "nexuiz") return;
     const m = ev.data;
@@ -194,6 +253,10 @@ export function buildNexuiz(body: HTMLElement) {
       status.textContent = `fetching the game data — ${(m.done / 1048576).toFixed(0)} of ${(m.total / 1048576).toFixed(0)} MB. it is verified whole before the engine starts.`;
     } else if (m.type === "error") {
       status.textContent = m.file === "engine" ? `the engine stopped: ${m.message}` : `the game data was refused: ${m.message}`;
+    } else if (m.type === "esc-down") {
+      escDown();
+    } else if (m.type === "esc-up") {
+      escUp();
     } else if (m.type === "started") {
       status.textContent = mode === "join"
         ? "thisissparta2! — live. click the game to take the mouse."
@@ -209,11 +272,29 @@ export function buildNexuiz(body: HTMLElement) {
   };
   document.addEventListener("fullscreenchange", tellFs);
   frame.addEventListener("load", tellFs);
+  /* The lock follows the screen: taken whenever this stage
+   * becomes the fullscreen element (either door in — the opening
+   * click or the fullscreen button), released whenever it stops
+   * being, with any standing hold cancelled alongside. */
+  const onFsLock = () => {
+    if (document.fullscreenElement === stage) {
+      try { void keyboard()?.lock?.(["Escape"])?.catch(() => undefined); } catch { /* no lock to take */ }
+    } else {
+      escCancel();
+      try { keyboard()?.unlock?.(); } catch { /* nothing was held */ }
+    }
+  };
+  document.addEventListener("fullscreenchange", onFsLock);
   const obs = new MutationObserver(() => {
     if (!document.body.contains(wrap)) {
       obs.disconnect();
       window.removeEventListener("message", onMsg);
       document.removeEventListener("fullscreenchange", tellFs);
+      document.removeEventListener("fullscreenchange", onFsLock);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+      escCancel();
+      try { keyboard()?.unlock?.(); } catch { /* nothing was held */ }
       frame.src = "about:blank";
     }
   });
