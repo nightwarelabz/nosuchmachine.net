@@ -34,6 +34,12 @@ const KEY = skey("blacksite-subconscious-v1");
 const NEVER_WARM = new Set([
   "simulacrum", "bloodbath", "sigint", "relay", "phantom", "editor",
   "bench", "suite", "orc", "wolf3d", "chip8", "ssh", "gauntlet", "bottle",
+  /* wyrdfall is a living world like the two above (its loop runs
+     from construction), and nexuiz must never be built in the
+     dark: a hidden second boot would fetch and start the whole
+     engine behind the player's back, on the same machine the
+     visible game is trying to run on. (2026-10-26 review, §4.) */
+  "wyrdfall", "nexuiz",
 ]);
 const CACHE_MAX = 2;
 const WARM_BUDGET = 6;
@@ -146,6 +152,14 @@ export function wakeSubconscious(hooks: SubHooks): Subconscious {
     window.addEventListener("touchstart", stir, { passive: true });
     const tick = window.setInterval(() => {
       if (!cacheEl.isConnected) { window.clearInterval(tick); return; }
+      /* Warming yields to play, always: never while the document
+       * is hidden, never while a fullscreen session holds the
+       * screen, and never while the game stands open. Play inside
+       * the game's frame never reaches the listeners above, so to
+       * them a player mid-match looks idle — an open game must
+       * read as work, not as an invitation to build another room
+       * behind it. (2026-10-26 review, §4.) */
+      if (document.hidden || document.fullscreenElement || hooks.isOpen("nexuiz")) return;
       if (Date.now() - lastInput >= IDLE_MS) warmOne();
     }, 4000);
     document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
