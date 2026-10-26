@@ -226,3 +226,34 @@ socket opens when the player takes the menu's door, or makes any
 connect of their own. Local play needs none of it: menus, the
 single-player ladder, and bot matches run on the engine's own
 in-process server.
+
+SESSION DIAGNOSTICS (OPT-IN, OFF BY DEFAULT)
+--------------------------------------------
+The play frame and its OS window carry a diagnostics layer that
+is off unless the operator arms it (a local-storage flag read by
+the OS window, or the page query word nexuiz-diag=1). Unarmed,
+nothing is sampled, no statistics are read, and no panel stands.
+Armed for a deal, the window mints a session tag the frame echoes
+on every message; the frame then samples its own session every
+500 ms into a bounded history (1,200 samples, 200 events) and the
+window's panel shows the running account, with an export of the
+whole record as JSON on request.
+
+What it reads, and only that: the session's own connection. The
+socket shim keeps the engine's sockets in a registry while armed,
+and the sampler reads the active one — which transport carried
+the session (WebRTC or the WebSocket fallback), why the fast road
+did not carry it when it did not, the setup time, the frame and
+byte counters, and the outgoing buffered amount. For a WebRTC
+carriage it also reads the ACTIVE peer connection's own
+statistics (the selected candidate pair, its candidate types and
+protocols, its round-trip time). No second peer is ever opened
+to measure. Two frame signals are kept apart on purpose: page
+animation-frame intervals (the browser's scheduling of the page,
+with a baseline frozen from before the engine started) and the
+engine's own main-loop iterations, counted from the engine
+glue's frame counter, which is reached only through an
+own-property descriptor probe — the standing rule for this glue,
+whose unexported runtime names abort on a direct read. The
+engine and the game data are untouched by all of it: no engine
+rebuild, no stamp change, no configuration change.

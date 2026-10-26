@@ -317,3 +317,38 @@ IF, IFNOT, GOTO): the release's fteqcc was two weeks younger
 than the bundled revision and does not survive, so code-section
 byte-identity is not claimed — see NOTICE.txt for the full
 parity statement.
+
+## Session diagnostics and the baseline procedure
+
+The diagnostics layer (play.js + src/scripts/os-nexuiz.ts,
+documented for players in NOTICE.txt) is not an engine artifact:
+no engine rebuild, no `NX_ENGINE_STAMP` change. To reproduce a
+measurement:
+
+1. Arm it: set local storage `blacksite-nexuiz-diag` = `1` for
+   the site (the OS window reads it through its storage seam),
+   or load the OS page with `?nexuiz-diag=1`. Open the Nexuiz
+   window: the deal carries `diag=1` and a minted `session`
+   tag, and the diagnostics panel stands under the game.
+2. Play the session under the conditions being measured. The
+   panel updates at the sampler's rate (2/s) from the frame's
+   own account of the session's active connection.
+3. Press "export diagnostics (json)": the window asks the frame
+   for its record and saves it — header (browser, platform,
+   hardware concurrency, display refresh estimate, canvas
+   backing, dealt mode, engine stamp, site build, bridge host),
+   the frozen pre-engine rAF baseline, the event log, and up to
+   1,200 samples at 500 ms (transport, setup, fallback reason,
+   RTT and ICE pair when WebRTC carried it, packet/byte counters
+   and rates, buffered bytes, page-frame percentiles, engine
+   frames per window, focus/visibility/fullscreen/pointer-lock,
+   canvas size, DPR).
+
+Baseline discipline (review §1): a comparison counts only when
+map, resolution, effects, server population and network
+conditions match across runs, and the export header's context
+record matches too. Foreground play is measured separately
+from background throttling (the samples carry visibility and
+focus for exactly this). Local bot modes are outside the
+performance target; their exports are labelled by mode and are
+not multiplayer evidence.

@@ -28,6 +28,18 @@ const NX_ENGINE_STAMP = "4";
 const bridge = q.get("bridge") || "";
 const botsRaw = parseInt(q.get("bots") || "5", 10);
 const bots = Number.isFinite(botsRaw) ? Math.max(0, Math.min(15, botsRaw)) : 5;
+/* The session this deal belongs to, minted by the OS window per
+ * deal and echoed on every word the frame sends up, so a stale
+ * frame's words can be told from the live deal's (the house reads
+ * the tag; a frame dealt none sends an empty one). */
+const NX_SESSION = q.get("session") || "";
+/* Diagnostics are opt-in, per deal: the OS window deals diag=1
+ * only when the operator has armed them there (see os-nexuiz.ts).
+ * Off is the shipped state — nothing below samples, polls or
+ * posts diagnostics, and the socket instrumentation stays inert:
+ * no statistics calls, no panel, no per-frame cost beyond the
+ * flag checks themselves. */
+const NX_DIAG = q.get("diag") === "1";
 
 const plate = document.getElementById("plate");
 const plateText = document.getElementById("plate-text");
@@ -35,13 +47,14 @@ const plateBar = document.getElementById("plate-bar");
 const plateFill = document.getElementById("plate-fill");
 const plateStatus = document.getElementById("plate-status");
 const con = document.getElementById("con");
-const post = (m) => { try { parent.postMessage(Object.assign({ from: "nexuiz" }, m), location.origin); } catch {} };
+const post = (m) => { try { parent.postMessage(Object.assign({ from: "nexuiz", session: NX_SESSION }, m), location.origin); } catch {} };
 const fmtMB = (b) => (b / 1048576).toFixed(0) + " MB";
 
 let engineDead = false;
 function engineError(message) {
   if (engineDead) return;
   engineDead = true;
+  if (NX_DIAG) nxDiagPushEvent("engine-error", String(message).slice(0, 160));
   plate.hidden = false;
   plateText.hidden = true; plateBar.hidden = true;
   plateStatus.className = "err";
@@ -96,6 +109,7 @@ const moduleDef = {
     if (engineDead) return;
     plate.hidden = true;
     post({ type: "started", mode });
+    if (NX_DIAG) nxDiagNoteEngineStart();
     engineStarted();
   },
   onAbort(what) { engineError("aborted (" + String(what) + ")"); },
@@ -198,6 +212,17 @@ function nxSpartaRemoteIce(msg) {
   };
 }
 
+/* The byte weight of one datagram as the face carries it — the
+ * diagnostics counters' measure, nothing more. */
+function nxSpartaByteLen(data) {
+  if (data === null || data === undefined) return 0;
+  if (typeof data === "string") return data.length;
+  if (data instanceof ArrayBuffer) return data.byteLength;
+  if (ArrayBuffer.isView(data)) return data.byteLength;
+  if (typeof Blob !== "undefined" && data instanceof Blob) return data.size;
+  return 0;
+}
+
 class NxSpartaSocket {
   constructor(url, protocols, RealWebSocket) {
     this.url = String(url);
@@ -229,9 +254,33 @@ class NxSpartaSocket {
     this._closed = false;
     this._closeFired = false;
     this._fallbackStarted = false;
+    /* Diagnostics ride along only when the page's deal armed them
+     * (NxSpartaSocket.DIAG, set by play.js from its diag parameter
+     * before any socket can be constructed): the timestamps, the
+     * failure's reason and the frame counters are the whole cost,
+     * and only then — an unarmed socket records nothing. Armed,
+     * the socket also stands in the class registry, so the page's
+     * sampler can read THIS connection — the active one — rather
+     * than opening a second peer to measure a stranger. */
+    this._diag = NxSpartaSocket.DIAG === true;
+    this._createdAt = this._diag ? performance.now() : 0;
+    this._openedAt = 0;
+    this._closedAt = 0;
+    this._transport = null;
+    this._rtcFailReason = null;
+    this._closeCode = null;
+    this._framesIn = 0;
+    this._framesOut = 0;
+    this._bytesIn = 0;
+    this._bytesOut = 0;
+    if (this._diag) {
+      const reg = NxSpartaSocket.REGISTRY;
+      reg.push(this);
+      if (reg.length > 4) reg.shift();
+    }
     /* The setup budget runs from construction: the fast road
      * proves itself in this window or the other road is taken. */
-    this._budgetTimer = setTimeout(() => this._failRtc(), NX_RTC_BUDGET_MS);
+    this._budgetTimer = setTimeout(() => this._failRtc("rtc setup budget expired"), NX_RTC_BUDGET_MS);
     if (this._budgetTimer && typeof this._budgetTimer.unref === "function") this._budgetTimer.unref();
     this._startRtc();
   }
@@ -281,7 +330,10 @@ class NxSpartaSocket {
     const set = this._listeners.get(type);
     if (set) for (const listener of [...set]) { try { listener.call(this, ev); } catch { /* the listener's business */ } }
   }
-  _emitMessage(data) { this._emit("message", { data }); }
+  _emitMessage(data) {
+    if (this._diag) { this._framesIn++; this._bytesIn += nxSpartaByteLen(data); }
+    this._emit("message", { data });
+  }
 
   send(data) {
     if (this._closed || this.readyState === NxSpartaSocket.CLOSING || this.readyState === NxSpartaSocket.CLOSED) return;
@@ -299,8 +351,8 @@ class NxSpartaSocket {
     this._queue.push(data);
   }
   _sendNow(data) {
-    if (this._dc && this._dc.readyState === "open") { this._dc.send(data); return; }
-    if (this._fb && this._fb.readyState === NxSpartaSocket.OPEN) { this._fb.send(data); return; }
+    if (this._dc && this._dc.readyState === "open") { this._dc.send(data); if (this._diag) { this._framesOut++; this._bytesOut += nxSpartaByteLen(data); } return; }
+    if (this._fb && this._fb.readyState === NxSpartaSocket.OPEN) { this._fb.send(data); if (this._diag) { this._framesOut++; this._bytesOut += nxSpartaByteLen(data); } return; }
     throw new Error("sparta socket: no transport is open");
   }
   _flushQueue() {
@@ -332,6 +384,7 @@ class NxSpartaSocket {
    * every case that reaches this line. */
   _finishClose(code, reason, wasClean) {
     this._closed = true;
+    if (this._diag && this._closedAt === 0) { this._closedAt = performance.now(); this._closeCode = code; }
     this._clearBudget();
     this.readyState = NxSpartaSocket.CLOSING;
     this._teardownRtc();
@@ -356,9 +409,9 @@ class NxSpartaSocket {
     const RTC = globalThis.RTCPeerConnection;
     /* No RTCPeerConnection, no fast road — the old browser takes
      * the current road directly and is none the worse for it. */
-    if (typeof RTC !== "function") { this._startFallback(); return; }
+    if (typeof RTC !== "function") { if (this._diag) this._rtcFailReason = "no RTCPeerConnection in this browser"; this._startFallback(); return; }
     let sigUrl;
-    try { sigUrl = nxSpartaSignalUrl(this.url); } catch { this._startFallback(); return; }
+    try { sigUrl = nxSpartaSignalUrl(this.url); } catch { if (this._diag) this._rtcFailReason = "signaling address could not be derived"; this._startFallback(); return; }
     let pc, dc, sig;
     try {
       pc = new RTC({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
@@ -373,16 +426,16 @@ class NxSpartaSocket {
       const RealWebSocket = this._realCtor;
       sig = new RealWebSocket(sigUrl);
       this._sig = sig;
-    } catch { this._startFallback(); return; }
+    } catch { if (this._diag) this._rtcFailReason = "rtc construction failed"; this._startFallback(); return; }
 
     dc.onopen = () => this._transportOpened();
     dc.onmessage = (ev) => { if (!this._closed) this._deliverDcData(ev ? ev.data : undefined); };
     dc.onclose = () => {
       if (this._closed) return;
-      if (!this._opened) this._failRtc();
+      if (!this._opened) this._failRtc("data channel closed during setup");
       else this._finishClose(1006, "", false);
     };
-    dc.onerror = () => { if (!this._opened) this._failRtc(); };
+    dc.onerror = () => { if (!this._opened) this._failRtc("data channel error during setup"); };
 
     pc.onicecandidate = (ev) => {
       const cand = ev && ev.candidate;
@@ -396,13 +449,13 @@ class NxSpartaSocket {
     pc.oniceconnectionstatechange = () => {
       const state = pc.iceConnectionState;
       if (state !== "failed" && state !== "disconnected") return;
-      if (!this._opened) this._failRtc();
+      if (!this._opened) this._failRtc(state === "failed" ? "ice connection failed" : "ice connection disconnected");
       else if (state === "failed") this._finishClose(1006, "", false);
     };
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       if (state !== "failed" && state !== "disconnected") return;
-      if (!this._opened) this._failRtc();
+      if (!this._opened) this._failRtc(state === "failed" ? "peer connection failed" : "peer connection disconnected");
       else if (state === "failed") this._finishClose(1006, "", false);
     };
 
@@ -412,8 +465,8 @@ class NxSpartaSocket {
       for (const text of queued) { try { sig.send(text); } catch { /* a dead signaling socket is the RTC road's failure, handled by its own handlers */ } }
     };
     sig.onmessage = (ev) => this._onSignal(ev ? ev.data : undefined);
-    sig.onerror = () => { if (!this._opened) this._failRtc(); };
-    sig.onclose = () => { if (!this._opened && !this._closed) this._failRtc(); };
+    sig.onerror = () => { if (!this._opened) this._failRtc("signaling socket error"); };
+    sig.onclose = () => { if (!this._opened && !this._closed) this._failRtc("signaling socket closed"); };
 
     (async () => {
       try {
@@ -426,7 +479,7 @@ class NxSpartaSocket {
         const pending = this._pendingIce;
         this._pendingIce = [];
         for (const msg of pending) this._sigSend(msg);
-      } catch { this._failRtc(); }
+      } catch { this._failRtc("negotiation failed"); }
     })();
   }
 
@@ -458,7 +511,7 @@ class NxSpartaSocket {
           const queued = this._pendingRemoteIce;
           this._pendingRemoteIce = [];
           for (const cand of queued) { try { await pc.addIceCandidate(cand); } catch { /* a refused candidate is not the negotiation's failure */ } }
-        } catch { this._failRtc(); }
+        } catch { this._failRtc("remote answer refused"); }
       })();
     } else if (msg.type === "ice") {
       const cand = nxSpartaRemoteIce(msg);
@@ -501,6 +554,10 @@ class NxSpartaSocket {
   _transportOpened() {
     if (this._closed || this._opened) return;
     this._opened = true;
+    if (this._diag) {
+      this._openedAt = performance.now();
+      this._transport = this._fb ? "websocket" : "webrtc";
+    }
     this._clearBudget();
     this.readyState = NxSpartaSocket.OPEN;
     /* The shim's own queue goes first, in order: those sends were
@@ -511,10 +568,66 @@ class NxSpartaSocket {
 
   /* The RTC road failed before a transport opened. Its handlers
    * come off and its pieces close before the other road is taken,
-   * so nothing from the attempt can speak after the switch. */
-  _failRtc() {
+   * so nothing from the attempt can speak after the switch. The
+   * reason rides along for diagnostics: a fallback that cannot
+   * say why it fell is a guess, not a measurement. */
+  _failRtc(reason) {
     if (this._closed || this._opened || this._fallbackStarted) return;
+    if (this._diag && reason && !this._rtcFailReason) this._rtcFailReason = reason;
     this._startFallback();
+  }
+
+  /* The diagnostic face — read by the page's sampler only when
+   * the deal armed diagnostics: a plain snapshot of what this
+   * socket has done, and, for a WebRTC carriage, the active peer
+   * connection's own statistics for the pair that actually
+   * carries the game. Nothing here opens anything; it reads the
+   * connection that exists. */
+  diagSnapshot() {
+    return {
+      state: this._closed ? "closed" : this._opened ? "open" : "connecting",
+      transport: this._transport,
+      setupMs: this._diag && this._openedAt ? Math.round(this._openedAt - this._createdAt) : null,
+      rtcFailReason: this._rtcFailReason,
+      framesIn: this._framesIn,
+      framesOut: this._framesOut,
+      bytesIn: this._bytesIn,
+      bytesOut: this._bytesOut,
+      bufferedAmount: this.bufferedAmount,
+      closeCode: this._closeCode,
+    };
+  }
+  async diagStats() {
+    const pc = this._pc;
+    if (!pc || this._transport !== "webrtc" || typeof pc.getStats !== "function") return null;
+    let report;
+    try { report = await pc.getStats(); } catch { return null; }
+    const byId = new Map();
+    let pair = null, channel = null, viaTransport = null;
+    try {
+      report.forEach((s) => { if (s && s.id) byId.set(s.id, s); });
+      report.forEach((s) => {
+        if (!s) return;
+        if (s.type === "transport" && s.selectedCandidatePairId && !viaTransport) viaTransport = s;
+        if (s.type === "data-channel" && s.label === "sparta" && !channel) channel = s;
+      });
+      if (viaTransport) pair = byId.get(viaTransport.selectedCandidatePairId) || null;
+      if (!pair) report.forEach((s) => { if (!pair && s && s.type === "candidate-pair" && s.nominated && (s.state === "succeeded" || s.state === "in-progress")) pair = s; });
+    } catch { return null; }
+    if (!pair) return null;
+    const local = byId.get(pair.localCandidateId) || {};
+    const remote = byId.get(pair.remoteCandidateId) || {};
+    return {
+      localCandidateType: local.candidateType || null,
+      localProtocol: local.protocol || null,
+      remoteCandidateType: remote.candidateType || null,
+      remoteProtocol: remote.protocol || null,
+      rttMs: typeof pair.currentRoundTripTime === "number" ? Math.round(pair.currentRoundTripTime * 1000) : null,
+      pairBytesSent: typeof pair.bytesSent === "number" ? pair.bytesSent : null,
+      pairBytesReceived: typeof pair.bytesReceived === "number" ? pair.bytesReceived : null,
+      channelMessagesSent: channel && typeof channel.messagesSent === "number" ? channel.messagesSent : null,
+      channelMessagesReceived: channel && typeof channel.messagesReceived === "number" ? channel.messagesReceived : null,
+    };
   }
   _teardownRtc() {
     const sig = this._sig, dc = this._dc, pc = this._pc;
@@ -569,6 +682,13 @@ NxSpartaSocket.CONNECTING = 0;
 NxSpartaSocket.OPEN = 1;
 NxSpartaSocket.CLOSING = 2;
 NxSpartaSocket.CLOSED = 3;
+/* Diagnostics plumbing, inert unless the page's deal armed it:
+ * play.js sets DIAG from its diag parameter before any socket can
+ * be constructed, and REGISTRY then keeps the last few sockets the
+ * engine made, so the sampler reads the ACTIVE connection — never
+ * a second peer opened for the purpose of measuring. */
+NxSpartaSocket.DIAG = false;
+NxSpartaSocket.REGISTRY = [];
 
 /* The replacement for the page-global WebSocket, installed only
  * when a bridge is dealt, before the engine script can look the
@@ -594,6 +714,10 @@ function nxInstallSpartaWebSocket(houseUrl) {
   return SpartaWebSocket;
 }
 /* sparta-rtc-shim:end */
+
+/* The deal's word on diagnostics reaches the shim before the
+ * engine script loads — and so before any socket can exist. */
+NxSpartaSocket.DIAG = NX_DIAG;
 
 /* Emscripten's socket layer (SOCKFS) dials this URL verbatim for
  * every connection and offers the "sparta" subprotocol — exactly the
@@ -656,6 +780,271 @@ if (typeof ResizeObserver === "function") new ResizeObserver(fitSoon).observe(st
 window.addEventListener("resize", fitSoon);
 fitCanvas();
 
+/* ————————————————————————————————————————————————————————————
+ * Diagnostics (review §2) — opt-in per deal, off by default.
+ *
+ * Armed only when the deal carries diag=1, this block samples
+ * the session every 500 ms and keeps a bounded history (1,200
+ * samples = 10 minutes, 200 events) for the export the house
+ * panel asks for. Three signals, each labelled for exactly what
+ * it measures — the brief is explicit that a browser rAF
+ * interval does not prove how often the engine renders:
+ *
+ *   pageRaf      — requestAnimationFrame intervals in this
+ *                  frame: the browser's scheduling of the page.
+ *                  A baseline is frozen from the same signal
+ *                  before the engine starts (data fetch shares
+ *                  the thread), so a throttled environment can
+ *                  be told from a busy engine.
+ *   engineFrames — the engine's own main-loop iterations,
+ *                  counted from the glue's MainLoop frame
+ *                  counter, reached ONLY through the
+ *                  own-property descriptor probe (the standing
+ *                  rule for this glue: a direct read of an
+ *                  unexported runtime name can abort the
+ *                  engine). A counter gives counts per window —
+ *                  a rate and a mean interval, never a
+ *                  distribution; null when unreachable.
+ *   packets      — datagrams through the house socket face
+ *                  (the shim's counters), and for a WebRTC
+ *                  carriage the ACTIVE peer connection's own
+ *                  getStats: the selected candidate pair, its
+ *                  candidate types/protocols and its RTT. No
+ *                  second peer is ever opened to measure.
+ *
+ * Unarmed, none of this runs: no sampler, no rAF probe, no
+ * statistics calls — the flag checks in the socket and the
+ * hooks are the whole footprint.
+ * ———————————————————————————————————————————————————————————— */
+const NX_DIAG_SAMPLE_MS = 500;
+const NX_DIAG_SAMPLE_CAP = 1200;
+const NX_DIAG_EVENT_CAP = 200;
+const nxDiag = {
+  t0: performance.now(),
+  engineStartAt: 0,
+  rafLast: 0,
+  winDeltas: [],
+  baseDeltas: [],
+  preEngine: null,
+  samples: [],
+  events: [],
+  lastTickAt: 0,
+  lastFrames: null,
+  lastEngineFrame: null,
+  lastSockKey: "",
+  version: undefined,
+};
+function nxDiagPushEvent(kind, detail) {
+  nxDiag.events.push({ t: Math.round(performance.now() - nxDiag.t0), wall: Date.now(), kind, detail: String(detail || "") });
+  if (nxDiag.events.length > NX_DIAG_EVENT_CAP) nxDiag.events.shift();
+}
+function nxDiagFrameStats(deltas) {
+  const n = deltas.length;
+  if (!n) return { n: 0, p50: null, p95: null, p99: null, gaps50: 0, mean: null };
+  const sorted = [...deltas].sort((a, b) => a - b);
+  const pick = (p) => Math.round(sorted[Math.min(n - 1, Math.floor(p / 100 * n))] * 10) / 10;
+  let sum = 0, gaps = 0;
+  for (const d of deltas) { sum += d; if (d > 50) gaps++; }
+  return { n, p50: pick(50), p95: pick(95), p99: pick(99), gaps50: gaps, mean: Math.round(sum / n * 10) / 10 };
+}
+function nxDiagRaf(now) {
+  if (nxDiag.rafLast) {
+    const d = now - nxDiag.rafLast;
+    nxDiag.winDeltas.push(d);
+    if (!nxDiag.engineStartAt && nxDiag.baseDeltas.length < 3600) nxDiag.baseDeltas.push(d);
+  }
+  nxDiag.rafLast = now;
+  requestAnimationFrame(nxDiagRaf);
+}
+function nxDiagNoteEngineStart() {
+  nxDiag.engineStartAt = performance.now();
+  const st = nxDiagFrameStats(nxDiag.baseDeltas);
+  if (st.n >= 10 && st.p50) {
+    nxDiag.preEngine = {
+      samples: st.n, p50: st.p50, p95: st.p95, p99: st.p99,
+      refreshHz: st.p50 >= 4 && st.p50 <= 50 ? Math.round(1000 / st.p50) : null,
+      note: "page rAF before the engine started; the data fetch shares this thread, so read it as the environment's cadence, not an idle desktop's",
+    };
+  }
+  nxDiagPushEvent("engine", "engine started");
+}
+/* The engine's frame counter, by the house's descriptor
+ * discipline (the runtimeMethod rule above): the descriptor is
+ * inspected, never the property — a data descriptor's value is
+ * read without running anything, and an accessor or an absence
+ * simply means the signal is not there to read. */
+function nxDiagEngineFrame() {
+  try {
+    const d = Object.getOwnPropertyDescriptor(window, "MainLoop");
+    if (!d || !("value" in d) || !d.value) return null;
+    const n = d.value.currentFrameNumber;
+    return typeof n === "number" && Number.isFinite(n) ? n : null;
+  } catch { return null; }
+}
+function nxDiagSocket() {
+  const reg = NxSpartaSocket.REGISTRY;
+  for (let i = reg.length - 1; i >= 0; i--) {
+    if (reg[i].diagSnapshot().state === "open") return reg[i];
+  }
+  return reg.length ? reg[reg.length - 1] : null;
+}
+function nxDiagFetchVersion() {
+  if (nxDiag.version !== undefined) return Promise.resolve(nxDiag.version);
+  return fetch("/version.json")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => { nxDiag.version = j; return j; })
+    .catch(() => { nxDiag.version = null; return null; });
+}
+async function nxDiagTick() {
+  const now = performance.now();
+  const elapsed = nxDiag.lastTickAt ? (now - nxDiag.lastTickAt) / 1000 : 0;
+  nxDiag.lastTickAt = now;
+  const deltas = nxDiag.winDeltas;
+  nxDiag.winDeltas = [];
+  const raf = nxDiagFrameStats(deltas);
+  const ef = nxDiagEngineFrame();
+  let engineDelta = null;
+  if (ef !== null && nxDiag.lastEngineFrame !== null) engineDelta = ef - nxDiag.lastEngineFrame;
+  if (ef !== null) nxDiag.lastEngineFrame = ef;
+  const sock = nxDiagSocket();
+  const snap = sock ? sock.diagSnapshot() : null;
+  let stats = null;
+  if (sock && snap && snap.state === "open" && snap.transport === "webrtc") {
+    try { stats = await sock.diagStats(); } catch { stats = null; }
+  }
+  let pktInPerSec = null, pktOutPerSec = null;
+  if (snap && elapsed > 0) {
+    if (nxDiag.lastFrames) {
+      pktInPerSec = Math.round((snap.framesIn - nxDiag.lastFrames.fi) / elapsed);
+      pktOutPerSec = Math.round((snap.framesOut - nxDiag.lastFrames.fo) / elapsed);
+    }
+    nxDiag.lastFrames = { fi: snap.framesIn, fo: snap.framesOut };
+  }
+  const sockKey = snap
+    ? snap.state + "|" + (snap.transport || "") + "|" + (snap.rtcFailReason || "") + "|" + (snap.closeCode ?? "")
+    : "none";
+  if (sockKey !== nxDiag.lastSockKey) {
+    nxDiag.lastSockKey = sockKey;
+    if (snap) nxDiagPushEvent("transport", snap.state + (snap.transport ? " via " + snap.transport : "")
+      + (snap.rtcFailReason ? " (rtc did not carry it: " + snap.rtcFailReason + ")" : "")
+      + (snap.closeCode !== null && snap.closeCode !== undefined ? " close " + snap.closeCode : ""));
+  }
+  const sample = {
+    t: Math.round(now - nxDiag.t0),
+    wall: Date.now(),
+    transport: snap ? snap.transport : null,
+    sockState: snap ? snap.state : "none",
+    setupMs: snap ? snap.setupMs : null,
+    rtcFailReason: snap ? snap.rtcFailReason : null,
+    rttMs: stats ? stats.rttMs : null,
+    ice: stats ? { local: stats.localCandidateType, localProto: stats.localProtocol, remote: stats.remoteCandidateType, remoteProto: stats.remoteProtocol } : null,
+    framesIn: snap ? snap.framesIn : 0,
+    framesOut: snap ? snap.framesOut : 0,
+    bytesIn: snap ? snap.bytesIn : 0,
+    bytesOut: snap ? snap.bytesOut : 0,
+    pktInPerSec, pktOutPerSec,
+    buffered: snap ? snap.bufferedAmount : 0,
+    raf: { p50: raf.p50, p95: raf.p95, p99: raf.p99, gaps50: raf.gaps50, n: raf.n },
+    engineFrames: engineDelta,
+    focus: document.hasFocus(),
+    visibility: document.visibilityState,
+    fullscreen: fsOn,
+    pointerLock: document.pointerLockElement === canvasEl,
+    canvas: [canvasEl.width, canvasEl.height],
+    dpr: window.devicePixelRatio || 1,
+  };
+  nxDiag.samples.push(sample);
+  if (nxDiag.samples.length > NX_DIAG_SAMPLE_CAP) nxDiag.samples.shift();
+  post({
+    type: "diag",
+    summary: {
+      t: sample.t,
+      transport: sample.transport,
+      sockState: sample.sockState,
+      setupMs: sample.setupMs,
+      rtcFailReason: sample.rtcFailReason,
+      rttMs: sample.rttMs,
+      ice: stats ? `${stats.localCandidateType || "?"}/${stats.localProtocol || "?"} to ${stats.remoteCandidateType || "?"}/${stats.remoteProtocol || "?"}` : null,
+      framesIn: sample.framesIn,
+      framesOut: sample.framesOut,
+      pktInPerSec, pktOutPerSec,
+      buffered: sample.buffered,
+      rafP50: raf.p50, rafP95: raf.p95, rafP99: raf.p99, rafGaps50: raf.gaps50,
+      engineFps: engineDelta !== null && elapsed > 0 ? Math.round(engineDelta / elapsed * 10) / 10 : null,
+      refreshHz: nxDiag.preEngine ? nxDiag.preEngine.refreshHz : null,
+      canvas: sample.canvas,
+      focus: sample.focus,
+      fullscreen: sample.fullscreen,
+      pointerLock: sample.pointerLock,
+      sampleCount: nxDiag.samples.length,
+    },
+  });
+}
+function nxDiagContext() {
+  let bridgeHost = null;
+  try { bridgeHost = bridge ? new URL(bridge).host : null; } catch { bridgeHost = null; }
+  return {
+    exportedAt: new Date().toISOString(),
+    session: NX_SESSION,
+    mode,
+    engineStamp: NX_ENGINE_STAMP,
+    siteBuild: nxDiag.version !== undefined ? nxDiag.version : null,
+    userAgent: navigator.userAgent,
+    platform: (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || null,
+    hardwareConcurrency: navigator.hardwareConcurrency || null,
+    displayRefreshHz: nxDiag.preEngine ? nxDiag.preEngine.refreshHz : null,
+    bridgeHost,
+    visibility: document.visibilityState,
+    focus: document.hasFocus(),
+    fullscreen: fsOn,
+    pointerLock: document.pointerLockElement === canvasEl,
+    canvasBacking: [canvasEl.width, canvasEl.height],
+    devicePixelRatio: window.devicePixelRatio || 1,
+    sampleIntervalMs: NX_DIAG_SAMPLE_MS,
+    sampleCap: NX_DIAG_SAMPLE_CAP,
+    signals: {
+      pageRaf: "requestAnimationFrame intervals in this frame — the browser's scheduling of the page, not engine renders",
+      engineFrames: "engine main-loop iterations per sample window, counted from the glue's MainLoop frame counter (descriptor-probed, read-only); null when the counter is unreachable",
+      packets: "datagrams through the house socket face (shim counters); for webrtc, rtt/ice/pair figures come from the active peer connection's own getStats",
+    },
+  };
+}
+function nxDiagBuildExport() {
+  return {
+    kind: "nexuiz-diagnostics",
+    version: 1,
+    header: nxDiagContext(),
+    baseline: nxDiag.preEngine,
+    events: nxDiag.events,
+    samples: nxDiag.samples,
+  };
+}
+async function nxDiagSendExport() {
+  if (nxDiag.version === undefined) {
+    await Promise.race([nxDiagFetchVersion(), new Promise((r) => setTimeout(r, 800))]);
+  }
+  post({ type: "diag-export", export: nxDiagBuildExport() });
+}
+function nxDiagDownload() {
+  try {
+    const blob = new Blob([JSON.stringify(nxDiagBuildExport(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "nexuiz-diagnostics.json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch { /* a framed page's export travels by postMessage instead */ }
+}
+function nxDiagInit() {
+  nxDiagPushEvent("boot", "diagnostics armed for this deal");
+  requestAnimationFrame(nxDiagRaf);
+  setInterval(() => { void nxDiagTick(); }, NX_DIAG_SAMPLE_MS);
+  void nxDiagFetchVersion();
+  window.__nexuizDiag = { export: () => nxDiagBuildExport(), download: () => nxDiagDownload() };
+}
+if (NX_DIAG) nxDiagInit();
+
 /* Escape, watched — never touched. In true fullscreen a press
  * of Esc is the game's menu key: it must reach the engine
  * exactly as pressed, so these listeners only observe the edges
@@ -717,6 +1106,7 @@ const RELOCK_MS = 1400;
 function engineStarted() { lockFails = 0; takeLock(); }
 function houseFullscreen(on) {
   fsOn = on;
+  if (NX_DIAG) nxDiagPushEvent("fullscreen", on ? "entered" : "left");
   if (on) { lockFails = 0; takeLock(); }
   else clearTimeout(relockTimer);
 }
@@ -735,17 +1125,24 @@ function scheduleRelock() {
   relockTimer = setTimeout(takeLock, RELOCK_MS);
 }
 document.addEventListener("pointerlockchange", () => {
+  if (NX_DIAG) nxDiagPushEvent("pointerlock", document.pointerLockElement === canvasEl ? "taken" : "lost");
   if (document.pointerLockElement === canvasEl) { lockFails = 0; return; }
   scheduleRelock();
 });
 document.addEventListener("pointerlockerror", () => { lockFails++; scheduleRelock(); });
 
-/* The house word on fullscreen (the OS stage owns the state; the
+/* The house's words (the OS stage owns the fullscreen state; the
  * frame only hears of it): the canvas refits, so the game takes
- * the whole display. */
+ * the whole display. The words are believed only from the house
+ * itself — this origin, and the parent window — because a data
+ * field alone is not a credential: any frame on the page could
+ * spell "house" (review §8). */
 window.addEventListener("message", (ev) => {
+  if (ev.origin !== location.origin || ev.source !== window.parent) return;
   const m = ev.data;
-  if (!m || m.from !== "house" || m.type !== "fullscreen") return;
+  if (!m || m.from !== "house") return;
+  if (m.type === "diag-export") { if (NX_DIAG) void nxDiagSendExport(); return; }
+  if (m.type !== "fullscreen") return;
   document.body.classList.toggle("fs", !!m.on);
   houseFullscreen(!!m.on);
   fitSoon();
