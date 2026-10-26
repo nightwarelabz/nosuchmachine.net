@@ -117,7 +117,7 @@ for (const asset of ["nexuiz/play.html", "nexuiz/autoexec.cfg", "nexuiz/NOTICE.t
 const nexWasmSize = fs.statSync(path.join(root, "nexuiz/darkplaces-wasm.wasm")).size;
 assert.ok(nexWasmSize > 1_000_000 && nexWasmSize < 25_000_000, `darkplaces-wasm.wasm size looks wrong: ${nexWasmSize}`);
 const nexNotice = fs.readFileSync(path.join(root, "nexuiz/NOTICE.txt"), "utf8");
-for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "1604c930532459322314edfffb694111be96b31e17703e72a98066fbc154fdc5"]) {
+for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "1ecf5d09ff61c5b614685dfe7d66710b0484272b22b159db1e8ac031d8c1435a"]) {
   assert.ok(nexNotice.includes(pin), `nexuiz NOTICE.txt must pin the verified hash: ${pin}`);
 }
 for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "thisissparta2!", "blacksite-relay-v2"]) {
@@ -132,6 +132,13 @@ assert.ok(astroJs.includes("4500"), "OS bundle must carry the 4.5 s Esc hold");
 const nexPlay = fs.readFileSync(path.join(root, "nexuiz/play.js"), "utf8");
 assert.ok(nexPlay.includes("esc-down"), "nexuiz play frame must report Esc edges to the house");
 assert.ok(nexPlay.includes("requestPointerLock"), "nexuiz play frame must hold pointer lock in fullscreen");
+// Menu-first law: the play frame deals a transport, never a
+// connection — the room is entered by the player's own press at
+// the menu's door (house-qc-patch-009), so no connect argument
+// may be dealt at boot, and the engine must raise itself (the
+// click-to-play plate belonged to the auto-join and is gone).
+assert.ok(!nexPlay.includes("+connect"), "nexuiz play frame must not deal an auto-connect — the room is entered at the menu's door");
+assert.ok(!nexPlay.includes("plate-btn"), "nexuiz play frame must not gate the menu behind a click-to-play plate");
 // Nexuiz WebRTC transport: a house peer's construction must try the
 // fast road first — a DataChannel negotiated over the /rtc
 // signaling path on the dealt door, STUN only, no TURN, inside the
