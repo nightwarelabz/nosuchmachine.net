@@ -472,11 +472,12 @@
     "name": "TRACTOR",
     "summary": "A native research application that preserves public-source evidence, discovery paths and unfinished work.",
     "purpose": "A single search result is rarely the whole research record. TRACTOR organizes an investigation across independent public sources while recording what was requested, what responded and what remains unsearched.",
-    "approach": "A resumable asynchronous query queue feeds source adapters into a local database. Deduplication, multilingual query variants, evidence hashes and provenance records support a Qt desktop interface with readable source coverage and export.",
+    "approach": "A resumable asynchronous query queue feeds source adapters into a local database. Deduplication, multilingual query variants, evidence hashes and provenance records support a Qt desktop interface with readable source coverage and export. Since 0.5, a loopback-only search service also answers the browser: Orc launches it as its default search engine and renders its recursive web and image results in-page.",
     "categories": ["Intelligence", "Research tools"],
     "technologies": ["Python", "PySide6 / Qt", "SQLite", "Asyncio"],
     "capabilities": [
       "Iterative public-source research across independent providers",
+      "Loopback search service for Orc — recursive web and image results as the browser's default search",
       "Evidence views, discovery chains, duplicate grouping and content hashes",
       "Stop, resume, refresh and searchable local investigation history",
       "JSON, Markdown and spreadsheet-safe CSV export"
@@ -486,13 +487,13 @@
       "Provider availability, credentials, rate limits and returned metadata constrain results",
       "Native bundles are unsigned and not notarized"
     ],
-    "maturity": "Released application · v0.4.0",
-    "status": "Released v0.4",
+    "maturity": "Released application · v0.5.0",
+    "status": "Released v0.5",
     "githubUrl": "https://github.com/nightwarelabz/tractor",
     "links": [
       {
-        "label": "Release v0.4.0",
-        "href": "https://github.com/nightwarelabz/tractor/releases/tag/v0.4.0"
+        "label": "Release v0.5.0",
+        "href": "https://github.com/nightwarelabz/tractor/releases/tag/v0.5.0"
       },
       {
         "label": "Architecture and providers",
@@ -502,11 +503,11 @@
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/nightwarelabz/tractor/blob/916a0d5e25068cf7f0713dd49ae9072f8c936a81/README.md"
+        "href": "https://github.com/nightwarelabz/tractor/blob/e5f6c89094c52854fda9a667f080141d6eb03454/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/nightwarelabz/tractor/tree/916a0d5e25068cf7f0713dd49ae9072f8c936a81"
+        "href": "https://github.com/nightwarelabz/tractor/tree/e5f6c89094c52854fda9a667f080141d6eb03454"
       }
     ],
     "featured": false,
