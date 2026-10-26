@@ -70,6 +70,16 @@ const moduleDef = {
       part: "spog", spanLength: 24638, size: 28724,
       sha256: "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c",
     },
+    /* The house menu override: one file, menu.dat, compiled from
+     * the release's own menu sources with one tracked patch
+     * (tools/nexuiz/house-qc-patch-008.diff) that locks the
+     * Settings surface to the player name, so every player runs
+     * the same specs and configs. Pack precedence is the
+     * engine's own filename order in the game directory — the
+     * same route the house room's sparta overrides take — so
+     * this pack's menu.dat is the one the engine reads. The
+     * full record is in NOTICE.txt. */
+    "data/sparta-menu.pk3": "/nexuiz/sparta-menu.pk3",
     "data/autoexec.cfg": "/nexuiz/autoexec.cfg",
   },
   arguments: args,

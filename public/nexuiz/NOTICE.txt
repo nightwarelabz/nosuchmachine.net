@@ -6,7 +6,9 @@ WHAT THIS IS
 The real game. The client is the DarkPlaces engine compiled from its
 real source tree to WebAssembly; the data is the original Nexuiz
 2.5.2 release data, byte-for-byte; the game logic is the game's own
-QuakeC progs, untouched. Nothing here is a re-implementation.
+QuakeC progs. One progs file carries a tracked house patch: the
+menu (see HOUSE MENU OVERRIDE below). Nothing here is a
+re-implementation.
 
 ENGINE
 ------
@@ -96,6 +98,81 @@ client's join door deals you straight into the shared room.
 Bots are a switch, never a condition of the room: the local
 match's toggle sets bot_number at the table; the house room's fill
 is the host's server-side switch (bot_join_empty / minplayers).
+
+HOUSE MENU OVERRIDE — SETTINGS LOCKED TO THE PLAYER NAME
+--------------------------------------------------------------
+Every player here runs the same build specs and configs (the house
+configuration above is dealt to everyone identically), so the
+in-game Settings are locked: they open on a single Player page
+whose only working control is the player NAME field. Video,
+effects, audio, input, network and misc settings cannot be
+changed from the menu; neither can model, skin, colors, crosshair
+or view settings — the Multiplayer dialog's Player Setup tab is
+the same surface and is locked the same way. The name field works
+exactly as stock (type, Apply, and that name is the one you wear
+in the room).
+
+Mechanism: the override pack public/nexuiz/sparta-menu.pk3
+(160,451 bytes, one entry: menu.dat) rides in the game directory
+beside the release packs; the engine's own directory order makes
+its menu.dat the one that loads — the same route as the house
+room's sparta-progs / sparta-csprogs overrides. Nothing in the
+release packs is modified.
+
+  sparta-menu.pk3  SHA-256 1604c930532459322314edfffb694111be96b31e17703e72a98066fbc154fdc5
+  menu.dat inside  SHA-256 1b81e2b278fb710bcd2bd27829259894149a1293d42fa4541671886b03598f9b
+
+The menu.dat is compiled from the release's own menu sources
+(qcsrc/menu in gamesource20091001.zip) with the era's own fteqcc
+(the rev1253299209 binary the release archive ships), flags
+-O1 -Oreturn_only -Ostrip_functions, plus the one tracked patch —
+tools/nexuiz/house-qc-patch-008.diff, three files:
+
+  dialog_settings.c: the Settings dialog's six tabs (Input,
+    Video, Effects, Audio, Network, Misc) are replaced by the
+    single Player tab, and the dialog takes the same 24-row
+    height as the Multiplayer dialog — a tab's declared height
+    must equal its controller's, and the shared player tab is
+    a 22-row tab.
+  dialog_multiplayer_playersetup.c: the player tab keeps only
+    the name label, the name field and the stock "Apply
+    immediately" row (the apply command is byte-for-byte the
+    stock one). Everything the
+    tab used to offer below the name — color picker, charmap,
+    model selector, shirt/pants colors, field of view, view
+    bobbing, zoom, weapon settings, crosshair, radar/HUD,
+    gore — is removed, and with it the only doors to the
+    weapons, radar and advanced-cvars dialogs.
+  menu.qc: the main menu draws the build's tag — "rezzmodV1",
+    etched in red (a dark groove pass, a lit top edge, the red
+    face) at the lower right of the title area, the treatment
+    the native build's menu plate carries. Drawn with the menu
+    background, under every dialog; the in-game menu background
+    stays stock, as on the native build. The version tag lives
+    here, in the game — not on the site around it.
+
+Parity of the base build, stated exactly: rebuilt from the
+unmodified sources, the menu program's header CRC is 10020 —
+the shipped menu.dat's own CRC — and its strings, field
+definitions, global definitions and initial global data are
+byte-identical to the shipped file's, as is the function table's
+shape (1,010 functions, same names, order and parameter
+metadata). The compiled statement streams differ in 168 of
+1,010 functions, only in how function exits are encoded
+(direct DONE/RETURN terminators versus jumps to a shared exit —
+the opcode census of the differing functions is confined to
+DONE, RETURN, IF, IFNOT and GOTO); the release was compiled
+with an fteqcc revision two weeks younger than the one the
+archive bundles, which does not survive, so byte-identity of
+the code section is not claimed. What is claimed: same defs,
+same strings, same globals, same CRC — and the same behavior,
+driven and screenshotted against the real client.
+
+One honest limit: this lock governs the menu surface. The
+engine's developer console — a stock part of the game — can
+still set cvars directly, as it could for any player of the
+original release. Sealing it would take an engine change, and
+none is made here.
 
 NETWORKING, HONESTLY
 --------------------
