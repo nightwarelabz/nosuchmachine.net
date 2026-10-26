@@ -182,8 +182,13 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
   No other changes.
 - Data packs: **none** — byte-for-byte the release packs, SHA-256
   verified in the loader before the engine starts.
-- Game logic (QuakeC progs): **none** — the progs are the ones inside
-  the release pack.
+- Game logic (QuakeC progs): the server and client progs are the
+  ones inside the release pack, untouched. The **menu** progs
+  carries one tracked house patch — `house-qc-patch-008.diff`
+  beside this file — shipped as the override pack
+  `public/nexuiz/sparta-menu.pk3` (see the menu section below
+  and NOTICE.txt): the Settings surface is locked to the player
+  name, and the main menu draws the build's rezzmodV1 tag.
 - House layer: configuration only — `public/nexuiz/autoexec.cfg`
   (MinstaHook cvars, the way real servers were run), the loader
   transport, and the OS window. One platform cvar rides in it:
@@ -266,3 +271,38 @@ keep it together:
   is how loader and tuning changes reach players; the autoexec is
   re-fetched each boot, with a fall back to the kept copy when the
   fetch fails.
+
+## Menu progs override (sparta-menu.pk3)
+
+The house menu is rebuilt from the release's own sources —
+`qcsrc/` inside `gamesource20091001.zip` (the source archive of
+the same verified release) — with the era's own compiler, the
+fteqcc binary the archive itself bundles
+(`fteqcc/fteqcc-linux-x86_64`, rev 1253299209):
+
+```
+cd qcsrc/menu
+fteqcc -O1 -Oreturn_only -Ostrip_functions   # writes ../../menu.dat
+zip -9 sparta-menu.pk3 menu.dat              # single entry, at the root
+```
+
+With `house-qc-patch-008.diff` applied to the sources first
+(`patch -p1`, from the qcsrc root's parent — it applies clean
+and reproduces the compiled tree exactly), the output is the
+shipped override: menu.dat SHA-256
+`1b81e2b278fb710bcd2bd27829259894149a1293d42fa4541671886b03598f9b`,
+pk3 SHA-256
+`1604c930532459322314edfffb694111be96b31e17703e72a98066fbc154fdc5`.
+
+Unpatched, the same recipe reproduces the shipped menu.dat's
+engine-visible contract exactly — header CRC 10020, and the
+strings, field-definition, global-definition and
+initial-global-data sections byte-identical; the function table
+keeps its shape (1,010 functions, same names, order and
+parameter metadata). Only the compiled statement streams
+differ, in 168 of 1,010 functions and only in function-exit
+encodings (the opcode census there is confined to DONE, RETURN,
+IF, IFNOT, GOTO): the release's fteqcc was two weeks younger
+than the bundled revision and does not survive, so code-section
+byte-identity is not claimed — see NOTICE.txt for the full
+parity statement.
