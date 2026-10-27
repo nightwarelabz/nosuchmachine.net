@@ -1087,6 +1087,14 @@ function buildSettings(body: HTMLElement) {
   {
     const b = el("button", "os-wp-thumb");
     const img = document.createElement("img");
+    img.src = "/monolith.webp"; img.alt = ""; img.className = "os-wp-canvas"; img.loading = "lazy";
+    b.append(img, el("span", "", "monolith"));
+    b.addEventListener("click", () => setWallpaper("monolith"));
+    wpRow.appendChild(b);
+  }
+  {
+    const b = el("button", "os-wp-thumb");
+    const img = document.createElement("img");
     img.src = "/nightmare.webp"; img.alt = ""; img.className = "os-wp-canvas"; img.loading = "lazy";
     b.append(img, el("span", "", "nightmare"));
     b.addEventListener("click", () => setWallpaper("mare"));
@@ -1292,9 +1300,12 @@ function applyTheme(name: string) {
   os.saveSoon();
   root().dataset.theme = "thinice";
 }
-let currentWallpaper = "mare";
+let currentWallpaper = "monolith";
 function marePlate(): string {
   return window.matchMedia("(max-width: 760px)").matches ? "/nightmare-portrait.webp" : "/nightmare.webp";
+}
+function monolithPlate(): string {
+  return window.matchMedia("(max-width: 760px)").matches ? "/monolith-portrait.webp" : "/monolith.webp";
 }
 function setWallpaper(kind: string) {
   sfx("snap");
@@ -1303,6 +1314,7 @@ function setWallpaper(kind: string) {
   os.wallpaper = kind;
   os.saveSoon();
   if (kind === "none") { desk.style.backgroundImage = ""; return; }
+  if (kind === "monolith") { desk.style.backgroundImage = `url(${monolithPlate()})`; return; }
   if (kind === "mare") { desk.style.backgroundImage = `url(${marePlate()})`; return; }
   desk.style.backgroundImage = `url(${paintWallpaper(kind, 960, 600).toDataURL()})`;
 }
@@ -1580,11 +1592,11 @@ function boot() {
   });
   document.addEventListener("blacksite:toast", (e) => osToast((e as CustomEvent).detail?.text || ""));
   document.addEventListener("blacksite:emcon", () => { updateEmconChip(); sfx(os.emcon === "alpha" ? "deny" : "beep"); });
-  setWallpaper(os.wallpaper || "mare");
+  setWallpaper(os.wallpaper || "monolith");
   let wasNarrow = window.matchMedia("(max-width: 760px)").matches;
   window.addEventListener("resize", () => {
     const narrow = window.matchMedia("(max-width: 760px)").matches;
-    if (narrow !== wasNarrow) { wasNarrow = narrow; if (currentWallpaper === "mare") setWallpaper("mare"); }
+    if (narrow !== wasNarrow) { wasNarrow = narrow; if (currentWallpaper === "mare" || currentWallpaper === "monolith") setWallpaper(currentWallpaper); }
   });
   sub = wakeSubconscious({
     root: desktop(),
