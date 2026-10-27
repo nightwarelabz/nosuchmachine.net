@@ -492,6 +492,12 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-live-route { font-size: 0.7rem; font-family: ui-monospace, monospace; color: #7dffa8; }
 .os-live-meter { background: #020604; border: 1px solid var(--os-line); border-radius: 4px; }
 
+/* ——— SIGINT air picture ——— */
+.os-air-num { width: 6.2rem; background: #04140b; color: inherit; border: 1px solid var(--os-line); border-radius: 6px; padding: 0.25rem 0.4rem; font-family: ui-monospace, monospace; font-size: 0.82rem; }
+.os-air-scope { width: 100%; max-width: 560px; aspect-ratio: 1; background: #020604; border: 1px solid var(--os-line); border-radius: 8px; margin: 0.3rem 0; }
+.os-air-table { margin-top: 0.3rem; }
+.os-air-emg td { color: #ff8f88; }
+
 /* ——— Simulacrum ——— */
 .os-sim { display: flex; flex-direction: column; height: 100%; background: #000; }
 .os-sim:fullscreen { background: #000; }

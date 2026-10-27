@@ -11,14 +11,28 @@
  * Playback honesty — the trap this module exists to disarm: an
  * <audio> element routed through a MediaElementAudioSourceNode goes
  * SILENT when the stream carries no CORS headers, while the element
- * itself plays happily. So every station is tried through the graph
- * first (tap → analyser → master: the bench can hear it, meter it,
- * and EMCON can mute it), and a watchdog judges the attempt: if the
- * element is playing but the graph tap reads silence, the stream is
- * re-routed DIRECT on a fresh element (straight to output — nothing
- * is routed twice through a captured element) and the UI says so.
- * A station that answers neither way is reported dead, plainly.
- * No station is ever listed that the directory did not return.
+ * itself plays happily — and the site serves COEP: require-corp, so
+ * a cross-origin stream with no CORP header is blocked before it
+ * can even do that. (That pair is why every station once read as
+ * dead.) So the graph route now loads the stream through the
+ * house's own relay, /api/radio: same-origin, CORS-clean, COEP-
+ * clean — the tap hears the station the directory promised. The
+ * watchdog still judges the attempt: if the graph tap reads
+ * silence while the element plays, the stream is re-routed DIRECT
+ * on a fresh element (straight to output — nothing is routed twice
+ * through a captured element) and the UI says so, knowing COEP may
+ * refuse that too. A station that answers neither way is reported
+ * dead, plainly. No station is ever listed that the directory did
+ * not return.
+ *
+ * A third wall stood in front of both: the OS page's Content-
+ * Security-Policy is connect-src 'self', so the browser's own
+ * directory fetches to radio-browser.info were refused outright —
+ * the list itself never loaded (convicted in a headless drive,
+ * 2026-10-27: CSP violations on every mirror). The directory
+ * therefore rides the house fetch edge (/api/fetch) like every
+ * other bench lookup, and list sizes are capped at 40 so a reply
+ * fits that edge's body cap.
  *
  * EMCON: a live stream is wire contact — an outbound request, the
  * same class the shell gates as "active". Under bravo or alpha the
@@ -72,26 +86,34 @@ const gateRefusal = (): string | null => {
 };
 
 /* ---------------- the directory ---------------- */
+/* nl1.api.radio-browser.info is gone (it no longer answers at
+ * all); de1 and de2 carry the directory, and all.api is the
+ * project's round-robin name. Verified answering 2026-10-27. */
 const BASES = [
   "https://de1.api.radio-browser.info",
   "https://de2.api.radio-browser.info",
-  "https://nl1.api.radio-browser.info",
+  "https://all.api.radio-browser.info",
 ];
 
-/* radio-browser asks apps to identify themselves with a proper
- * User-Agent; browsers forbid setting that header, so the JSON
- * endpoints are used exactly as the browser allows and the mirrors
- * are failed over in order. */
+/* The directory rides the house fetch edge: the OS page's CSP
+ * (connect-src 'self') refuses a direct browser fetch to the
+ * mirrors, so each mirror is asked through /api/fetch in turn —
+ * that edge sends the bench's own User-Agent, which is also what
+ * radio-browser asks apps to identify themselves with. The edge
+ * caps the body it hands back, so directory lists stay at 40. */
 async function dirFetch(path: string): Promise<unknown> {
   let lastErr: unknown = null;
   for (const b of BASES) {
     try {
       const ctl = new AbortController();
-      const to = window.setTimeout(() => ctl.abort(), 9000);
-      const r = await fetch(b + path, { signal: ctl.signal, headers: { Accept: "application/json" } });
+      const to = window.setTimeout(() => ctl.abort(), 15000);
+      const r = await fetch(`/api/fetch?url=${encodeURIComponent(b + path)}`, { signal: ctl.signal });
       window.clearTimeout(to);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return await r.json();
+      const data = (await r.json()) as { ok?: boolean; status?: number; bodyText?: string; truncated?: boolean };
+      if (!r.ok || !data?.ok || data.status !== 200 || typeof data.bodyText !== "string" || data.truncated) {
+        throw new Error("the fetch edge could not carry the directory reply");
+      }
+      return JSON.parse(data.bodyText);
     } catch (e) { lastErr = e; }
   }
   throw lastErr ?? new Error("directory unreachable");
@@ -162,7 +184,7 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
 
   /* browse menu: fixed entries + async country group */
   const BROWSE: Array<[string, () => Promise<LiveStationRec[]>]> = [
-    ["top voted", () => loadPath("/json/stations/topvote/80?hidebroken=true")],
+    ["top voted", () => loadPath("/json/stations/topvote/40?hidebroken=true")],
   ];
   const rebuildBrowse = (countries: string[]) => {
     browse.replaceChildren();
@@ -184,7 +206,7 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
   rebuildBrowse([]);
   void (async () => {
     try {
-      const raw = await dirFetch("/json/countries?order=count&reverse=true&hidebroken=true") as Array<{ name?: string; stationcount?: number }>;
+      const raw = await dirFetch("/json/countries?order=stationcount&reverse=true&hidebroken=true") as Array<{ name?: string; stationcount?: number }>;
       const names = raw.filter((c) => c.name && (c.stationcount ?? 0) >= 60).slice(0, 36).map((c) => c.name!);
       if (names.length) rebuildBrowse(names);
     } catch { /* the menu simply stays without countries */ }
@@ -196,11 +218,11 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
   const queryFor = (key: string): (() => Promise<LiveStationRec[]>) => {
     if (key.startsWith("tag:")) {
       const t = key.slice(4);
-      return () => loadPath(`/json/stations/bytag/${encodeURIComponent(t)}?order=votes&reverse=true&hidebroken=true&limit=80`);
+      return () => loadPath(`/json/stations/bytag/${encodeURIComponent(t)}?order=votes&reverse=true&hidebroken=true&limit=40`);
     }
     if (key.startsWith("country:")) {
       const c = key.slice(8);
-      return () => loadPath(`/json/stations/bycountry/${encodeURIComponent(c)}?order=votes&reverse=true&hidebroken=true&limit=80`);
+      return () => loadPath(`/json/stations/bycountry/${encodeURIComponent(c)}?order=votes&reverse=true&hidebroken=true&limit=40`);
     }
     return BROWSE[0][1];
   };
@@ -243,7 +265,7 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
       note.textContent = `${recs.length} stations · ${what} · click one to play it`;
       renderList(recs);
     } catch {
-      showPlate("the directory didn't answer — de1, de2 and nl1 all failed. No stations are shown, because none were fetched; nothing here is ever faked. Retry when the wire is back.", true);
+      showPlate("the directory didn't answer on any mirror. No stations are shown, because none were fetched; nothing here is ever faked. Retry when the wire is back.", true);
       hooks.status("live stations: the radio-browser directory did not answer");
     }
   };
@@ -251,7 +273,7 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
   searchBtn.addEventListener("click", () => {
     const q = search.value.trim();
     if (!q) return;
-    void runQuery(() => loadPath(`/json/stations/search?name=${encodeURIComponent(q)}&order=votes&reverse=true&hidebroken=true&limit=80`), `search “${q}”`);
+    void runQuery(() => loadPath(`/json/stations/search?name=${encodeURIComponent(q)}&order=votes&reverse=true&hidebroken=true&limit=40`), `search “${q}”`);
   });
   search.addEventListener("keydown", (e) => {
     e.stopPropagation();
@@ -261,6 +283,11 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
   retryBtn.addEventListener("click", () => { void runQuery(lastQuery, "retry"); });
 
   /* ---------------- playback ---------------- */
+  /* The graph route never loads a station cross-origin: the house
+     relay (/api/radio) carries the stream same-origin so COEP and
+     CORS cannot silence the tap. The direct route keeps the
+     station's own URL — it is the fallback, by definition. */
+  const relayUrl = (u: string) => `/api/radio?u=${encodeURIComponent(u)}`;
   interface Playing {
     rec: LiveStationRec;
     route: "graph" | "direct";
@@ -377,7 +404,7 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
     const ela = new Audio();
     ela.crossOrigin = "anonymous";
     ela.preload = "auto";
-    ela.src = rec.url;
+    ela.src = relayUrl(rec.url);
     let srcNode: MediaElementAudioSourceNode, analyser: AnalyserNode, gnode: GainNode;
     try {
       srcNode = ctx.createMediaElementSource(ela);
