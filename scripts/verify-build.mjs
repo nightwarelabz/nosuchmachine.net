@@ -303,6 +303,21 @@ assert.ok(astroJs.includes("os-games"), "the built OS bundle must carry the game
 assert.ok(!subSrcR.includes("bloodbath") && !subSrcR.includes("wyrdfall"), "the subconscious must name no removed app (candidates or exclusions)");
 assert.ok(subSrcR.includes('"games", "nexuiz"'), "the subconscious must never warm the games folder or the haxiuz engine");
 assert.ok(qcPatch010.includes('"connect thisissparta2"'), "the door's connect token is unchanged by the identity (patch of record)");
+// ——— BEGIN phonehome pins (Chase, 2026-10-27) ———
+// phonehome is the OS's telecommunications field: registered as an
+// app, stood on the desk, sealed station to station, and its edge
+// rendezvous exists. The bundle pins read the built OS chunk.
+assert.ok(osSrcR.includes('phonehome: { title: "phonehome", icon: "phonehome" }'), "APPS must register phonehome");
+assert.ok(osSrcR.includes('["phonehome", "phonehome", "phonehome"]'), "desktop defs must stand phonehome on the desk");
+assert.ok(osSrcR.includes("registerPhonehomeVerbs()"), "os.ts must register the phonehome verb");
+assert.ok(astroJs.includes("nsm.phonehome.signal.v1"), "OS bundle must carry the phonehome signal schema");
+assert.ok(astroJs.includes("nsm.phonehome.message.v1"), "OS bundle must carry the phonehome sealed-message schema");
+assert.ok(astroJs.includes("a secure transmitter and reception field"), "OS bundle must carry phonehome's own description of itself");
+assert.ok(ex2(new URL("../functions/api/phonehome.ts", import.meta.url)), "the phonehome rendezvous function must exist");
+const phApiSrc = rfs2(new URL("../functions/api/phonehome.ts", import.meta.url), "utf8");
+assert.ok(phApiSrc.includes("phonehome:v1:") && phApiSrc.includes("expirationTtl"), "the rendezvous must namespace its keys and expire them");
+assert.ok(phApiSrc.includes("PHONEHOME") && phApiSrc.includes("RELAY_MEMORY"), "the rendezvous must prefer its own KV binding and fall back to the house namespace");
+// ——— END phonehome pins ———
 // ——— END haxiuz restructure pins ———
 assert.ok(astroJs.includes("credentialless"), "orc preview frame must be credentialless (the OS page's COEP require-corp blocks plain cross-origin frames)");
 assert.ok(!astroJs.includes("Orchestration"), "ORC is never expanded in public copy (Chase: the expansion is for internal records)");

@@ -8,6 +8,7 @@ import { registerBenchVerbs } from "./os-verbs3";
 import { registerToolchestVerbs } from "./os-toolchest";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
+import { registerPhonehomeVerbs, buildPhonehomeApp } from "./os-phonehome";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
 import { buildWolf3d } from "./os-wolf3d";
@@ -78,6 +79,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   orc: { title: "orc", icon: "orc" },
   simulacrum: { title: "Simulacrum — a generated world", icon: "simulacrum" },
   sigint: { title: "sigint bench", icon: "sigint" },
+  phonehome: { title: "phonehome", icon: "phonehome" },
   toolchest: { title: "toolchest", icon: "toolchest" },
 };
 
@@ -1289,6 +1291,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   orc: buildOrc,
   simulacrum: buildSimulacrum,
   sigint: buildSigint,
+  phonehome: (body) => buildPhonehomeApp(body, os),
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
@@ -1506,6 +1509,7 @@ function boot() {
   registerBenchVerbs();
   registerToolchestVerbs();
   registerBottleVerbs();
+  registerPhonehomeVerbs();
   registerLimitReasons();
   applyTheme(os.theme);
   document.addEventListener("pointerdown", armAudio);
@@ -1536,7 +1540,7 @@ function boot() {
     ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["files", "files", "files"], ["editor", "editor", "editor"],
     ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
     ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
-    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
+    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["phonehome", "phonehome", "phonehome"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
     ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
