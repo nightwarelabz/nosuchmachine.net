@@ -1,0 +1,27 @@
+name: pack-once
+on:
+  push:
+    branches: [feat/haxiuz-v1.2]
+
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/haxiuz-v1.2
+      - name: Reassemble the menu pack
+        run: |
+          cat .pack-chunks/chunk-00 .pack-chunks/chunk-01 .pack-chunks/chunk-02 .pack-chunks/chunk-03 .pack-chunks/chunk-04 .pack-chunks/chunk-05 | base64 -d > public/nexuiz/sparta-menu.pk3
+          echo "9b20e773ef86a45017835138ac3bda582631c583dddffe68f9c1c1eb6b67cd17  public/nexuiz/sparta-menu.pk3" | sha256sum -c -
+      - name: Commit the pack and remove the scaffolding
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/nexuiz/sparta-menu.pk3
+          git rm -r --quiet .pack-chunks
+          git rm --quiet .github/workflows/pack-once.yml
+          git commit -m "menu pack v1.2 (gunmetal plate + tag seat #014)"
+          git push origin HEAD:feat/haxiuz-v1.2
