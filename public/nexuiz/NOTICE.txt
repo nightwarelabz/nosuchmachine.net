@@ -138,10 +138,12 @@ configured. It makes local games MinstaHook instagib (g_minstagib 1,
 g_grappling_hook 1 — the "thisissparta" flavor) with the era's
 tunings. The house server is named thisissparta2! — it runs natively
 at the house, and its public bridge address is published (it is
-the constant the OS window deals with the game frame). The game
-boots to its own main menu; the room's door stands in that menu,
-and entering the room is the player's own press there — no
-connection is ever made for the player at boot.
+the constant the OS window deals with the game frame). Opening
+the game deals the room itself: the engine boots with the
+connect dealt and the player lands in the match. The room's
+door stands in the game's menu (below) as the manual road back
+in, and where the player is left standing if the room cannot
+be reached.
 Bots are a switch, never a condition of the room: the local
 match's toggle sets bot_number at the table; the house room's fill
 is the host's server-side switch (bot_join_empty / minplayers).
@@ -151,36 +153,49 @@ HOUSE MENU OVERRIDE — SETTINGS LOCKED, THE ROOM'S DOOR IN THE MENU
 Every player here runs the same build specs and configs (the house
 configuration above is dealt to everyone identically), so the
 in-game Settings are locked: they open on a single Player page
-whose only working control is the player NAME field. Video,
-effects, audio, input, network and misc settings cannot be
-changed from the menu; neither can model, skin, colors, crosshair
-or view settings — the Multiplayer dialog's Player Setup tab is
+whose working controls are the player NAME field and — restored
+in this build (patch 013 below) — the mouse SENSITIVITY slider,
+the stock control on the stock cvar, because how fast the mouse
+moves is the player's own choice, not a build spec. Video,
+effects, audio, network and misc settings cannot be changed
+from the menu; neither can model, skin, colors, crosshair or
+view settings — the Multiplayer dialog's Player Setup tab is
 the same surface and is locked the same way. The name field works
 exactly as stock (type, Apply, and that name is the one you wear
-in the room).
+in the room). The sensitivity slider works as stock too, and
+nothing in the house configuration deals that cvar, so the
+value a player sets stands and persists.
 
-The same override carries the room's front door: the game boots
-to its main menu, and at the head of the Multiplayer dialog —
-above the server browser — stands a button labeled
-"haxiuz", a stock command button whose command is
-"connect thisissparta2": the very connect the boot used to deal
-sight unseen, now pressed by the player's own hand. It is the
-same road, not a new one — the engine's socket layer dials the
-dealt bridge address for any connect (the shipped glue's peer
-construction takes the dealt URL whole), so the door and the
-retired auto-join differ only in whose hand presses. The
-Singleplayer dialog and the stock server browser are untouched
-and work as shipped.
+The same override carries the room's front door: at the head
+of the Multiplayer dialog — above the server browser — stands
+a button labeled "haxiuz", a stock command button whose
+command is "connect thisissparta2". The boot deals that same
+connect itself (the auto-join: open the game, land in the
+match), and the door is the manual road back in — after a
+local match, a disconnect, or a join that failed. Both roads
+are the same road: the engine's socket layer dials the dealt
+bridge address for any connect (the shipped glue's peer
+construction takes the dealt URL whole). The Singleplayer
+dialog and the stock server browser are untouched and work
+as shipped.
 
 Mechanism: the override pack public/nexuiz/sparta-menu.pk3
-(160,520 bytes, one entry: menu.dat) rides in the game directory
-beside the release packs; the engine's own directory order makes
-its menu.dat the one that loads — the same route as the house
-room's sparta-progs / sparta-csprogs overrides. Nothing in the
-release packs is modified.
+(1,794,956 bytes, two entries: menu.dat and the menu banner,
+below) rides in the game directory beside the release packs;
+the engine's own directory order makes its menu.dat the one
+that loads — the same route as the house room's sparta-progs /
+sparta-csprogs overrides. Nothing in the release packs is
+modified.
 
-  sparta-menu.pk3  SHA-256 9508199a9a70dfb80fe266795f63eaec4f22d99aa75ae4426cad3a898eab4813
-  menu.dat inside  SHA-256 72083265b5c7dc9723d72536b35adc967bf49d7897fcd2eae09017aaa496d9e4
+  sparta-menu.pk3  SHA-256 8e4f26be73410725a0f7d4807809eb29875cbf0b4988107bf2ee39d759c0e0c2
+  menu.dat inside  SHA-256 de06b531c8cabedf64c00d005d4e1365ca54b92c2992797a474073aa0e186f0c
+  gfx/nightware-banner.tga inside  SHA-256 dd3fb4373565953957d341052be4b1f1f42a32ff6afaec38b1ba47264c86ee51
+
+The banner is the house's own art — the NIGHTWARE LABZ
+gunmetal banner — converted losslessly from its PNG master
+(1,672 x 941, pixel-for-pixel; this engine build decodes no
+PNG, the deviation named above) and carried in the override
+pack so the menu can draw it.
 
 The menu.dat is compiled from the release's own menu sources
 (qcsrc/menu in gamesource20091001.zip) with the era's own fteqcc
@@ -190,7 +205,10 @@ tools/nexuiz/house-qc-patch-008.diff (three files) and, stacked
 on it, tools/nexuiz/house-qc-patch-009.diff (one file), and,
 stacked on that, tools/nexuiz/house-qc-patch-010.diff
 (two files), and, stacked on that,
-tools/nexuiz/house-qc-patch-011.diff (one file):
+tools/nexuiz/house-qc-patch-011.diff (one file), and, stacked
+on that, tools/nexuiz/house-qc-patch-012.diff (two files),
+and, stacked on that, tools/nexuiz/house-qc-patch-013.diff
+(one file):
 
   dialog_settings.c: the Settings dialog's six tabs (Input,
     Video, Effects, Audio, Network, Misc) are replaced by the
@@ -244,6 +262,27 @@ tools/nexuiz/house-qc-patch-011.diff (one file):
     work, and the menu's mouse tracking and hit-testing are
     untouched. The engine tracks that cursor in absolute
     mode (menu_mouse_absolute, dealt in the house config).
+  menu.qc + menu/nexuiz/util.qc (patch 012): the menu banner.
+    The stock backgrounds carry the Nexuiz logo and the
+    "visit www.nexuiz.com" strap baked into one plate layer
+    (title layer 3, in-game layer 2); that layer is never
+    drawn now. In its footprint — the top right of both the
+    main menu and the in-game Esc menu — the menu draws the
+    house banner (gfx/nightware-banner, in the pack above),
+    fitted by its own aspect, at each background's own alpha.
+    The separate update nag that carried a nexuiz.com
+    address is gated off in preMenuDraw, so no nexuiz.com
+    element can appear on the menu; it never carried a press
+    or a link. Everything else in the draw is stock.
+  dialog_multiplayer_playersetup.c (patch 013): the Player
+    tab gains the mouse sensitivity control — the stock
+    "Sensitivity:" label and makeNexuizSlider(1, 32, 0.2,
+    "sensitivity") verbatim from the stock Input settings,
+    which has stood unwired in this tree since patch 008
+    trimmed the Settings dialog to this one tab. The slider
+    writes the cvar directly, as stock; no house config
+    deals it, and the engine's own config save persists the
+    player's value.
 
 Parity of the base build, stated exactly: rebuilt from the
 unmodified sources, the menu program's header CRC is 10020 —
@@ -294,6 +333,31 @@ statements in both, opcode stream identical. Exactly one
 statement differs, in draw_drawMousePointer: the drawpic
 alpha operand now reads the constant 0 instead of the
 draw_alpha global. File size unchanged (617,644 bytes).
+
+Parity of patch 012 against the patch-011 build, measured the
+same way: header CRC still 10020; 1,010 functions, same names
+and order; field definitions identical; the only new string
+is "/gfx/nightware-banner" (the leading slash is the menu's
+own absolute form — its draw wrappers prefix every relative
+name with the current skin's directory) and no string is
+removed; global definitions +9, all anonymous; statements
+43,525 to 43,568 (+43): exactly two functions' opcode
+streams change — drawBackground (138 to 180; locals 26 to
+34) and preMenuDraw (114 to 115, the gate) — every other
+function's opcode stream identical, its statements differing
+only by the global-operand renumbering the additions cause.
+One compiler warning is expected and is the gate itself
+("Result of comparison is constant"). File size 618,112.
+
+Parity of patch 013 against the patch-012 build, measured the
+same way: header CRC still 10020; 1,010 functions, same names
+and order; field definitions identical; no new strings (the
+label and the cvar name already live in the progs — the stock
+Input dialog compiles alongside); global definitions +1 (the
+fill's added local); statements 43,568 to 43,593 (+25), all
+inside fillNexuizPlayerSettingsTab (73 to 98; locals 9 to
+12) — the only function's opcode stream that changes. File
+size 618,324.
 
 One honest limit: this lock governs the menu surface. The
 engine's developer console — a stock part of the game — can

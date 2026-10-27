@@ -117,7 +117,7 @@ for (const asset of ["nexuiz/play.html", "nexuiz/autoexec.cfg", "nexuiz/NOTICE.t
 const nexWasmSize = fs.statSync(path.join(root, "nexuiz/darkplaces-wasm.wasm")).size;
 assert.ok(nexWasmSize > 1_000_000 && nexWasmSize < 25_000_000, `darkplaces-wasm.wasm size looks wrong: ${nexWasmSize}`);
 const nexNotice = fs.readFileSync(path.join(root, "nexuiz/NOTICE.txt"), "utf8");
-for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "9508199a9a70dfb80fe266795f63eaec4f22d99aa75ae4426cad3a898eab4813", "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3"]) {
+for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "8e4f26be73410725a0f7d4807809eb29875cbf0b4988107bf2ee39d759c0e0c2", "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3"]) {
   assert.ok(nexNotice.includes(pin), `nexuiz NOTICE.txt must pin the verified hash: ${pin}`);
 }
 for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "blacksite-nexuiz-bridge", "blacksite-relay-v2"]) {
@@ -151,6 +151,29 @@ assert.ok(
   qcPatch011.includes("draw_mousepointer_size, '1 1 1', 0, 0)"),
   "house-qc-patch-011 must draw the menu cursor at zero alpha",
 );
+// House QC patch 012 (the menu banner): the patch of record
+// must carry the plate-layer skip, the banner draw in the
+// resolver's absolute form, and the update-nag gate.
+const qcPatch012 = fs.readFileSync("tools/nexuiz/house-qc-patch-012.diff", "utf8");
+assert.ok(
+  qcPatch012.includes('SKINGFX_BACKGROUND_INGAME && i == 1'),
+  "house-qc-patch-012 must record the plate-layer skip",
+);
+assert.ok(
+  qcPatch012.includes('"/gfx/nightware-banner"'),
+  "house-qc-patch-012 must draw the house banner in the resolver's absolute form",
+);
+assert.ok(
+  qcPatch012.includes('FALSE && _Nex_ExtResponseSystem_UpdateTo'),
+  "house-qc-patch-012 must gate the nexuiz.com update nag off",
+);
+// House QC patch 013 (mouse sensitivity, restored): the patch
+// of record must carry the stock slider on the stock cvar.
+const qcPatch013 = fs.readFileSync("tools/nexuiz/house-qc-patch-013.diff", "utf8");
+assert.ok(
+  qcPatch013.includes('makeNexuizSlider(1, 32, 0.2, "sensitivity")'),
+  "house-qc-patch-013 must restore the stock sensitivity slider on the stock cvar",
+);
 // Nexuiz fullscreen law: Esc is the game's menu key — the OS bundle
 // must carry the frame's Esc report and the 4.5 s hold-exit clock,
 // and the play frame must carry its half (watching the key, holding
@@ -183,13 +206,22 @@ assert.ok(nexPlay.includes('sha256: "10018c6a19fee310c70504952691fb21748ff5d1412
 assert.ok(!nexPlay.includes('"/nexuiz/haxiuz.pk3?v="'), "nexuiz play frame must not deal the haxiuz pack as a static site file");
 assert.ok(!nexPlay.includes('"data/data20091001.pk3":'), "nexuiz play frame must not deal the full release data pack");
 assert.ok(nexPlay.includes("part=data"), "nexuiz play frame must carry the legacy full-data cache retirement");
-// Menu-first law: the play frame deals a transport, never a
-// connection — the room is entered by the player's own press at
-// the menu's door (house-qc-patch-009), so no connect argument
-// may be dealt at boot, and the engine must raise itself (the
-// click-to-play plate belonged to the auto-join and is gone).
-assert.ok(!nexPlay.includes("+connect"), "nexuiz play frame must not deal an auto-connect — the room is entered at the menu's door");
+// Auto-join law (v1.1, restoring the pre-menu-first mechanism):
+// the window's room deal ("join") carries the connect as a boot
+// argument, dealt only when a usable bridge address rides
+// along — the local and menu deals deal no connect — and the
+// engine must raise itself (the click-to-play plate belonged
+// to the first auto-join and stays gone). The menu's door
+// (house-qc-patch-009) stands as the manual road back in.
+assert.ok(nexPlay.includes('args.push("+connect", server)'), "nexuiz play frame must deal the auto-join connect on a join deal");
+assert.ok(nexPlay.includes('const joinLive = mode === "join"'), "the auto-join connect must be gated on the join deal and a live bridge");
+assert.ok(nexPlay.includes('rawMode === "join" ? "join" : "menu"'), "the play frame must deal the join mode the window deals on open");
 assert.ok(!nexPlay.includes("plate-btn"), "nexuiz play frame must not gate the menu behind a click-to-play plate");
+// Esc heal forwarding (review §9): a press inside the frame is
+// reported to the house as a throttled "gesture" word, and the
+// OS bundle must answer it with the fullscreen heal.
+assert.ok(nexPlay.includes('post({ type: "gesture" })'), "nexuiz play frame must forward in-frame gestures to the house for the fullscreen heal");
+assert.ok(astroJs.includes("gesture"), "OS bundle must carry the nexuiz gesture heal word");
 // Nexuiz WebRTC transport: a house peer's construction must try the
 // fast road first — a DataChannel negotiated over the /rtc
 // signaling path on the dealt door, STUN only, no TURN, inside the

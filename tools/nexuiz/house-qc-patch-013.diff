@@ -1,0 +1,61 @@
+# house-qc-patch-013.diff — house QC patch 013 (mouse sensitivity,
+# restored), stacked on house-qc-patch-008.diff through
+# house-qc-patch-012.diff. Apply in that order, each with
+# `patch -p1` from the qcsrc root's parent (the directory
+# containing qcsrc/). This file is the incremental diff of the
+# 012-patched sources vs the 013-patched sources: one file, one
+# control.
+#
+# dialog_multiplayer_playersetup.c, fillNexuizPlayerSettingsTab:
+# the Player tab — the Settings surface that survived patch
+# 008's trim (the Settings dialog's only tab, and the
+# Multiplayer dialog's Player Setup) — gains the mouse
+# sensitivity control: the stock label "Sensitivity:" and the
+# stock slider makeNexuizSlider(1, 32, 0.2, "sensitivity"),
+# verbatim from the stock Input settings
+# (dialog_settings_input.c, which stands unmodified in this
+# tree but unwired since the trim). The slider writes the
+# engine's sensitivity cvar directly; nothing in the house
+# config deals that cvar, so a dealt value can never stomp
+# the player's choice at boot, and the engine's own config
+# save persists it per player.
+#
+# Parity (measured, patch-012 build vs patch-013 build, same
+# recipe): header CRC 10020 unchanged; 1,010 functions, names
+# and order identical; field definitions identical; no new
+# strings (the label and the cvar name already live in the
+# progs — the stock Input dialog compiles alongside); global
+# definitions +1 (the fill's added local); statements
+# 43,568 -> 43,593 (+25), all inside
+# fillNexuizPlayerSettingsTab (73 -> 98; locals 9 -> 12) —
+# the only function's opcode stream that changes.
+--- a/qcsrc/menu/nexuiz/dialog_multiplayer_playersetup.c
++++ b/qcsrc/menu/nexuiz/dialog_multiplayer_playersetup.c
+@@ -30,7 +30,7 @@
+ }
+ void fillNexuizPlayerSettingsTab(entity me)
+ {
+-	entity label, box;
++	entity label, box, e;
+ 
+ 	me.TR(me);
+ 		me.TD(me, 1, 0.5, me.playerNameLabel = makeNexuizTextLabel(0, "Name:"));
+@@ -44,6 +44,18 @@
+ 			box.forbiddenCharacters = "\r\n\\\"$"; // don't care, isn't getting saved
+ 			box.maxLength = 63;
+ 			label.textEntity = box;
++	me.TR(me);
++		// house (patch 013): the mouse sensitivity control,
++		// restored to the surviving Settings surface. The
++		// stock Input settings dialog carries it (label and
++		// slider verbatim, on the stock cvar); that dialog
++		// has stood unwired since patch 008 trimmed the
++		// Settings dialog to this tab, so the control comes
++		// here instead. Nothing in the house config deals
++		// sensitivity — the player's value stands, and the
++		// engine's own config save persists it.
++		me.TD(me, 1, 1, e = makeNexuizTextLabel(0, "Sensitivity:"));
++		me.TD(me, 1, 2, e = makeNexuizSlider(1, 32, 0.2, "sensitivity"));
+ 	me.gotoRC(me, me.rows - 1, 0);
+ 		me.TD(me, 1, me.columns, makeNexuizCommandButton("Apply immediately", '0 0 0', "color -1 -1;name \"$_cl_name\";sendcvar cl_weaponpriority;sendcvar cl_zoomfactor;sendcvar cl_zoomspeed;sendcvar cl_autoswitch;sendcvar cl_shownames;sendcvar cl_forceplayermodelsfromnexuiz;sendcvar cl_forceplayermodels", COMMANDBUTTON_APPLY));
+ }
