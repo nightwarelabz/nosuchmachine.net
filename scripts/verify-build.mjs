@@ -313,6 +313,8 @@ assert.ok(osSrcR.includes("registerPhonehomeVerbs()"), "os.ts must register the 
 assert.ok(astroJs.includes("nsm.phonehome.signal.v1"), "OS bundle must carry the phonehome signal schema");
 assert.ok(astroJs.includes("nsm.phonehome.message.v1"), "OS bundle must carry the phonehome sealed-message schema");
 assert.ok(astroJs.includes("a secure transmitter and reception field"), "OS bundle must carry phonehome's own description of itself");
+assert.ok(astroJs.includes("tap to talk") && astroJs.includes("toggleTalk"), "phonehome talk must be a tap toggle (Chase, 2026-10-27)");
+assert.ok(!astroJs.includes("hold to talk"), "phonehome must not ship the retired hold-to-talk control");
 assert.ok(ex2(new URL("../functions/api/phonehome.ts", import.meta.url)), "the phonehome rendezvous function must exist");
 const phApiSrc = rfs2(new URL("../functions/api/phonehome.ts", import.meta.url), "utf8");
 assert.ok(phApiSrc.includes("phonehome:v1:") && phApiSrc.includes("expirationTtl"), "the rendezvous must namespace its keys and expire them");
