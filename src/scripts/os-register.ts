@@ -46,12 +46,18 @@ export function vfsStats(files: Map<string, { type: string; content?: string; bi
   for (const n of files.values()) {
     if (n.type !== "file") continue;
     count++;
-    bytes += n.content?.length ?? 0;
-    // binary nodes carry base64 in `binary` — count the bytes it
-    // decodes to, not the armour it travels in.
+    // Exactly one measure per node, and a real byte measure at
+    // that: a binary node counts the bytes its base64 decodes to —
+    // and ONLY those (its `content` field is the lossy text shadow
+    // of the same bytes, so counting both counted the file twice);
+    // a text node counts its UTF-8 bytes, not its UTF-16 length —
+    // a character is not a byte, and the register's totals used to
+    // say otherwise for anything past ASCII.
     if (n.binary) {
       const pad = n.binary.endsWith("==") ? 2 : n.binary.endsWith("=") ? 1 : 0;
       bytes += Math.max(0, Math.floor((n.binary.length * 3) / 4) - pad);
+    } else if (n.content) {
+      bytes += new TextEncoder().encode(n.content).length;
     }
   }
   return { files: count, bytes };

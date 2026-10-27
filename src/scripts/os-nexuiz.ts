@@ -355,7 +355,12 @@ export function buildNexuiz(body: HTMLElement) {
      * and is ignored whole. */
     if (ev.origin !== location.origin || ev.source !== frame.contentWindow || !ev.data || ev.data.from !== "nexuiz") return;
     const m = ev.data;
-    if (typeof m.session === "string" && session && m.session !== session) return;
+    // The session is not advisory: a frame message is the frame's
+    // only if it carries THIS launch's session, exactly. A message
+    // with no session at all used to walk straight past this check
+    // (it only rejected a mismatched one) — a stale or foreign
+    // frame could speak as the game. No match, no hearing.
+    if (typeof m.session !== "string" || !session || m.session !== session) return;
     if (m.type === "diag" && diagPre && m.summary) {
       diagPre.textContent = diagText(m.summary as Record<string, unknown>);
     } else if (m.type === "diag-export" && m.export) {

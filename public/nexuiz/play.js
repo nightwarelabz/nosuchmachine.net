@@ -11,7 +11,10 @@ const rawMode = q.get("mode");
  * road in, and where a failed join leaves the player standing. */
 const mode = rawMode === "minsta" ? "minsta" : rawMode === "join" ? "join" : "menu";
 const rawName = (q.get("name") || "").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "").slice(0, 24);
-const dataBase = q.get("base") || "/api/nexuiz-data";
+/* The data source is fixed: the house's same-origin range
+ * endpoint, never a URL parameter. A `?base=` once let a crafted
+ * link point the engine's data fetches at any origin at all. */
+const dataBase = "/api/nexuiz-data";
 /* The engine build stamp. The glue script and the wasm are served
  * immutable (see public/_headers), so their URLs must change when
  * the engine does: this stamp rides both URLs, and play.js itself
@@ -63,6 +66,11 @@ if (typeof caches !== "undefined") {
     } catch { /* a store that refuses is left as it lies */ }
   }).catch(() => {});
 }
+/* The session this deal belongs to, minted by the OS window per
+ * deal and echoed on every word the frame sends up. The house
+ * REQUIRES the tag, exactly: a word carrying no session, or
+ * another deal's, is not heard at all. */
+const NX_SESSION = q.get("session") || "";
 /* The house bridge (sparta-bridge contract): a wss URL used VERBATIM
  * by the engine's socket layer — one WebSocket session there is one
  * player on the house server. The address is dealt as a transport,
@@ -72,16 +80,16 @@ if (typeof caches !== "undefined") {
  * address only out of the bare-scheme form). A join deal dials
  * it at boot (the connect below); the other deals install it
  * undialed, and there the menu's own connect reaches the room
- * through it. */
-const bridge = q.get("bridge") || "";
+ * through it.
+ * The bridge is honoured only from a real deal: this page framed
+ * by the house, carrying the session the house minted for it. A
+ * bare top-level link — opened straight from an address bar or a
+ * stranger's page — cannot choose a bridge, and so cannot point
+ * the engine's socket at a server of the link-maker's picking. */
+const bridge = window.self !== window.top && NX_SESSION ? q.get("bridge") || "" : "";
 const server = (q.get("server") || "thisissparta2").replace(/[^A-Za-z0-9_!.\-:]/g, "").slice(0, 64) || "thisissparta2";
 const botsRaw = parseInt(q.get("bots") || "5", 10);
 const bots = Number.isFinite(botsRaw) ? Math.max(0, Math.min(15, botsRaw)) : 5;
-/* The session this deal belongs to, minted by the OS window per
- * deal and echoed on every word the frame sends up, so a stale
- * frame's words can be told from the live deal's (the house reads
- * the tag; a frame dealt none sends an empty one). */
-const NX_SESSION = q.get("session") || "";
 /* Diagnostics are opt-in, per deal: the OS window deals diag=1
  * only when the operator has armed them there (see os-nexuiz.ts).
  * Off is the shipped state — nothing below samples, polls or

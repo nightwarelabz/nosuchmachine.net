@@ -201,6 +201,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         claimIn.focus();
         return;
       }
+      if ((passIn.value || regIn.checked || claim) && !tlsIn.checked) { msg.textContent = "— a password or claim code never travels in the clear: tick TLS (port 6697) first."; return; }
       if (regIn.checked && (!passIn.value.trim() || !mailIn.value.trim())) { msg.textContent = "— registering takes both a password and an email for the code."; return; }
       const channel = chanIn.value.trim().startsWith("#") ? chanIn.value.trim() : HOUSE_CHANNEL;
       hideIdentityBox();
@@ -277,6 +278,11 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   /* ————— client state ————— */
   let ws: WebSocket | null = null;
   let myNick = "";
+  /* Every nick worn on THIS connection. A /wipe's authorship scope
+     is exactly this set — the lines spoken under a name you have
+     since changed away from are still yours to take back, and no
+     one else's lines are ever in reach. Reset per connection. */
+  const nicksWorn = new Set<string>();
   let current = "server";
   const joinedChans = new Set<string>();
   let intentionalClose = false;
@@ -648,6 +654,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
     if (ws && ws.readyState === WebSocket.OPEN && registered) { send(`NICK ${fresh}`); return; }
     for (const meta of roster.values()) { const e = meta.get(myNick); if (e) { meta.delete(myNick); meta.set(fresh, e); } }
     myNick = fresh;
+    nicksWorn.add(fresh);
     renderUsers();
     scheduleSave();
   };
@@ -793,7 +800,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         for (const set of users.values()) if (set.delete(m.nick)) set.add(fresh);
         for (const set of ops.values()) if (set.delete(m.nick)) set.add(fresh);
         for (const meta of roster.values()) { const e = meta.get(m.nick); if (e) { meta.delete(m.nick); meta.set(fresh, e); } }
-        if (m.nick === myNick) { myNick = fresh; push("server", `— you are now ${myNick}`); }
+        if (m.nick === myNick) { myNick = fresh; nicksWorn.add(fresh); push("server", `— you are now ${myNick}`); }
         scheduleSave();
         renderUsers();
         break;
@@ -889,6 +896,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
       case "433": {
         if (/^machine\d[A-Z][0-9A-Z]$/.test(myNick)) {
           myNick = machineName();
+          nicksWorn.add(myNick);
           push("server", `— that machine name is already worn in the room; you are ${myNick} now`);
           send(`NICK ${myNick}`);
         } else push("server", `— the name ${m.params[1] || ""} is taken on this network — /nick another, or wear a machine name`);
@@ -919,7 +927,14 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const connectWith = (o: IdentityOpts) => {
     const refusal = os.gate("active");
     if (refusal) { push("server", refusal); return; }
+    // Credentials never travel in the clear — not the NickServ
+    // password, not a house claim code. The identity box refuses
+    // first; this is the same refusal at the door itself, so no
+    // caller of this function can route a secret onto port 6667.
+    if ((o.password || o.claim) && o.port !== 6697) { push("server", "— credentials travel only on TLS (port 6697). Nothing was sent."); return; }
     myNick = o.nick || machineName();
+    nicksWorn.clear();
+    nicksWorn.add(myNick);
     if (ws) { intentionalClose = true; if (keepalive) { clearInterval(keepalive); keepalive = null; } try { ws.close(); } catch { /* already gone */ } }
     users.clear(); ops.clear(); current = "server";
     joinedChans.clear(); intentionalClose = false; attempts = 0;
@@ -1073,15 +1088,17 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         case "quit": intentionalClose = true; joinedChans.clear(); if (keepalive) { clearInterval(keepalive); keepalive = null; } send("QUIT :off the wire"); ws.close(); push("server", "— off the wire. The identity box is up if you want back in — any name, or none."); showIdentityBox(); break;
         case "wipe": {
           // A wipe reaches exactly as far as authorship — the house's
-          // ruling. It takes back YOUR lines: the bridge purges this
-          // name's lines from the room's memory (its answer arrives as
-          // a bridge notice), and this device drops them from the room
-          // in front of you. Everyone else's words stand, untouched —
-          // nobody wipes the whole chat for everyone.
+          // ruling. It takes back YOUR lines, under every name you
+          // have worn on this connection: the bridge purges each of
+          // them from the room's memory (its answer arrives as a
+          // bridge notice, and it says plainly when a deletion could
+          // not be confirmed), and this device drops them from the
+          // room in front of you. Everyone else's words stand,
+          // untouched — nobody wipes the whole chat for everyone.
           if (!current.startsWith("#")) { push(current, "— /wipe belongs to a room: stand in the channel whose lines of yours you would take back."); break; }
           send(`RELAYMEM-WIPE ${current}`);
-          purgeLines(current, myNick);
-          push(current, "— your lines here are wiped — yours only. Everyone else's words stand, and so does the room.");
+          for (const worn of nicksWorn) purgeLines(current, worn);
+          push(current, "— taking back your lines here, under every name you have worn on this connection — yours only. The bridge answers for the room's memory.");
           break;
         }
         default: push(current, `— no such order: /${cmd} (try /join /part /msg /me /nick /away /back /topic /wipe /quit)`);

@@ -161,14 +161,19 @@ export async function memReplay(kv: any, net: string, chan: string): Promise<Mem
 }
 
 /** Forget one voice in one channel — moderation reaches memory too.
- *  The voice rides in every key, so a purge needs no reads at all. */
-export async function memPurgeNick(kv: any, net: string, chan: string, nick: string): Promise<void> {
-  if (!kv) return;
+ *  The voice rides in every key, so a purge needs no reads at all.
+ *  Reports how many lines it actually deleted, or -1 when the key
+ *  list itself could not be read: a /wipe answers for its work, and
+ *  "unconfirmed" is an answer — silence dressed as success is not. */
+export async function memPurgeNick(kv: any, net: string, chan: string, nick: string): Promise<number> {
+  if (!kv) return 0;
+  let keys: string[];
   try {
-    const keys = await listKeys(kv, net, chan);
-    const mine = keys.filter((k) => k.split("|")[4] === nick.toLowerCase());
-    await Promise.allSettled(mine.map((k) => kv.delete(k)));
-  } catch { /* a failed purge still leaves expiry to do the forgetting */ }
+    keys = await listKeys(kv, net, chan);
+  } catch { return -1; /* the purge cannot even see its work — say so */ }
+  const mine = keys.filter((k) => k.split("|")[4] === nick.toLowerCase());
+  const done = await Promise.allSettled(mine.map((k) => kv.delete(k)));
+  return done.filter((r) => r.status === "fulfilled").length;
 }
 
 /* ————— the restart probe —————

@@ -111,6 +111,11 @@ export async function onRequest(context: any) {
   void memBuildProbe(mem, host, "#nosuchmachine", (url.searchParams.get("build") || "").slice(0, 80),
     "BLACKSITE was restarted — a new build went live and every client has been refreshed onto it.");
   let myNick = "";
+  /* Every nick this connection has worn, in order of wearing. A
+   * wipe's authorship scope is exactly this set: a speaker who
+   * changed names mid-session still OWNS the lines they spoke
+   * under the earlier name — and owns nobody else's. */
+  const myNicks = new Set<string>();
   const pair = new (globalThis as any).WebSocketPair();
   const [client, server] = Object.values(pair) as any[];
   server.accept();
@@ -189,7 +194,10 @@ export async function onRequest(context: any) {
       m = /^:(\S+) NICK :?(\S+)$/.exec(line);
       if (m) {
         const old = m[1].split("!")[0];
-        if (myNick && old.toLowerCase() === myNick.toLowerCase()) myNick = m[2];
+        if (old.toLowerCase() === myNick.toLowerCase() || [...myNicks].some((n) => n.toLowerCase() === old.toLowerCase())) {
+          myNicks.add(m[2]);
+          if (old.toLowerCase() === myNick.toLowerCase()) myNick = m[2];
+        }
       }
     } catch { /* the tap never breaks the wire */ }
   };
@@ -259,22 +267,30 @@ export async function onRequest(context: any) {
             return;
           }
           myNick = want;
+          myNicks.add(want);
         }
         if (upper.startsWith("RELAYMEM-WIPE")) {
           // A control line for the bridge alone — it never crosses to
           // the network. By the house's ruling a wipe reaches exactly
           // as far as authorship: it takes back the wiper's OWN lines
-          // from the room's memory, and no one else's. The bridge
-          // knows the name this session wears, and that name is the
-          // whole scope — there is no way to name another voice here.
+          // from the room's memory, and no one else's. The scope is
+          // every name this session has worn — tracked by the bridge
+          // itself, never taken from the request — so there is still
+          // no way to name another voice here.
           const chan = raw.split(/\s+/)[1] || "";
           const say = (text: string) => { try { server.send(new TextEncoder().encode(`:relay.bridge NOTICE * :${text}\r\n`)); } catch { /* the answer is best-effort; the act is what counts */ } };
           if (!mem) say("this bridge keeps no room memory — there is nothing to take back.");
           else if (!chan.startsWith("#")) say("name the room: RELAYMEM-WIPE #channel — it takes back your own lines there.");
           else if (!myNick) say("you are wearing no name yet — there is nothing of yours to take back.");
           else {
-            void memPurgeNick(mem, host, chan, myNick);
-            say(`your lines in ${chan} are wiped from the room's memory. Yours were the only ones touched.`);
+            // Every name worn on THIS connection, and no other
+            // voice's: authorship is the whole scope, and a name
+            // change does not leave the earlier name's lines
+            // standing behind as somebody nobody can take back.
+            const worn = [...new Set([...myNicks, myNick].filter(Boolean))];
+            const results = await Promise.all(worn.map((n) => memPurgeNick(mem, host, chan, n)));
+            if (results.some((r) => r < 0)) say(`the wipe ran under ${worn.join(", ")}, but the bridge could not confirm every deletion — whatever remains is only yours, and it expires within the day.`);
+            else say(`your lines in ${chan} under ${worn.join(", ")} are wiped from the room's memory. Yours were the only ones touched.`);
           }
           continue;
         }

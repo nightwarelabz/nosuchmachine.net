@@ -401,8 +401,8 @@ assert.ok(!bridgeSrc.includes("memWipe"), "The bridge must hold no whole-room wi
 assert.ok(bridgeSrc.includes("RELAY_MEMORY"), "The bridge must read the room-memory binding");
 assert.ok(bridgeSrc.includes("relaymem=1"), "The bridge must tag replayed lines so clients lay them in as memory, not as new speech");
 assert.ok(bridgeSrc.includes("RELAYMEM-WIPE"), "The bridge must honor the wipe control line at authorship scope only — the sender's own lines, never the room");
-assert.ok(bridgeSrc.includes("memPurgeNick(mem, host, chan, myNick)"), "A bridge wipe must purge by the name the wiper's own session wears — authorship is the whole scope");
-assert.ok(ircSrc.includes("yours only. Everyone else's words stand"), "The client must state the wipe ruling where a wipe happens: your lines only, everyone else untouched");
+assert.ok(bridgeSrc.includes("worn.map((n) => memPurgeNick(mem, host, chan, n))"), "A bridge wipe must purge by every name the wiper's own session wore on this connection — authorship is the whole scope, and nobody else's lines are reachable");
+assert.ok(ircSrc.includes("under every name you have worn on this connection — yours only"), "The client must state the wipe ruling where a wipe happens: your lines only, under every name you wore, everyone else untouched");
 assert.ok(ircSrc.includes('tags?.relaymem'), "The client must recognize memory-tagged lines");
 assert.ok(ircSrc.includes("pushMemory"), "The client must lay memory lines in deduped, with their true time");
 // Relay colour law + restart probes + self-naming (Chase, 2026-10-25):
