@@ -227,6 +227,12 @@ export function openApp(app: string, arg?: string, opts?: { deferBuild?: boolean
   /* the nexuiz room opens onto the whole screen — the click that
      opened it is the gesture; see nexuizStageFullscreen. */
   if (app === "nexuiz") nexuizStageFullscreen(body);
+  /* The sigint bench opens enlarged, as if its square button were
+     the first thing pressed: its screen-view instruments are laid
+     out for the whole desk and only render correctly at that size.
+     Same toggleMaximize every window answers to — a view state
+     only; the lifecycle below is untouched. */
+  if (app === "sigint") toggleMaximize(win);
   applyWinState(life, true);
   saveSession();
 }
@@ -324,6 +330,7 @@ function ensureBuilt(win: HTMLElement) {
   rec.built = true;
   serveBuild(rec.app, rec.body, rec.arg);
   if (rec.app === "nexuiz") nexuizStageFullscreen(rec.body);
+  if (rec.app === "sigint" && !rec.win.classList.contains("maxed")) toggleMaximize(rec.win);
   applyWinState(rec, true);
 }
 function visibleWindows(): HTMLElement[] { return [...windows.values()].filter((w) => w.style.display !== "none"); }

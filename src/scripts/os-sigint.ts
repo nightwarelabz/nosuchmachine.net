@@ -26,6 +26,7 @@
 
 import { skey } from "./os-depth";
 import { createLiveSource } from "./os-sigint-live";
+import { createAirSource } from "./os-sigint-air";
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -227,10 +228,11 @@ export function buildSigint(body: HTMLElement) {
   const srcMic = el("button", "os-btn", "mic");
   const srcFile = el("button", "os-btn", "file");
   const srcLive = el("button", "os-btn", "stations");
+  const srcAir = el("button", "os-btn", "air");
   const recBtn = el("button", "os-btn", "rec");
   const fileInput = document.createElement("input");
   fileInput.type = "file"; fileInput.accept = "audio/*"; fileInput.style.display = "none";
-  head.append(freqInput, freqUnit, power, srcBand, srcMic, srcFile, srcLive, recBtn, fileInput);
+  head.append(freqInput, freqUnit, power, srcBand, srcMic, srcFile, srcLive, srcAir, recBtn, fileInput);
 
   const fall = document.createElement("canvas");
   fall.className = "os-sigint-fall";
@@ -299,6 +301,7 @@ export function buildSigint(body: HTMLElement) {
   let bandBuffer: AudioBuffer | null = null;
   let freq = 3200, mode = "cw", running = false;
   let liveOn = false;
+  let airOn = false;
   let latestMag: Float32Array | null = null;
   const hist = document.createElement("canvas");
   hist.width = 1024; hist.height = 226;
@@ -366,6 +369,14 @@ export function buildSigint(body: HTMLElement) {
     intercept: (text) => commitIntercept("stream", text, 0),
   });
   logBox.after(live.panel);
+  /* Air picture (os-sigint-air.ts): the ADS-B exchange feed as a
+     scope + table; a clicked contact grades into the same log,
+     with freq 0 — no RF frequency is claimed for it either. */
+  const air = createAirSource({
+    status: (t) => { status.textContent = t; },
+    intercept: (text) => commitIntercept("air", text, 0),
+  });
+  live.panel.after(air.panel);
   markA.addEventListener("click", () => { curA = freq; });
   markB.addEventListener("click", () => { curB = freq; });
   markX.addEventListener("click", () => { curA = null; curB = null; });
@@ -413,6 +424,8 @@ export function buildSigint(body: HTMLElement) {
   const stopSource = () => {
     liveOn = false;
     live.deactivate();
+    airOn = false;
+    air.deactivate();
     try { liveSrc?.disconnect(); } catch { /* already gone */ }
     if (liveSrc instanceof AudioBufferSourceNode) { try { liveSrc.stop(); } catch { /* noop */ } }
     liveSrc = null;
@@ -420,37 +433,53 @@ export function buildSigint(body: HTMLElement) {
     micStream = null;
   };
 
-  const setSource = async (kind: "band" | "mic" | "file" | "stations", file?: File) => {
-    if (!ctx || !node) return;
+  const setSource = async (kind: "band" | "mic" | "file" | "stations" | "air", file?: File) => {
+    /* The audio sources play through the receiver and say so when
+       it is off. The two feed sources (stations directory, air
+       picture) need no receiver — their panels open with the ear
+       off, and their own gates speak for them. */
+    if ((kind === "band" || kind === "mic" || kind === "file") && (!ctx || !node)) {
+      status.textContent = "power the receiver first — the band, mic and file sources play through it";
+      return;
+    }
     stopSource();
-    for (const [b, k] of [[srcBand, "band"], [srcMic, "mic"], [srcFile, "file"], [srcLive, "stations"]] as Array<[HTMLButtonElement, string]>) {
+    for (const [b, k] of [[srcBand, "band"], [srcMic, "mic"], [srcFile, "file"], [srcLive, "stations"], [srcAir, "air"]] as Array<[HTMLButtonElement, string]>) {
       b.classList.toggle("primary", k === kind);
     }
+    /* narrowed for the audio branches: the guard above has already
+       refused them when the receiver is off */
+    const ac = ctx as AudioContext, nd = node as AudioWorkletNode;
     if (kind === "band") {
       if (!bandBuffer) {
         status.textContent = "building the house band…";
-        bandBuffer = await synthBand(ctx.sampleRate, 30);
+        bandBuffer = await synthBand(ac.sampleRate, 30);
         /* powered off while the band was building: stay off */
         if (!running) return;
       }
-      const s = ctx.createBufferSource(); s.buffer = bandBuffer; s.loop = true;
-      s.connect(node); s.start(); liveSrc = s;
+      const s = ac.createBufferSource(); s.buffer = bandBuffer; s.loop = true;
+      s.connect(nd); s.start(); liveSrc = s;
       status.textContent = "source: the house band (synthesized) · live";
     } else if (kind === "mic") {
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-        const s = ctx.createMediaStreamSource(micStream);
-        s.connect(node); liveSrc = s;
+        const s = ac.createMediaStreamSource(micStream);
+        s.connect(nd); liveSrc = s;
         status.textContent = "source: microphone / line-in · live — a real radio's audio is a real input";
       } catch { status.textContent = "microphone refused — the bench hears nothing from it"; }
     } else if (kind === "stations") {
       live.activate();
       liveOn = true;
+    } else if (kind === "air") {
+      /* The air picture is a feed, not an audio source: it rides
+         no ctx and no node — but it is picked from the same source
+         row, so it is chosen here like the rest. */
+      air.activate();
+      airOn = true;
     } else if (kind === "file" && file) {
       try {
-        const buf = await ctx.decodeAudioData(await file.arrayBuffer());
-        const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
-        s.connect(node); s.start(); liveSrc = s;
+        const buf = await ac.decodeAudioData(await file.arrayBuffer());
+        const s = ac.createBufferSource(); s.buffer = buf; s.loop = true;
+        s.connect(nd); s.start(); liveSrc = s;
         status.textContent = `source: file ${file.name} · looping`;
       } catch { status.textContent = "that file would not decode as audio"; }
     }
@@ -514,6 +543,7 @@ export function buildSigint(body: HTMLElement) {
   srcMic.addEventListener("click", () => void setSource("mic"));
   srcFile.addEventListener("click", () => fileInput.click());
   srcLive.addEventListener("click", () => void setSource("stations"));
+  srcAir.addEventListener("click", () => void setSource("air"));
   fileInput.addEventListener("change", () => { const f = fileInput.files?.[0]; if (f) void setSource("file", f); });
 
   /* recording: the worklet taps the raw band; the room keeps WAV. */
@@ -982,7 +1012,7 @@ export function buildSigint(body: HTMLElement) {
   /* ---------------- draw loop + housekeeping ---------------- */
   const fx = fall.getContext("2d")!;
   let suspended = false, benchDisposed = false, drawHandle = 0;
-  let ctxWasRunning = false, liveWasOn = false;
+  let ctxWasRunning = false, liveWasOn = false, airWasOn = false;
   const draw = () => {
     drawHandle = 0;
     if (!body.isConnected) return;
@@ -1074,6 +1104,8 @@ export function buildSigint(body: HTMLElement) {
     if (ctxWasRunning && ctx) void ctx.suspend();
     liveWasOn = liveOn;
     if (liveOn) { live.deactivate(); liveOn = false; }
+    airWasOn = airOn;
+    if (airOn) { air.deactivate(); airOn = false; }
   });
   body.addEventListener("os:resume", () => {
     if (benchDisposed || !suspended) return;
@@ -1081,6 +1113,7 @@ export function buildSigint(body: HTMLElement) {
     if (ctxWasRunning && ctx && ctx.state === "suspended") void ctx.resume();
     ctxWasRunning = false;
     if (liveWasOn) { live.activate(); liveOn = true; liveWasOn = false; }
+    if (airWasOn) { air.activate(); airOn = true; airWasOn = false; }
     if (!drawHandle && body.isConnected) drawHandle = requestAnimationFrame(draw);
   });
   body.addEventListener("os:dispose", () => teardownBench());
