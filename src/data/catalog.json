@@ -487,13 +487,13 @@
       "Provider availability, credentials, rate limits and returned metadata constrain results",
       "Native bundles are unsigned and not notarized"
     ],
-    "maturity": "Released application · v0.5.0",
+    "maturity": "Released application · v0.5.1",
     "status": "Released v0.5",
     "githubUrl": "https://github.com/nightwarelabz/tractor",
     "links": [
       {
-        "label": "Release v0.5.0",
-        "href": "https://github.com/nightwarelabz/tractor/releases/tag/v0.5.0"
+        "label": "Release v0.5.1",
+        "href": "https://github.com/nightwarelabz/tractor/releases/tag/v0.5.1"
       },
       {
         "label": "Architecture and providers",
@@ -503,11 +503,11 @@
     "sources": [
       {
         "label": "Project README",
-        "href": "https://github.com/nightwarelabz/tractor/blob/e5f6c89094c52854fda9a667f080141d6eb03454/README.md"
+        "href": "https://github.com/nightwarelabz/tractor/blob/d95ed871f4e2a39921d43a805f6fb88779f63912/README.md"
       },
       {
         "label": "Reviewed source revision",
-        "href": "https://github.com/nightwarelabz/tractor/tree/e5f6c89094c52854fda9a667f080141d6eb03454"
+        "href": "https://github.com/nightwarelabz/tractor/tree/d95ed871f4e2a39921d43a805f6fb88779f63912"
       }
     ],
     "featured": false,
