@@ -1,13 +1,15 @@
 "use strict";
 const q = new URLSearchParams(location.search);
 const rawMode = q.get("mode");
-/* "join" is the retired auto-join's name: a dealt URL carrying
- * it (an older OS bundle, a kept link) now means what every room
- * deal means — the game's own menu, with the transport dealt —
- * never a connection made for the player. The room is entered
- * by hand, at the door the menu itself carries
- * (tools/nexuiz/house-qc-patch-009.diff). */
-const mode = rawMode === "minsta" ? "minsta" : "menu";
+/* "join" is the room deal: the window deals it on open and the
+ * engine boots with the connect dealt (below), so opening the
+ * game throws the player straight into the match — the shape
+ * this frame carried before the menu-first change, restored.
+ * "menu" stands the game at its own main menu, undialed: the
+ * room is in there too, at the door the menu itself carries
+ * (tools/nexuiz/house-qc-patch-009.diff), which is the manual
+ * road in, and where a failed join leaves the player standing. */
+const mode = rawMode === "minsta" ? "minsta" : rawMode === "join" ? "join" : "menu";
 const rawName = (q.get("name") || "").replace(/[^A-Za-z0-9_\-\[\]{}^`|]/g, "").slice(0, 24);
 const dataBase = q.get("base") || "/api/nexuiz-data";
 /* The engine build stamp. The glue script and the wasm are served
@@ -67,9 +69,12 @@ if (typeof caches !== "undefined") {
  * nothing more: the socket layer dials it for ANY connection the
  * engine makes (verified in the shipped glue — SOCKFS's createPeer
  * takes the dealt URL whole whenever one is dealt, and builds an
- * address only out of the bare-scheme form), so the menu's own
- * connect reaches the room through it. Nothing dials at boot. */
+ * address only out of the bare-scheme form). A join deal dials
+ * it at boot (the connect below); the other deals install it
+ * undialed, and there the menu's own connect reaches the room
+ * through it. */
 const bridge = q.get("bridge") || "";
+const server = (q.get("server") || "thisissparta2").replace(/[^A-Za-z0-9_!.\-:]/g, "").slice(0, 64) || "thisissparta2";
 const botsRaw = parseInt(q.get("bots") || "5", 10);
 const bots = Number.isFinite(botsRaw) ? Math.max(0, Math.min(15, botsRaw)) : 5;
 /* The session this deal belongs to, minted by the OS window per
@@ -111,10 +116,18 @@ if (rawName) args.push("+set", "name", rawName);
 if (mode === "minsta") {
   args.push("+maxplayers", "16", "+bot_number", String(bots), "+gametype", "dm", "+map", "aggressor");
 }
-/* No connect is dealt, for any mode: the engine boots to its
- * main menu and the connection is the player's to make, at the
- * door the menu carries. A usable bridge address riding along
- * deals the transport below — that is all it does. */
+/* The join deal carries its connect as a boot argument — the
+ * mechanism exactly as it stood before the menu-first change:
+ * with a usable bridge address dealt, the engine boots already
+ * dialing the room, and the player lands in the match. If the
+ * room refuses or never answers, the engine leaves the player
+ * at its main menu, where the door is the manual road in. The
+ * other modes deal no connect: the menu stands undialed, and
+ * the local match is its own server. */
+const joinLive = mode === "join" && /^(ws|wss):\/\/[^\s"']+$/.test(bridge);
+if (mode === "join" && joinLive) {
+  args.push("+connect", server);
+}
 const bridgeLive = bridge !== "" && /^(ws|wss):\/\/[^\s"']+$/.test(bridge);
 /* Extra engine arguments (comma-separated) — the game's own
  * command line, for tuning and diagnosis. */
@@ -1113,7 +1126,25 @@ if (NX_DIAG) nxDiagInit();
  * shorter hold is the game's, whole. A blur mid-hold reads as a
  * release: a hold nobody is still making must not fire. */
 let escHeld = false;
+/* The house cannot hear presses made inside this frame: its
+ * fullscreen heal listens on its own document, and a press in
+ * the game never reaches it (the bench conviction review §9
+ * answered). So the frame reports its own gestures, throttled
+ * to one word a second: a pointer or key press here posts a
+ * "gesture", and the house answers an unearned fullscreen
+ * drop with its heal, spending this press the way it spends
+ * a press on its own chrome. The word carries no state but
+ * the press — earned exits are marked on the house side and
+ * are never fought there. */
+let lastGesturePost = 0;
+const postGesture = () => {
+  const now = performance.now();
+  if (now - lastGesturePost < 1000) return;
+  lastGesturePost = now;
+  post({ type: "gesture" });
+};
 window.addEventListener("keydown", (e) => {
+  postGesture();
   /* A key press in the frame is a live gesture — the one moment
    * the platform reliably grants pointer lock (see takeLock). */
   if (e.key !== "Escape" && fsOn) takeLock();
@@ -1346,6 +1377,7 @@ raiseEngine();
  * the self-raise above ever be refused, a press still stands
  * the engine up rather than leaving a dead plate. */
 canvasEl.addEventListener("mousedown", () => {
+  postGesture();
   if (!engineRaised && !engineDead) raiseEngine();
   takeLock();
 });

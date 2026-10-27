@@ -11,13 +11,15 @@
  * through the house bridge (one WebSocket session there is one
  * player on the server; the engine's own socket layer dials the
  * bridge address verbatim — see public/nexuiz/play.js). Opening
- * this window stands the game up on its own main menu, in true
- * fullscreen, and deals the bridge address with the frame: the
- * room's door is in that menu, at the head of its multiplayer
- * side (a tracked house patch to the menu progs —
- * tools/nexuiz/house-qc-patch-009.diff), and taking it dials the
- * room through the dealt transport. No connection is made for
- * the player. Local play rides along: the game's own menus and
+ * this window deals the room itself, in true fullscreen: the
+ * engine boots with the connect dealt (the auto-join this
+ * surface carried before the menu-first change, restored), so
+ * the player lands in the match. The room's door also stands
+ * in the game's menu, at the head of its multiplayer side (a
+ * tracked house patch to the menu progs —
+ * tools/nexuiz/house-qc-patch-009.diff) — the manual road back
+ * in, and where the player stands if the room can't be
+ * reached. Local play rides along: the game's own menus and
  * ladder, and a local MinstaHook bot match — house
  * configuration is config-only, the way real Nexuiz servers were
  * run (public/nexuiz/autoexec.cfg).
@@ -122,7 +124,7 @@ export function buildNexuiz(body: HTMLElement) {
   const wrap = el("div", "os-nexuiz");
   const bar = el("div", "os-files-bar");
   const stage = el("div", "os-nexuiz-stage");
-  const status = el("p", "os-note", "haxiuz — standing the game up on its menu.");
+  const status = el("p", "os-note", "haxiuz — standing the game up.");
   const frame = document.createElement("iframe");
   frame.className = "os-nexuiz-frame";
   frame.setAttribute("title", "haxiuz");
@@ -175,11 +177,13 @@ export function buildNexuiz(body: HTMLElement) {
   const src = (mode: string) => {
     const q = new URLSearchParams({ mode });
     if (name) q.set("name", name);
+    if (mode === "join") q.set("server", "thisissparta2");
     if (mode === "minsta") q.set("bots", botsOn ? "5" : "0");
     /* The bridge rides with every deal, not just the room's: it
      * is a transport, not a destination — the frame installs the
-     * socket layer from it and dials only when the player takes
-     * the menu's door, from whichever engine session this window
+     * socket layer from it and dials it at boot on a join deal,
+     * and on the other deals only when the player takes the
+     * menu's door, from whichever engine session this window
      * dealt (the menu a local match disconnects back to carries
      * the same door). */
     if (bridge) q.set("bridge", bridge);
@@ -195,16 +199,16 @@ export function buildNexuiz(body: HTMLElement) {
     frame.src = src(next);
   };
 
-  /* No join button stands here anymore: the room's door moved
-   * into the game (the menu's multiplayer side), and a window
-   * button promising the join would be copy the window cannot
-   * keep — the join is the player's press, in the game. */
+  /* No join button stands here: the window deals the join
+   * itself, on open — a button would promise a second press
+   * the design doesn't ask for. The door inside the game
+   * stays the manual road back in. */
   const minstaBtn = el("button", "os-btn small", "minsta hook — instant match");
   minstaBtn.addEventListener("click", () => deal("minsta", botsOn
     ? "minsta hook on aggressor, five bots. one shot, one kill — hook is your other hand."
     : "minsta hook on aggressor, no bots — the map is yours alone."));
   const menuBtn = el("button", "os-btn small", "haxiuz menu");
-  menuBtn.addEventListener("click", () => deal("menu", "haxiuz's menu — single player, the server browser, and the haxiuz door at the head of the multiplayer side."));
+  menuBtn.addEventListener("click", () => deal("menu", "haxiuz's menu, standing undialed — single player, the server browser, and the haxiuz door at the head of the multiplayer side: the manual road into the room."));
   const botsBtn = el("button", "os-btn small", "bots: on");
   botsBtn.addEventListener("click", () => {
     botsOn = !botsOn;
@@ -360,14 +364,20 @@ export function buildNexuiz(body: HTMLElement) {
       status.textContent = `fetching the game data — ${(m.done / 1048576).toFixed(0)} of ${(m.total / 1048576).toFixed(0)} MB. it is verified whole before the engine starts.`;
     } else if (m.type === "error") {
       status.textContent = m.file === "engine" ? `the engine stopped: ${m.message}` : `the game data was refused: ${m.message}`;
+    } else if (m.type === "gesture") {
+      /* A press inside the game (review §9): this document's
+       * own gesture listeners never hear it, so the frame
+       * forwards the press and the heal answers it exactly
+       * as it answers a press on the OS's own chrome. */
+      healFs();
     } else if (m.type === "esc-down") {
       escDown();
     } else if (m.type === "esc-up") {
       escUp();
     } else if (m.type === "started") {
-      status.textContent = mode === "minsta"
-        ? "minsta hook — live."
-        : "haxiuz — live, on its menu. click the game to take the mouse; haxiuz is the multiplayer side's first door.";
+      status.textContent = mode === "join"
+        ? "haxiuz — live. click the game to take the mouse."
+        : mode === "minsta" ? "minsta hook — live." : "haxiuz — live, on its menu. click the game to take the mouse; haxiuz is the multiplayer side's first door.";
     }
   };
   window.addEventListener("message", onMsg);
@@ -523,11 +533,10 @@ export function buildNexuiz(body: HTMLElement) {
   body.addEventListener("os:suspend", () => { if (fsSession) fsExitEarned = true; });
   body.addEventListener("os:dispose", teardown);
 
-  /* The icon press is the whole ceremony: the game stands up on
-   * its own main menu (the frame raises the engine itself — no
-   * further press is asked), and the fullscreen follows on this
-   * same gesture below. The room is one more press away, inside
-   * the game, where its door stands. */
-  deal("menu", "haxiuz's menu — the haxiuz door stands in it, on the multiplayer side. the room is entered there now, by hand.");
+  /* The icon press is the whole ceremony: the window deals
+   * the room (the frame raises the engine itself, already
+   * dialing — no further press is asked), and the fullscreen
+   * follows on this same gesture below. */
+  deal("join", "haxiuz — straight into the match. the menu's haxiuz door rejoins by hand.");
   nexuizStageFullscreen(body);
 }

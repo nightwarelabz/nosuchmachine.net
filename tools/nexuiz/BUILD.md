@@ -187,15 +187,20 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
   the documented fallback in that section.
 - Game logic (QuakeC progs): the server and client progs are the
   ones inside the release pack, untouched. The **menu** progs
-  carries four tracked house patches — `house-qc-patch-008.diff`
+  carries six tracked house patches — `house-qc-patch-008.diff`
   and, stacked on it, `house-qc-patch-009.diff`,
-  `house-qc-patch-010.diff` and `house-qc-patch-011.diff`, all beside
-  this file — shipped as the override pack
+  `house-qc-patch-010.diff`, `house-qc-patch-011.diff`,
+  `house-qc-patch-012.diff` and `house-qc-patch-013.diff`, all
+  beside this file — shipped as the override pack
   `public/nexuiz/sparta-menu.pk3` (see the menu section below
-  and NOTICE.txt): the Settings surface is locked to the player
-  name, the main menu draws the build's haxiuz tag, and the
-  Multiplayer dialog carries the house room's front door — the
-  game boots to its menu, and the room is entered there.
+  and NOTICE.txt): the Settings surface is locked to the Player
+  page (the name field, and the mouse sensitivity control
+  patch 013 restores there), the main menu draws the build's
+  haxiuz tag and — patch 012 — the house banner where the
+  stock plate stood, and the Multiplayer dialog carries the
+  house room's front door: the boot deals the room's connect
+  itself (the auto-join, restored in the play frame), and the
+  door is the manual road back in.
 - House layer: configuration only — `public/nexuiz/autoexec.cfg`
   (MinstaHook cvars, the way real servers were run), the loader
   transport, and the OS window. One platform cvar rides in it:
@@ -386,18 +391,26 @@ fteqcc binary the archive itself bundles
 ```
 cd qcsrc/menu
 fteqcc -O1 -Oreturn_only -Ostrip_functions   # writes ../../menu.dat
-zip -9 sparta-menu.pk3 menu.dat              # single entry, at the root
+zip -9 sparta-menu.pk3 menu.dat gfx/nightware-banner.tga
 ```
 
+The pack's second entry is the menu banner: the NIGHTWARE
+LABZ gunmetal banner, converted losslessly from its PNG
+master (1,672 x 941 — this engine build decodes no PNG),
+carried at `gfx/nightware-banner.tga` so patch 012's draw
+finds it at the pack's root. Any faithful PNG->TGA converter
+reproduces it; the member's SHA-256 is pinned in NOTICE.txt.
+
 With `house-qc-patch-008.diff`, then `house-qc-patch-009.diff`,
-then `house-qc-patch-010.diff`, then `house-qc-patch-011.diff`
+then `house-qc-patch-010.diff`, then `house-qc-patch-011.diff`,
+then `house-qc-patch-012.diff`, then `house-qc-patch-013.diff`
 applied to the sources first (`patch -p1`, from the qcsrc root's
 parent — they apply clean in order and reproduce the compiled
 tree exactly), the output is the shipped override: menu.dat
 SHA-256
-`72083265b5c7dc9723d72536b35adc967bf49d7897fcd2eae09017aaa496d9e4`,
+`de06b531c8cabedf64c00d005d4e1365ca54b92c2992797a474073aa0e186f0c`,
 pk3 SHA-256
-`9508199a9a70dfb80fe266795f63eaec4f22d99aa75ae4426cad3a898eab4813`.
+`8e4f26be73410725a0f7d4807809eb29875cbf0b4988107bf2ee39d759c0e0c2`.
 Patch 009 alone (one file, `dialog_multiplayer.c`) adds the
 room's door to the Multiplayer dialog; measured against the
 patch-008 build it moves the header CRC not at all (still
@@ -433,6 +446,45 @@ table and initial global data byte-identical; exactly one
 statement differs — the drawpic alpha operand reads the
 constant 0 instead of the `draw_alpha` global. File size
 unchanged (617,644 bytes).
+Patch 012 (two files, `menu.qc` + `menu/nexuiz/util.qc`) is
+the menu banner: the stock backgrounds carry the Nexuiz
+logo and the nexuiz.com strap baked into ONE plate layer
+(title layer 3, in-game layer 2 — measured from the shipped
+textures: x 0.1709..1, y 0..0.2096 of the 1024x768 layers,
+identical in both), and drawBackground now skips that layer
+and draws the house banner in its footprint instead —
+fitted by its own aspect (the size read from the texture
+itself), pinned to the top-right corner, at each
+background's own alpha. The texture is named in the menu's
+absolute form ("/gfx/nightware-banner"): draw_UseSkinFor
+prefixes every relative pic name with the current skin's
+directory, and the leading slash is the stock resolver's
+own escape. The separate update nag in preMenuDraw, which
+carried a nexuiz.com address, is gated off. Measured
+against the patch-011 build it moves the header CRC not at
+all (still 10020), keeps all 1,010 functions and all field
+definitions, adds one string (the banner's name) and nine
+anonymous global definitions, and changes exactly two
+functions' opcode streams: drawBackground (138 -> 180
+statements; locals 26 -> 34) and preMenuDraw (114 -> 115,
+the gate). One compiler warning is expected — "Result of
+comparison is constant" — and is the gate itself.
+Patch 013 alone (one file, `dialog_multiplayer_playersetup.c`)
+restores the mouse sensitivity control to the Player tab —
+the stock "Sensitivity:" label and
+makeNexuizSlider(1, 32, 0.2, "sensitivity") verbatim from
+the stock Input settings (dialog_settings_input.c, which
+stands unmodified in the tree but unwired since patch 008).
+The slider writes the cvar directly; the house config
+never deals sensitivity, so the player's value is never
+stomped at boot and the engine's own config save persists
+it. Measured against the patch-012 build it moves the
+header CRC not at all (still 10020), keeps all 1,010
+functions and all field definitions, adds no strings (the
+label and cvar already live in the progs), adds one global
+definition (the fill's local), and changes exactly one
+function's opcode stream: fillNexuizPlayerSettingsTab
+(73 -> 98 statements).
 
 Unpatched, the same recipe reproduces the shipped menu.dat's
 engine-visible contract exactly — header CRC 10020, and the

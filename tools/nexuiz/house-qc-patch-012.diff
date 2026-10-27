@@ -1,0 +1,118 @@
+# house-qc-patch-012.diff — house QC patch 012 (the menu banner), stacked on
+# house-qc-patch-008.diff, house-qc-patch-009.diff,
+# house-qc-patch-010.diff and house-qc-patch-011.diff. Apply in order
+# 008, then 009, then 010, then 011, then 012, each with `patch -p1`
+# from the qcsrc root's parent (the directory containing qcsrc/).
+# This file is the incremental diff of the 011-patched sources vs the
+# 012-patched sources: two files, two changes.
+#
+# (1) menu.qc, drawBackground: the stock menu backgrounds carry the
+# Nexuiz logo and the "visit www.nexuiz.com" strap baked into ONE
+# plate layer (title background layer 3, in-game background layer 2 —
+# measured from the shipped textures: the plate spans x 0.1709..1,
+# y 0..0.2096 of the 1024x768 layers, identical in both). The plate
+# layer is never drawn. In its footprint the menu now draws the
+# house banner — the NIGHTWARE LABZ gunmetal banner (Chase's asset,
+# shipped as a lossless TGA member of sparta-menu.pk3) — fitted by
+# its own aspect inside the plate's footprint, pinned to the
+# top-right corner, at each background's own alpha (the title's
+# logo fade on the main menu; the in-game fade behind the Esc
+# menu). The texture is named in draw_UseSkinFor's absolute form
+# ("/gfx/nightware-banner"): the menu's draw wrappers prefix every
+# relative name with the current skin's directory, and the leading
+# slash is the stock resolver's own escape from that. Nothing else
+# in the draw changes: the base scene, the other layers, the
+# haxiuz tag and every dialog are stock.
+#
+# (2) menu/nexuiz/util.qc, preMenuDraw: the separate update nag
+# ("Update to … now!" over the nexuiz.com address) never draws —
+# its condition is gated off. It carried no press and no link;
+# the version check above it still runs. No nexuiz.com element
+# can appear on the menu.
+#
+# Parity (measured, patch-011 build vs patch-012 build, same
+# recipe): header CRC 10020 unchanged; 1,010 functions, names and
+# order identical; field definitions identical; the only new
+# string is "/gfx/nightware-banner" and no string is removed;
+# global definitions +9, all anonymous (the banner string
+# constant and drawBackground's added locals/temps); exactly two
+# functions' opcode streams change — drawBackground (138 -> 180
+# statements; locals 26 -> 34) and preMenuDraw (114 -> 115, the
+# gate) — every other function's opcode stream is identical, its
+# statements differing only by the global-operand renumbering
+# the additions cause. One compiler warning is expected and is
+# the gate itself: "nexuiz/util.qc: warning: Result of comparison
+# is constant".
+--- a/qcsrc/menu/menu.qc
++++ b/qcsrc/menu/menu.qc
+@@ -211,6 +211,8 @@
+ 	vector v;
+ 	string s;
+ 	float i, f;
++	vector bsz;
++	float bw, bh;
+ 	sz = draw_PictureSize(img);
+ 	// keep aspect of image
+ 	if(sz_x * draw_scale_y >= sz_y * draw_scale_x)
+@@ -250,6 +252,12 @@
+ 			case 1: case 2: case 3: v_y = br_y; break;
+ 			default: v_y = tl_y + (br_y - tl_y) * random(); break;
+ 		}
++		// house (patch 012): the plate layer — title layer 3,
++		// in-game layer 2, the one carrying the baked Nexuiz
++		// logo and the nexuiz.com strap — is never drawn. The
++		// house banner is drawn over its footprint below.
++		if((img == SKINGFX_BACKGROUND && i == 2) || (img == SKINGFX_BACKGROUND_INGAME && i == 1))
++			continue;
+ 		if(i == 0)
+ 			draw_Picture(v, img, isz, '1 1 1', a);
+ 		else if(force1)
+@@ -260,6 +268,32 @@
+ 		else
+ 			draw_Picture(v, strcat(img, "_l", ftos(i+1)), isz, '1 1 1', a);
+ 	}
++
++	// house (patch 012): the house banner — NIGHTWARE LABZ
++	// gunmetal — takes the retired plate's place on both
++	// backgrounds: the plate's own footprint, measured from
++	// the shipped layers (x 0.1709..1, y 0..0.2096 of the
++	// cover-fitted background), the banner's own aspect
++	// kept, pinned to the top-right corner, at this
++	// background's alpha (the title's logo fade on the main
++	// menu; the in-game fade behind the Esc menu). The name
++	// is dealt with a leading slash — draw_UseSkinFor's
++	// absolute form — so the skin resolver leaves it alone
++	// and the engine finds the texture at the pack's root.
++	if(img == SKINGFX_BACKGROUND || img == SKINGFX_BACKGROUND_INGAME)
++	{
++		draw_PreloadPicture("/gfx/nightware-banner");
++		bsz = draw_PictureSize("/gfx/nightware-banner");
++		bh = 0.2096 * isz_y;
++		bw = bh * (bsz_x / bsz_y) * (draw_scale_y / draw_scale_x);
++		if(bw > 0.8291 * isz_x)
++		{
++			bw = 0.8291 * isz_x;
++			bh = bw / ((bsz_x / bsz_y) * (draw_scale_y / draw_scale_x));
++		}
++		v = '1 0 0' * (1 - bw);
++		draw_Picture(v, "/gfx/nightware-banner", '1 0 0' * bw + '0 1 0' * bh, '1 1 1', a);
++	}
+ }
+ 
+ vector menuTooltipAveragedMousePos;
+--- a/qcsrc/menu/nexuiz/util.qc
++++ b/qcsrc/menu/nexuiz/util.qc
+@@ -320,7 +320,12 @@
+ 				Item_Nex_ExtResponseSystem_SendQuery();
+ 	}
+ 
+-	if(_Nex_ExtResponseSystem_UpdateTo != "")
++	// house (patch 012): the update nag — "Update to … now!"
++	// over the nexuiz.com address — never draws in the house
++	// build, so no nexuiz.com element can appear on the menu.
++	// The version check above it still runs; only this draw
++	// is retired (it never carried a press or a link).
++	if(FALSE && _Nex_ExtResponseSystem_UpdateTo != "")
+ 	{
+ 		fs = ((1/draw_scale_x) * eX + (1/draw_scale_y) * eY) * 12;
+ 		line = eY * fs_y;
