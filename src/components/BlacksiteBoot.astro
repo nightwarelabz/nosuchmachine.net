@@ -1,0 +1,56 @@
+---
+import "../styles/os-boot.css";
+---
+<div class="os-boot" id="os-boot" data-boot="thinice" role="region" aria-label="BLACKSITE startup">
+  <!-- The original boot screen remains the complete, independent fallback. -->
+  <div class="os-boot-classic" id="os-boot-classic" hidden>
+    <img src="/brand/nightware/nightjar-icon.png" alt="" width="72" height="72" />
+    <div class="os-boot-name">BLACKSITE <em>OS</em></div>
+    <pre class="os-boot-text" id="os-boot-text"></pre>
+    <div class="os-boot-classic-actions">
+      <button type="button" data-boot-skip>Skip boot</button>
+      <button type="button" data-boot-thinice>Use Thinice next time</button>
+    </div>
+  </div>
+
+  <div class="os-cold" id="os-boot-thinice">
+    <div class="os-cold-field" aria-hidden="true"></div>
+    <canvas class="os-cold-frost" id="os-boot-frost" aria-hidden="true"></canvas>
+    <div class="os-cold-grain" aria-hidden="true"></div>
+    <div class="os-cold-border" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+    <header class="os-cold-header">
+      <div class="os-cold-maker"><span class="os-cold-mark" aria-hidden="true">N<span>↗</span></span><span>NIGHTWARE LABZ<small>INDEPENDENT SYSTEMS</small></span></div>
+      <div class="os-cold-edition"><span class="os-cold-lamp" aria-hidden="true"></span> THINICE<small>COLD START SEQUENCE</small></div>
+    </header>
+
+    <div class="os-cold-hero">
+      <div class="os-cold-sigil" aria-hidden="true">
+        <span></span>
+        <svg viewBox="0 0 120 120" width="80" height="80" fill="none">
+          <path class="os-cold-sigil-outer" d="m60 4 49 28v56l-49 28L11 88V32Z" />
+          <path d="m60 20 35 20v40l-35 20-35-20V40Z M60 36l21 12v24L60 84 39 72V48Z M60 4v32m49-4L81 48m28 40L81 72m-21 44V84M11 88l28-16M11 32l28 16" />
+          <path class="os-cold-sigil-core" d="m60 48 10.4 6v12L60 72l-10.4-6V54Z" />
+          <path d="m60 48 10.4 18H49.6Z" />
+        </svg>
+        <span></span>
+      </div>
+      <p class="os-cold-overline">BROWSER RESIDENT <span>·</span> RECURSIVELY CONCURRENT</p>
+      <div class="os-cold-title" aria-label="BLACKSITE OS"><span class="os-cold-wordmark">BLACKSITE</span><span class="os-cold-os">OS</span></div>
+      <div class="os-cold-subtitle"><span></span><p>THE SURFACE IS ONLY THE BEGINNING.</p><span></span></div>
+    </div>
+
+    <div class="os-cold-console">
+      <div class="os-cold-status"><span id="os-boot-stage">01 <span>·</span> ESTABLISHING THE SURFACE</span><span class="os-cold-percent" id="os-boot-percent" aria-hidden="true">000<span>%</span></span></div>
+      <div class="os-cold-track" id="os-boot-progress" role="progressbar" aria-label="Boot sequence" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+      <p class="os-cold-detail" id="os-boot-detail">blacksite web firmware 2.0 · NOETHER</p>
+      <div class="os-cold-checkpoints" aria-hidden="true"><span data-boot-checkpoint="0">FIRMWARE</span><span data-boot-checkpoint="1">FILESYSTEM</span><span data-boot-checkpoint="2">RUNTIME</span><span data-boot-checkpoint="3">SURFACE</span></div>
+    </div>
+
+    <footer class="os-cold-footer">
+      <div class="os-cold-coordinate"><span id="os-boot-depth">SURFACE 00</span><span id="os-boot-emcon">EMCON OPEN</span><span>LOCAL BY DESIGN</span></div>
+      <div class="os-cold-actions"><button type="button" data-boot-classic>Classic boot</button><button class="os-cold-enter" type="button" data-boot-skip>Enter system <span aria-hidden="true">↵</span></button></div>
+    </footer>
+  </div>
+  <span class="os-boot-announcement" id="os-boot-announcement" role="status" aria-live="polite" aria-atomic="true">Starting BLACKSITE OS.</span>
+</div>

@@ -25,6 +25,7 @@ import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { identifyFile, hexdump } from "./os-parse";
 import { Chip8, CHIP8_DEMO } from "./os-engines2";
 import { SshSession } from "./os-ssh";
+import { BOOT_STYLE_KEY, preferredBootStyle, rememberBootStyle, startBootSequence } from "./os-boot";
 
 const os = new BlacksiteOS();
 /* AEGIS keeps its own cadence: a snapshot every five minutes of room
@@ -1081,6 +1082,16 @@ function buildSettings(body: HTMLElement) {
   const themeTitle = el("h3", "", "Theme");
   const themeRow = el("div", "os-btnrow");
   themeRow.appendChild(el("span", "os-btn primary", "thinice — current"));
+  const bootTitle = el("h3", "", "Boot screen");
+  const bootRow = el("div", "os-btnrow");
+  for (const style of ["thinice", "classic"] as const) {
+    const b = el("button", "os-btn" + (preferredBootStyle(skey(BOOT_STYLE_KEY)) === style ? " primary" : ""), style === "thinice" ? "thinice — frost" : "classic — original");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(preferredBootStyle(skey(BOOT_STYLE_KEY)) === style));
+    b.addEventListener("click", () => { rememberBootStyle(style, skey(BOOT_STYLE_KEY)); buildSettingsRefresh(body); });
+    bootRow.appendChild(b);
+  }
+  const bootNote = el("p", "os-note", "Applies on the next boot. Enter or Escape skips the sequence. Add ?boot=classic or ?boot=thinice to the URL for a one-time override.");
   const emconTitle = el("h3", "", "EMCON");
   const emconRow = el("div", "os-btnrow");
   for (const c of ["open", "charlie", "bravo", "alpha"] as const) { const b = el("button", "os-btn" + (os.emcon === c ? " primary" : ""), c.toUpperCase()); b.addEventListener("click", () => { if (os.emcon !== c) { os.emcon = c; os.saveSoon(); updateEmconChip(); sfx(c === "alpha" ? "deny" : "beep"); } buildSettingsRefresh(body); }); emconRow.appendChild(b); }
@@ -1132,7 +1143,7 @@ function buildSettings(body: HTMLElement) {
   const resetBtn = el("button", "os-btn danger", "FACTORY RESET THE ROOM (wipes files, macros, settings)");
   resetBtn.addEventListener("click", () => { if (confirm("Wipe the room back to first boot?")) { os.reset(); applyTheme(os.theme); updateEmconChip(); window.location.reload(); } });
   const note = el("p", "os-note", "Files live in this browser's storage. A cleared browser is a wiped room. EMCON gates every wire verb: bravo refuses active probes, alpha refuses the wire entirely — try it, the refusals speak.");
-  wrap.append(themeTitle, themeRow, emconTitle, emconRow, wpTitle, wpRow, soundTitle, soundRow, soundNote, dangerTitle, resetBtn, note);
+  wrap.append(themeTitle, themeRow, bootTitle, bootRow, bootNote, emconTitle, emconRow, wpTitle, wpRow, soundTitle, soundRow, soundNote, dangerTitle, resetBtn, note);
   body.appendChild(wrap);
 }
 function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSettings(body); }
@@ -1517,7 +1528,6 @@ function boot() {
   window.addEventListener("blacksite:aegis", () => sfx("aegis"));
   soundGate(() => os.emcon === "alpha");
   const overlay = document.getElementById("os-boot")!;
-  const bootText = document.getElementById("os-boot-text")!;
   const lines = [
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
@@ -1528,12 +1538,16 @@ function boot() {
     "",
     "BLACKSITE IS NOW LIVE",
   ];
-  let i = 0;
-  const tick = () => {
-    if (i < lines.length) { bootText.textContent += (i ? "\n" : "") + lines[i]; i++; setTimeout(tick, Math.max(12, Math.round(110 / (DEPTH + 1)))); }
-    else setTimeout(() => { sfx("live"); overlay.classList.add("done"); restoreSession(); if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } })); const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); setTimeout(() => overlay.remove(), 650); }, 420);
-  };
-  tick();
+  startBootSequence({
+    overlay, lines, depth: DEPTH, emcon: os.emcon, storageKey: skey(BOOT_STYLE_KEY),
+    onReady: () => {
+      sfx("live");
+      restoreSession();
+      if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } }));
+      const h = window.location.hash.slice(1);
+      if (h && APPS[h]) openApp(h);
+    },
+  });
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
