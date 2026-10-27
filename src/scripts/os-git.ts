@@ -43,12 +43,12 @@ export class VfsFs {
     const cb = typeof options === "function" ? (options as any) : callback!;
     try {
       const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
-      this.os.writeBytes(this.p(path), bytes);
+      this.os.ownSync(() => this.os.writeBytes(this.p(path), bytes));
       cb(null);
     } catch (e) { cb(e); }
   }
   unlink(path: string, callback: (err: any) => void) {
-    try { this.os.remove(this.p(path)); callback(null); } catch (e: any) { callback(/no such/.test(String(e?.message)) ? fsError("ENOENT", `ENOENT: ${path}`) : e); }
+    try { this.os.ownSync(() => this.os.remove(this.p(path))); callback(null); } catch (e: any) { callback(/no such/.test(String(e?.message)) ? fsError("ENOENT", `ENOENT: ${path}`) : e); }
   }
   readdir(path: string, callback: (err: any, names?: string[]) => void) {
     try {
@@ -70,13 +70,13 @@ export class VfsFs {
         cur += "/" + seg;
         if (this.os.isDir(cur)) continue;
         if (this.os.readBytes(cur) !== null) return callback(fsError("ENOTDIR", `ENOTDIR: ${cur}`));
-        this.os.mkdir(cur);
+        this.os.ownSync(() => this.os.mkdir(cur));
       }
       callback(null);
     } catch (e) { callback(e); }
   }
   rmdir(path: string, callback: (err: any) => void) {
-    try { this.os.remove(this.p(path), true); callback(null); } catch (e: any) { callback(/no such/.test(String(e?.message)) ? fsError("ENOENT", `ENOENT: ${path}`) : e); }
+    try { this.os.ownSync(() => this.os.remove(this.p(path), true)); callback(null); } catch (e: any) { callback(/no such/.test(String(e?.message)) ? fsError("ENOENT", `ENOENT: ${path}`) : e); }
   }
   stat(path: string, callback: (err: any, st?: any) => void) {
     try { callback(null, this.statObj(path)); } catch (e) { callback(e); }
@@ -86,13 +86,12 @@ export class VfsFs {
     try {
       const bytes = this.os.readBytes(this.p(from));
       if (bytes === null) return callback(fsError("ENOENT", `ENOENT: ${from}`));
-      this.os.writeBytes(this.p(to), bytes);
-      this.os.remove(this.p(from));
+      this.os.ownSync(() => { this.os.writeBytes(this.p(to), bytes); this.os.remove(this.p(from)); });
       callback(null);
     } catch (e) { callback(e); }
   }
   symlink(target: string, path: string, callback: (err: any) => void) {
-    try { this.os.write(this.p(path), target); callback(null); } catch (e) { callback(e); }
+    try { this.os.ownSync(() => this.os.write(this.p(path), target)); callback(null); } catch (e) { callback(e); }
   }
   readlink(path: string, callback: (err: any, target?: string) => void) {
     const content = this.os.read(this.p(path));
@@ -117,10 +116,23 @@ function authorOf(os: BlacksiteOS): { name: string; email: string } {
   } catch { /* fall through to the house default */ }
   return { name: "operator", email: "operator@blacksite.local" };
 }
-function authOf(os: BlacksiteOS) {
+export function authOf(os: BlacksiteOS) {
   const token = os.read("/home/operator/git-token.txt")?.trim();
   if (!token) return undefined;
-  return () => ({ username: "x-access-token", password: token });
+  // The token is GitHub's and only GitHub's: it is offered solely
+  // when the URL that issued the authentication challenge is
+  // exactly github.com. Any other host — a clone pointed at a
+  // stranger's server that answers with an auth challenge, hoping
+  // to be handed whatever the room keeps — gets the library's
+  // documented cancellation instead, and never sees the token.
+  // (isomorphic-git hands this callback the remote's own URL, not
+  // the proxied one; the challenge is judged on that URL's host.)
+  return (url: string) => {
+    let host = "";
+    try { host = new URL(url).hostname; } catch { host = ""; }
+    if (host === "github.com") return { username: "x-access-token", password: token };
+    return { cancel: true };
+  };
 }
 async function repoRoot(os: BlacksiteOS): Promise<string | null> {
   const { git } = await loadGit();
@@ -253,10 +265,14 @@ export function registerGit(verb: (name: string, status: any, help: string, run:
       default: return usage;
     }
   };
-  // Every git operation runs as the room's own hand (withOwnOps): a
-  // clone or checkout writes a thousand files in a breath — AEGIS's
-  // bulk-mutation shape read wrong. Its cadence and entropy heuristics
-  // stand down for the room's own git; the signature checks (ransom
-  // names and texts, the decoy canaries) stay armed throughout.
-  verb("git", "EDGE", "git <clone|init|status|log|add|commit|branch|checkout|remote|pull|push|config> — real git, in the room's own tree", async (ctx) => ctx.os.withOwnOps(() => runGit(ctx)));
+  // AEGIS meets git at the adapter, not at the operation: each
+  // synchronous VfsFs mutation runs under os.ownSync, whose span is
+  // the call itself — the ransom signatures, the decoy canaries and
+  // the entropy watch stay armed for git's writes exactly as for
+  // anyone's, and while git waits on the wire the room's cadence
+  // counts every other writer at full strength. The one documented
+  // tradeoff stands: an adapter mutation skips the generic volume
+  // count, so a git operation can write or delete many files
+  // without tripping that single heuristic.
+  verb("git", "EDGE", "git <clone|init|status|log|add|commit|branch|checkout|remote|pull|push|config> — real git, in the room's own tree", async (ctx) => runGit(ctx));
 }

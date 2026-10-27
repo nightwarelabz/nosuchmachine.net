@@ -615,17 +615,98 @@ function loadSkulpt(): Promise<any> {
   skulptPromise.catch(() => { skulptPromise = null; });
   return skulptPromise;
 }
+/* Exercises run in a worker inside a sandboxed, opaque-origin
+   iframe — NOT in this page's realm, where `new Function` once gave
+   a learner's `run` the room's full authority: the OS object graph,
+   the DOM, localStorage with the room's keys in it, same-origin
+   fetch. The frame is allow-scripts only, so its origin is opaque;
+   a restrictive CSP rides in its document (nothing loads, nothing
+   connects — 'unsafe-eval' is granted to script-src because an
+   exercise IS string evaluation, and it is granted inside a worker
+   that holds no page, no storage and no network to spend it on);
+   the code itself runs in a worker the frame spawns from a Blob,
+   so stopping it is real:
+   the parent removes the frame at ten seconds and the worker dies
+   with it, while the page never blocks. The verb's contract is
+   unchanged — console and print output come back, a completion
+   value is shown, an error reads `js: …` — but the code runs with
+   no page, no storage and no network. Never fall back to evaluating
+   in the page: if the sandbox cannot be built, the exercise does
+   not run. */
+const JS_EXERCISE_FRAME_DOC = `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:; connect-src 'none'"><script>
+"use strict";
+addEventListener("message", (ev) => {
+  const code = ev.data && ev.data.code;
+  if (typeof code !== "string") return;
+  const workerSrc = [
+    '"use strict";',
+    'const send = (t, v) => postMessage({ t, v: String(v) });',
+    'const fmt = (x) => (typeof x === "object" ? JSON.stringify(x) : String(x));',
+    'const line = (...a) => send("line", a.map(fmt).join(" "));',
+    'const print = line;',
+    'const cons = { log: line, error: (...a) => send("line", "err: " + a.join(" ")), warn: (...a) => send("line", "warn: " + a.join(" ")) };',
+    'onmessage = (ev) => {',
+    '  try {',
+    '    const STRICT = String.fromCharCode(34) + "use strict" + String.fromCharCode(34) + ";" + String.fromCharCode(10);',
+    '    const fn = new Function("console", "print", STRICT + ev.data);',
+    '    const r = fn(cons, print);',
+    '    if (r !== undefined) send("line", String(r));',
+    '    send("done", "");',
+    '  } catch (e) { send("error", (e && e.message) || String(e)); }',
+    '};',
+  ].join("\\n");
+  const w = new Worker(URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" })));
+  w.onmessage = (we) => parent.postMessage(we.data, "*");
+  w.onerror = (we) => parent.postMessage({ t: "error", v: we.message || "worker error" }, "*");
+  w.postMessage(code);
+});
+<\/script>`;
 async function runJs(ctx: Ctx, source: string): Promise<string> {
-  const lines: string[] = [];
-  const fakeConsole = { log: (...a: any[]) => lines.push(a.map((x) => typeof x === "object" ? JSON.stringify(x) : String(x)).join(" ")), error: (...a: any[]) => lines.push("err: " + a.join(" ")), warn: (...a: any[]) => lines.push("warn: " + a.join(" ")) };
-  try {
-    const fn = new Function("console", "print", `"use strict";\n${source}`);
-    const result = fn(fakeConsole, (...a: any[]) => fakeConsole.log(...a));
-    if (result !== undefined) lines.push(String(result));
-  } catch (e: any) {
-    lines.push(`js: ${e?.message || e}`);
-  }
-  return lines.join("\n");
+  const JS_SRC_LIMIT = 100_000;
+  const JS_OUT_LIMIT = 64_000;
+  const JS_LINE_LIMIT = 2_000;
+  if (source.length > JS_SRC_LIMIT) return `js: source too long (${source.length} characters; the limit is ${JS_SRC_LIMIT})`;
+  return new Promise<string>((resolve) => {
+    const lines: string[] = [];
+    let outLen = 0;
+    let truncated = false;
+    const push = (t: string) => {
+      if (truncated) return;
+      if (lines.length >= JS_LINE_LIMIT || outLen + t.length > JS_OUT_LIMIT) {
+        truncated = true;
+        lines.push(`[output stopped — an exercise may show ${JS_LINE_LIMIT} lines / ${JS_OUT_LIMIT} characters]`);
+        return;
+      }
+      lines.push(t); outLen += t.length + 1;
+    };
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.display = "none";
+    let settled = false;
+    const finish = (tail?: string) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("message", onMsg);
+      iframe.remove();
+      if (tail) push(tail);
+      resolve(lines.join("\n"));
+    };
+    const onMsg = (ev: MessageEvent) => {
+      if (ev.source !== iframe.contentWindow) return;
+      const d: any = ev.data;
+      if (!d || typeof d !== "object") return;
+      if (d.t === "line") push(String(d.v ?? ""));
+      else if (d.t === "error") finish("js: " + String(d.v ?? "error"));
+      else if (d.t === "done") finish();
+    };
+    window.addEventListener("message", onMsg);
+    // Ten seconds, then the frame goes and the worker with it.
+    window.setTimeout(() => finish("js: stopped at 10 seconds — an endless exercise is terminated, not waited on"), 10_000);
+    iframe.srcdoc = JS_EXERCISE_FRAME_DOC;
+    iframe.onload = () => { try { iframe.contentWindow?.postMessage({ code: source }, "*"); } catch { finish("js: the sandbox could not start"); } };
+    document.body.appendChild(iframe);
+  });
 }
 
 function registerSelfTests() {
@@ -634,7 +715,7 @@ function registerSelfTests() {
     checks.push(["kernel (shell parses)", typeof ctx.os.norm === "function", ""]);
     try { localStorage.setItem("bs-probe", "1"); localStorage.removeItem("bs-probe"); checks.push(["files persist (localStorage)", true, ""]); } catch { checks.push(["files persist (localStorage)", false, "storage blocked — the room is volatile"]); }
     checks.push(["crypto.subtle (hashes, seals)", !!crypto?.subtle, ""]);
-    checks.push(["engines: javascript", true, "native, sandboxed"]);
+    checks.push(["engines: javascript", true, "worker in an opaque-origin sandbox, 10s stop"]);
     try { await loadSkulpt(); checks.push(["engines: python (skulpt)", true, "vendored, loads on demand"]); } catch { checks.push(["engines: python (skulpt)", false, "failed to load"]); }
     checks.push(["engines: lua / scheme / bf / wasm / chip8", true, "in-room; lua (fengari) and sql (sqlite wasm) load on first use"]);
     try { const echo = await api("/api/echo"); checks.push(["edge functions", !!echo.ok, echo.ok ? `colo ${echo.network?.colo}` : "no answer"]); } catch { checks.push(["edge functions", false, "unreachable"]); }

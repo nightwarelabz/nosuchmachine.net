@@ -148,16 +148,19 @@ export class BlacksiteOS {
   history: string[] = [];
   procs: Proc[] = [];
   nextPid = 100;
-  /* > 0 while the room's own hand works (its git engine): AEGIS's
-     cadence and entropy heuristics stand down — a clone's thousand
-     writes are the operator's own work, not an attack's shape. The
-     signature checks (ransom names/text, the decoy canaries) stay
-     armed throughout. See withOwnOps. */
+  /* > 0 only for the span of ONE synchronous VFS adapter call made
+     by the room's own git engine (see ownSync): while it stands,
+     AEGIS's generic volume count alone stands down for that call —
+     a clone's thousand writes are the operator's own work, not an
+     attack's shape. The signature checks (ransom names/text, the
+     decoy canaries) and the entropy watch stay armed throughout,
+     and no asynchronous operation — network waits included — holds
+     the exemption open for anyone else. */
   ownOps = 0;
   private persistFailed = false;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
   theme = "thinice";
-  wallpaper = "monolith";
+  wallpaper = "mare";
   journal: Array<{ at: string; text: string }> = [];
   tomatoes: string[] = [];
   bootedAt = Date.now();
@@ -239,14 +242,22 @@ export class BlacksiteOS {
   }
   remove(path: string, recursive = false) {
     const p = this.norm(path);
-    if (!this.booting && this.aegisGateRemove(p)) return;
+    if (!this.booting && this.aegis.contained) { this.aegisGateRemove(p); return; }
     const n = this.files.get(p);
     if (!n) throw new Error(`no such file: ${p}`);
-    if (n.type === "dir") {
-      const children = [...this.files.keys()].filter((k) => k.startsWith(p + "/"));
-      if (children.length && !recursive) throw new Error(`directory not empty: ${p} (rm -r to take the tree)`);
-      children.forEach((k) => this.files.delete(k));
+    const prefix = p === "/" ? "/" : p + "/";
+    const children = n.type === "dir" ? [...this.files.keys()].filter((k) => k !== p && k.startsWith(prefix)) : [];
+    if (children.length && !recursive) throw new Error(`directory not empty: ${p} (rm -r to take the tree)`);
+    if (!this.booting) {
+      // The operation is validated BEFORE AEGIS counts any of it, and
+      // then every path it would take passes the gate first — a
+      // recursive removal can no longer walk past a decoy canary by
+      // deleting its parent directory: the canary's own check runs,
+      // exactly as if the file had been named outright. If the gate
+      // trips or holds any one of them, nothing is deleted at all.
+      for (const k of [p, ...children]) if (this.aegisGateRemove(k)) return;
     }
+    children.forEach((k) => this.files.delete(k));
     this.files.delete(p);
     this.saveSoon();
   }
@@ -276,13 +287,21 @@ export class BlacksiteOS {
       this.mirageSetWrite(p, content, bytes, true);
       return true;
     }
-    if (this.ownOps > 0) return false;
-    this.maybeSnapshot();
-    if (this.aegisObserve(AEGIS_CANARIES.has(p) ? 6 : 1)) {
-      this.aegisTrip("bulk mutation — the cadence of a mass-encryption run");
+    // The decoy canaries trip on a touch, whoever's hand it is — the
+    // room's own git included. A write over a canary is not volume,
+    // it is the act itself, so it never rode the cadence's coattails
+    // and it does not stand down with it. (A delete trips the same
+    // way in aegisGateRemove.)
+    if (AEGIS_CANARIES.has(p)) {
+      this.aegisTrip(`a decoy file was overwritten: ${p}`);
       this.mirageSetWrite(p, content, bytes, false);
       return true;
     }
+    this.maybeSnapshot();
+    // Entropy stays armed under the room's own hand too: an
+    // operation that turns existing files to noise reads exactly
+    // like an encryption run, because in every way the room can see
+    // it is one.
     const prev = this.files.get(p);
     if (prev && prev.type === "file") {
       const data = bytes ?? (content !== null ? te.encode(content) : null);
@@ -299,6 +318,19 @@ export class BlacksiteOS {
           return true;
         }
       }
+    }
+    // Only the generic volume count stands down for the room's own
+    // hand, and only for the span of a single synchronous adapter
+    // call (see ownSync): a clone's thousand writes are the
+    // operator's own work, but the cadence of every OTHER writer in
+    // the room keeps counting while git runs — the exemption no
+    // longer wraps the whole asynchronous operation, network waits
+    // and all.
+    if (this.ownOps > 0) return false;
+    if (this.aegisObserve(1)) {
+      this.aegisTrip("bulk mutation — the cadence of a mass-encryption run");
+      this.mirageSetWrite(p, content, bytes, false);
+      return true;
     }
     return false;
   }
@@ -320,11 +352,30 @@ export class BlacksiteOS {
     this.aegisPersist();
     try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: entry })); } catch { /* headless — the journal still knows */ }
   }
+  /* The recovery point: the newest snapshot that is NOT the at-trip
+     one. A restore deserves a past from BEFORE the incident — the
+     at-trip snapshot is taken as containment closes and may already
+     carry the attack's first landed writes, the ones that passed
+     under the thresholds on their way in. Every pruning in this
+     class protects the recovery point: it is the last snapshot the
+     ring gives up, and when it is gone the status says so. */
+  private recoverySnap(): AegisSnap | undefined {
+    return [...this.aegisSnaps].reverse().find((x) => x.why !== "at-trip");
+  }
+  /* Shed the oldest snapshot that is not the recovery point.
+     Returns false when nothing may be shed. */
+  private dropSnap(): boolean {
+    const keep = this.recoverySnap();
+    const i = this.aegisSnaps.findIndex((x) => x !== keep);
+    if (i < 0) return false;
+    this.aegisSnaps.splice(i, 1);
+    return true;
+  }
   snapshotNow(why: string) {
     this.aegisSnaps.push({ at: Date.now(), why, files: JSON.parse(JSON.stringify([...this.files.entries()])) as Array<[string, VNode]> });
-    while (this.aegisSnaps.length > 8) this.aegisSnaps.shift();
+    while (this.aegisSnaps.length > 8 && this.dropSnap()) { /* shed to the ring's size, sparing the recovery point */ }
     let size = 0; try { size = JSON.stringify(this.aegisSnaps).length; } catch { size = 0; }
-    while (size > 2_500_000 && this.aegisSnaps.length > 1) { this.aegisSnaps.shift(); try { size = JSON.stringify(this.aegisSnaps).length; } catch { break; } }
+    while (size > 2_500_000 && this.aegisSnaps.length > 1 && this.dropSnap()) { try { size = JSON.stringify(this.aegisSnaps).length; } catch { break; } }
     this.aegisPersist();
   }
   maybeSnapshot() {
@@ -335,7 +386,19 @@ export class BlacksiteOS {
   private aegisPersist() {
     const body = () => JSON.stringify({ contained: this.aegis.contained, trips: this.aegis.trips, snaps: this.aegisSnaps });
     try { localStorage.setItem(AEGIS_KEY, body()); }
-    catch { try { this.aegisSnaps.splice(0, Math.ceil(this.aegisSnaps.length / 2)); localStorage.setItem(AEGIS_KEY, body()); } catch { /* volatile room — limits says so */ } }
+    catch {
+      // Quota: shed snapshots one at a time and retry — never the
+      // recovery point while anything else remains to shed. The old
+      // fallback cut the OLDEST HALF of the ring in one motion,
+      // which is to say it spent the pre-incident snapshots first
+      // and kept the at-trip one: precisely the past a restore
+      // must not be left with. If even the bare register will not
+      // fit, the room runs volatile and limits says so.
+      while (this.aegisSnaps.length > 1 && this.dropSnap()) {
+        try { localStorage.setItem(AEGIS_KEY, body()); return; } catch { /* keep shedding */ }
+      }
+      try { localStorage.setItem(AEGIS_KEY, body()); } catch { /* volatile room — limits says so */ }
+    }
   }
   private aegisLoad() {
     try {
@@ -346,11 +409,19 @@ export class BlacksiteOS {
     if (this.aegis.contained) this.log("aegis: containment held across the restart — the room is still frozen behind the mirage. `aegis restore` or `aegis lift` when ready.");
   }
   aegisRestore(): boolean {
-    const snap = [...this.aegisSnaps].reverse().find((x) => x.why !== "at-trip") || this.aegisSnaps[this.aegisSnaps.length - 1];
+    const snap = this.recoverySnap() || this.aegisSnaps[this.aegisSnaps.length - 1];
     if (!snap) return false;
     this.files = new Map(JSON.parse(JSON.stringify(snap.files)) as Array<[string, VNode]>);
     this.mirage.clear(); this.aegis.contained = false; this.hotFiles.clear(); this.opLog = [];
-    this.log(`aegis: the room restored from the ${new Date(snap.at).toLocaleString()} snapshot (${snap.why}) — nothing the attack wrote survived the restore.`);
+    if (snap.why === "at-trip") {
+      // Said out loud, never dressed up: with no pre-incident
+      // snapshot surviving, recovery is unavailable — this restore
+      // returns the room to the moment of the trip, and whatever
+      // the attack changed before the trip stands changed.
+      this.log(`aegis: restored from the at-trip snapshot (${new Date(snap.at).toLocaleString()}) — NO pre-incident snapshot survives, so recovery from before the attack is unavailable; anything it changed before the trip came back with the room.`);
+    } else {
+      this.log(`aegis: the room restored from the ${new Date(snap.at).toLocaleString()} snapshot (${snap.why}) — nothing the attack wrote survived the restore.`);
+    }
     this.aegisPersist(); this.saveSoon();
     return true;
   }
@@ -363,7 +434,8 @@ export class BlacksiteOS {
     return held;
   }
   aegisStatus() {
-    return { contained: this.aegis.contained, snaps: this.aegisSnaps.map((x) => ({ at: x.at, why: x.why })), trips: [...this.aegis.trips], mirage: this.mirage.size };
+    const rec = this.recoverySnap();
+    return { contained: this.aegis.contained, snaps: this.aegisSnaps.map((x) => ({ at: x.at, why: x.why })), trips: [...this.aegis.trips], mirage: this.mirage.size, recovery: !!rec, recoveryAt: rec ? rec.at : null, recoveryWhy: rec ? rec.why : null };
   }
 
   seed() {
@@ -431,11 +503,25 @@ export class BlacksiteOS {
     if (this.procs.length > 40) this.procs = this.procs.slice(-40);
     return proc;
   }
-  /** Run fn as the room's own hand. While it runs, AEGIS's cadence and
-   *  entropy heuristics stand down (see ownOps); its signature checks
-   *  never do. The git engine works under this — a clone or checkout is
-   *  bulk mutation by nature, and the room does not trip its own alarm
-   *  over the operator's own work. */
+  /** Run one synchronous VFS adapter call as the room's own hand.
+   *  The exemption is exactly this call's span — never the whole
+   *  asynchronous operation around it: while git waits on the wire,
+   *  ownOps is 0 and every writer in the room, git's next adapter
+   *  call included, meets the armed checks (ransom signatures, the
+   *  decoy canaries, the entropy watch). Only AEGIS's generic volume
+   *  count stands down inside the call — the one heuristic a clone
+   *  cannot help tripping, and the documented price of the room's
+   *  own git: an adapter mutation is never counted, however many of
+   *  them an operation makes. */
+  ownSync<T>(fn: () => T): T {
+    this.ownOps++;
+    try { return fn(); } finally { this.ownOps--; }
+  }
+  /** Run fn as the room's own hand across an await. Kept for the
+   *  callers that genuinely work in one breath; the git engine no
+   *  longer wraps its operations in this (see ownSync) — an open
+   *  exemption across network waits silenced the cadence and the
+   *  entropy watch for the whole room, not just for git. */
   async withOwnOps<T>(fn: () => Promise<T>): Promise<T> {
     this.ownOps++;
     try { return await fn(); } finally { this.ownOps--; }
@@ -454,34 +540,147 @@ export class BlacksiteOS {
 
 /* ---------------- shell engine ---------------- */
 
-function tokenize(line: string, os: BlacksiteOS): string[] {
-  const tokens: string[] = [];
-  let cur = ""; let quote: string | null = null; let started = false;
-  for (let i = 0; i < line.length; i++) {
+interface StageParse { argv: string[]; out: { file: string; append: boolean } | null; inFile: string | null; }
+
+/* ——— the stage parser ———
+   One pass over one pipeline stage, quote- and escape-aware from
+   the first character to the last:
+   · single quotes are literal — no $VAR, no substitution, no
+     escapes: what you single-quote is exactly what the verb gets;
+   · double quotes group, and still expand $VAR and $(...);
+   · an unquoted backslash escapes the next character; inside
+     double quotes it escapes only $ ` " \ and newline (POSIX), so
+     regexes ("\d+") and printf formats ("%s\n") survive intact;
+   · $VAR and ${VAR} expand from the room's env, in place;
+   · $(...) is matched by BALANCE — nested parentheses and quotes
+     inside it are honoured, where the old shallow regex broke on
+     the first inner paren — and runs as a sub-line whose captured
+     output is spliced back as DATA: word-split when unquoted, as
+     a shell splits it, but never re-scanned for operators, quotes
+     or further expansions, so a program's output cannot turn into
+     the shell's own syntax;
+   · an unquoted > >> < is a redirection operator wherever it
+     stands (an abutting 1 or 2 is its fd, not an argument);
+     quoted, it is just a letter — `printf '%s' "a > b"` writes
+     text now, not a file named b". */
+async function parseStage(line: string, os: BlacksiteOS, io: ShellIO, depth: number): Promise<StageParse> {
+  const argv: string[] = [];
+  let out: StageParse["out"] = null;
+  let inFile: string | null = null;
+  let cur = "";
+  let started = false; // the token under construction exists, even empty ("")
+  let quote: string | null = null;
+  let wantTarget: "out" | "in" | null = null;
+  let wantAppend = false;
+
+  const flush = () => {
+    if (!started && !cur) return;
+    const tok = cur; cur = ""; started = false;
+    if (wantTarget === "out") { out = { file: tok, append: wantAppend }; wantTarget = null; }
+    else if (wantTarget === "in") { inFile = tok; wantTarget = null; }
+    else argv.push(tok);
+  };
+  /* Splice expansion output into the token stream. Word-split when
+     asked (an unquoted substitution): the first word joins the
+     token under construction, the last stays open for whatever
+     follows it. Never re-scanned — data, not syntax. */
+  const absorb = (text: string, split: boolean) => {
+    if (!split) { cur += text; started = true; return; }
+    for (const part of text.split(/(\s+)/)) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) flush();
+      else { cur += part; started = true; }
+    }
+  };
+  const runSub = async (inner: string): Promise<string> => {
+    if (depth >= 4) return "";
+    const capture: string[] = [];
+    const capIO: ShellIO = { print: (t) => capture.push(t), clear: () => undefined, openApp: io.openApp, setWallpaper: io.setWallpaper, setTheme: io.setTheme };
+    await execLine(os, inner, capIO, depth + 1);
+    return capture.join("\n").replace(/\n+$/, "");
+  };
+  /* The index of the ")" balancing the "(" at `open` — nesting and
+     quotes honoured — or -1 when the line runs out first. */
+  const matchParen = (open: number): number => {
+    let d = 0; let q: string | null = null;
+    for (let i = open; i < line.length; i++) {
+      const c = line[i];
+      if (q) { if (c === "\\") i++; else if (c === q) q = null; continue; }
+      if (c === '"' || c === "'") { q = c; continue; }
+      if (c === "\\") { i++; continue; }
+      if (c === "(") d++;
+      else if (c === ")") { d--; if (d === 0) return i; }
+    }
+    return -1;
+  };
+  /* Expand the $ at `at` (never called inside single quotes).
+     Returns the index just past the expansion. */
+  const expandDollar = async (at: number, inQuotes: boolean): Promise<number> => {
+    const next = line[at + 1];
+    if (next === "(") {
+      const end = matchParen(at + 1);
+      if (end < 0) { cur += "$"; started = true; return at + 1; } // unbalanced: the dollar is a letter
+      const text = await runSub(line.slice(at + 2, end));
+      absorb(text, !inQuotes);
+      return end + 1;
+    }
+    if (next === "{") {
+      const end = line.indexOf("}", at + 2);
+      if (end > 0) { cur += os.env[line.slice(at + 2, end)] ?? ""; started = true; return end + 1; }
+      cur += "$"; started = true; return at + 1;
+    }
+    const m = /^\$([A-Za-z_][A-Za-z0-9_]*)/.exec(line.slice(at));
+    if (m) { cur += os.env[m[1]] ?? ""; started = true; return at + m[0].length; }
+    cur += "$"; started = true; return at + 1;
+  };
+
+  let i = 0;
+  while (i < line.length) {
     const ch = line[i];
-    if (quote) {
-      if (ch === quote) quote = null;
-      // POSIX: inside double quotes a backslash escapes only $ ` " \ and
-      // newline — every other sequence keeps its backslash, so regexes
-      // ("\d+") and printf formats ("%s\n") survive tokenizing intact.
-      else if (ch === "\\" && quote === '"' && i + 1 < line.length && ['"', "\\", "$", "`"].includes(line[i + 1])) { cur += line[++i]; }
+    if (quote === "'") {
+      if (ch === "'") quote = null;
       else cur += ch;
+      i++; continue;
+    }
+    if (ch === "\\") {
+      if (quote === '"') {
+        if (i + 1 < line.length && ['"', "\\", "$", "`"].includes(line[i + 1])) { cur += line[i + 1]; i += 2; }
+        else { cur += ch; i++; }
+      } else if (i + 1 < line.length) { cur += line[i + 1]; started = true; i += 2; }
+      else i++;
       continue;
     }
-    if (ch === '"' || ch === "'") { quote = ch; started = true; continue; }
-    if (ch === "\\" && i + 1 < line.length) { cur += line[++i]; started = true; continue; }
-    if (/\s/.test(ch)) { if (started || cur) { tokens.push(cur); cur = ""; started = false; } continue; }
-    cur += ch; started = true;
+    if (quote === '"') {
+      if (ch === '"') { quote = null; i++; continue; }
+      if (ch === "$") { i = await expandDollar(i, true); continue; }
+      cur += ch; i++; continue;
+    }
+    // unquoted
+    if (ch === "'" || ch === '"') { quote = ch; started = true; i++; continue; }
+    if (/\s/.test(ch)) { flush(); i++; continue; }
+    if (ch === ">" || ch === "<") {
+      // an abutting 1 or 2 is the operator's fd, not an argument
+      if (ch === ">" && started && (cur === "1" || cur === "2") && line[i - 1] === cur) { cur = ""; started = false; }
+      else flush();
+      let append = false;
+      if (ch === ">" && line[i + 1] === ">") { append = true; i++; }
+      wantTarget = ch === ">" ? "out" : "in";
+      wantAppend = append;
+      i++; continue;
+    }
+    if (ch === "$") { i = await expandDollar(i, false); continue; }
+    cur += ch; started = true; i++;
   }
-  if (started || cur) tokens.push(cur);
-  // $VAR expansion (not inside single quotes — simplified: expand everywhere post-tokenize)
-  return tokens.map((t) => t.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_, name) => os.env[name] ?? ""));
+  flush();
+  if (wantTarget) throw new Error("redirection with no target");
+  return { argv, out, inFile };
 }
 function splitTop(line: string, sep: string): string[] {
   const out: string[] = []; let cur = ""; let quote: string | null = null; let depth = 0;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (quote) { cur += ch; if (ch === quote) quote = null; continue; }
+    if (ch === "\\" && i + 1 < line.length) { cur += ch + line[i + 1]; i++; continue; }
     if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; }
     if (ch === "(") depth++;
     if (ch === ")") depth--;
@@ -509,14 +708,6 @@ export async function execLine(os: BlacksiteOS, rawLine: string, io: ShellIO, de
 
 async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: number): Promise<boolean> {
   if (!line) return true;
-  // command substitution $(...)
-  const sub = line.match(/\$\(([^()]*(?:\([^()]*\))?[^()]*)\)/);
-  if (sub && depth < 4) {
-    const capture: string[] = [];
-    const capIO: ShellIO = { print: (t) => capture.push(t), clear: () => undefined, openApp: io.openApp, setWallpaper: io.setWallpaper, setTheme: io.setTheme };
-    await execLine(os, sub[1], capIO, depth + 1);
-    line = line.replace(sub[0], capture.join("\n").trim().split("\n")[0] || "");
-  }
   let background = false;
   if (/&\s*$/.test(line) && !line.endsWith("&&")) { background = true; line = line.replace(/&\s*$/, "").trim(); }
   const stages = splitTop(line, "|").map((s) => s.trim()).filter(Boolean);
@@ -527,16 +718,20 @@ async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: n
     for (let s = 0; s < stages.length; s++) {
       if (proc.ctrl.signal.aborted) { proc.state = "killed"; return ok; }
       const stage = stages[s];
-      // redirects
-      let redirect: { file: string; append: boolean } | null = null;
-      let inputFile: string | null = null;
-      let cmdline = stage;
-      const redir = cmdline.match(/(>>?)\s*([^\s]+)\s*$/);
-      if (redir && s === stages.length - 1) { redirect = { file: redir[2], append: redir[1] === ">>" }; cmdline = cmdline.replace(redir[0], "").trim(); }
-      const inredir = cmdline.match(/<\s*([^\s]+)/);
-      if (inredir) { inputFile = inredir[1]; cmdline = cmdline.replace(inredir[0], "").trim(); }
+      /* One parse, whole stage: quotes, expansions, substitutions
+         and redirections are all settled by the stage parser (see
+         parseStage) — there is no regex pre-pass left to mistake a
+         quoted ">" for an operator or a substitution's output for
+         the shell's own syntax. The raw stage rides along as the
+         verbs' ctx.raw, as it always has. */
+      let parsed: StageParse;
+      try { parsed = await parseStage(stage, os, io, depth); }
+      catch (e: any) { io.print(`blacksite: ${e?.message || e}`, "err"); return false; }
+      const cmdline = stage;
+      const redirect = parsed.out;
+      const inputFile = parsed.inFile;
       if (inputFile) { const content = os.read(inputFile); if (content === null) { io.print(`blacksite: no such file: ${inputFile}`, "err"); return false; } stdin = content; }
-      const tokens = tokenize(cmdline, os);
+      const tokens = parsed.argv;
       if (!tokens.length) continue;
       // NAME=value assignments
       if (tokens.length === 1 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0])) {

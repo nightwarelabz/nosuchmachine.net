@@ -52,6 +52,28 @@ const PACKS: Record<string, { origin: string; source: string; spanStart: number;
   haxiuz: { origin: "https://github.com/nightwarelabz/haxiuz/releases/download/data-1/haxiuz-release.zip", source: "github.com/nightwarelabz/haxiuz (release data-1)", spanStart: 40, spanLength: 98509217 },
 };
 
+/* The range answer is verified before a single byte is passed on:
+   the upstream's Content-Range must name exactly the chunk that
+   was asked for — the same start, the same end, and a total (when
+   one is reported) that can actually contain it — and its
+   Content-Length, when sent, must equal the chunk's size. Only
+   then does the answer earn the one-year immutable cache stamp
+   below. Before this check existed the endpoint trusted a bare
+   206: an upstream answering a DIFFERENT range (a mirror gone
+   wrong, an origin swapped mid-flight) would have its bytes
+   stamped with this chunk's length and cached immutably under
+   this chunk's URL — poison with a year's lease on it.
+   Returns a short problem string, or null when the range fits. */
+export function rangeCheck(contentRange: string | null, contentLength: string | null, start: number, end: number): string | null {
+  if (!contentRange) return "no Content-Range header";
+  const m = /^bytes (\d+)-(\d+)\/(\d+|\*)$/.exec(contentRange.trim());
+  if (!m) return "an unparsable Content-Range";
+  if (Number(m[1]) !== start || Number(m[2]) !== end) return `Content-Range ${m[1]}-${m[2]} for a request of ${start}-${end}`;
+  if (m[3] !== "*" && Number(m[3]) <= end) return `a reported total of ${m[3]} that cannot contain the chunk`;
+  if (contentLength !== null && Number(contentLength) !== end - start + 1) return `Content-Length ${contentLength} for a chunk of ${end - start + 1}`;
+  return null;
+}
+
 export async function onRequestGet(context: any) {
   const url = new URL(context.request.url);
   const part = url.searchParams.get("part") || "";
@@ -76,6 +98,10 @@ export async function onRequestGet(context: any) {
   }
   if (upstream.status !== 206 || !upstream.body) {
     return err(`The data archive answered ${upstream.status} instead of a byte range — refusing to pass it on.`, 502);
+  }
+  const rangeProblem = rangeCheck(upstream.headers.get("content-range"), upstream.headers.get("content-length"), start, end);
+  if (rangeProblem) {
+    return err(`The data archive's answer carries ${rangeProblem} — refusing to pass it on, and nothing is cached.`, 502);
   }
   const headers: Record<string, string> = {
     "content-type": "application/octet-stream",

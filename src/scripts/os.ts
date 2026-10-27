@@ -1015,7 +1015,7 @@ function buildSystem(body: HTMLElement) {
     ? "CONTAINED — the real filesystem is frozen. Everything written since the trip lives in the mirage: visible to whoever wrote it, weightless to the room. Restore, or lift and judge the mirage yourself."
     : "Standing watch. Snapshots at boot, every five minutes, and at the first whisper of noise; bulk mutation, entropy runs, ransom-note shapes, and hands on the decoy files in ~/documents trip containment — and containment answers with a mirage.");
   if (ast.contained) astate.style.color = "var(--os-accent)";
-  const ainfo = el("p", "os-note", `snapshots: ${ast.snaps.length ? ast.snaps.map((x) => `${new Date(x.at).toLocaleTimeString()} (${x.why})`).join(" · ") : "none"}${ast.trips.length ? `\ntrips: ${ast.trips.map((t) => t.reason).join(" · ")}` : ""}`);
+  const ainfo = el("p", "os-note", `snapshots: ${ast.snaps.length ? ast.snaps.map((x) => `${new Date(x.at).toLocaleTimeString()} (${x.why})`).join(" · ") : "none"}\nrecovery point: ${ast.recovery ? `kept — ${new Date(ast.recoveryAt!).toLocaleTimeString()} (${ast.recoveryWhy})` : "NONE — no pre-incident snapshot survives"}${ast.trips.length ? `\ntrips: ${ast.trips.map((t) => t.reason).join(" · ")}` : ""}`);
   ainfo.style.whiteSpace = "pre-line";
   const arow = el("div", "os-sys-actions");
   const snapBtn = el("button", "os-btn", "snapshot now");
@@ -1084,14 +1084,6 @@ function buildSettings(body: HTMLElement) {
   for (const c of ["open", "charlie", "bravo", "alpha"] as const) { const b = el("button", "os-btn" + (os.emcon === c ? " primary" : ""), c.toUpperCase()); b.addEventListener("click", () => { if (os.emcon !== c) { os.emcon = c; os.saveSoon(); updateEmconChip(); sfx(c === "alpha" ? "deny" : "beep"); } buildSettingsRefresh(body); }); emconRow.appendChild(b); }
   const wpTitle = el("h3", "", "Wallpaper");
   const wpRow = el("div", "os-btnrow");
-  {
-    const b = el("button", "os-wp-thumb");
-    const img = document.createElement("img");
-    img.src = "/monolith.webp"; img.alt = ""; img.className = "os-wp-canvas"; img.loading = "lazy";
-    b.append(img, el("span", "", "monolith"));
-    b.addEventListener("click", () => setWallpaper("monolith"));
-    wpRow.appendChild(b);
-  }
   {
     const b = el("button", "os-wp-thumb");
     const img = document.createElement("img");
@@ -1300,12 +1292,9 @@ function applyTheme(name: string) {
   os.saveSoon();
   root().dataset.theme = "thinice";
 }
-let currentWallpaper = "monolith";
+let currentWallpaper = "mare";
 function marePlate(): string {
   return window.matchMedia("(max-width: 760px)").matches ? "/nightmare-portrait.webp" : "/nightmare.webp";
-}
-function monolithPlate(): string {
-  return window.matchMedia("(max-width: 760px)").matches ? "/monolith-portrait.webp" : "/monolith.webp";
 }
 function setWallpaper(kind: string) {
   sfx("snap");
@@ -1314,7 +1303,6 @@ function setWallpaper(kind: string) {
   os.wallpaper = kind;
   os.saveSoon();
   if (kind === "none") { desk.style.backgroundImage = ""; return; }
-  if (kind === "monolith") { desk.style.backgroundImage = `url(${monolithPlate()})`; return; }
   if (kind === "mare") { desk.style.backgroundImage = `url(${marePlate()})`; return; }
   desk.style.backgroundImage = `url(${paintWallpaper(kind, 960, 600).toDataURL()})`;
 }
@@ -1592,11 +1580,11 @@ function boot() {
   });
   document.addEventListener("blacksite:toast", (e) => osToast((e as CustomEvent).detail?.text || ""));
   document.addEventListener("blacksite:emcon", () => { updateEmconChip(); sfx(os.emcon === "alpha" ? "deny" : "beep"); });
-  setWallpaper(os.wallpaper || "monolith");
+  setWallpaper(os.wallpaper || "mare");
   let wasNarrow = window.matchMedia("(max-width: 760px)").matches;
   window.addEventListener("resize", () => {
     const narrow = window.matchMedia("(max-width: 760px)").matches;
-    if (narrow !== wasNarrow) { wasNarrow = narrow; if (currentWallpaper === "mare" || currentWallpaper === "monolith") setWallpaper(currentWallpaper); }
+    if (narrow !== wasNarrow) { wasNarrow = narrow; if (currentWallpaper === "mare") setWallpaper("mare"); }
   });
   sub = wakeSubconscious({
     root: desktop(),
