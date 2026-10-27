@@ -1,0 +1,103 @@
+# house-qc-patch-014.diff — house QC patch 014 (the tag's seat), stacked on
+# house-qc-patch-008.diff, house-qc-patch-009.diff,
+# house-qc-patch-010.diff, house-qc-patch-011.diff,
+# house-qc-patch-012.diff and house-qc-patch-013.diff. Apply in order
+# 008, 009, 010, 011, 012, 013, then 014, each with `patch -p1` from
+# the qcsrc root's parent (the directory containing qcsrc/). This
+# file is the incremental diff of the 013-patched sources vs the
+# 014-patched sources: one file, one function.
+#
+# menu.qc, m_draw: the build's tag (patch 008, worded by patch 010)
+# moves seat. Since patch 012 the house banner — the machined
+# NIGHTWARE LABZ plate — owns the title's top right, pinned to the
+# corner at the screen's right edge, and the tag's old seat (right
+# edge at x 0.986, the margin it kept from the screen's edge) put it
+# on the plate's right edge, stacked over the plate's own etched
+# rezzmodV1. The tag now sits in the clear band immediately LEFT of
+# the plate at the same height (y 0.112, size unchanged), its right
+# edge one tag margin — 0.014, the margin the old seat kept — left
+# of the plate's left edge. The plate's left edge is recomputed in
+# m_draw with drawBackground's own cover-fit math (patch 012,
+# mirrored line for line: the background's cover fit, the banner's
+# height at 0.2096 of it, the width from the texture's own aspect,
+# the 0.8291 width cap), so the seat tracks the plate at any
+# aspect. Nothing else moves: the plate's draw, the tag's three
+# etched passes, every dialog and every other element are
+# untouched, and the in-game menu still carries no tag.
+#
+# Parity (measured, patch-013 build vs patch-014 build, same
+# recipe): header CRC 10020 unchanged; 1,010 functions, names and
+# order identical; field definitions identical; no string added
+# or removed (the banner's name already lives in the progs since
+# patch 012); global definitions 9,264 -> 9,274 (+10, m_draw's
+# added locals and frame); statements 43,593 -> 43,629 (+36),
+# every added statement inside m_draw — the only function whose
+# opcode stream changes (287 -> 323 statements; locals 49 -> 57,
+# the two vectors and two floats of the seat computation). The
+# one compiler warning is patch 012's gate, unchanged. File size
+# 618,324 -> 618,724 bytes.
+--- a/qcsrc/menu/menu.qc
++++ b/qcsrc/menu/menu.qc
+@@ -524,6 +524,8 @@
+ 	float realFrametime;
+ 	vector tagpos, tagsize;
+ 	float tagw;
++	vector bsz, psz;
++	float bw, bh;
+ 
+ 	menuMouseMode = cvar("menu_mouse_absolute");
+ 
+@@ -607,14 +609,47 @@
+ 		if(menuLogoAlpha > 0)
+ 		{
+ 			drawBackground(SKINGFX_BACKGROUND, bound(0, menuLogoAlpha, 1), SKINALIGN_BACKGROUND, TRUE);
+-			// house (patch 008): the build's tag, etched in red at
+-			// the lower right of the title area — the treatment the
+-			// native build's menu plate carries. Drawn with the
+-			// background, under every dialog, and only here (the
+-			// in-game menu background stays stock).
++			// house (patch 008): the build's tag, etched in red —
++			// the treatment the native build's menu plate
++			// carries. Drawn with the background, under every
++			// dialog, and only here (the in-game menu
++			// background carries no tag).
++			// house (patch 014): the tag's seat moves off the
++			// plate. Since patch 012 the house banner — the
++			// machined LABZ plate — owns the title's top
++			// right, pinned to the corner the tag used to
++			// ride, and the tag overprinted its right edge.
++			// The tag now sits in the clear band immediately
++			// left of the plate at the same height, its right
++			// edge one tag margin left of the plate's left
++			// edge — 0.014, the margin the old seat kept from
++			// the screen's edge. The plate's left edge is
++			// recomputed here with drawBackground's own
++			// cover-fit math (patch 012), so the seat tracks
++			// the plate at any aspect.
+ 			tagsize = '1 0 0' * (0.0339 * conheight / conwidth) + '0 1 0' * 0.0339;
+ 			tagw = draw_TextWidth("haxiuz", FALSE) * tagsize_x;
+-			tagpos = '1 0 0' * (0.986 - tagw) + '0 1 0' * 0.112;
++			draw_PreloadPicture("/gfx/nightware-banner");
++			bsz = draw_PictureSize("/gfx/nightware-banner");
++			psz = draw_PictureSize(SKINGFX_BACKGROUND);
++			if(psz_x * draw_scale_y >= psz_y * draw_scale_x)
++			{
++				psz_x = (psz_x / psz_y) * (draw_scale_y / draw_scale_x);
++				psz_y = 1;
++			}
++			else
++			{
++				psz_y = (psz_y / psz_x) * (draw_scale_x / draw_scale_y);
++				psz_x = 1;
++			}
++			bh = 0.2096 * psz_y;
++			bw = bh * (bsz_x / bsz_y) * (draw_scale_y / draw_scale_x);
++			if(bw > 0.8291 * psz_x)
++			{
++				bw = 0.8291 * psz_x;
++				bh = bw / ((bsz_x / bsz_y) * (draw_scale_y / draw_scale_x));
++			}
++			tagpos = '1 0 0' * (1 - bw - 0.014 - tagw) + '0 1 0' * 0.112;
+ 			draw_Text(tagpos + '0.0012 0.0017 0', "haxiuz", tagsize, '0.431 0.031 0.055', bound(0, menuLogoAlpha, 1), FALSE);
+ 			draw_Text(tagpos - '0.0012 0.0017 0', "haxiuz", tagsize, '1 0.667 0.667', 0.43 * bound(0, menuLogoAlpha, 1), FALSE);
+ 			draw_Text(tagpos, "haxiuz", tagsize, '0.816 0.110 0.141', bound(0, menuLogoAlpha, 1), FALSE);

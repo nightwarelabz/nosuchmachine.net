@@ -180,22 +180,26 @@ dialog and the stock server browser are untouched and work
 as shipped.
 
 Mechanism: the override pack public/nexuiz/sparta-menu.pk3
-(1,794,956 bytes, two entries: menu.dat and the menu banner,
+(310,583 bytes, two entries: menu.dat and the menu banner,
 below) rides in the game directory beside the release packs;
 the engine's own directory order makes its menu.dat the one
 that loads — the same route as the house room's sparta-progs /
 sparta-csprogs overrides. Nothing in the release packs is
 modified.
 
-  sparta-menu.pk3  SHA-256 8e4f26be73410725a0f7d4807809eb29875cbf0b4988107bf2ee39d759c0e0c2
-  menu.dat inside  SHA-256 de06b531c8cabedf64c00d005d4e1365ca54b92c2992797a474073aa0e186f0c
-  gfx/nightware-banner.tga inside  SHA-256 dd3fb4373565953957d341052be4b1f1f42a32ff6afaec38b1ba47264c86ee51
+  sparta-menu.pk3  SHA-256 9b20e773ef86a45017835138ac3bda582631c583dddffe68f9c1c1eb6b67cd17
+  menu.dat inside  SHA-256 d8afaccf5dd8f7b1f32383353a4e52ff9a011790859b370b1361630b24e80ef5
+  gfx/nightware-banner.tga inside  SHA-256 5c4d8b542ca73344223d2439411bfd0da65e70bf10f378ed531dbdc85d1d138e
 
-The banner is the house's own art — the NIGHTWARE LABZ
-gunmetal banner — converted losslessly from its PNG master
-(1,672 x 941, pixel-for-pixel; this engine build decodes no
-PNG, the deviation named above) and carried in the override
-pack so the menu can draw it.
+The banner is the house's own art — the machined gunmetal
+NIGHTWARE LABZ plate built for this menu in the house art
+pass of 2026-10-25 (build_menu_art.py's redo_plate: the
+gunmetal plate with raised machined-silver letters, the red
+rule along its foot and the red etched rezzmodV1 tag, the
+same plate that pass baked into its menu backgrounds),
+rendered standalone with transparency at its native
+534 x 161 and carried in the override pack so the menu
+can draw it.
 
 The menu.dat is compiled from the release's own menu sources
 (qcsrc/menu in gamesource20091001.zip) with the era's own fteqcc
@@ -208,7 +212,8 @@ stacked on that, tools/nexuiz/house-qc-patch-010.diff
 tools/nexuiz/house-qc-patch-011.diff (one file), and, stacked
 on that, tools/nexuiz/house-qc-patch-012.diff (two files),
 and, stacked on that, tools/nexuiz/house-qc-patch-013.diff
-(one file):
+(one file), and, stacked on that,
+tools/nexuiz/house-qc-patch-014.diff (one file):
 
   dialog_settings.c: the Settings dialog's six tabs (Input,
     Video, Effects, Audio, Network, Misc) are replaced by the
@@ -283,6 +288,17 @@ and, stacked on that, tools/nexuiz/house-qc-patch-013.diff
     writes the cvar directly, as stock; no house config
     deals it, and the engine's own config save persists the
     player's value.
+  menu.qc (patch 014): the build's tag moves seat. Since
+    patch 012 the plate owns the title's top right, pinned
+    to the corner the tag used to ride, and the tag
+    overprinted the plate's right edge, stacked over its
+    etched rezzmodV1. The tag now sits in the clear band
+    immediately left of the plate at the same height, its
+    right edge one tag margin (0.014, the margin its old
+    seat kept from the screen's edge) left of the plate's
+    left edge — recomputed each frame with the banner
+    draw's own cover-fit math, so the seat tracks the
+    plate at any aspect. Nothing else moves.
 
 Parity of the base build, stated exactly: rebuilt from the
 unmodified sources, the menu program's header CRC is 10020 —
@@ -358,6 +374,17 @@ fill's added local); statements 43,568 to 43,593 (+25), all
 inside fillNexuizPlayerSettingsTab (73 to 98; locals 9 to
 12) — the only function's opcode stream that changes. File
 size 618,324.
+
+Parity of patch 014 against the patch-013 build, measured the
+same way: header CRC still 10020; 1,010 functions, same names
+and order; field definitions identical; no string added or
+removed (the banner's name already lives in the progs since
+patch 012); global definitions 9,264 to 9,274 (+10, m_draw's
+added locals and frame); statements 43,593 to 43,629 (+36),
+every added statement inside m_draw (287 to 323; locals 49
+to 57) — the only function's opcode stream that changes.
+The one compiler warning remains patch 012's gate. File
+size 618,724.
 
 One honest limit: this lock governs the menu surface. The
 engine's developer console — a stock part of the game — can
