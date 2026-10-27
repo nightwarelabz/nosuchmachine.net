@@ -2,8 +2,8 @@
  *
  * Every BLACKSITE icon is the same kind of drawing: a 24-unit grid,
  * a 1.6 stroke in the current color, round caps, no fills except
- * pin-dots. They take the theme's color wherever they stand, so the
- * whole set re-skins with the house themes. No emoji anywhere: an
+ * pin-dots. They take thinice's ice wherever they stand — thinice
+ * is the house's one theme, so the set wears it everywhere. No emoji anywhere: an
  * icon here is a mark the house drew, not a glyph a vendor shipped.
  */
 const wrap = (inner: string) =>

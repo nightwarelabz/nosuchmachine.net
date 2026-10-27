@@ -36,6 +36,12 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let armed = false;
 
+export interface SoundState { enabled: boolean; volume: number; armed: boolean; context: string; silenced: boolean }
+export function soundState(): SoundState {
+  const prefs = soundPrefs();
+  return { enabled: prefs.enabled, volume: prefs.volume, armed, context: ctx ? ctx.state : "none", silenced: !!(gateFn && gateFn()) };
+}
+
 export function armAudio() {
   // EVERY gesture re-arms, never just the first: Safari can hand back
   // a context born suspended even inside a handler, and a resume
@@ -111,6 +117,17 @@ const RECIPES: Record<SfxName, () => void> = {
   boot2: () => { tone(660, { dur: 0.06, gain: 0.06, type: "square" }); tone(990, { at: 0.07, dur: 0.09, gain: 0.06, type: "square" }); },
   halt: () => { tone(520, { dur: 0.22, gain: 0.07, type: "square", glide: 196 }); },
 };
+
+/* Safari suspends the context when the tab hides or the window
+   loses focus, and only a resume lands it back. The gesture handlers
+   re-arm on the way in; these follow the tab itself, so a room the
+   operator returns to is already awake. */
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && armed) armAudio(); });
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("focus", () => { if (armed) armAudio(); });
+}
 
 const lastPlayed = new Map<SfxName, number>();
 export function sfx(name: SfxName) {

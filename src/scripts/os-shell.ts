@@ -156,7 +156,7 @@ export class BlacksiteOS {
   ownOps = 0;
   private persistFailed = false;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
-  theme = "redteam";
+  theme = "thinice";
   wallpaper = "mare";
   journal: Array<{ at: string; text: string }> = [];
   tomatoes: string[] = [];
@@ -390,8 +390,9 @@ export class BlacksiteOS {
       const macros = localStorage.getItem(MACRO_KEY);
       if (macros) this.macros = new Map(Object.entries(JSON.parse(macros)));
       const settings = localStorage.getItem(SET_KEY);
-      // theme renamed 2026-10-25: a stored "violent-redteam" reads as "redteam"
-      if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; if (s.theme) this.theme = s.theme === "violent-redteam" ? "redteam" : s.theme; if (s.wallpaper) this.wallpaper = s.wallpaper; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
+      // thinice is the house's one theme: any stored theme that is not
+      // thinice (every retired theme, by whatever name) reads as thinice.
+      if (settings) { const s = JSON.parse(settings); if (s.emcon) this.emcon = s.emcon; this.theme = "thinice"; if (s.wallpaper) this.wallpaper = s.wallpaper; if (Array.isArray(s.tomatoes)) this.tomatoes = s.tomatoes; }
     } catch { if (!this.files.size) this.seed(); }
     if (!this.files.size) this.seed();
     this.aegisLoad();

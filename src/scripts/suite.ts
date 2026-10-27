@@ -2,6 +2,7 @@
 // session Report (the Deliveries of the web bench). All probe logic lives
 // in nettools.ts (edge) and lab.ts (local).
 import { initLab } from "./lab";
+import { sfx, armAudio } from "./os-sound";
 import { initNetTools, globalTarget } from "./nettools";
 
 interface ReportEntry { source: string; title: string; body: unknown; at: string; }
@@ -104,18 +105,24 @@ async function edgeChip() {
 }
 
 function init() {
+  // the bench arms the same synthesized voice the OS uses: rail moves
+  // click, a landed result pings, a copy beeps. No EMCON gate here —
+  // the bench page stands outside the room's condition.
+  document.addEventListener("pointerdown", armAudio);
+  document.addEventListener("keydown", armAudio);
   void edgeChip();
   document.querySelectorAll<HTMLFormElement>("form.bs-form").forEach((f) => {
     f.addEventListener("submit", (e) => e.preventDefault());
   });
   document.querySelectorAll<HTMLButtonElement>(".rail-btn").forEach((b) => {
-    b.addEventListener("click", () => switchPanel(b.dataset.panel || "overview"));
+    b.addEventListener("click", () => { sfx("snap"); switchPanel(b.dataset.panel || "overview"); });
   });
   document.querySelectorAll<HTMLButtonElement>("[data-goto]").forEach((b) => {
-    b.addEventListener("click", () => switchPanel(b.dataset.goto || "overview"));
+    b.addEventListener("click", () => { sfx("snap"); switchPanel(b.dataset.goto || "overview"); });
   });
   document.addEventListener("blacksite:report", (e) => {
     const entry = (e as CustomEvent<ReportEntry>).detail;
+    sfx("ping");
     report.push(entry);
     renderReport();
   });
@@ -129,7 +136,7 @@ function init() {
     if (!btn) return;
     const src = document.getElementById(btn.dataset.copy || "");
     const text = src instanceof HTMLInputElement || src instanceof HTMLTextAreaElement ? src.value : src?.textContent || "";
-    if (text) void navigator.clipboard.writeText(text).then(() => { const old = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(() => (btn.textContent = old), 1400); });
+    if (text) void navigator.clipboard.writeText(text).then(() => { sfx("beep"); const old = btn.textContent; btn.textContent = "Copied ✓"; setTimeout(() => (btn.textContent = old), 1400); });
   });
   document.querySelectorAll<HTMLElement>(".bs-out[id]").forEach((out) => {
     out.setAttribute("aria-live", "polite");
