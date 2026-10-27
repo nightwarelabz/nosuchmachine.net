@@ -5,6 +5,7 @@ import type { ShellIO } from "./os-shell";
 import { registerCoreVerbs } from "./os-verbs";
 import { registerWireVerbs } from "./os-verbs2";
 import { registerBenchVerbs } from "./os-verbs3";
+import { registerToolchestVerbs } from "./os-toolchest";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { buildRelayApp } from "./os-irc";
@@ -77,6 +78,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   orc: { title: "orc", icon: "orc" },
   simulacrum: { title: "Simulacrum — a generated world", icon: "simulacrum" },
   sigint: { title: "sigint bench", icon: "sigint" },
+  toolchest: { title: "toolchest", icon: "toolchest" },
 };
 
 /* ————— session retention —————
@@ -489,7 +491,7 @@ function buildTerminal(body: HTMLElement) {
     setWallpaper: (kind) => setWallpaper(kind),
     setTheme: (name) => applyTheme(name),
   };
-  io.print("BLACKSITE OS — web edition. `help` for the 427, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
+  io.print("BLACKSITE OS — web edition. `help` for the 636, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
   io.print("doctrine: one knock, read, grade. public targets only.", "dim");
   // the launcher (start button / Ctrl-K) can hand this terminal a line
   // to run — and exactly ONE terminal answers: the one standing in a
@@ -977,7 +979,7 @@ function buildSystem(body: HTMLElement) {
   const cells: Array<[string, string]> = [
     [OS_RELEASE.version + " " + OS_RELEASE.codename, "RELEASE"],
     [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, "WORKING VERBS — IN-ROOM + EDGE"],
-    ["427", "COMMANDS ON THE ROSTER"],
+    ["636", "COMMANDS ON THE ROSTER"],
     [`${vs.files}`, "FILES IN THE VFS"],
     [`${(vs.bytes / 1024).toFixed(1)} KB`, "VFS CONTENT"],
     [`${(lsBytes / 1024).toFixed(1)} KB`, "LOCAL STORAGE FOOTPRINT"],
@@ -1120,13 +1122,13 @@ function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSet
 function buildHelp(body: HTMLElement) {
   const search = document.createElement("input");
   search.className = "os-help-search";
-  search.placeholder = "search the 427 — try 'smtp', 'modbus', 'jwt'…";
+  search.placeholder = "search the 636 — try 'smtp', 'modbus', 'jwt'…";
   const listEl = el("div", "os-help-list");
   body.append(search, listEl);
   const render = (q: string) => {
     listEl.innerHTML = "";
     const rows = (roster as any[]).filter((r) => !q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || r.section.includes(q));
-    const head = el("p", "os-note", `${rows.length} of 427 commands · status is this room's honest standing`);
+    const head = el("p", "os-note", `${rows.length} of 636 commands · status is this room's honest standing`);
     listEl.appendChild(head);
     for (const r of rows.slice(0, 150)) {
       const status = VERBS.get(r.verb)?.status || "LIMIT";
@@ -1137,6 +1139,97 @@ function buildHelp(body: HTMLElement) {
   };
   search.addEventListener("input", () => render(search.value.trim().toLowerCase()));
   render("");
+}
+
+/* ————— the toolchest —————
+   The chest is the shelf the new tools live on: the three tool
+   sections of the roster as commands (a click hands the line to the
+   terminal through the same blacksite:run door the launcher uses),
+   and the registries as data — the lazy tables under /toolchest/,
+   read in this window, row by row. */
+const TOOLCHEST_SETS: Array<[string, string, string]> = [
+  ["ports", "ports", "the IANA service registry"],
+  ["ciphers", "ciphers", "TLS cipher suites"],
+  ["mime", "mime", "MIME types and extensions"],
+  ["protocols", "protocols", "IANA protocol numbers"],
+  ["tz", "time zones", "the zone registry, with the hour in each"],
+  ["countries", "countries", "ISO 3166 country codes"],
+  ["currencies", "currencies", "ISO 4217 currency codes"],
+  ["languages", "languages", "ISO 639 language codes"],
+  ["http", "http codes", "HTTP status codes"],
+  ["dnstypes", "dns types", "DNS record types"],
+  ["magic", "file magic", "file signatures"],
+  ["signals", "signals", "POSIX signals"],
+  ["errno", "errno", "Linux error numbers"],
+];
+function buildToolchest(body: HTMLElement) {
+  const search = document.createElement("input");
+  search.className = "os-help-search";
+  search.placeholder = "search the chest — try 'subnet', 'ssh', 'mime', 'ports'…";
+  const cats = el("div", "os-btnrow");
+  const listEl = el("div", "os-help-list");
+  body.append(search, cats, listEl);
+  let active = "network tools";
+  const setCache = new Map<string, any[]>();
+  const runInTerminal = (cmd: string) => {
+    openApp("terminal");
+    setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: cmd })), 60);
+  };
+  const renderVerbs = (q: string) => {
+    listEl.innerHTML = "";
+    const rs = (roster as any[]).filter((r) => r.section === active && (!q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q)));
+    listEl.appendChild(el("p", "os-note", `${rs.length} tools · click a row and it runs in the terminal`));
+    for (const r of rs.slice(0, 200)) {
+      const status = VERBS.get(r.verb)?.status || "LIMIT";
+      const row = el("div", "os-help-row");
+      row.append(el("span", `os-status ${status.toLowerCase()}`, status), el("code", "", r.cmd), el("span", "os-help-desc", r.desc));
+      row.addEventListener("click", () => runInTerminal(r.verb));
+      listEl.appendChild(row);
+    }
+  };
+  const renderSet = async (q: string) => {
+    listEl.innerHTML = "";
+    listEl.appendChild(el("p", "os-note", "loading the registry…"));
+    let rs = setCache.get(active);
+    if (!rs) {
+      try {
+        const res = await fetch(`/toolchest/${active}.json`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        rs = (await res.json()) as any[];
+        setCache.set(active, rs);
+      } catch {
+        listEl.innerHTML = "";
+        listEl.appendChild(el("p", "os-note", `the ${active} registry could not be loaded — it ships with the site as /toolchest/${active}.json.`));
+        return;
+      }
+    }
+    const hits = q ? rs.filter((r) => JSON.stringify(r).toLowerCase().includes(q)) : rs;
+    listEl.innerHTML = "";
+    listEl.appendChild(el("p", "os-note", `${hits.length} of ${rs.length} entries`));
+    for (const r of hits.slice(0, 200)) {
+      const row = el("div", "os-help-row");
+      const cells = (r as any[]).map((c) => Array.isArray(c) ? c.join(", ") : String(c));
+      row.append(el("code", "", cells[0]), el("span", "os-help-desc", cells.slice(1).join(" — ")));
+      listEl.appendChild(row);
+    }
+    if (hits.length > 200) listEl.appendChild(el("p", "os-note", `… and ${hits.length - 200} more — narrow the search`));
+  };
+  const render = () => {
+    const q = search.value.trim().toLowerCase();
+    if (TOOLCHEST_SETS.some(([id]) => id === active)) void renderSet(q);
+    else renderVerbs(q);
+  };
+  const chips: HTMLButtonElement[] = [];
+  const chip = (id: string, label: string) => {
+    const b = el("button", "os-btn" + (active === id ? " primary" : ""), label) as HTMLButtonElement;
+    b.addEventListener("click", () => { active = id; for (const c of chips) c.className = "os-btn"; b.className = "os-btn primary"; render(); });
+    chips.push(b);
+    return b;
+  };
+  for (const s of ["network tools", "admin tools", "data tools"]) cats.appendChild(chip(s, s.replace(" tools", "")));
+  for (const [id, label] of TOOLCHEST_SETS) cats.appendChild(chip(id, label));
+  search.addEventListener("input", render);
+  render();
 }
 
 /* ————— the games folder —————
@@ -1171,6 +1264,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   bottle: (body) => buildBottleApp(body, os),
   system: buildSystem,
   games: buildGamesFolder,
+  toolchest: buildToolchest,
   chip8: buildChip8,
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
@@ -1387,6 +1481,7 @@ function boot() {
   registerCoreVerbs();
   registerWireVerbs();
   registerBenchVerbs();
+  registerToolchestVerbs();
   registerBottleVerbs();
   registerLimitReasons();
   applyTheme(os.theme);
@@ -1400,7 +1495,7 @@ function boot() {
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
     DEPTH === 0 ? "kernel: blacksite sh · vfs: mounted (persistent, this browser)" : `kernel: blacksite sh · vfs: mounted (volatile — nest ${DEPTH} of ${MAX_NEST} keeps nothing)`,
-    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 427 on the roster`,
+    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 636 on the roster`,
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     "doctrine loaded: one knock, read, grade.",
     "",
@@ -1418,7 +1513,7 @@ function boot() {
     ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["files", "files", "files"], ["editor", "editor", "editor"],
     ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
     ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
-    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
+    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
     ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
