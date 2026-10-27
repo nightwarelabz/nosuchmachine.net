@@ -117,7 +117,7 @@ for (const asset of ["nexuiz/play.html", "nexuiz/autoexec.cfg", "nexuiz/NOTICE.t
 const nexWasmSize = fs.statSync(path.join(root, "nexuiz/darkplaces-wasm.wasm")).size;
 assert.ok(nexWasmSize > 1_000_000 && nexWasmSize < 25_000_000, `darkplaces-wasm.wasm size looks wrong: ${nexWasmSize}`);
 const nexNotice = fs.readFileSync(path.join(root, "nexuiz/NOTICE.txt"), "utf8");
-for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "8e4f26be73410725a0f7d4807809eb29875cbf0b4988107bf2ee39d759c0e0c2", "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3"]) {
+for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "9b20e773ef86a45017835138ac3bda582631c583dddffe68f9c1c1eb6b67cd17", "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3"]) {
   assert.ok(nexNotice.includes(pin), `nexuiz NOTICE.txt must pin the verified hash: ${pin}`);
 }
 for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "blacksite-nexuiz-bridge", "blacksite-relay-v2"]) {
@@ -173,6 +173,19 @@ const qcPatch013 = fs.readFileSync("tools/nexuiz/house-qc-patch-013.diff", "utf8
 assert.ok(
   qcPatch013.includes('makeNexuizSlider(1, 32, 0.2, "sensitivity")'),
   "house-qc-patch-013 must restore the stock sensitivity slider on the stock cvar",
+);
+// House QC patch 014 (the tag's seat): the patch of record must
+// carry the tag's seat on both sides — the old seat on the
+// plate's corner, and the new seat computed off the plate's
+// left edge with the tag margin.
+const qcPatch014 = fs.readFileSync("tools/nexuiz/house-qc-patch-014.diff", "utf8");
+assert.ok(
+  qcPatch014.includes("tagpos = '1 0 0' * (0.986 - tagw) + '0 1 0' * 0.112;"),
+  "house-qc-patch-014 must record the tag's pre-move seat",
+);
+assert.ok(
+  qcPatch014.includes("tagpos = '1 0 0' * (1 - bw - 0.014 - tagw) + '0 1 0' * 0.112;"),
+  "house-qc-patch-014 must seat the tag left of the plate with its margin",
 );
 // Nexuiz fullscreen law: Esc is the game's menu key — the OS bundle
 // must carry the frame's Esc report and the 4.5 s hold-exit clock,

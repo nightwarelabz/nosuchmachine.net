@@ -394,23 +394,29 @@ fteqcc -O1 -Oreturn_only -Ostrip_functions   # writes ../../menu.dat
 zip -9 sparta-menu.pk3 menu.dat gfx/nightware-banner.tga
 ```
 
-The pack's second entry is the menu banner: the NIGHTWARE
-LABZ gunmetal banner, converted losslessly from its PNG
-master (1,672 x 941 — this engine build decodes no PNG),
-carried at `gfx/nightware-banner.tga` so patch 012's draw
-finds it at the pack's root. Any faithful PNG->TGA converter
-reproduces it; the member's SHA-256 is pinned in NOTICE.txt.
+The pack's second entry is the menu banner: the machined
+gunmetal NIGHTWARE LABZ plate from the house menu-art pass
+(`thisissparta2/menu/src/build_menu_art.py`, `redo_plate` —
+the plate that pass baked into its menu backgrounds),
+extracted standalone with its alpha at its native 534 x 161
+(the plate silhouette's own bounds in the 1024 x 768 layer,
+plus its drop shadow; the pass is deterministic and a fresh
+run reproduces the baked plate pixel-for-pixel), carried at
+`gfx/nightware-banner.tga` so patch 012's draw finds it at
+the pack's root. The member's SHA-256 is pinned in
+NOTICE.txt.
 
 With `house-qc-patch-008.diff`, then `house-qc-patch-009.diff`,
 then `house-qc-patch-010.diff`, then `house-qc-patch-011.diff`,
-then `house-qc-patch-012.diff`, then `house-qc-patch-013.diff`
+then `house-qc-patch-012.diff`, then `house-qc-patch-013.diff`,
+then `house-qc-patch-014.diff`
 applied to the sources first (`patch -p1`, from the qcsrc root's
 parent — they apply clean in order and reproduce the compiled
 tree exactly), the output is the shipped override: menu.dat
 SHA-256
-`de06b531c8cabedf64c00d005d4e1365ca54b92c2992797a474073aa0e186f0c`,
+`d8afaccf5dd8f7b1f32383353a4e52ff9a011790859b370b1361630b24e80ef5`,
 pk3 SHA-256
-`8e4f26be73410725a0f7d4807809eb29875cbf0b4988107bf2ee39d759c0e0c2`.
+`9b20e773ef86a45017835138ac3bda582631c583dddffe68f9c1c1eb6b67cd17`.
 Patch 009 alone (one file, `dialog_multiplayer.c`) adds the
 room's door to the Multiplayer dialog; measured against the
 patch-008 build it moves the header CRC not at all (still
@@ -485,6 +491,26 @@ label and cvar already live in the progs), adds one global
 definition (the fill's local), and changes exactly one
 function's opcode stream: fillNexuizPlayerSettingsTab
 (73 -> 98 statements).
+Patch 014 alone (one file, `menu.qc`) is the tag's seat.
+Since patch 012 the plate owns the title's top right, pinned
+to the corner, and the build's tag (patch 008, worded by
+patch 010) overprinted the plate's right edge, stacked over
+its etched rezzmodV1. The tag now sits in the clear band
+immediately left of the plate at the same height (y 0.112,
+size unchanged), its right edge one tag margin — 0.014, the
+margin the old seat kept from the screen's edge — left of
+the plate's left edge; `m_draw` recomputes that edge with
+drawBackground's own cover-fit math (patch 012, mirrored),
+so the seat tracks the plate at any aspect. Nothing else
+moves. Measured against the patch-013 build it moves the
+header CRC not at all (still 10020), keeps all 1,010
+functions and all field definitions, adds no strings (the
+banner's name already lives in the progs), adds ten global
+definitions (m_draw's added locals and frame), and changes
+exactly one function's opcode stream: m_draw (287 -> 323
+statements; locals 49 -> 57). Statements 43,593 -> 43,629;
+file size 618,324 -> 618,724 bytes. The one compiler
+warning remains patch 012's gate.
 
 Unpatched, the same recipe reproduces the shipped menu.dat's
 engine-visible contract exactly — header CRC 10020, and the
