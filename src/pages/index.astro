@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import "../styles/os.css";
+import BlacksiteBoot from "../components/BlacksiteBoot.astro";
 ---
 <BaseLayout
   bare={true}
@@ -10,11 +11,7 @@ import "../styles/os.css";
   <div class="os-root" id="os-root" data-theme="thinice">
     <span id="bottle" hidden></span>
     <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">BLACKSITE OS — the nightjar console as a web operating system</h1>
-    <div class="os-boot" id="os-boot" aria-hidden="true">
-      <img src="/brand/nightware/nightjar-icon.png" alt="" width="72" height="72" />
-      <div class="os-boot-name">BLACKSITE <em>OS</em></div>
-      <pre class="os-boot-text" id="os-boot-text"></pre>
-    </div>
+    <BlacksiteBoot />
     <main class="os-desktop" id="main">
       <div class="os-icons" id="os-icons"></div>
       <div class="os-desktop-brand" aria-hidden="true">
@@ -36,6 +33,6 @@ import "../styles/os.css";
     <p>BLACKSITE OS by NIGHTWARE LABZ is a windowed operating system that runs entirely in a browser tab: a real shell over a persistent virtual filesystem, 636 commands, eight programming engines (Python, JavaScript, Lua, SQLite, Scheme, Brainfuck, WebAssembly, CHIP-8), git and SSH clients built in, relaychat (a built-in IRC client whose house channel is #nosuchmachine on OFTC), and the Daylight Bottle age-encrypted message desk. Doctrine: one knock, read, grade. Public targets only.</p>
     <p>The companion <a href="/bench/">BLACKSITE WEB bench suite</a> runs DNS lookups, TLS inspection, HTTP security grading, TCP connect checks, domain recon, email security grading, JWT and certificate inspection, hashing, codecs, and subnet math directly in the browser. Read the <a href="/book/">Orange Book</a> — a programming book about building a cryptographic language — and browse <a href="/projects/orange/">NIGHTWARE LABZ projects</a> including nightjar, the native iOS and macOS network instrument this site ports.</p>
   </section>
-  <noscript><p style="padding:1rem">BLACKSITE OS needs JavaScript to boot its desktop. The <a href="/bench/">bench suite</a>, the <a href="/book/">Orange Book</a>, and the <a href="/projects/orange/">project pages</a> work without it.</p></noscript>
+  <noscript><style>.os-root { display: none; }</style><p style="padding:1rem">BLACKSITE OS needs JavaScript to boot its desktop. The <a href="/bench/">bench suite</a>, the <a href="/book/">Orange Book</a>, and the <a href="/projects/orange/">project pages</a> work without it.</p></noscript>
   <script src="../scripts/os.ts"></script>
 </BaseLayout>

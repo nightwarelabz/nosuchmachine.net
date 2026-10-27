@@ -436,6 +436,12 @@ assert.ok(bridgeSrc.includes("memBuildProbe"), "The bridge must register full re
 assert.ok(memLibSrc.includes("sys|build") && memLibSrc.includes("PROBE_COOLDOWN_MS"), "Restart probes must key on the build stamp and respect a cooldown — register, never spam");
 
 const osPage = fs.readFileSync(path.join(root, "blacksite/index.html"), "utf8");
+for (const [route, html] of [["/", osHome], ["/blacksite/", osPage]]) {
+  for (const marker of ['id="os-boot-classic"', 'id="os-boot-thinice"', 'id="os-boot-frost"', 'data-boot-classic', 'data-boot-skip', 'role="progressbar"']) {
+    assert.ok(html.includes(marker), `${route} must ship the Thinice boot and the original classic fallback: ${marker}`);
+  }
+  assert.ok(html.includes("needs JavaScript to boot"), `${route} must retain its no-script path`);
+}
 assert.ok(home.includes("Daylight Bottle"), "Bench page must carry the Daylight Bottle plug");
 assert.ok(home.includes("/#bottle"), "Bench page must deep-link the OS bottle desk");
 for (const marker of ["os-boot", "os-desktop", "os-taskbar", "os-emcon-chip", "BLACKSITE OS"]) {
