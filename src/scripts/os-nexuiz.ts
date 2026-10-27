@@ -122,10 +122,10 @@ export function buildNexuiz(body: HTMLElement) {
   const wrap = el("div", "os-nexuiz");
   const bar = el("div", "os-files-bar");
   const stage = el("div", "os-nexuiz-stage");
-  const status = el("p", "os-note", "nexuiz — standing the game up on its menu.");
+  const status = el("p", "os-note", "haxiuz — standing the game up on its menu.");
   const frame = document.createElement("iframe");
   frame.className = "os-nexuiz-frame";
-  frame.setAttribute("title", "nexuiz");
+  frame.setAttribute("title", "haxiuz");
   frame.setAttribute("allow", "pointer-lock; fullscreen; autoplay");
   stage.appendChild(frame);
 
@@ -136,7 +136,7 @@ export function buildNexuiz(body: HTMLElement) {
   if (touchFirst()) {
     stage.dataset.touch = "1";
     bar.appendChild(notice0);
-    const plateNote = el("p", "os-note", "nexuiz is played with a keyboard and a mouse — this screen is touch-first, and there are no touch controls. open the site on a laptop or desktop and the table is yours.");
+    const plateNote = el("p", "os-note", "haxiuz is played with a keyboard and a mouse — this screen is touch-first, and there are no touch controls. open the site on a laptop or desktop and the table is yours.");
     plateNote.style.padding = "18px 14px";
     stage.appendChild(plateNote);
     status.textContent = "best on a laptop or desktop.";
@@ -203,8 +203,8 @@ export function buildNexuiz(body: HTMLElement) {
   minstaBtn.addEventListener("click", () => deal("minsta", botsOn
     ? "minsta hook on aggressor, five bots. one shot, one kill — hook is your other hand."
     : "minsta hook on aggressor, no bots — the map is yours alone."));
-  const menuBtn = el("button", "os-btn small", "nexuiz menu");
-  menuBtn.addEventListener("click", () => deal("menu", "the game's own menu — single player, the server browser, and thisissparta2!'s door at the head of the multiplayer side."));
+  const menuBtn = el("button", "os-btn small", "haxiuz menu");
+  menuBtn.addEventListener("click", () => deal("menu", "haxiuz's menu — single player, the server browser, and the haxiuz door at the head of the multiplayer side."));
   const botsBtn = el("button", "os-btn small", "bots: on");
   botsBtn.addEventListener("click", () => {
     botsOn = !botsOn;
@@ -367,7 +367,7 @@ export function buildNexuiz(body: HTMLElement) {
     } else if (m.type === "started") {
       status.textContent = mode === "minsta"
         ? "minsta hook — live."
-        : "nexuiz — live, on its menu. click the game to take the mouse; thisissparta2! is the multiplayer side's first door.";
+        : "haxiuz — live, on its menu. click the game to take the mouse; haxiuz is the multiplayer side's first door.";
     }
   };
   window.addEventListener("message", onMsg);
@@ -528,6 +528,6 @@ export function buildNexuiz(body: HTMLElement) {
    * further press is asked), and the fullscreen follows on this
    * same gesture below. The room is one more press away, inside
    * the game, where its door stands. */
-  deal("menu", "the game's own menu — thisissparta2!'s door stands in it, on the multiplayer side. the room is entered there now, by hand.");
+  deal("menu", "haxiuz's menu — the haxiuz door stands in it, on the multiplayer side. the room is entered there now, by hand.");
   nexuizStageFullscreen(body);
 }

@@ -1,0 +1,37 @@
+# house-qc-patch-010.diff — house QC patch 010 (identity swap), stacked on
+# house-qc-patch-008.diff and house-qc-patch-009.diff. Apply in order
+# 008, then 009, then 010, each with `patch -p1` from the qcsrc root's
+# parent (the directory containing qcsrc/). This file is the incremental
+# diff of the 009-patched sources vs the 010-patched sources: exactly two
+# string contents change — the menu masthead tag and the Multiplayer door
+# button's label both become "haxiuz"; the door's command
+# "connect thisissparta2" is unchanged.
+--- a/qcsrc/menu/menu.qc
++++ b/qcsrc/menu/menu.qc
+@@ -579,11 +579,11 @@
+ 			// background, under every dialog, and only here (the
+ 			// in-game menu background stays stock).
+ 			tagsize = '1 0 0' * (0.0339 * conheight / conwidth) + '0 1 0' * 0.0339;
+-			tagw = draw_TextWidth("rezzmodV1", FALSE) * tagsize_x;
++			tagw = draw_TextWidth("haxiuz", FALSE) * tagsize_x;
+ 			tagpos = '1 0 0' * (0.986 - tagw) + '0 1 0' * 0.112;
+-			draw_Text(tagpos + '0.0012 0.0017 0', "rezzmodV1", tagsize, '0.431 0.031 0.055', bound(0, menuLogoAlpha, 1), FALSE);
+-			draw_Text(tagpos - '0.0012 0.0017 0', "rezzmodV1", tagsize, '1 0.667 0.667', 0.43 * bound(0, menuLogoAlpha, 1), FALSE);
+-			draw_Text(tagpos, "rezzmodV1", tagsize, '0.816 0.110 0.141', bound(0, menuLogoAlpha, 1), FALSE);
++			draw_Text(tagpos + '0.0012 0.0017 0', "haxiuz", tagsize, '0.431 0.031 0.055', bound(0, menuLogoAlpha, 1), FALSE);
++			draw_Text(tagpos - '0.0012 0.0017 0', "haxiuz", tagsize, '1 0.667 0.667', 0.43 * bound(0, menuLogoAlpha, 1), FALSE);
++			draw_Text(tagpos, "haxiuz", tagsize, '0.816 0.110 0.141', bound(0, menuLogoAlpha, 1), FALSE);
+ 			if(menuAlpha <= 0 && SKINALPHA_CURSOR_INTRO > 0)
+ 			{
+ 				draw_alpha = SKINALPHA_CURSOR_INTRO * bound(0, menuLogoAlpha, 1);
+--- a/qcsrc/menu/nexuiz/dialog_multiplayer.c
++++ b/qcsrc/menu/nexuiz/dialog_multiplayer.c
+@@ -26,7 +26,7 @@
+ 		// below: the web build deals the player's name to the
+ 		// engine itself, and _cl_name is only the menu's staging
+ 		// cvar — gating on it would bar the dealt-name player.
+-		me.TD(me, 1, me.columns, e = makeNexuizCommandButton("thisissparta2!", '0 0 0', "connect thisissparta2", 0));
++		me.TD(me, 1, me.columns, e = makeNexuizCommandButton("haxiuz", '0 0 0', "connect thisissparta2", 0));
+ 	me.TR(me);
+ 		me.TD(me, 1, 1, e = mc.makeTabButton(mc, "Servers",  makeNexuizServerListTab()));
+ 			setDependentStringNotEqual(e, "_cl_name", "Player");

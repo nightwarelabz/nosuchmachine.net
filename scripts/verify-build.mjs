@@ -117,12 +117,40 @@ for (const asset of ["nexuiz/play.html", "nexuiz/autoexec.cfg", "nexuiz/NOTICE.t
 const nexWasmSize = fs.statSync(path.join(root, "nexuiz/darkplaces-wasm.wasm")).size;
 assert.ok(nexWasmSize > 1_000_000 && nexWasmSize < 25_000_000, `darkplaces-wasm.wasm size looks wrong: ${nexWasmSize}`);
 const nexNotice = fs.readFileSync(path.join(root, "nexuiz/NOTICE.txt"), "utf8");
-for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "1ecf5d09ff61c5b614685dfe7d66710b0484272b22b159db1e8ac031d8c1435a"]) {
+for (const pin of ["3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0", "a5e27ebcc9775c4a490d0d3536c32e4a8f8f96b038c0b6a78d1823c37a962000", "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c", "9508199a9a70dfb80fe266795f63eaec4f22d99aa75ae4426cad3a898eab4813", "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3"]) {
   assert.ok(nexNotice.includes(pin), `nexuiz NOTICE.txt must pin the verified hash: ${pin}`);
 }
-for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "thisissparta2!", "blacksite-relay-v2"]) {
+for (const marker of ["os-nexuiz-stage", "/nexuiz/play.html", "blacksite-nexuiz-bridge", "blacksite-relay-v2"]) {
   assert.ok(astroJs.includes(marker), `OS bundle missing nexuiz marker: ${marker}`);
 }
+// House QC patch 010 (identity swap): the menu door's label is
+// "haxiuz" and its command is unchanged — the connect token is
+// load-bearing across bridge, gateway and OS. The patch of
+// record must carry the door line on both sides with the same
+// command string: before (label "thisissparta2!") and after
+// (label "haxiuz"), command "connect thisissparta2" in both.
+const qcPatch010 = fs.readFileSync("tools/nexuiz/house-qc-patch-010.diff", "utf8");
+assert.ok(
+  qcPatch010.includes('makeNexuizCommandButton("thisissparta2!", \'0 0 0\', "connect thisissparta2", 0)'),
+  "house-qc-patch-010 must record the door's pre-swap line with its connect command",
+);
+assert.ok(
+  qcPatch010.includes('makeNexuizCommandButton("haxiuz", \'0 0 0\', "connect thisissparta2", 0)'),
+  "house-qc-patch-010 must relabel the door to haxiuz with the connect command unchanged",
+);
+// House QC patch 011 (the native cursor): the menu's drawn
+// cursor is a zero-alpha drawpic — the same draw, painting
+// nothing — and the patch of record must carry both sides of
+// that one line.
+const qcPatch011 = fs.readFileSync("tools/nexuiz/house-qc-patch-011.diff", "utf8");
+assert.ok(
+  qcPatch011.includes("draw_mousepointer_size, '1 1 1', draw_alpha, 0)"),
+  "house-qc-patch-011 must record the cursor draw's pre-patch line",
+);
+assert.ok(
+  qcPatch011.includes("draw_mousepointer_size, '1 1 1', 0, 0)"),
+  "house-qc-patch-011 must draw the menu cursor at zero alpha",
+);
 // Nexuiz fullscreen law: Esc is the game's menu key — the OS bundle
 // must carry the frame's Esc report and the 4.5 s hold-exit clock,
 // and the play frame must carry its half (watching the key, holding
@@ -141,6 +169,20 @@ assert.ok(astroJs.includes("deferBuild"), "OS bundle must carry the deferred bui
 const nexPlay = fs.readFileSync(path.join(root, "nexuiz/play.js"), "utf8");
 assert.ok(nexPlay.includes("esc-down"), "nexuiz play frame must report Esc edges to the house");
 assert.ok(nexPlay.includes("requestPointerLock"), "nexuiz play frame must hold pointer lock in fullscreen");
+// Haxiuz stripped data: the play frame must deal the stripped
+// pack as a span entry on the data pipe (part "haxiuz", its span
+// and SHA-256 pinned — the pack is 99 MB, far past the 25 MiB
+// ceiling on a static site file, so it cannot be dealt as one),
+// it must no longer deal the release pack as a files entry, and
+// it must retire the full-data kept copies a returning player's
+// machine may still hold under the old parts' keys.
+assert.ok(nexPlay.includes("data/haxiuz.pk3"), "nexuiz play frame must deal the stripped haxiuz data pack");
+assert.ok(nexPlay.includes('part: "haxiuz"'), "nexuiz play frame must deal the stripped pack as the data pipe's haxiuz span part");
+assert.ok(nexPlay.includes("spanLength: 98509217"), "nexuiz play frame must pin the haxiuz pack's span length in its deal");
+assert.ok(nexPlay.includes('sha256: "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3"'), "nexuiz play frame must pin the haxiuz pack's SHA-256 in its deal");
+assert.ok(!nexPlay.includes('"/nexuiz/haxiuz.pk3?v="'), "nexuiz play frame must not deal the haxiuz pack as a static site file");
+assert.ok(!nexPlay.includes('"data/data20091001.pk3":'), "nexuiz play frame must not deal the full release data pack");
+assert.ok(nexPlay.includes("part=data"), "nexuiz play frame must carry the legacy full-data cache retirement");
 // Menu-first law: the play frame deals a transport, never a
 // connection — the room is entered by the player's own press at
 // the menu's door (house-qc-patch-009), so no connect argument
@@ -195,7 +237,28 @@ assert.ok(fs.existsSync(path.join(root, "_astro", versionStamp.chunk)), "version
 assert.ok(astroJs.includes("BLACKSITE has been updated"), "OS bundle must carry the update watcher");
 assert.ok(astroJs.includes("/version.json"), "OS bundle must poll /version.json");
 assert.ok(astroJs.includes("server is about to refresh for an update"), "OS bundle must carry the held update's warning toast");
-assert.ok(astroJs.includes("waiting for nexuiz to close"), "OS bundle must carry the held update's nexuiz wait");
+assert.ok(astroJs.includes("waiting for haxiuz to close"), "OS bundle must carry the held update's haxiuz wait");
+// ——— BEGIN haxiuz restructure pins (Games folder + surface removal) ———
+// Chase's order (2026-10-26): the games stand in one desktop folder;
+// Bloodbath and Wyrdfall leave the shipped surface (their sources stay
+// in the repo, unbuilt); haxiuz keeps its internal "nexuiz" key.
+// Source-level pins read the wiring files, bundle pins read the built OS.
+const osSrcR = fs.readFileSync("src/scripts/os.ts", "utf8");
+const subSrcR = fs.readFileSync("src/scripts/os-subconscious.ts", "utf8");
+assert.ok(osSrcR.includes('games: { title: "games", icon: "games" }'), "APPS must register the games folder");
+assert.ok(osSrcR.includes('["games", "games", "games"]'), "desktop defs must stand the games folder on the desk");
+assert.ok(osSrcR.includes('["nexuiz", "haxiuz"]') && osSrcR.includes('["simulacrum", "Simulacrum"]') && osSrcR.includes('["wolf3d", "Wolfenstein 3D"]'), "GAME_FOLDER must hold exactly haxiuz (key nexuiz), Simulacrum and Wolfenstein 3D");
+for (const loose of ['["simulacrum", "simulacrum", "Simulacrum"]', '["bloodbath", "bloodbath", "Bloodbath"]', '["wyrdfall", "wyrdfall", "Wyrdfall"]', '["wolf3d", "wolf3d", "Wolfenstein 3D"]', '["nexuiz", "nexuiz", "haxiuz"]']) {
+  assert.ok(!osSrcR.includes(loose), `desktop defs must not stand a loose game icon: ${loose}`);
+}
+assert.ok(!osSrcR.includes("buildBloodbath") && !osSrcR.includes("buildWyrdfall"), "os.ts must not import the removed rooms' builders");
+assert.ok(!/bloodbath: \{ title/.test(osSrcR) && !/wyrdfall: \{ title/.test(osSrcR), "APPS must carry no bloodbath/wyrdfall registration");
+assert.ok(!astroJs.includes("Bloodbath") && !astroJs.includes("Wyrdfall"), "the built OS bundle must carry no Bloodbath/Wyrdfall surface");
+assert.ok(astroJs.includes("os-games"), "the built OS bundle must carry the games folder window");
+assert.ok(!subSrcR.includes("bloodbath") && !subSrcR.includes("wyrdfall"), "the subconscious must name no removed app (candidates or exclusions)");
+assert.ok(subSrcR.includes('"games", "nexuiz"'), "the subconscious must never warm the games folder or the haxiuz engine");
+assert.ok(qcPatch010.includes('"connect thisissparta2"'), "the door's connect token is unchanged by the identity (patch of record)");
+// ——— END haxiuz restructure pins ———
 assert.ok(astroJs.includes("credentialless"), "orc preview frame must be credentialless (the OS page's COEP require-corp blocks plain cross-origin frames)");
 assert.ok(!astroJs.includes("Orchestration"), "ORC is never expanded in public copy (Chase: the expansion is for internal records)");
 const headersOut = fs.readFileSync(path.join(root, "_headers"), "utf8");

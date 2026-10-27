@@ -1,0 +1,32 @@
+# house-qc-patch-011.diff — house QC patch 011 (the native cursor), stacked on
+# house-qc-patch-008.diff, house-qc-patch-009.diff and
+# house-qc-patch-010.diff. Apply in order 008, then 009, then 010, then
+# 011, each with `patch -p1` from the qcsrc root's parent (the directory
+# containing qcsrc/). This file is the incremental diff of the
+# 010-patched sources vs the 011-patched sources: exactly one draw
+# changes — draw_drawMousePointer still draws the skin cursor picture
+# at the tracked position and size, but at zero alpha, so it paints
+# nothing (a zero size would not do: the engine's DrawQ_Pic reads a
+# zero size as the picture's natural size). The menu's mouse
+# tracking and hit-testing are untouched; the player's real cursor
+# does the menu work (the engine tracks it in absolute mode —
+# menu_mouse_absolute, dealt in the house config).
+--- a/qcsrc/menu/draw.qc
++++ b/qcsrc/menu/draw.qc
+@@ -19,7 +19,15 @@
+ 
+ void draw_drawMousePointer(vector where)
+ {
+-	drawpic(boxToGlobal(where, draw_shift, draw_scale) - draw_mousepointer_offset, draw_mousepointer, draw_mousepointer_size, '1 1 1', draw_alpha, 0);
++	// house (patch 011): the menu paints no cursor of its own —
++	// the player's real cursor does the menu work (the engine
++	// tracks it in absolute mode, dealt by the house config).
++	// The draw stays a drawpic of the same picture at the same
++	// place and size, but at zero alpha, so it paints nothing
++	// (a zero SIZE would not do: DrawQ_Pic reads a zero size
++	// as the picture's natural size); mouse tracking and
++	// hit-testing are untouched.
++	drawpic(boxToGlobal(where, draw_shift, draw_scale) - draw_mousepointer_offset, draw_mousepointer, draw_mousepointer_size, '1 1 1', 0, 0);
+ }
+ 
+ void draw_reset()
