@@ -308,6 +308,7 @@ assert.ok(qcPatch010.includes('"connect thisissparta2"'), "the door's connect to
 // app, stood on the desk, sealed station to station, and its edge
 // rendezvous exists. The bundle pins read the built OS chunk.
 assert.ok(osSrcR.includes('phonehome: { title: "phonehome", icon: "phonehome" }'), "APPS must register phonehome");
+assert.ok(osSrcR.includes("function defaultWallpaper()") && osSrcR.includes('? "mare" : "monolith"') && osSrcR.includes("defaultWallpaper()"), "the un-chosen wallpaper default must split by device: mare on mobile, monolith on desktop (Chase, 2026-10-27)");
 assert.ok(osSrcR.includes('["phonehome", "phonehome", "phonehome"]'), "desktop defs must stand phonehome on the desk");
 assert.ok(osSrcR.includes("registerPhonehomeVerbs()"), "os.ts must register the phonehome verb");
 assert.ok(astroJs.includes("nsm.phonehome.signal.v1"), "OS bundle must carry the phonehome signal schema");

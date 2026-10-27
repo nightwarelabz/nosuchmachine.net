@@ -160,7 +160,11 @@ export class BlacksiteOS {
   private persistFailed = false;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
   theme = "thinice";
-  wallpaper = "monolith";
+  /* The un-chosen wallpaper default follows the machine: the mare
+     on mobile (≤760px, the house line), the monolith on laptops
+     and desktops (Chase, 2026-10-27). A stored choice overrides
+     this in loadSettings on every architecture. */
+  wallpaper = typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches ? "mare" : "monolith";
   journal: Array<{ at: string; text: string }> = [];
   tomatoes: string[] = [];
   bootedAt = Date.now();

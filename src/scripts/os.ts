@@ -1303,6 +1303,16 @@ function applyTheme(name: string) {
   os.saveSoon();
   root().dataset.theme = "thinice";
 }
+/* The un-chosen default is split by the machine in front of the
+   operator (Chase's ruling, 2026-10-27): the mare is the default
+   on mobile, as she was from the start; the monolith is the
+   default on laptops and desktops only. A wallpaper the operator
+   chose is stored and wins on every architecture — this decides
+   only what a fresh or reset room opens on. The boundary is the
+   house's own mobile line, the same 760px the plates swap at. */
+function defaultWallpaper(): string {
+  return window.matchMedia("(max-width: 760px)").matches ? "mare" : "monolith";
+}
 let currentWallpaper = "monolith";
 function marePlate(): string {
   return window.matchMedia("(max-width: 760px)").matches ? "/nightmare-portrait.webp" : "/nightmare.webp";
@@ -1596,7 +1606,7 @@ function boot() {
   });
   document.addEventListener("blacksite:toast", (e) => osToast((e as CustomEvent).detail?.text || ""));
   document.addEventListener("blacksite:emcon", () => { updateEmconChip(); sfx(os.emcon === "alpha" ? "deny" : "beep"); });
-  setWallpaper(os.wallpaper || "monolith");
+  setWallpaper(os.wallpaper || defaultWallpaper());
   let wasNarrow = window.matchMedia("(max-width: 760px)").matches;
   window.addEventListener("resize", () => {
     const narrow = window.matchMedia("(max-width: 760px)").matches;
