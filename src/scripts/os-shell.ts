@@ -160,7 +160,7 @@ export class BlacksiteOS {
   private persistFailed = false;
   emcon: "open" | "charlie" | "bravo" | "alpha" = "open";
   theme = "thinice";
-  wallpaper = "mare";
+  wallpaper = "monolith";
   journal: Array<{ at: string; text: string }> = [];
   tomatoes: string[] = [];
   bootedAt = Date.now();
