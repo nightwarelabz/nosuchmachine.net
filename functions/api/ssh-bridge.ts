@@ -7,6 +7,7 @@
 // verification) happens in the visitor's tab — the edge sees ciphertext
 // only and keeps nothing.
 import { guardTarget, err } from "../_lib/guard";
+import { attemptAllowed, ATTEMPT_LIMIT } from "../_lib/ratelimit";
 
 export async function onRequest(context: any) {
   const { request } = context;
@@ -30,6 +31,16 @@ export async function onRequest(context: any) {
   const portRaw = url.searchParams.get("port");
   const port = portRaw === null ? 22 : Number(portRaw);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return err("ssh bridge: port must be an integer between 1 and 65535.", 400);
+  // Per-visitor cadence (Chase's ruling, 2026-10-27): the bridge is a
+  // public outbound relay, so new connection attempts are counted per
+  // visitor and capped — past the cap the answer is a plain 429 before
+  // any target is resolved or dialed. Refused attempts still count:
+  // knocking costs the knocker, not the house.
+  const kv = context.env?.RELAY_MEMORY || null;
+  const visitor = request.headers.get("cf-connecting-ip") || "";
+  if (!(await attemptAllowed(kv, "sshrl", visitor))) {
+    return err(`ssh bridge: too many connection attempts from this visitor — the limit is ${ATTEMPT_LIMIT} in 10 minutes. Wait a while, then try again.`, 429);
+  }
   let addresses: string[];
   try {
     const g = await guardTarget(host);
