@@ -37,6 +37,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["relay (irc)", "a real IRC client in the room — OFTC/Libera/hackint over TLS through the house bridge; the house channel is #nosuchmachine on OFTC", "LIVE"],
     ["timelock", "RSW repeated-squaring seals (the Magic Box construction)", "LIVE"],
     ["gauntlet", "the room tests itself — crypto vectors, vfs, roster, engines", "LIVE"],
+    ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
   ];
 }
 
