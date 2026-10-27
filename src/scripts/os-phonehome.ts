@@ -251,6 +251,7 @@ let rendezvousCode = "";
 let micStream: MediaStream | null = null;
 let micTrack: MediaStreamTrack | null = null;
 let voiceArmed = false;
+let talking = false;
 let remoteStream: MediaStream | null = null;
 
 function gateActive(): string | null { return osRef ? osRef.gate("active") : null; }
@@ -264,6 +265,10 @@ function pushRx(text: string, from: string, mine = false) {
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 function teardown(note?: string) {
   stopPolling();
+  /* a link going down always closes the microphone with it —
+     talk never survives into the next link on its own. */
+  talking = false;
+  if (micTrack) micTrack.enabled = false;
   endpoint?.close();
   endpoint = null;
   remoteStream = null;
@@ -319,7 +324,7 @@ function pollFor(code: string, role: "offer" | "answer", what: string, take: (bl
    for the caller to show; the window re-renders off `emit()`. */
 export const phonehome = {
   onChange(fn: Listener) { listeners.add(fn); return () => { listeners.delete(fn); }; },
-  get state() { return { identity, callsign, linkState, linkNote, rxLines, voiceArmed, peer: endpoint?.peer || null, rendezvousCode, remoteStream }; },
+  get state() { return { identity, callsign, linkState, linkNote, rxLines, voiceArmed, talking, peer: endpoint?.peer || null, rendezvousCode, remoteStream }; },
   bindOs(os: BlacksiteOS) { osRef = os; },
   setCallsign(name: string) { callsign = name.trim().slice(0, 40); saveCallsign(); emit(); },
   async newIdentity(): Promise<string> {
@@ -421,17 +426,27 @@ export const phonehome = {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     micTrack = micStream.getAudioTracks()[0] || null;
     if (!micTrack) return "no microphone was granted";
-    micTrack.enabled = false; // push-to-talk: silent until held
+    micTrack.enabled = false; // tap-to-talk: silent until switched on
+    talking = false;
     voiceArmed = true;
     emit();
-    return "voice armed for the next link — the microphone rides the offer or answer you make next, and speaks only while you hold talk. a link already up must be re-made to carry voice.";
+    return "voice armed for the next link — the microphone rides the offer or answer you make next, and speaks only while talk is toggled on. tap talk once to open the mic, tap again to close it. a link already up must be re-made to carry voice.";
   },
   disarmVoice() {
     micStream?.getTracks().forEach((t) => t.stop());
-    micStream = null; micTrack = null; voiceArmed = false; emit();
+    micStream = null; micTrack = null; voiceArmed = false; talking = false; emit();
     return "voice disarmed — microphone released";
   },
-  talk(down: boolean) { if (micTrack && voiceArmed) micTrack.enabled = down; },
+  /* Tap-to-talk: one tap opens the microphone, the next closes
+     it. The track itself is the switch — disabled, it sends
+     silence, so off is off, not muted-in-software theatre. */
+  toggleTalk(): string {
+    if (!voiceArmed || !micTrack) return "voice is not armed — arm voice first, then tap talk";
+    talking = !talking;
+    micTrack.enabled = talking;
+    emit();
+    return talking ? "talk on — the microphone is live" : "talk off — the microphone is silent";
+  },
   async selfTest(say: (t: string) => void) {
     const a = await makeIdentity();
     const b = await makeIdentity();
@@ -491,7 +506,7 @@ export function registerPhonehomeVerbs() {
       st.peer ? `peer       ${st.peer.callsign} · ${shortFingerprint(st.peer.fingerprint)}` : "",
       "",
       "phonehome call <code> · phonehome listen <code> · phonehome send <line…> · phonehome hangup",
-      "or open the phonehome window for the fields, hand-carried signals, and push-to-talk.",
+      "or open the phonehome window for the fields, hand-carried signals, and tap-to-talk voice.",
       "honest physics: no PSTN, no SMS — a browser has no telephony radio. links are station to station.",
     ].filter(Boolean).join("\n");
   });
@@ -510,7 +525,7 @@ export function buildPhonehomeApp(body: HTMLElement, os: BlacksiteOS) {
   phonehome.bindOs(os);
   body.innerHTML = "";
   const wrap = el("div", "os-ph");
-  const note = el("p", "os-note", "a secure transmitter and reception field between two blacksite stations. text is sealed station to station; voice rides the encrypted peer path and speaks only while you hold talk. the rendezvous — when you use it — holds signed signals only, for ten minutes, and never hears the link. honest physics: no phone numbers, no SMS; a browser has no telephony radio.");
+  const note = el("p", "os-note", "a secure transmitter and reception field between two blacksite stations. text is sealed station to station; voice rides the encrypted peer path and speaks only while talk is toggled on — one tap on, one tap off. the rendezvous — when you use it — holds signed signals only, for ten minutes, and never hears the link. honest physics: no phone numbers, no SMS; a browser has no telephony radio.");
   wrap.appendChild(note);
 
   /* identity */
@@ -565,7 +580,7 @@ export function buildPhonehomeApp(body: HTMLElement, os: BlacksiteOS) {
   const txRow = el("div", "os-btnrow");
   const bSend = el("button", "os-btn primary", "transmit");
   const bVoice = el("button", "os-btn", "arm voice");
-  const bTalk = el("button", "os-btn os-ph-talk", "hold to talk");
+  const bTalk = el("button", "os-btn os-ph-talk", "tap to talk");
   txRow.append(bSend, bVoice, bTalk);
   txBox.append(txArea, txRow);
   const rxBox = el("div", "os-ph-box os-ph-rx");
@@ -621,6 +636,8 @@ export function buildPhonehomeApp(body: HTMLElement, os: BlacksiteOS) {
     peerLine.textContent = st.peer ? `peer — ${st.peer.callsign} · fingerprint ${st.peer.fingerprint}\nshort ${shortFingerprint(st.peer.fingerprint)}` : (st.linkState === "linked" ? "" : "no peer yet. the two short fingerprints are the ceremony: read yours aloud, hear theirs, and only then trust the wire.");
     peerLine.style.whiteSpace = "pre-line";
     bVoice.textContent = st.voiceArmed ? "voice armed — disarm" : "arm voice";
+    bTalk.textContent = st.talking ? "talking — tap to stop" : "tap to talk";
+    bTalk.classList.toggle("live", st.talking);
     rxPre.textContent = st.rxLines.length
       ? st.rxLines.map((l) => `${l.at}  ${l.mine ? "you →" : "→ you"}  [${shortFingerprint(l.from)}]\n${l.text}`).join("\n\n")
       : "the reception field is quiet. what crosses the link lands here, and nowhere else — nothing is recorded, nothing is kept by any server.";
@@ -650,11 +667,7 @@ export function buildPhonehomeApp(body: HTMLElement, os: BlacksiteOS) {
     else { try { say(await phonehome.armVoice()); } catch (e: any) { say(`✗ microphone: ${e?.message || e}`); } }
     render();
   });
-  const talkOn = (e: Event) => { e.preventDefault(); phonehome.talk(true); bTalk.classList.add("live"); };
-  const talkOff = () => { phonehome.talk(false); bTalk.classList.remove("live"); };
-  bTalk.addEventListener("pointerdown", talkOn);
-  bTalk.addEventListener("pointerup", talkOff);
-  bTalk.addEventListener("pointerleave", talkOff);
+  bTalk.addEventListener("click", () => { say(phonehome.toggleTalk()); render(); });
   bClear.addEventListener("click", () => { phonehome.clearFields(); say("fields cleared — what crossed them is gone from this station."); render(); });
   bTest.addEventListener("click", () => { say("running the field self-test — two stations, in this page only…"); void phonehome.selfTest(say).then(render); });
 
