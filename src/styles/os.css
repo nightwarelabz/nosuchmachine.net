@@ -231,6 +231,20 @@ a.os-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .os-bottle-area:focus { outline: 1px solid var(--os-accent); }
 .os-bottle-input, .os-bottle-select { background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line); border-radius: 3px; font: inherit; font-size: 0.77rem; padding: 0.44rem 0.6rem; }
 
+/* phonehome — the transmitter + reception field */
+.os-ph-box { border: 1px solid var(--os-line-soft); border-radius: 3px; padding: 0.75rem; margin-bottom: 0.85rem; background: rgba(255, 255, 255, 0.02); }
+.os-ph-box h3 { font-size: 0.8rem; letter-spacing: 0.12em; color: var(--os-muted); margin: 0 0 0.55rem; text-transform: uppercase; }
+.os-ph-state { font-family: ui-monospace, monospace; font-size: 0.82rem; line-height: 1.55; border: 1px solid var(--os-line-soft); border-radius: 3px; padding: 0.5rem 0.6rem; margin: 0 0 0.6rem; background: #03050a; color: var(--os-muted); }
+.os-ph-state[data-state="linked"] { color: var(--os-green, #3ddc84); border-color: var(--os-green, #3ddc84); }
+.os-ph-state[data-state="waiting"] { color: var(--os-accent); border-color: var(--os-accent); }
+.os-ph-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+.os-ph-fields .os-ph-box { margin-bottom: 0; }
+.os-ph-rxlog { font-family: ui-monospace, monospace; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; background: #03050a; border: 1px solid var(--os-line-soft); border-radius: 3px; padding: 0.6rem; min-height: 9.5rem; max-height: 22rem; overflow: auto; margin: 0 0 0.5rem; color: var(--os-ink); }
+.os-ph-meter { height: 6px; border: 1px solid var(--os-line-soft); border-radius: 2px; background: #03050a; overflow: hidden; margin-bottom: 0.6rem; }
+.os-ph-meter-fill { height: 100%; width: 0%; background: var(--os-accent); transition: width 90ms linear; }
+.os-ph-talk.live { background: var(--os-accent); color: #05131a; border-color: var(--os-accent); }
+@media (max-width: 760px) { .os-ph-fields { grid-template-columns: 1fr; } }
+
 /* ————————————————————————————————
    TABLET allocation (761–1100px): windows open near-full, dock stays left
    ———————————————————————————————— */

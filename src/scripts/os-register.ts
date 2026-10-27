@@ -35,6 +35,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["git", "isomorphic-git over the room's own tree; the wire runs through the site's guarded git proxy", "LIVE"],
     ["ssh client", "the room's own SSH — curve25519, AES-GCM, verified host keys; the edge bridge pipes ciphertext only", "LIVE"],
     ["relay (irc)", "a real IRC client in the room — OFTC/Libera/hackint over TLS through the house bridge; the house channel is #nosuchmachine on OFTC", "LIVE"],
+    ["phonehome", "a secure transmitter + reception field between two stations — WebRTC voice + text sealed station to station (ECDH + AES-GCM, signed signals); the edge rendezvous swaps signed signals only and hears nothing", "LIVE"],
     ["timelock", "RSW repeated-squaring seals (the Magic Box construction)", "LIVE"],
     ["gauntlet", "the room tests itself — crypto vectors, vfs, roster, engines", "LIVE"],
     ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
