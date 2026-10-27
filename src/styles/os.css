@@ -99,7 +99,8 @@
 
 /* ————— taskbar ————— */
 .os-taskbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.14rem 0.55rem calc(0.14rem + env(safe-area-inset-bottom)); background: #070b0f; border-top: 1px solid var(--os-line-soft); z-index: 90; }
-.os-start { background: var(--os-accent); color: var(--os-on-accent); border: 1px solid var(--os-accent); border-radius: 2px; padding: 0.16rem 0.52rem; font-size: 0.74rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; transition: background-color 80ms linear; }
+.os-root .os-start { background: var(--os-accent); color: #000; border: 1px solid var(--os-accent); border-radius: 2px; padding: 0.16rem 0.52rem; font-size: 0.74rem; font-weight: 800; cursor: pointer; letter-spacing: 0.06em; transition: background-color 80ms linear; }
+.os-root .os-start-glyph { color: #39ff6e; text-shadow: 0 0 7px rgba(57, 255, 110, 0.65); }
 .os-start:hover { background: var(--os-accent-bright); }
 .os-taskbar-apps { display: flex; gap: 0.4rem; overflow-x: auto; flex: 1; scrollbar-width: none; }
 .os-taskbar-apps::-webkit-scrollbar { display: none; }
