@@ -31,7 +31,7 @@ refused in `functions/_lib/guard.ts` before contact and on every redirect hop.
   (`src/data/blacksite-commands.json`) with each command LIVE, EDGE, or a
   named LIMIT, Python (vendored Skulpt) and JavaScript engines, a
   vim-mannered editor, the Wave-10 file parsers, the Gauntlet self-test
-  battery, EMCON gating, themes, and room-generated wallpapers. Its wire
+  battery, EMCON gating, the thinice theme, and room-generated wallpapers. Its wire
   verbs ride the same guarded edge functions (`/api/fetch`, `/api/exchange`,
   `/api/ping` included: one connection, ≤4KB spoken, ≤64KB read).
 - The bench page (`src/pages/bench/index.astro`, served at `/bench/`) is the suite console: a global target

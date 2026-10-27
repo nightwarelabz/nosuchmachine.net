@@ -8,7 +8,7 @@ import {
 import type { ShellIO } from "./os-shell";
 import { identifyFile, hexdump } from "./os-parse";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
-import { sfx, armAudio, soundPrefs, setSoundPrefs } from "./os-sound";
+import { sfx, armAudio, soundPrefs, setSoundPrefs, soundState } from "./os-sound";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -93,7 +93,7 @@ function registerHouse() {
     if (a === "off") { setSoundPrefs({ enabled: false }); return "the room is mute. (EMCON alpha silences it too, whatever this says.)"; }
     if (a === "vol") { const v = parseInt(ctx.args[1] || "", 10); if (isNaN(v) || v < 0 || v > 100) return "sound vol <0-100>"; setSoundPrefs({ volume: v / 100 }); armAudio(); sfx("ping"); return `volume ${v}.`; }
     if (a === "test") { armAudio(); sfx("live"); return "the voice, tested — the boot swell, on demand."; }
-    return `sound: ${p.enabled ? "on" : "off"} · volume ${Math.round(p.volume * 100)} · synthesized in-tab, no audio files · arms on your first click or keypress · EMCON alpha is total silence.`;
+    const st = soundState(); return `sound: ${p.enabled ? "on" : "off"} · volume ${Math.round(p.volume * 100)} · engine ${st.armed ? "armed" : "unarmed"} · context ${st.context}${st.silenced ? " · silenced by EMCON alpha" : ""} · synthesized in-tab, no audio files · arms on your first click or keypress · EMCON alpha is total silence.`;
   });
   verb("ver", "LIVE", "version of the room", async () => "BLACKSITE OS — web edition 2.0 'NOETHER' · the nightjar bench, ported\nkernel: blacksite-web · shell: blacksite sh · engines: skulpt python, native javascript\nthe register: `register` · the budgets: `sysinfo` · the grade: `posture`");
   verb("sys", "LIVE", "the whole house state", async (ctx) => {
@@ -212,13 +212,10 @@ function registerHouse() {
     document.dispatchEvent(new CustomEvent("blacksite:emcon"));
     return `condition is now ${ctx.os.emcon.toUpperCase()}. the gates read it before every knock.`;
   });
-  verb("theme", "LIVE", "theme [name] — list or switch the house theme", async (ctx) => {
-    const themes = ["redteam", "phosphor", "ember", "ghost", "arctic", "plumage"];
-    const v = ctx.args[0];
-    if (!v) return `theme: ${ctx.os.theme}\nthemes: ${themes.join(", ")}`;
-    if (!themes.includes(v)) return `no such theme. themes: ${themes.join(", ")}`;
-    ctx.os.theme = v; ctx.os.saveSoon(); ctx.io.setTheme?.(v);
-    return `theme is now ${v}.`;
+  verb("theme", "LIVE", "theme — the house theme (thinice, the only one)", async (ctx) => {
+    const v = (ctx.args[0] || "").toLowerCase();
+    if (!v || v === "thinice") return "theme: thinice — glacial ice on frozen black. it is the house's one theme.";
+    return `there is no other theme. the house wears thinice.`;
   });
   verb("journal", "LIVE", "journal [n] — the house journal", async (ctx) => {
     const n = Number(ctx.args[0]) || 20;

@@ -382,6 +382,7 @@ function addTaskbarButton(key: string, title: string, win: HTMLElement) {
       setTimeout(() => { win.style.display = "none"; win.classList.remove("os-win-min"); refreshLifecycles(); saveSession(); }, 130);
       return;
     }
+    if (win.style.display !== "none") sfx("snap");
     ensureBuilt(win);
     focusWindow(win);
   });
@@ -1075,13 +1076,12 @@ function buildGauntlet(body: HTMLElement) {
 }
 function buildSettings(body: HTMLElement) {
   const wrap = el("div", "os-settings");
-  const themes = ["redteam", "phosphor", "ember", "ghost", "arctic", "plumage"];
   const themeTitle = el("h3", "", "Theme");
   const themeRow = el("div", "os-btnrow");
-  for (const t of themes) { const b = el("button", "os-btn" + (os.theme === t ? " primary" : ""), t); b.addEventListener("click", () => { applyTheme(t); buildSettingsRefresh(body); }); themeRow.appendChild(b); }
+  themeRow.appendChild(el("span", "os-btn primary", "thinice — current"));
   const emconTitle = el("h3", "", "EMCON");
   const emconRow = el("div", "os-btnrow");
-  for (const c of ["open", "charlie", "bravo", "alpha"] as const) { const b = el("button", "os-btn" + (os.emcon === c ? " primary" : ""), c.toUpperCase()); b.addEventListener("click", () => { os.emcon = c; os.saveSoon(); updateEmconChip(); buildSettingsRefresh(body); }); emconRow.appendChild(b); }
+  for (const c of ["open", "charlie", "bravo", "alpha"] as const) { const b = el("button", "os-btn" + (os.emcon === c ? " primary" : ""), c.toUpperCase()); b.addEventListener("click", () => { if (os.emcon !== c) { os.emcon = c; os.saveSoon(); updateEmconChip(); sfx(c === "alpha" ? "deny" : "beep"); } buildSettingsRefresh(body); }); emconRow.appendChild(b); }
   const wpTitle = el("h3", "", "Wallpaper");
   const wpRow = el("div", "os-btnrow");
   {
@@ -1284,16 +1284,20 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
 };
 
 /* ---------------- theme / wallpaper / chrome ---------------- */
+/* thinice is the house's one theme: applyTheme keeps the name pinned
+   whatever a caller or a stored setting hands it. */
 function applyTheme(name: string) {
-  os.theme = name;
+  void name;
+  os.theme = "thinice";
   os.saveSoon();
-  root().dataset.theme = name;
+  root().dataset.theme = "thinice";
 }
 let currentWallpaper = "mare";
 function marePlate(): string {
   return window.matchMedia("(max-width: 760px)").matches ? "/nightmare-portrait.webp" : "/nightmare.webp";
 }
 function setWallpaper(kind: string) {
+  sfx("snap");
   const desk = desktop();
   currentWallpaper = kind;
   os.wallpaper = kind;
@@ -1306,7 +1310,7 @@ function paintWallpaper(kind: string, W: number, H: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const g = canvas.getContext("2d")!;
-  const accent = getComputedStyle(root()).getPropertyValue("--os-accent").trim() || "#ff3b47";
+  const accent = getComputedStyle(root()).getPropertyValue("--os-accent").trim() || "#a5e3f5";
   const base = g.createLinearGradient(0, 0, W * 0.3, H);
   base.addColorStop(0, "#0a0f1a"); base.addColorStop(0.55, "#05070c"); base.addColorStop(1, "#030408");
   g.fillStyle = base; g.fillRect(0, 0, W, H);
@@ -1532,7 +1536,7 @@ function boot() {
   }
   const suiteIcon = el("button", "os-icon");
   suiteIcon.append(iconEl("bench", "os-icon-glyph"), el("span", "os-icon-label", "bench"));
-  suiteIcon.addEventListener("click", () => { window.location.href = "/bench/"; });
+  suiteIcon.addEventListener("click", () => { sfx("send"); window.location.href = "/bench/"; });
   icons.appendChild(suiteIcon);
   // clock
   const clock = document.getElementById("os-clock")!;
@@ -1541,7 +1545,7 @@ function boot() {
   updateEmconChip();
   document.getElementById("os-emcon-chip")?.addEventListener("click", () => openApp("settings"));
   document.getElementById("os-start")?.addEventListener("click", () => toggleLauncher());
-  document.getElementById("os-winmenu-btn")?.addEventListener("click", () => toggleWinMenu());
+  document.getElementById("os-winmenu-btn")?.addEventListener("click", () => { const opening = !winMenuEl; toggleWinMenu(); if (opening) sfx("open"); });
   syncWinMenu();
   document.addEventListener("blacksite:openapp", (e) => { const d = (e as CustomEvent).detail || {}; if (d.app) openApp(d.app, d.arg); });
   window.addEventListener("hashchange", () => { const h = window.location.hash.slice(1); if (h && APPS[h]) openApp(h); });
@@ -1575,7 +1579,7 @@ function boot() {
     }
   });
   document.addEventListener("blacksite:toast", (e) => osToast((e as CustomEvent).detail?.text || ""));
-  document.addEventListener("blacksite:emcon", () => updateEmconChip());
+  document.addEventListener("blacksite:emcon", () => { updateEmconChip(); sfx(os.emcon === "alpha" ? "deny" : "beep"); });
   setWallpaper(os.wallpaper || "mare");
   let wasNarrow = window.matchMedia("(max-width: 760px)").matches;
   window.addEventListener("resize", () => {
@@ -1633,8 +1637,10 @@ function cascadeWindows() {
 function closeAllWindows() {
   [...windows.values()].forEach((w) => w.querySelector<HTMLElement>(".os-win-close")?.click());
 }
-function toggleLauncher() { if (launcherEl) { launcherEl.remove(); launcherEl = null; } else openLauncher(); }
+function closeLauncher(play = true) { if (!launcherEl) return; launcherEl.remove(); launcherEl = null; if (play) sfx("close"); }
+function toggleLauncher() { if (launcherEl) closeLauncher(); else openLauncher(); }
 function openLauncher() {
+  sfx("open");
   const desk = desktop();
   const box = el("div", "os-launcher");
   const input = document.createElement("input");
@@ -1670,7 +1676,7 @@ function openLauncher() {
       if (it.icon) b.appendChild(iconEl(it.icon, "os-launch-icon"));
       b.appendChild(document.createTextNode(it.label));
       b.appendChild(el("small", "", it.small));
-      b.addEventListener("click", () => { toggleLauncher(); it.go(); });
+      b.addEventListener("click", () => { closeLauncher(false); it.go(); });
       list.appendChild(b);
     });
     box.dataset.count = String(items.length);
@@ -1685,15 +1691,15 @@ function openLauncher() {
       e.preventDefault();
       const q = input.value.trim();
       const it = items[selected];
-      toggleLauncher();
+      closeLauncher(false);
       if (it) it.go();
       else if (q) { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: q })), 60); }
-    } else if (e.key === "Escape") toggleLauncher();
+    } else if (e.key === "Escape") closeLauncher();
   });
   launcherOpenedAt = Date.now();
   render();
   setTimeout(() => document.addEventListener("pointerdown", function outside(ev) {
-    if (launcherEl && !launcherEl.contains(ev.target as Node) && (ev.target as HTMLElement).id !== "os-start") { toggleLauncher(); document.removeEventListener("pointerdown", outside); }
+    if (launcherEl && !launcherEl.contains(ev.target as Node) && (ev.target as HTMLElement).id !== "os-start") { closeLauncher(); document.removeEventListener("pointerdown", outside); }
   }), 0);
 }
 
