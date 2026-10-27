@@ -180,16 +180,20 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
   the desktop compilers silently convert to.
   Video capture is configured off via the tree's own switch.
   No other changes.
-- Data packs: **none** — byte-for-byte the release packs, SHA-256
-  verified in the loader before the engine starts.
+- Data packs: the files inside the served pack are byte-for-byte
+  the release packs' own (see the stripped-data section below);
+  the pack itself is a house-built subset of the release data,
+  hash-pinned in NOTICE.txt. The full-data deal it replaced is
+  the documented fallback in that section.
 - Game logic (QuakeC progs): the server and client progs are the
   ones inside the release pack, untouched. The **menu** progs
-  carries two tracked house patches — `house-qc-patch-008.diff`
-  and, stacked on it, `house-qc-patch-009.diff`, both beside
+  carries four tracked house patches — `house-qc-patch-008.diff`
+  and, stacked on it, `house-qc-patch-009.diff`,
+  `house-qc-patch-010.diff` and `house-qc-patch-011.diff`, all beside
   this file — shipped as the override pack
   `public/nexuiz/sparta-menu.pk3` (see the menu section below
   and NOTICE.txt): the Settings surface is locked to the player
-  name, the main menu draws the build's rezzmodV1 tag, and the
+  name, the main menu draws the build's haxiuz tag, and the
   Multiplayer dialog carries the house room's front door — the
   game boots to its menu, and the room is entered there.
 - House layer: configuration only — `public/nexuiz/autoexec.cfg`
@@ -212,6 +216,102 @@ make -j2 emscripten-release DP_VIDEO_CAPTURE=disabled \
 - The generic engine build reports its game as "DarkPlaces-Quake"
   in the console (the Nexuiz data dir rides as `-game data`); the
   game itself — menus, progs, media — is Nexuiz's own.
+
+## Stripped data — the haxiuz pack, and the full-data fallback
+
+haxiuz plays one session — CTF MinstaHook on evilspace — so the
+site serves a stripped data pack instead of the release's whole
+data universe:
+
+- `data/haxiuz.pk3` — **99,228,456 bytes, 1,528 files**, SHA-256
+  `10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3`
+  (pin of record in `public/nexuiz/NOTICE.txt`), dealt in
+  `public/nexuiz/play.js` as a span entry on the data pipe
+  (`part: "haxiuz"`, `spanLength: 98509217`), the road the full
+  packs took before it. The strip's first deal carried the pack
+  as a plain site file, but Cloudflare Pages caps static assets
+  at 25 MiB — a 99 MB pack cannot deploy as one — so the pack
+  rides the pipe: its container is `haxiuz-release.zip`
+  (**98,509,335 bytes**, SHA-256
+  `f00dc045337d245bc3be901763d1fe7607112f383bc64abcc9611f33f8a252f1`),
+  a release asset on the haxiuz repo (tag `data-1`) whose single
+  deflated entry is the pack itself; the pack's span inside it
+  starts at offset 40 and runs 98,509,217 bytes, and inflating
+  it reproduces the pack byte-for-byte. `NX_DATA_STAMP` in
+  play.js names the pack build's generation — **bump it
+  whenever the pack is rebuilt**, in the same change that
+  updates the span and the pin here, in play.js, in the pipe
+  (`functions/api/nexuiz-data.ts`) and in NOTICE.txt: a changed
+  stamp makes the play frame's cache sweep retire the previous
+  build's `part=haxiuz` staging chunks and kept pack, so a
+  rebuilt pack never assembles out of an older build's bytes.
+- Contents are a measured census, not a hand list: the era
+  native client was run against the full release data unpacked
+  loose (menu boot; a full local CTF MinstaHook bot match on
+  evilspace under the house rules, with working audio so the
+  sound loads count) under `strace`, and every file it opened is
+  in the pack — closed out with what the engine loads beside an
+  open: model `.skin`/`.sounds`/`.framegroups` companions and
+  LODs, texture variant sets (`_norm`/`_glow`/`_gloss`/…),
+  randomized sound variants, every player model (the gamecode
+  precaches them all at match start —
+  `qcsrc/server/miscfunctions.qc`, `sv_precacheplayermodels`),
+  the item models and their texture families, all shader
+  scripts, and common-spog's files merged in. The pack was then
+  played the same way and its console censused against the full
+  data's console: the only lines left are the ones the full data
+  prints too (the `.zym.animinfo` probe, the palette fallback,
+  the `.wav`→`.ogg` sound probes). Two misses the first census
+  caught and repaired are the standing warning: files a session
+  reaches only sometimes (an item model, its pickup sounds) do
+  not appear in any single run's opens — precache lists in the
+  pinned QC are the second source, and any rebuild must check
+  both.
+- What a returning player's machine keeps changes with the deal:
+  the old kept packs and staging chunks sit in the
+  `nexuiz-data-v1` cache under the old span parts' keys. play.js
+  deletes exactly those keys at boot (the stripped pack's own
+  keys are its part's own — `part=haxiuz` staging chunks and the
+  kept pack under the same part — and the small house files are
+  untouched), so the ~900 MB the full deal kept does not linger
+  as dead weight, and no stale full-data entry can ever be
+  mistaken for the stripped set — the loader only ever reads
+  the keys the current deal names. On a data-build generation
+  change (`NX_DATA_STAMP`, above) the sweep retires the
+  previous build's `part=haxiuz` keys as well; the loader's
+  SHA-256 verdict over kept and assembled bytes stands behind
+  the sweep either way.
+
+**Fallback — restoring the full-data deal.** If a miss ever
+surfaces in the stripped pack (a console line naming a file the
+session reached for and did not find), the full data is one
+edit away and needs nothing rebuilt:
+
+1. In `public/nexuiz/play.js`, replace the
+   `"data/haxiuz.pk3"` entry in `Module.files` with the two
+   original span entries, verbatim:
+
+   ```js
+   "data/data20091001.pk3": {
+     part: "data", spanLength: 880493625, size: 887580846,
+     sha256: "3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0",
+   },
+   "data/common-spog.pk3": {
+     part: "spog", spanLength: 24638, size: 28724,
+     sha256: "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c",
+   },
+   ```
+
+2. Nothing else moves: the data pipe
+   (`functions/api/nexuiz-data.ts`) still stands with the
+   full-data parts' pins unchanged (the `haxiuz` part may stay
+   beside them, undealt), the loader's span path is untouched
+   in the glue, and the cache-retirement sweep in play.js only
+   deletes keys, never blocks a download — a machine that kept
+   nothing simply crosses the wire again. NOTICE.txt records
+   both deals' hashes; update its “what is served” section in
+   the same change so the file never describes a deal the frame
+   does not make.
 
 ## Storage and caching — what a player's machine keeps
 
@@ -289,14 +389,15 @@ fteqcc -O1 -Oreturn_only -Ostrip_functions   # writes ../../menu.dat
 zip -9 sparta-menu.pk3 menu.dat              # single entry, at the root
 ```
 
-With `house-qc-patch-008.diff` and then `house-qc-patch-009.diff`
+With `house-qc-patch-008.diff`, then `house-qc-patch-009.diff`,
+then `house-qc-patch-010.diff`, then `house-qc-patch-011.diff`
 applied to the sources first (`patch -p1`, from the qcsrc root's
 parent — they apply clean in order and reproduce the compiled
 tree exactly), the output is the shipped override: menu.dat
 SHA-256
-`2444a040d1780cc7f960918c2e2db989cd745357ba658a8b00179e8b5acb9a53`,
+`72083265b5c7dc9723d72536b35adc967bf49d7897fcd2eae09017aaa496d9e4`,
 pk3 SHA-256
-`1ecf5d09ff61c5b614685dfe7d66710b0484272b22b159db1e8ac031d8c1435a`.
+`9508199a9a70dfb80fe266795f63eaec4f22d99aa75ae4426cad3a898eab4813`.
 Patch 009 alone (one file, `dialog_multiplayer.c`) adds the
 room's door to the Multiplayer dialog; measured against the
 patch-008 build it moves the header CRC not at all (still
@@ -304,6 +405,34 @@ patch-008 build it moves the header CRC not at all (still
 (fillNexuizMultiplayerDialog, +16 statements — the net program
 delta), adds two anonymous string globals (the door's label and
 command), and leaves the field definitions identical.
+Patch 010 alone (two files, `menu.qc` +
+`dialog_multiplayer.c`) is the identity swap: the masthead tag
+and the door button's label both become "haxiuz"; the door's
+command `connect thisissparta2` is unchanged. Measured against
+the patch-009 build it moves the header CRC not at all (still
+10020), keeps all 1,010 functions and all 43,525 statements
+(same opcode stream), and changes no field definition; because
+both labels are now the same string, the compiler folds the
+masthead's string global into the door's (global definitions
+9,255 → 9,254 by that one removal, with the operand
+renumbering it causes), and the string table's whole diff is
+the two old labels out, "haxiuz" in.
+Patch 011 alone (one file, `draw.qc`) is the native cursor:
+the menu paints no cursor of its own — `draw_drawMousePointer`
+still draws the skin cursor picture at the tracked position
+and size, but at zero alpha, so it paints nothing (a zero
+size would not do: the engine's DrawQ_Pic reads a zero size
+as the picture's natural size); mouse tracking and
+hit-testing are untouched, and the engine tracks the
+player's real cursor in absolute mode (`menu_mouse_absolute`,
+dealt in the house config). Measured against the patch-010
+build it moves the header CRC not at all (still 10020), keeps
+all 1,010 functions and all 43,525 statements (same opcode
+stream), changes no field definition, and leaves the string
+table and initial global data byte-identical; exactly one
+statement differs — the drawpic alpha operand reads the
+constant 0 instead of the `draw_alpha` global. File size
+unchanged (617,644 bytes).
 
 Unpatched, the same recipe reproduces the shipped menu.dat's
 engine-visible contract exactly — header CRC 10020, and the

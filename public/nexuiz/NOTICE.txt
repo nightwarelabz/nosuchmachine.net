@@ -51,41 +51,85 @@ The copy used to derive everything below was downloaded from the
 Internet Archive's mirror of the release and matched both hashes.
 
 The game's packs, extracted from that verified zip (each extraction
-CRC-checked against the zip's own central directory):
+CRC-checked against the zip's own central directory) — recorded
+here as the SOURCE of what is served, not as what is served:
 
   data/data20091001.pk3 — 887,580,846 bytes
     SHA-256 3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0
   data/common-spog.pk3 — 28,724 bytes
     SHA-256 d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c
 
+WHAT IS SERVED — THE HAXIUZ STRIPPED PACK
+-----------------------------------------
+haxiuz plays one session — CTF MinstaHook on evilspace — so the
+site no longer ships the release's whole data universe. It serves
+one house-built pack containing only what that session loads:
+
+  data/haxiuz.pk3 — 99,228,456 bytes, 1,528 files
+    SHA-256 10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3
+
+Every file in it is a byte-for-byte member of the verified source
+packs above (common-spog's files ride inside it); nothing is
+re-encoded, resized or renamed. Its contents are a measured
+census, not a guess: the real client was run against the full
+data (menu, and a full bot match on evilspace under the house
+rules) with every file open recorded, and the pack is that
+record, closed out with the companions the engine loads beside
+what it opens (model skins and frame groups, texture variant
+sets, randomized sound variants, the item models and their
+textures, and every player model — the gamecode precaches them
+all at match start, qcsrc/server/miscfunctions.qc). The pack was
+then played the same way and its console censused against the
+full data's: no file a session reaches for is missing from it.
+What is NOT in it is everything a session never loads: the other
+maps and their textures, the other weapons, modes, vehicles and
+turrets, the campaign and demo data, and all but the two music
+tracks the menu and evilspace play. The full account — file
+counts, byte accounting by category, and how to restore the
+full-data deal if a miss ever surfaces — is in
+tools/nexuiz/BUILD.md.
+
 HOW THE DATA TRAVELS
 --------------------
-The packs are too large to ship as site files, and no lawful upstream
-sends the CORS headers a browser fetch would need (measured
-2026-10-25). The site's data pipe (/api/nexuiz-data) therefore
-streams fixed 16 MiB chunks of each pack's raw-deflate span inside
-the pinned release zip:
+The stripped pack travels the site's span pipe
+(/api/nexuiz-data), the road the release packs took before it:
+at 99 MB the pack is far past the 25 MiB ceiling on a site file,
+so it cannot ride as one. The pipe streams fixed 16 MiB chunks
+of the pack's raw-deflate span inside its container zip; the
+loader inflates the span, reassembles the pack byte-for-byte,
+and verifies its SHA-256 against the pin above before the
+engine starts — wrong bytes are refused, never played. The
+verified pack is then kept on the player's machine, so the wire
+is crossed once.
 
-  data20091001.pk3 span: bytes [23842145, 904335770) of nexuiz-252.zip
-  common-spog.pk3  span: bytes [904335848, 904360486) of nexuiz-252.zip
+The container is a house-built zip whose single deflated entry
+is the pack itself, published as a release asset on the
+house's haxiuz repo (github.com/nightwarelabz/haxiuz, release
+tag data-1):
 
-The loader inflates the span, reassembles the pack, and verifies the
-SHA-256 above before the engine starts. Wrong bytes are refused.
-Chunks are cached by the browser (Cache API) so the wire is crossed
-once. License for the game data and code: GPL-2.0 (the release's own
-terms; see COPYING.txt).
+  haxiuz-release.zip — 98,509,335 bytes
+    SHA-256 f00dc045337d245bc3be901763d1fe7607112f383bc64abcc9611f33f8a252f1
+    the pack's span inside it: offset 40, length 98,509,217
+
+The site's build verification checks that the frame's deal of
+the pack — its pipe part, its span, and its hash pin — is what
+the site ships. The full-data deal the pipe carried before
+(parts "data" and "spog", spans of the release zip above)
+stands as the documented restore; it is written down in
+tools/nexuiz/BUILD.md. License for the game data and code:
+GPL-2.0 (the release's own terms; see COPYING.txt).
 
 DECODERS LINKED INTO THIS BUILD (census in tools/nexuiz/BUILD.md)
 ------------------------------------------------------------------
-TGA and WAV: the engine's own loaders. JPEG (2,188 files in the
-data): statically linked. OGG/Vorbis (538 files — all music, the
-announcer, the welcome voice): statically linked libvorbis 1.3.7 +
+TGA and WAV: the engine's own loaders. JPEG (96 files in the
+stripped pack): statically linked. OGG/Vorbis (329 files — the
+two music tracks the session plays, the announcer, the welcome
+voice, the game's sounds): statically linked libvorbis 1.3.7 +
 libogg 1.3.5, built from the Xiph tarballs with the same toolchain
 (BSD-style license, Xiph.org Foundation — see BUILD.md for hashes).
 PNG: NOT decoded — this engine tree's PNG support is dynamic-load
-only, and the data carries exactly 4 PNG files of 9,341 (two water
-fallbacks, one sprite, one unused template). Named here rather
-than shipped quiet.
+only, and the stripped pack carries exactly 1 PNG file. Named here
+rather than shipped quiet.
 
 HOUSE CONFIGURATION (the only deliberate deviation from stock)
 --------------------------------------------------------------
@@ -118,7 +162,7 @@ in the room).
 The same override carries the room's front door: the game boots
 to its main menu, and at the head of the Multiplayer dialog —
 above the server browser — stands a button labeled
-"thisissparta2!", a stock command button whose command is
+"haxiuz", a stock command button whose command is
 "connect thisissparta2": the very connect the boot used to deal
 sight unseen, now pressed by the player's own hand. It is the
 same road, not a new one — the engine's socket layer dials the
@@ -129,21 +173,24 @@ Singleplayer dialog and the stock server browser are untouched
 and work as shipped.
 
 Mechanism: the override pack public/nexuiz/sparta-menu.pk3
-(160,556 bytes, one entry: menu.dat) rides in the game directory
+(160,520 bytes, one entry: menu.dat) rides in the game directory
 beside the release packs; the engine's own directory order makes
 its menu.dat the one that loads — the same route as the house
 room's sparta-progs / sparta-csprogs overrides. Nothing in the
 release packs is modified.
 
-  sparta-menu.pk3  SHA-256 1ecf5d09ff61c5b614685dfe7d66710b0484272b22b159db1e8ac031d8c1435a
-  menu.dat inside  SHA-256 2444a040d1780cc7f960918c2e2db989cd745357ba658a8b00179e8b5acb9a53
+  sparta-menu.pk3  SHA-256 9508199a9a70dfb80fe266795f63eaec4f22d99aa75ae4426cad3a898eab4813
+  menu.dat inside  SHA-256 72083265b5c7dc9723d72536b35adc967bf49d7897fcd2eae09017aaa496d9e4
 
 The menu.dat is compiled from the release's own menu sources
 (qcsrc/menu in gamesource20091001.zip) with the era's own fteqcc
 (the rev1253299209 binary the release archive ships), flags
 -O1 -Oreturn_only -Ostrip_functions, plus the tracked patches —
 tools/nexuiz/house-qc-patch-008.diff (three files) and, stacked
-on it, tools/nexuiz/house-qc-patch-009.diff (one file):
+on it, tools/nexuiz/house-qc-patch-009.diff (one file), and,
+stacked on that, tools/nexuiz/house-qc-patch-010.diff
+(two files), and, stacked on that,
+tools/nexuiz/house-qc-patch-011.diff (one file):
 
   dialog_settings.c: the Settings dialog's six tabs (Input,
     Video, Effects, Audio, Network, Misc) are replaced by the
@@ -160,7 +207,7 @@ on it, tools/nexuiz/house-qc-patch-009.diff (one file):
     bobbing, zoom, weapon settings, crosshair, radar/HUD,
     gore — is removed, and with it the only doors to the
     weapons, radar and advanced-cvars dialogs.
-  menu.qc: the main menu draws the build's tag — "rezzmodV1",
+  menu.qc: the main menu draws the build's tag — "haxiuz",
     etched in red (a dark groove pass, a lit top edge, the red
     face) at the lower right of the title area, the treatment
     the native build's menu plate carries. Drawn with the menu
@@ -169,7 +216,8 @@ on it, tools/nexuiz/house-qc-patch-009.diff (one file):
     here, in the game — not on the site around it.
   dialog_multiplayer.c (patch 009): the Multiplayer dialog
     gains the room's door — a full-width stock command button
-    labeled "thisissparta2!" at its head, issuing
+    labeled "thisissparta2!" at its head (patch 010 below
+    relabels the button "haxiuz"), issuing
     "connect thisissparta2" with no close flag, exactly as the
     stock server browser's own Join does. The dialog grows one
     row (24 to 25) and its tab controller's height drops the
@@ -179,6 +227,23 @@ on it, tools/nexuiz/house-qc-patch-009.diff (one file):
     name to the engine itself, and the cvar those tabs gate on
     is only the menu's staging name — gating the door on it
     would bar the dealt-name player it serves.
+  menu.qc + dialog_multiplayer.c (patch 010): the build's
+    identity swap — the masthead tag "rezzmodV1" and the door
+    button's label "thisissparta2!" both become "haxiuz".
+    Nothing else changes: the door's command stays
+    "connect thisissparta2" byte-for-byte (the connect token
+    is load-bearing across bridge, gateway and OS), and no
+    statement, function or field is added, removed or
+    reordered — see the parity note below.
+  draw.qc (patch 011): the menu paints no cursor of its own.
+    draw_drawMousePointer still draws the skin cursor picture
+    at the tracked position and size, but at zero alpha, so
+    it paints nothing (a zero size would not do: the
+    engine's DrawQ_Pic reads a zero size as the picture's
+    natural size); the player's real cursor does the menu
+    work, and the menu's mouse tracking and hit-testing are
+    untouched. The engine tracks that cursor in absolute
+    mode (menu_mouse_absolute, dealt in the house config).
 
 Parity of the base build, stated exactly: rebuilt from the
 unmodified sources, the menu program's header CRC is 10020 —
@@ -205,6 +270,30 @@ statement stream changes — fillNexuizMultiplayerDialog, 91 to
 renumbering two new anonymous string globals cause (the door's
 label and its command; every other stream shift is that
 renumbering, not new code).
+
+Parity of patch 010 against the patch-009 build, measured the
+same way: header CRC still 10020; 1,010 functions, same names
+and order; field definitions identical; 43,525 statements in
+both, opcode stream identical. The two relabeled strings are
+now the same word, so the compiler's duplicate-string fold
+merges the masthead's string global into the door's: global
+definitions go 9,255 to 9,254 by exactly that one removal
+(the "rezzmodV1" global), every statement operand past it
+renumbers by one (m_draw's local frame sheds the word the
+folded constant occupied, 50 to 49), and the only statements
+whose meaning changes are m_draw's four masthead loads, which
+now read the shared "haxiuz" global. The string table's whole
+diff is + "haxiuz", - "rezzmodV1", - "thisissparta2!";
+"connect thisissparta2" stands unchanged in both.
+
+Parity of patch 011 against the patch-010 build, measured the
+same way: header CRC still 10020; 1,010 functions, same names,
+order and metadata; field definitions byte-identical; string
+table and initial global data byte-identical; 43,525
+statements in both, opcode stream identical. Exactly one
+statement differs, in draw_drawMousePointer: the drawpic
+alpha operand now reads the constant 0 instead of the
+draw_alpha global. File size unchanged (617,644 bytes).
 
 One honest limit: this lock governs the menu surface. The
 engine's developer console — a stock part of the game — can

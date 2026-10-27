@@ -13,8 +13,6 @@ import { buildWolf3d } from "./os-wolf3d";
 import { buildNexuiz, nexuizStageFullscreen } from "./os-nexuiz";
 import { buildOrc } from "./os-orc";
 import { buildSimulacrum } from "./os-simulacrum";
-import { buildBloodbath } from "./os-bloodbath";
-import { buildWyrdfall } from "./os-wyrdfall";
 import { buildSigint } from "./os-sigint";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
@@ -69,16 +67,15 @@ const APPS: Record<string, { title: string; icon: string }> = {
   help: { title: "help", icon: "help" },
   bottle: { title: "bottle", icon: "bottle" },
   system: { title: "system", icon: "system" },
+  games: { title: "games", icon: "games" },
   chip8: { title: "CHIP-8 Console", icon: "chip8" },
   ssh: { title: "ssh", icon: "ssh" },
   relay: { title: "relaychat", icon: "relay" },
   phantom: { title: "phantom", icon: "phantom" },
   wolf3d: { title: "Wolfenstein 3D", icon: "wolf3d" },
-  nexuiz: { title: "nexuiz", icon: "nexuiz" },
+  nexuiz: { title: "haxiuz", icon: "nexuiz" },
   orc: { title: "orc", icon: "orc" },
   simulacrum: { title: "Simulacrum — a generated world", icon: "simulacrum" },
-  bloodbath: { title: "Bloodbath — the other world", icon: "bloodbath" },
-  wyrdfall: { title: "Wyrdfall", icon: "wyrdfall" },
   sigint: { title: "sigint bench", icon: "sigint" },
 };
 
@@ -1142,11 +1139,38 @@ function buildHelp(body: HTMLElement) {
   render("");
 }
 
+/* ————— the games folder —————
+   The desk's games stand together in one folder: a desktop icon
+   opens this window, and its tiles open the games through the
+   same openApp door a desktop icon used. Membership is this one
+   set — the desktop defs, the launcher and this folder all read
+   it, so a game is either in the folder everywhere or nowhere.
+   The keys are the apps' own: haxiuz rides its "nexuiz" key, as
+   it always has. Bloodbath and Wyrdfall are not members and not
+   registered at all: their rooms left the shipped surface with
+   this folder's arrival, their sources stay in the repo as a
+   development library, unbuilt and unopened here. */
+const GAME_FOLDER: Array<[string, string]> = [["nexuiz", "haxiuz"], ["simulacrum", "Simulacrum"], ["wolf3d", "Wolfenstein 3D"]];
+const GAME_KEYS = new Set(GAME_FOLDER.map(([app]) => app));
+function buildGamesFolder(body: HTMLElement) {
+  const wrap = el("div", "os-games");
+  for (const [app, label] of GAME_FOLDER) {
+    const meta = APPS[app];
+    if (!meta) continue;
+    const b = el("button", "os-icon");
+    b.append(iconEl(meta.icon, "os-icon-glyph"), el("span", "os-icon-label", label));
+    b.addEventListener("click", () => openApp(app));
+    wrap.appendChild(b);
+  }
+  body.appendChild(wrap);
+}
+
 const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   terminal: buildTerminal, files: buildFiles, editor: buildEditor, processes: buildProcesses,
   journal: buildJournal, gauntlet: buildGauntlet, settings: buildSettings, help: buildHelp,
   bottle: (body) => buildBottleApp(body, os),
   system: buildSystem,
+  games: buildGamesFolder,
   chip8: buildChip8,
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
@@ -1155,8 +1179,6 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   nexuiz: buildNexuiz,
   orc: buildOrc,
   simulacrum: buildSimulacrum,
-  bloodbath: buildBloodbath,
-  wyrdfall: buildWyrdfall,
   sigint: buildSigint,
 };
 
@@ -1315,7 +1337,7 @@ function startUpdateWatch(): void {
       // A nexuiz window restored minimized and never opened holds no
       // game (it was never built), so it does not hold the update.
       holdMode = "wait"; deadline = 0;
-      showToast("server is about to refresh for an update… waiting for nexuiz to close.");
+      showToast("server is about to refresh for an update… waiting for haxiuz to close.");
       return;
     }
     if (windows.size > 0) {
@@ -1393,11 +1415,11 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "terminal", "terminal"], ["simulacrum", "simulacrum", "Simulacrum"], ["bloodbath", "bloodbath", "Bloodbath"], ["wyrdfall", "wyrdfall", "Wyrdfall"], ["files", "files", "files"], ["editor", "editor", "editor"],
+    ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["files", "files", "files"], ["editor", "editor", "editor"],
     ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
     ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
     ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
-    ["wolf3d", "wolf3d", "Wolfenstein 3D"], ["nexuiz", "nexuiz", "nexuiz"], ["orc", "orc", "orc"],
+    ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
     const b = el("button", "os-icon");
@@ -1521,7 +1543,7 @@ function openLauncher() {
   desk.appendChild(box);
   launcherEl = box;
   let selected = 0;
-  const appDefs: Array<[string, string, string]> = Object.entries(APPS).map(([k, v]) => [k, v.title, v.icon]);
+  const appDefs: Array<[string, string, string]> = Object.entries(APPS).filter(([k]) => !GAME_KEYS.has(k)).map(([k, v]) => [k, v.title, v.icon]);
   const render = () => {
     list.innerHTML = "";
     const q = input.value.trim().toLowerCase();

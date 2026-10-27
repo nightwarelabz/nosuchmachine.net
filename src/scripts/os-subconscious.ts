@@ -32,14 +32,16 @@ const KEY = skey("blacksite-subconscious-v1");
    that reaches for the wire on waking, anything addressed by an
    argument, anything whose waking is an event in itself */
 const NEVER_WARM = new Set([
-  "simulacrum", "bloodbath", "sigint", "relay", "phantom", "editor",
+  "simulacrum", "sigint", "relay", "phantom", "editor",
   "bench", "suite", "orc", "wolf3d", "chip8", "ssh", "gauntlet", "bottle",
-  /* wyrdfall is a living world like the two above (its loop runs
-     from construction), and nexuiz must never be built in the
-     dark: a hidden second boot would fetch and start the whole
-     engine behind the player's back, on the same machine the
-     visible game is trying to run on. (2026-10-26 review, §4.) */
-  "wyrdfall", "nexuiz",
+  /* the games folder is a desk surface, not a room to prepare,
+     and nexuiz must never be built in the dark: a hidden second
+     boot would fetch and start the whole engine behind the
+     player's back, on the same machine the visible game is
+     trying to run on. (2026-10-26 review, §4.) Rooms that left
+     the shipped surface are not named here at all: unregistered,
+     they are already outside the app universe this set filters. */
+  "games", "nexuiz",
 ]);
 const CACHE_MAX = 2;
 const WARM_BUDGET = 6;

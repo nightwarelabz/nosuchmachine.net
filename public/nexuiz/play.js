@@ -17,6 +17,50 @@ const dataBase = q.get("base") || "/api/nexuiz-data";
  * whenever darkplaces-wasm.js or darkplaces-wasm.wasm is rebuilt
  * (the rule is written down in tools/nexuiz/BUILD.md). */
 const NX_ENGINE_STAMP = "4";
+/* The stripped data pack's build stamp. The pack is a house build
+ * and its bytes change when the strip is rebuilt (its SHA-256 is
+ * pinned in NOTICE.txt); the span deal below has no file URL for
+ * a stamp to ride, so the stamp names the build generation to the
+ * retirement sweep instead: when the stamp a machine last swept
+ * under differs from this one, the sweep also retires the previous
+ * build's part=haxiuz staging chunks and kept pack, so a rebuilt
+ * pack never assembles out of an older build's bytes (the loader's
+ * hash verdict is the backstop — wrong bytes are refused, never
+ * played). Bump it whenever haxiuz.pk3 is rebuilt, in the same
+ * change that updates the deal's span and pin (see
+ * tools/nexuiz/BUILD.md). */
+const NX_DATA_STAMP = "1";
+/* Retire the full-data kept copies, and the previous data
+ * build's. The loader's kept packs and staging chunks live in
+ * the "nexuiz-data-v1" Cache API store under keys naming their
+ * span parts (part=data / part=spog for the full deal, part=
+ * haxiuz for the stripped one) and the old pack paths; the deal
+ * below never requests the full-data keys, and this sweep
+ * deletes them so a returning player's machine does not keep
+ * ~900 MB of data the game no longer plays. The stripped pack's
+ * own keys are its part's own (part=haxiuz) and are touched only
+ * on a build-generation change (see NX_DATA_STAMP above). The
+ * small house files are not touched. */
+if (typeof caches !== "undefined") {
+  let staleBuild = false;
+  try {
+    staleBuild = localStorage.getItem("nexuiz-data-stamp") !== NX_DATA_STAMP;
+    if (staleBuild) localStorage.setItem("nexuiz-data-stamp", NX_DATA_STAMP);
+  } catch { /* no storage, no generation sweep — the hash verdict still stands */ }
+  caches.open("nexuiz-data-v1").then(async (cache) => {
+    try {
+      for (const req of await cache.keys()) {
+        if (req.url.includes("part=data") || req.url.includes("part=spog")
+          || req.url.includes("/nexuiz/kept/data/data20091001.pk3")
+          || req.url.includes("/nexuiz/kept/data/common-spog.pk3")
+          || req.url.includes("/nexuiz/kept/data/haxiuz.pk3")
+          || (staleBuild && /[?&]part=haxiuz(&|$)/.test(req.url))) {
+          await cache.delete(req);
+        }
+      }
+    } catch { /* a store that refuses is left as it lies */ }
+  }).catch(() => {});
+}
 /* The house bridge (sparta-bridge contract): a wss URL used VERBATIM
  * by the engine's socket layer — one WebSocket session there is one
  * player on the house server. The address is dealt as a transport,
@@ -84,13 +128,27 @@ const moduleDef = {
   locateFile(path) { return path.endsWith(".wasm") ? path + "?v=" + NX_ENGINE_STAMP : path; },
   dataBase,
   files: {
-    "data/data20091001.pk3": {
-      part: "data", spanLength: 880493625, size: 887580846,
-      sha256: "3ec238441a4886b44a12134cf89f45b3d9be59359d4a089773f7996b8d4bd6c0",
-    },
-    "data/common-spog.pk3": {
-      part: "spog", spanLength: 24638, size: 28724,
-      sha256: "d098b071c88447914ec6e9f17f8b57327399e91b011699d20a39e6452949780c",
+    /* haxiuz data: the game stripped to the session it plays —
+     * CTF MinstaHook on evilspace, the MinstaNex and the laser,
+     * the hook, Mulder for everyone, bots, the menu and the HUD.
+     * One house-built pack (99,228,456 bytes, 1,528 files) whose
+     * contents are the recorded census of what a session loads,
+     * built from the verified release packs (the full record —
+     * provenance, census method, and the full-data fallback — is
+     * in NOTICE.txt and tools/nexuiz/BUILD.md). common-spog's
+     * files ride inside it. It travels the span pipe, the road
+     * the release packs took before it: at 99 MB it is
+     * far past the 25 MiB ceiling on a site file, so the pipe
+     * (/api/nexuiz-data, part "haxiuz") streams its raw-deflate
+     * span out of its container zip — haxiuz-release.zip, a
+     * release asset on the house's haxiuz repo (tag data-1),
+     * whose single deflated entry the pack is — and the loader
+     * inflates the span, reassembles the pack, and verifies it
+     * against the SHA-256 pinned here and in NOTICE.txt before
+     * the engine starts. Wrong bytes are refused, never played. */
+    "data/haxiuz.pk3": {
+      part: "haxiuz", spanLength: 98509217, size: 99228456,
+      sha256: "10018c6a19fee310c70504952691fb21748ff5d1412c4f1271ff7de658d7f5b3",
     },
     /* The house menu override: one file, menu.dat, compiled from
      * the release's own menu sources with one tracked patch
@@ -1079,26 +1137,88 @@ window.addEventListener("blur", () => {
   post({ type: "esc-up" });
 });
 
-/* The mouse, held. In true fullscreen the external cursor is
- * disabled for the whole session: the canvas holds pointer lock
- * from the moment the house says the screen is taken until the
- * hold-exit drops lock and fullscreen together, and the game's
- * own software cursor does the menu work under it, the way
- * DarkPlaces renders it. The lock is asked for at fullscreen
- * entry and re-asked whenever it is lost while the session
- * stands — a short Esc can cost it, and the engine's own
- * relative-mouse toggles in its menus can too — after the
- * browser's re-lock cooldown (Chromium refuses a re-lock for
- * ~1.25 s after an Esc-cost loss). One stand-down: while an Esc
- * hold is underway nothing re-locks, so the hold-exit is one act
- * and no race undoes it. A failed ask is retried a few times,
- * never in a loop. And because the platform grants the lock
- * only to a live gesture inside the frame (a message from the
- * house carries none — Chromium answers NotAllowedError), the
- * asks are anchored where gestures happen: the press that
- * raises the engine, and any key or press in the frame after.
- * Windowed play is untouched: there, the lock stays the
- * engine's click-to-play business, as shipped. */
+/* The mouse: one pointer truth per state. In play, the mouse
+ * is captured — pointer lock, raw: every lock request made in
+ * this frame (the engine's own, through its SDL/Emscripten
+ * glue, and this keeper's) passes through the interception
+ * below, which is installed here, before the engine script is
+ * ever loaded, and asks for unadjustedMovement — the browser's
+ * raw, unaccelerated movement — wherever the options form is
+ * offered; a refusal of the options form falls back to the
+ * plain call, so the option can never cost the lock. In the
+ * menus, the mouse is NOT captured: the menu progs paint no
+ * cursor (house QC patch 011) and track the player's real
+ * cursor in absolute mode (menu_mouse_absolute, dealt in the
+ * house config), so the native cursor standing over the canvas
+ * IS the game's pointer, at the same coordinates the engine
+ * hit-tests.
+ *
+ * The engine itself says which state stands: it asks for
+ * relative mouse (a pointer-lock request out of its glue) when
+ * play owns the mouse, and releases it (an exitPointerLock out
+ * of the same glue) when a menu takes over. The interception
+ * records that want, and the keeper below serves only it:
+ * while the engine wants the mouse, a lock lost mid-play is
+ * re-asked — after the browser's re-lock cooldown (Chromium
+ * refuses a re-lock for ~1.25 s after an Esc-cost loss) — and
+ * anchored where gestures happen, because the platform grants
+ * the lock only to a live gesture inside the frame (a message
+ * from the house carries none — Chromium answers
+ * NotAllowedError). While a menu stands, the keeper asks for
+ * nothing: no lock is taken, held or healed over a menu, in
+ * fullscreen or windowed alike. One stand-down rides over both
+ * states: while an Esc hold is underway nothing re-locks, so
+ * the earned hold-exit is one act and no race undoes it. A
+ * failed ask is retried a few times, never in a loop.
+ *
+ * The census is the proof surface: every request is logged
+ * with who asked (engine or keeper) and what the browser
+ * granted (unadjusted, or the plain fallback), in
+ * window.nxLockCensus and, when armed, the diagnostics log. */
+let engineWantsLock = false;
+let keeperAsking = false;
+const nxLockCensus = [];
+window.nxLockCensus = nxLockCensus;
+function nxLockNote(by, form, outcome) {
+  const entry = { t: Date.now(), by, form, outcome };
+  nxLockCensus.push(entry);
+  if (nxLockCensus.length > 64) nxLockCensus.shift();
+  if (NX_DIAG) nxDiagPushEvent("pointerlock-ask", by + " " + form + " " + outcome);
+  return entry;
+}
+const nxNativeRequestPointerLock = Element.prototype.requestPointerLock;
+Element.prototype.requestPointerLock = function (...args) {
+  if (this !== canvasEl) return nxNativeRequestPointerLock.apply(this, args);
+  const by = keeperAsking ? "keeper" : "engine";
+  if (!keeperAsking) engineWantsLock = true;
+  if (args.length > 0) { nxLockNote(by, "as-asked", "asked"); return nxNativeRequestPointerLock.apply(this, args); }
+  let first;
+  try {
+    first = nxNativeRequestPointerLock.call(this, { unadjustedMovement: true });
+  } catch {
+    nxLockNote(by, "plain", "options form refused (throw) — plain ask follows");
+    return nxNativeRequestPointerLock.call(this);
+  }
+  if (first && typeof first.then === "function") {
+    const entry = nxLockNote(by, "unadjusted", "asked");
+    return first.then(
+      () => { entry.outcome = "granted"; if (NX_DIAG) nxDiagPushEvent("pointerlock-grant", by + " unadjusted"); },
+      () => {
+        entry.outcome = "refused — plain fallback follows";
+        nxLockNote(by, "plain", "fallback ask");
+        return nxNativeRequestPointerLock.call(this);
+      },
+    );
+  }
+  nxLockNote(by, "unadjusted", "asked (no promise — grant read at pointerlockchange)");
+  return first;
+};
+const nxNativeExitPointerLock = Document.prototype.exitPointerLock;
+Document.prototype.exitPointerLock = function (...args) {
+  engineWantsLock = false;
+  return nxNativeExitPointerLock.apply(this, args);
+};
+
 let fsOn = false;
 let lockFails = 0;
 let relockTimer = 0;
@@ -1112,23 +1232,51 @@ function houseFullscreen(on) {
 }
 function takeLock() {
   if (!fsOn || escHeld || engineDead) return;
+  if (!engineWantsLock) return;
   if (document.pointerLockElement === canvasEl) return;
   if (lockFails >= 4) return;
+  keeperAsking = true;
   try {
     const p = canvasEl.requestPointerLock();
     if (p && typeof p.catch === "function") p.catch(() => { lockFails++; scheduleRelock(); });
   } catch { lockFails++; scheduleRelock(); }
+  keeperAsking = false;
 }
 function scheduleRelock() {
   if (!fsOn || escHeld || engineDead) return;
+  if (!engineWantsLock) return;
   clearTimeout(relockTimer);
   relockTimer = setTimeout(takeLock, RELOCK_MS);
 }
 document.addEventListener("pointerlockchange", () => {
-  if (NX_DIAG) nxDiagPushEvent("pointerlock", document.pointerLockElement === canvasEl ? "taken" : "lost");
-  if (document.pointerLockElement === canvasEl) { lockFails = 0; return; }
+  const locked = document.pointerLockElement === canvasEl;
+  if (NX_DIAG) nxDiagPushEvent("pointerlock", locked ? "taken" : "lost");
+  nxApplyCursor();
+  if (locked) { lockFails = 0; return; }
   scheduleRelock();
 });
+/* The cursor truth, worn on the canvas: the real cursor stands
+ * whenever the lock does not own the mouse (menus, the plate),
+ * and is hidden exactly while it does. The engine hides the
+ * browser cursor under its own hand (its SDL layer disables
+ * the cursor in menus and in play alike, for the sake of the
+ * drawn cursor patch 011 retires), and it re-asserts that word
+ * whenever its mouse mode changes — so the page's answer is a
+ * standing one: an important declaration for the state's
+ * truth, re-applied the moment the canvas's style changes
+ * under it (a mutation observer fires before paint, so the
+ * wrong cursor never shows). Under lock the platform hides
+ * the cursor regardless; this keeps the unlocked states
+ * honest by construction. */
+function nxApplyCursor() {
+  const want = document.pointerLockElement === canvasEl ? "none" : "default";
+  if (canvasEl.style.getPropertyValue("cursor") !== want
+    || canvasEl.style.getPropertyPriority("cursor") !== "important") {
+    canvasEl.style.setProperty("cursor", want, "important");
+  }
+}
+new MutationObserver(nxApplyCursor).observe(canvasEl, { attributes: true, attributeFilter: ["style"] });
+nxApplyCursor();
 document.addEventListener("pointerlockerror", () => { lockFails++; scheduleRelock(); });
 
 /* The house's words (the OS stage owns the fullscreen state; the
@@ -1164,7 +1312,7 @@ function raiseEngine() {
   engineRaised = true;
   fitCanvas();
   plateText.textContent = bridgeLive
-    ? "raising the engine — it stands up on its own menu; thisissparta2!'s door is in it, on the multiplayer side…"
+    ? "raising the engine — it stands up on its own menu; the haxiuz door is in it, on the multiplayer side…"
     : "raising the engine…";
   const s = document.createElement("script");
   s.src = "darkplaces-wasm.js?v=" + NX_ENGINE_STAMP;
