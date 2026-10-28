@@ -53,6 +53,11 @@ function harness({ search = "", reduced = false, storageDenied = false, canvasFa
     setTimeout: (run, delay) => { const id = next++; jobs.set(id, { at: now + delay, run }); return id; },
     clearTimeout: (id) => jobs.delete(id),
     require: (name) => {
+      // os-boot's whole dependency set, named on purpose: the frost plate,
+      // and the language engine (2026-10-28 — boot labels translate; the
+      // stub serves t() as the identity, the boot tests exercise the
+      // controller, not the dictionary).
+      if (name === "./os-i18n") return { t: (s) => s };
       assert.equal(name, "./os-boot-frost");
       return { createFrostPlate: () => {
         if (canvasFailure) throw new Error("no context");

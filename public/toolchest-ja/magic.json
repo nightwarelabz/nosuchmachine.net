@@ -1,0 +1,457 @@
+[
+[
+null,
+null,
+"PNG 画像"
+],
+[
+null,
+null,
+"JPEG 画像 (JFIF)"
+],
+[
+null,
+null,
+"JPEG 画像 (Exif)"
+],
+[
+null,
+null,
+"JPEG 画像 (生)"
+],
+[
+null,
+null,
+"GIF 画像 (87a)"
+],
+[
+null,
+null,
+"GIF 画像 (89a)"
+],
+[
+null,
+null,
+"PDF 文書"
+],
+[
+null,
+null,
+"ZIP アーカイブ — jar、docx、xlsx、apk、epub も"
+],
+[
+null,
+null,
+"ZIP アーカイブ（空）"
+],
+[
+null,
+null,
+"ZIP アーカイブ（分割）"
+],
+[
+null,
+null,
+"gzip 圧縮データ"
+],
+[
+null,
+null,
+"bzip2 圧縮データ"
+],
+[
+null,
+null,
+"XZ 圧縮データ"
+],
+[
+null,
+null,
+"Zstandard フレーム"
+],
+[
+null,
+null,
+"7-Zip アーカイブ"
+],
+[
+null,
+null,
+"RAR アーカイブ (v4)"
+],
+[
+null,
+null,
+"RAR アーカイブ (v5)"
+],
+[
+null,
+null,
+"LZ4 フレーム"
+],
+[
+null,
+null,
+"ar アーカイブ — .deb パッケージも"
+],
+[
+null,
+null,
+"RPM パッケージ"
+],
+[
+null,
+null,
+"Microsoft Cabinet アーカイブ"
+],
+[
+null,
+null,
+"ELF 実行ファイルまたは共有オブジェクト (Linux/Unix)"
+],
+[
+null,
+null,
+"Mach-O バイナリ（32ビット、ビッグエンディアン順）"
+],
+[
+null,
+null,
+"Mach-O バイナリ（64ビット、ビッグエンディアン順）"
+],
+[
+null,
+null,
+"Mach-O バイナリ（32ビット、リトルエンディアン順）"
+],
+[
+null,
+null,
+"Mach-O バイナリ（64ビット、リトルエンディアン順）"
+],
+[
+null,
+null,
+"Java クラスファイル — Mach-O fat バイナリもこのマジックを共有"
+],
+[
+null,
+null,
+"DOS/Windows 実行ファイル (MZ)"
+],
+[
+null,
+null,
+"WebAssembly モジュール"
+],
+[
+null,
+null,
+"SQLite 3 データベース"
+],
+[
+null,
+null,
+"Windows アイコン"
+],
+[
+null,
+null,
+"Windows カーソル"
+],
+[
+null,
+null,
+"BMP ビットマップ画像"
+],
+[
+null,
+null,
+"TIFF 画像（リトルエンディアン）"
+],
+[
+null,
+null,
+"TIFF 画像（ビッグエンディアン）"
+],
+[
+null,
+null,
+"WebP 画像 (RIFF コンテナ)"
+],
+[
+null,
+null,
+"WAV 音声 (RIFF コンテナ)"
+],
+[
+null,
+null,
+"AVI 動画 (RIFF コンテナ)"
+],
+[
+null,
+null,
+"ID3 タグつき MP3 音声"
+],
+[
+null,
+null,
+"MP3 音声フレーム"
+],
+[
+null,
+null,
+"FLAC 可逆音声"
+],
+[
+null,
+null,
+"Ogg コンテナ — Vorbis、Opus、Theora"
+],
+[
+null,
+null,
+"MIDI 楽曲ファイル"
+],
+[
+null,
+null,
+"Adobe Photoshop 文書"
+],
+[
+null,
+null,
+"Encapsulated PostScript"
+],
+[
+null,
+null,
+"MP4 動画 (ISO メディア、isom ブランド)"
+],
+[
+null,
+null,
+"M4A 音声"
+],
+[
+null,
+null,
+"QuickTime ムービー"
+],
+[
+null,
+null,
+"HEIC 画像 (HEIF)"
+],
+[
+null,
+null,
+"AVIF 画像"
+],
+[
+null,
+null,
+"JPEG 2000 画像"
+],
+[
+null,
+null,
+"Matroska コンテナ — MKV または WebM"
+],
+[
+null,
+null,
+"Flash Video"
+],
+[
+null,
+null,
+"ASF コンテナ — WMV/WMA"
+],
+[
+null,
+null,
+"RealMedia ファイル"
+],
+[
+null,
+null,
+"OLE 複合文書 — 古い Office .doc/.xls/.ppt"
+],
+[
+null,
+null,
+"WOFF ウェブフォント"
+],
+[
+null,
+null,
+"WOFF2 ウェブフォント"
+],
+[
+null,
+null,
+"TrueType フォント（一般的なヘッダ）"
+],
+[
+null,
+null,
+"OpenType フォント (CFF アウトライン)"
+],
+[
+null,
+null,
+"TrueType フォントコレクション"
+],
+[
+null,
+null,
+"BitTorrent メタ情報ファイル"
+],
+[
+null,
+null,
+"Windows ショートカット"
+],
+[
+null,
+null,
+"Windows レジストリエディタファイル"
+],
+[
+null,
+null,
+"shebang 行のあるスクリプト"
+],
+[
+null,
+null,
+"Apache Parquet データファイル（先頭）"
+],
+[
+null,
+null,
+"Apache ORC データファイル"
+],
+[
+null,
+null,
+"pcap キャプチャ（リトルエンディアン）"
+],
+[
+null,
+null,
+"pcap キャプチャ（ビッグエンディアン）"
+],
+[
+null,
+null,
+"pcapng キャプチャ"
+],
+[
+null,
+null,
+"DER エンコード証明書または鍵 (ASN.1 SEQUENCE)"
+],
+[
+null,
+null,
+"PEM エンコード証明書または鍵"
+],
+[
+null,
+null,
+"Apple ディスクイメージ (kDMG)"
+],
+[
+null,
+null,
+"Xbox 実行ファイル"
+],
+[
+null,
+null,
+"AMR 音声"
+],
+[
+null,
+null,
+"Sun/NeXT 音声 (au/snd)"
+],
+[
+null,
+null,
+"AIFF 音声 (FORM コンテナ)"
+],
+[
+null,
+null,
+"オフセット 257 の tar アーカイブシグネチャ (ustar)"
+],
+[
+null,
+null,
+"QEMU QCOW2 ディスクイメージ"
+],
+[
+null,
+null,
+"Hyper-V VHDX 末尾シグネチャ族"
+],
+[
+null,
+null,
+"VHD ディスクイメージフッター (conectix)"
+],
+[
+null,
+null,
+"光学ディスクイメージ族のマーカー — サイズとレイアウトで確認"
+],
+[
+null,
+null,
+"PNG 画像（短縮形）"
+],
+[
+null,
+null,
+"JPEG 画像（短縮形）"
+],
+[
+null,
+null,
+"PDF 文書（バージョンつきヘッダ）"
+],
+[
+null,
+null,
+"Apple バイナリプロパティリスト"
+],
+[
+null,
+null,
+"XML 文書"
+],
+[
+null,
+null,
+"JSON テキスト（開き波括弧 — 弱いシグネチャ）"
+],
+[
+null,
+null,
+"compress(1) .Z データ"
+],
+[
+null,
+null,
+"古い packed データ (pack)"
+],
+[
+null,
+null,
+"Java アーカイブマーカー（まれ）"
+]
+]

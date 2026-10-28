@@ -368,6 +368,44 @@ execFileSync(process.execPath, ["scripts/verify-ivory.mjs"], { stdio: "inherit" 
 const rosterRaw = fs.readFileSync("src/data/blacksite-commands.json", "utf8");
 assert.ok(!/[\u0080-\u009F]/.test(rosterRaw), "the command roster must carry no C1 control characters (mojibake from the 2026-10-27 toolchest harvest)");
 assert.ok(!rosterRaw.includes("â"), "the command roster must carry no UTF-8-as-Latin-1 mojibake (â)");
+// ——— Japanese + Ruby pins (2026-10-28) ———
+// Every roster row carries a real Japanese description (descJa),
+// the dictionary and the toolchest companions stay character-clean
+// under the same C1 law as the roster itself, and the built site
+// carries the Ruby engine as same-origin assets (the interpreter
+// is a build artifact of scripts/build-ruby.mjs, never committed).
+const rosterRowsJ = JSON.parse(rosterRaw);
+assert.equal(rosterRowsJ.length, 644, "the roster stands at 644 rows (642 + the lang and ruby verbs)");
+assert.ok(rosterRowsJ.every((r) => typeof r.descJa === "string" && r.descJa.trim().length > 0), "every roster row must carry a non-empty descJa");
+const jaDictSrc = fs.readFileSync("src/scripts/os-i18n-ja.ts", "utf8");
+assert.ok(!/[\u0080-\u009F]/.test(jaDictSrc), "the Japanese dictionary must carry no C1 control characters");
+for (const id of ["http", "errno", "signals", "dnstypes", "protocols", "magic"]) {
+  const compRaw = fs.readFileSync(`public/toolchest-ja/${id}.json`, "utf8");
+  assert.ok(!/[\u0080-\u009F]/.test(compRaw), `the toolchest-ja companion ${id} must carry no C1 control characters`);
+  const srcRows = JSON.parse(fs.readFileSync(`public/toolchest/${id}.json`, "utf8"));
+  assert.equal(JSON.parse(compRaw).length, srcRows.length, `the toolchest-ja companion ${id} must parallel its dataset row for row`);
+}
+// The Ruby interpreter ships split (Pages refuses files over 25 MiB;
+// the worker reassembles + hash-verifies). The gate keeps the whole
+// invariant: a manifest, every part present and under the cap, and
+// the parts summing to the full interpreter.
+const rubyManifestPath = path.join(root, "ruby/manifest.json");
+assert.ok(fs.existsSync(rubyManifestPath), "dist must carry the Ruby manifest at ruby/manifest.json");
+const rubyManifest = JSON.parse(fs.readFileSync(rubyManifestPath, "utf8"));
+assert.ok(Array.isArray(rubyManifest.parts) && rubyManifest.parts.length >= 2, "the ruby manifest must name at least two parts");
+let rubyWasmSize = 0;
+for (const part of rubyManifest.parts) {
+  const partPath = path.join(root, "ruby", part);
+  assert.ok(fs.existsSync(partPath), `dist must carry the Ruby part ruby/${part}`);
+  const partSize = fs.statSync(partPath).size;
+  assert.ok(partSize <= 26_214_400, `ruby/${part} exceeds the 25 MiB Pages per-file cap: ${partSize}`);
+  rubyWasmSize += partSize;
+}
+assert.equal(rubyWasmSize, rubyManifest.bytes, "the ruby parts must sum to the manifest byte count");
+assert.ok(rubyWasmSize > 20_000_000 && rubyWasmSize < 40_000_000, `ruby.wasm size looks wrong: ${rubyWasmSize}`);
+const rubyWorkerJs = fs.readFileSync(path.join(root, "ruby/ruby-worker.js"), "utf8");
+assert.ok(rubyWorkerJs.includes("full_message"), "the built ruby worker must carry the run driver");
+assert.ok(astroJs.includes("blacksite-lang-v1"), "the OS bundle must carry the language register");
 assert.ok(osSrcR.includes('["phonehome", "phonehome", "phonehome"]'), "desktop defs must stand phonehome on the desk");
 assert.ok(osSrcR.includes("registerPhonehomeVerbs()"), "os.ts must register the phonehome verb");
 assert.ok(astroJs.includes("nsm.phonehome.signal.v1"), "OS bundle must carry the phonehome signal schema");

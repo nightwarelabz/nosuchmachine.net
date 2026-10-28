@@ -1,4 +1,5 @@
 import { sfx } from "./os-sound";
+import { t, tf } from "./os-i18n";
 /* phantom · phase1 (Bryforge/phase1 v7.0.1), ported to the
  * room. The Rust binary runs unmodified-in-spirit as wasm32-wasip1 in
  * a worker (public/phantom/phantom-worker.js holds the WASI world:
@@ -152,9 +153,9 @@ export function buildPhantomApp(body: HTMLElement) {
   lamp.dataset.state = "booting";
   const stateWord = el("span", "os-guest-state", "RAISING");
   const plate = el("span", "os-guest-plate", "GUEST phase1 7.0.1 · RUST · WASM32-WASIP1 · IMAGE 995,163 B · MEMORY VOLATILE · NETWORK: NONE — NO WIRE EXISTS IN ITS WORLD");
-  const wakeBtn = el("button", "os-btn small", "wake");
-  const haltBtn = el("button", "os-btn small", "halt");
-  const copyBtn = el("button", "os-btn small", "copy");
+  const wakeBtn = el("button", "os-btn small", t("wake"));
+  const haltBtn = el("button", "os-btn small", t("halt"));
+  const copyBtn = el("button", "os-btn small", t("copy"));
   rail.append(lamp, stateWord, plate, wakeBtn, haltBtn, copyBtn);
 
   /* — the screen: the guest's display, framed like one. — */

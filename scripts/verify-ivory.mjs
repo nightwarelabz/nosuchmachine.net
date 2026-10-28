@@ -185,6 +185,8 @@ const room = { "/a": "alpha", "/b": "beta", [CAN]: "canary-song" };
 console.log("ivory layer 1: the tower alone — all assertions held");
 
 /* ————— layer 2: the tower in the real shell ————— */
+const jaDict = loadModule(transpile("src/scripts/os-i18n-ja.ts"), {}, makeStorage());
+const i18n = loadModule(transpile("src/scripts/os-i18n.ts"), { "./os-i18n-ja": jaDict, "./os-depth": { skey: (k) => k } }, makeStorage());
 const tripwire = loadModule(transpile("src/scripts/os-tripwire.ts"), { "./os-ivory": ivory }, makeStorage());
 void tripwire;
 const shell = loadModule(transpile("src/scripts/os-shell.ts"), {
@@ -194,6 +196,7 @@ const shell = loadModule(transpile("src/scripts/os-shell.ts"), {
   "./os-depth": { skey: (k) => k },
   "./os-ivory": ivory,
   "./os-tripwire": tripwire,
+  "./os-i18n": i18n,
 }, makeStorage()); // placeholder storage, replaced per scenario below
 
 function bootOS(shared, sessionShared) {
@@ -208,6 +211,7 @@ function bootOS(shared, sessionShared) {
     "./os-depth": { skey: (k) => k },
     "./os-ivory": ivory,
     "./os-tripwire": tripwire,
+  "./os-i18n": i18n,
   }, storage, sessionShared);
   return { ...mod, storage };
 }
@@ -325,7 +329,7 @@ const REBOOT = "blacksite-tripwire-reboot";
   flushTimers();
   const st = os.tripwireStatus();
   assert.equal(st.state, "strung", "the wire is strung");
-  assert.equal(st.registers, 12, "twelve system registers are on the wire");
+  assert.equal(st.registers, 13, "thirteen system registers are on the wire (the language register joined, 2026-10-28)");
   assert.ok(st.heads.aegis && st.heads.ivory && st.heads.vfs, "the defenses and the filesystem are notarized");
   assert.ok(st.census >= 3, "the census saw the room's keys");
   assert.equal(os.aegis.contained, false);

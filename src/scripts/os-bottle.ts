@@ -13,6 +13,7 @@
 // leave this browser — the identity lives in memory unless the operator
 // explicitly saves it into the virtual filesystem.
 import { verb, bToHex } from "./os-shell";
+import { t, tf } from "./os-i18n";
 import type { BlacksiteOS, ShellIO } from "./os-shell";
 
 const SCHEMA = {
@@ -286,16 +287,16 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
 
   // identity
   const idBox = el("div", "os-bottle-box");
-  idBox.append(el("h3", "", "Identity"));
+  idBox.append(el("h3", "", t("Identity")));
   const idArea = el("textarea", "os-bottle-area");
-  idArea.placeholder = "paste an AGE-SECRET-KEY-1… to load an identity, or generate one";
+  idArea.placeholder = t("paste an AGE-SECRET-KEY-1… to load an identity, or generate one");
   idArea.rows = 2;
   const idMeta = el("p", "os-note", identity ? `in memory — recipient ${identity.recipient}` : "no identity loaded");
   const idRow = el("div", "os-btnrow");
-  const btnGen = el("button", "os-btn", "Generate new");
-  const btnLoad = el("button", "os-btn", "Load from text");
-  const btnSave = el("button", "os-btn", "Save to filesystem");
-  const btnForget = el("button", "os-btn", "Forget");
+  const btnGen = el("button", "os-btn", t("Generate new"));
+  const btnLoad = el("button", "os-btn", t("Load from text"));
+  const btnSave = el("button", "os-btn", t("Save to filesystem"));
+  const btnForget = el("button", "os-btn", t("Forget"));
   btnGen.addEventListener("click", async () => {
     try {
       const age = await ageLib();
@@ -303,54 +304,54 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
       const me = await setIdentity(secret);
       idArea.value = secret;
       idMeta.textContent = `in memory — recipient ${me.recipient}. the secret above is your whole identity; save it somewhere safe.`;
-      say("identity generated. it lives in memory until you save it.");
+      say(t("identity generated. it lives in memory until you save it."));
     } catch (e: any) { say(`✗ ${e?.message || e}`); }
   });
   btnLoad.addEventListener("click", async () => {
     const m = idArea.value.match(/AGE-SECRET-KEY-1[0-9A-Z]+/);
-    if (!m) { say("that text holds no AGE-SECRET-KEY"); return; }
-    try { const me = await setIdentity(m[0]); idMeta.textContent = `in memory — recipient ${me.recipient}`; say("identity loaded."); }
+    if (!m) { say(t("that text holds no AGE-SECRET-KEY")); return; }
+    try { const me = await setIdentity(m[0]); idMeta.textContent = `in memory — recipient ${me.recipient}`; say(t("identity loaded.")); }
     catch (e: any) { say(`✗ ${e?.message || e}`); }
   });
   btnSave.addEventListener("click", () => {
-    if (!identity) { say("no identity in memory to save"); return; }
+    if (!identity) { say(t("no identity in memory to save")); return; }
     os.write(IDENTITY_PATH, `# daylight bottle identity — secret. kept in this browser's blacksite filesystem.\n${identity.secret}\n`);
     say(`saved to ${IDENTITY_PATH} — this browser only.`);
   });
-  btnForget.addEventListener("click", () => { identity = null; idArea.value = ""; idMeta.textContent = "no identity loaded"; say("identity dropped from memory."); });
+  btnForget.addEventListener("click", () => { identity = null; idArea.value = ""; idMeta.textContent = "no identity loaded"; say(t("identity dropped from memory.")); });
   idRow.append(btnGen, btnLoad, btnSave, btnForget);
   idBox.append(idArea, idMeta, idRow);
   body.append(idBox);
 
   // keyring + drop/seal
   const dropBox = el("div", "os-bottle-box");
-  dropBox.append(el("h3", "", "Seal a bottle"));
+  dropBox.append(el("h3", "", t("Seal a bottle")));
   const keyRow = el("div", "os-btnrow");
   const keySelect = el("select", "os-bottle-select");
-  const btnKeys = el("button", "os-btn", "Refresh keyring");
+  const btnKeys = el("button", "os-btn", t("Refresh keyring"));
   keyRow.append(keySelect, btnKeys);
   const bareRow = el("div", "os-btnrow");
   const bareInput = el("input", "os-bottle-input");
-  bareInput.placeholder = "…or any age1… recipient (sealed locally, not via the service keyring)";
+  bareInput.placeholder = t("…or any age1… recipient (sealed locally, not via the service keyring)");
   bareInput.style.flex = "1";
   const nameInput = el("input", "os-bottle-input");
-  nameInput.placeholder = "keyname for that recipient";
+  nameInput.placeholder = t("keyname for that recipient");
   bareRow.append(bareInput, nameInput);
   const msgArea = el("textarea", "os-bottle-area");
-  msgArea.placeholder = "the message — encrypted here, in this window, before anything is sent";
+  msgArea.placeholder = t("the message — encrypted here, in this window, before anything is sent");
   msgArea.rows = 4;
   const actRow = el("div", "os-btnrow");
-  const btnSeal = el("button", "os-btn", "Seal to a file");
-  const btnDrop = el("button", "os-btn primary", "Drop at bottle.nosuchmachine.net");
+  const btnSeal = el("button", "os-btn", t("Seal to a file"));
+  const btnDrop = el("button", "os-btn primary", t("Drop at bottle.nosuchmachine.net"));
   actRow.append(btnSeal, btnDrop);
   const armorArea = el("textarea", "os-bottle-area");
-  armorArea.placeholder = "armored bottle appears here — and below, bottles you open";
+  armorArea.placeholder = t("armored bottle appears here — and below, bottles you open");
   armorArea.rows = 6;
   const openRow = el("div", "os-btnrow");
-  const btnOpen = el("button", "os-btn", "Open the bottle above");
-  const btnInbox = el("button", "os-btn", "Fetch my inbox");
+  const btnOpen = el("button", "os-btn", t("Open the bottle above"));
+  const btnInbox = el("button", "os-btn", t("Fetch my inbox"));
   const inboxName = el("input", "os-bottle-input");
-  inboxName.placeholder = "my keyname (for inbox)";
+  inboxName.placeholder = t("my keyname (for inbox)");
   openRow.append(btnOpen, inboxName, btnInbox);
   dropBox.append(keyRow, bareRow, msgArea, actRow, armorArea, openRow);
   body.append(dropBox, out);
@@ -379,13 +380,13 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
   const chosen = (): { keyname: string; recipient: string; fingerprint: Promise<string>; viaKeyring: boolean } | null => {
     const bare = bareInput.value.trim();
     if (bare) {
-      if (!/^age1[a-z0-9]{20,511}$/.test(bare)) { say("that is not an age recipient (age1…)"); return null; }
+      if (!/^age1[a-z0-9]{20,511}$/.test(bare)) { say(t("that is not an age recipient (age1…)")); return null; }
       const kn = nameInput.value.trim().toLowerCase();
-      if (!kn) { say("name the keyname for that recipient"); return null; }
+      if (!kn) { say(t("name the keyname for that recipient")); return null; }
       return { keyname: kn, recipient: bare, fingerprint: fingerprintFor(kn, bare), viaKeyring: false };
     }
     const rec = keyring.find((k) => k.keyname === keySelect.value && k.status === "active");
-    if (!rec) { say("pick a keyring recipient, or paste an age1… recipient"); return null; }
+    if (!rec) { say(t("pick a keyring recipient, or paste an age1… recipient")); return null; }
     return { keyname: rec.keyname, recipient: rec.publicRecipient, fingerprint: Promise.resolve(rec.fingerprint), viaKeyring: true };
   };
   btnSeal.addEventListener("click", async () => {
@@ -402,7 +403,7 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
   btnDrop.addEventListener("click", async () => {
     const refusal = os.gate("active"); if (refusal) { say(refusal); return; }
     const c = chosen(); if (!c) return;
-    if (!c.viaKeyring) { say("the service only accepts drops for keyring-registered keynames — seal to a file instead, or pick a keyring recipient"); return; }
+    if (!c.viaKeyring) { say(t("the service only accepts drops for keyring-registered keynames — seal to a file instead, or pick a keyring recipient")); return; }
     try {
       const fp = await c.fingerprint;
       const armored = await sealPayload(c.keyname, fp, c.recipient, msgArea.value);
@@ -416,7 +417,7 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
     } catch (e: any) { say(`✗ drop refused: ${e?.message || e}`); }
   });
   btnOpen.addEventListener("click", async () => {
-    if (!identity) { say("load or generate an identity first"); return; }
+    if (!identity) { say(t("load or generate an identity first")); return; }
     try {
       const payload = await openPayload(armorArea.value, identity.secret);
       say(`opened — for keyname ${payload.keyname}, sealed ${payload.createdAt}:\n\n${payload.message}`);
@@ -424,9 +425,9 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
   });
   btnInbox.addEventListener("click", async () => {
     const refusal = os.gate("ledger"); if (refusal) { say(refusal); return; }
-    if (!identity) { say("load or generate an identity first"); return; }
+    if (!identity) { say(t("load or generate an identity first")); return; }
     const keyname = inboxName.value.trim().toLowerCase();
-    if (!keyname) { say("give your keyname — it pairs with your identity to form the lookup fingerprint"); return; }
+    if (!keyname) { say(t("give your keyname — it pairs with your identity to form the lookup fingerprint")); return; }
     try {
       const fingerprint = await fingerprintFor(keyname, identity.recipient);
       const lines: string[] = [];
@@ -456,5 +457,5 @@ export function buildBottleApp(body: HTMLElement, os: BlacksiteOS) {
       say([found ? lines.join("\n\n") : "no bottles waiting under that fingerprint. (fresh drops can take a minute to surface — the service is eventually consistent.)", ...notes].join("\n\n"));
     } catch (e: any) { say(`✗ inbox: ${e?.message || e}`); }
   });
-  say("daylight bottle, in the room. seal and drop from here, or drive it from the terminal: `bottle`.");
+  say(t("daylight bottle, in the room. seal and drop from here, or drive it from the terminal: `bottle`."));
 }

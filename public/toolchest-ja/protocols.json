@@ -1,0 +1,757 @@
+[
+[
+null,
+null,
+"IPv6 ホップバイホップオプション"
+],
+[
+null,
+null,
+"Internet Control Message"
+],
+[
+null,
+null,
+"Internet Group Management"
+],
+[
+null,
+null,
+"Gateway-to-Gateway"
+],
+[
+null,
+null,
+"IPv4 カプセル化"
+],
+[
+null,
+null,
+"Stream"
+],
+[
+null,
+null,
+"Transmission Control"
+],
+[
+null,
+null,
+"CBT"
+],
+[
+null,
+null,
+"Exterior Gateway Protocol"
+],
+[
+null,
+null,
+"任意のプライベート内部ゲートウェイ (Cisco が IGRP に使用)"
+],
+[
+null,
+null,
+"BBN RCC Monitoring"
+],
+[
+null,
+null,
+"Network Voice Protocol"
+],
+[
+null,
+null,
+"PUP"
+],
+[
+null,
+null,
+"ARGUS"
+],
+[
+null,
+null,
+"EMCON"
+],
+[
+null,
+null,
+"Cross Net Debugger"
+],
+[
+null,
+null,
+"Chaos"
+],
+[
+null,
+null,
+"User Datagram"
+],
+[
+null,
+null,
+"Multiplexing"
+],
+[
+null,
+null,
+"DCN Measurement Subsystems"
+],
+[
+null,
+null,
+"Host Monitoring"
+],
+[
+null,
+null,
+"Packet Radio Measurement"
+],
+[
+null,
+null,
+"XEROX NS IDP"
+],
+[
+null,
+null,
+"Trunk-1"
+],
+[
+null,
+null,
+"Trunk-2"
+],
+[
+null,
+null,
+"Leaf-1"
+],
+[
+null,
+null,
+"Leaf-2"
+],
+[
+null,
+null,
+"Reliable Data Protocol"
+],
+[
+null,
+null,
+"Internet Reliable Transaction"
+],
+[
+null,
+null,
+"ISO Transport Protocol Class 4"
+],
+[
+null,
+null,
+"Bulk Data Transfer Protocol"
+],
+[
+null,
+null,
+"MFE Network Services Protocol"
+],
+[
+null,
+null,
+"MERIT Internodal Protocol"
+],
+[
+null,
+null,
+"Datagram Congestion Control Protocol"
+],
+[
+null,
+null,
+"Third Party Connect Protocol"
+],
+[
+null,
+null,
+"Inter-Domain Policy Routing Protocol"
+],
+[
+null,
+null,
+"XTP"
+],
+[
+null,
+null,
+"Datagram Delivery Protocol"
+],
+[
+null,
+null,
+"IDPR Control Message Transport Proto"
+],
+[
+null,
+null,
+"TP++ Transport Protocol"
+],
+[
+null,
+null,
+"IL Transport Protocol"
+],
+[
+null,
+null,
+"IPv6 カプセル化"
+],
+[
+null,
+null,
+"Source Demand Routing Protocol"
+],
+[
+null,
+null,
+"IPv6 用 Routing Header"
+],
+[
+null,
+null,
+"IPv6 用 Fragment Header"
+],
+[
+null,
+null,
+"Inter-Domain Routing Protocol"
+],
+[
+null,
+null,
+"Reservation Protocol"
+],
+[
+null,
+null,
+"Generic Routing Encapsulation"
+],
+[
+null,
+null,
+"Dynamic Source Routing Protocol"
+],
+[
+null,
+null,
+"BNA"
+],
+[
+null,
+null,
+"Encap Security Payload"
+],
+[
+null,
+null,
+"Authentication Header"
+],
+[
+null,
+null,
+"Integrated Net Layer Security TUBA"
+],
+[
+null,
+null,
+"暗号化つき IP"
+],
+[
+null,
+null,
+"NBMA Address Resolution Protocol"
+],
+[
+null,
+null,
+"最小 IPv4 カプセル化"
+],
+[
+null,
+null,
+"Kryptonet 鍵管理を使う Transport Layer Security Protocol"
+],
+[
+null,
+null,
+"SKIP"
+],
+[
+null,
+null,
+"IPv6 用 ICMP"
+],
+[
+null,
+null,
+"IPv6 用 No Next Header"
+],
+[
+null,
+null,
+"IPv6 用 Destination Options"
+],
+[
+null,
+null,
+"任意のホスト内部プロトコル"
+],
+[
+null,
+null,
+"CFTP"
+],
+[
+null,
+null,
+"任意のローカルネットワーク"
+],
+[
+null,
+null,
+"SATNET と Backroom EXPAK"
+],
+[
+null,
+null,
+"Kryptolan"
+],
+[
+null,
+null,
+"MIT Remote Virtual Disk Protocol"
+],
+[
+null,
+null,
+"Internet Pluribus Packet Core"
+],
+[
+null,
+null,
+"任意の分散ファイルシステム"
+],
+[
+null,
+null,
+"SATNET Monitoring"
+],
+[
+null,
+null,
+"VISA Protocol"
+],
+[
+null,
+null,
+"Internet Packet Core Utility"
+],
+[
+null,
+null,
+"Computer Protocol Network Executive"
+],
+[
+null,
+null,
+"Computer Protocol Heart Beat"
+],
+[
+null,
+null,
+"Wang Span Network"
+],
+[
+null,
+null,
+"Packet Video Protocol"
+],
+[
+null,
+null,
+"Backroom SATNET Monitoring"
+],
+[
+null,
+null,
+"SUN ND PROTOCOL-Temporary"
+],
+[
+null,
+null,
+"WIDEBAND Monitoring"
+],
+[
+null,
+null,
+"WIDEBAND EXPAK"
+],
+[
+null,
+null,
+"ISO Internet Protocol"
+],
+[
+null,
+null,
+"VMTP"
+],
+[
+null,
+null,
+"SECURE-VMTP"
+],
+[
+null,
+null,
+"VINES"
+],
+[
+null,
+null,
+"Internet Protocol Traffic Manager"
+],
+[
+null,
+null,
+"NSFNET-IGP"
+],
+[
+null,
+null,
+"Dissimilar Gateway Protocol"
+],
+[
+null,
+null,
+"TCF"
+],
+[
+null,
+null,
+"EIGRP"
+],
+[
+null,
+null,
+"OSPFIGP"
+],
+[
+null,
+null,
+"Sprite RPC Protocol"
+],
+[
+null,
+null,
+"Locus Address Resolution Protocol"
+],
+[
+null,
+null,
+"Multicast Transport Protocol"
+],
+[
+null,
+null,
+"AX.25 Frames"
+],
+[
+null,
+null,
+"IP-within-IP カプセル化プロトコル"
+],
+[
+null,
+null,
+"Mobile Internetworking Control Pro."
+],
+[
+null,
+null,
+"Semaphore Communications Sec. Pro."
+],
+[
+null,
+null,
+"Ethernet-within-IP カプセル化"
+],
+[
+null,
+null,
+"Encapsulation Header"
+],
+[
+null,
+null,
+"任意のプライベート暗号化方式"
+],
+[
+null,
+null,
+"GMTP"
+],
+[
+null,
+null,
+"Ipsilon Flow Management Protocol"
+],
+[
+null,
+null,
+"PNNI over IP"
+],
+[
+null,
+null,
+"Protocol Independent Multicast"
+],
+[
+null,
+null,
+"ARIS"
+],
+[
+null,
+null,
+"SCPS"
+],
+[
+null,
+null,
+"QNX"
+],
+[
+null,
+null,
+"Active Networks"
+],
+[
+null,
+null,
+"IP Payload Compression Protocol"
+],
+[
+null,
+null,
+"Sitara Networks Protocol"
+],
+[
+null,
+null,
+"Compaq Peer Protocol"
+],
+[
+null,
+null,
+"IPX in IP"
+],
+[
+null,
+null,
+"Virtual Router Redundancy Protocol"
+],
+[
+null,
+null,
+"PGM Reliable Transport Protocol"
+],
+[
+null,
+null,
+"任意の 0 ホッププロトコル"
+],
+[
+null,
+null,
+"Layer Two Tunneling Protocol"
+],
+[
+null,
+null,
+"D-II Data Exchange (DDX)"
+],
+[
+null,
+null,
+"Interactive Agent Transfer Protocol"
+],
+[
+null,
+null,
+"Schedule Transfer Protocol"
+],
+[
+null,
+null,
+"SpectraLink Radio Protocol"
+],
+[
+null,
+null,
+"UTI"
+],
+[
+null,
+null,
+"Simple Message Protocol"
+],
+[
+null,
+null,
+"Simple Multicast Protocol"
+],
+[
+null,
+null,
+"Performance Transparency Protocol"
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+"Combat Radio Transport Protocol"
+],
+[
+null,
+null,
+"Combat Radio User Datagram"
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+"Secure Packet Shield"
+],
+[
+null,
+null,
+"Private IP Encapsulation within IP"
+],
+[
+null,
+null,
+"Stream Control Transmission Protocol"
+],
+[
+null,
+null,
+"Fibre Channel"
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+null
+],
+[
+null,
+null,
+"MANET Protocols"
+],
+[
+null,
+null,
+"Host Identity Protocol"
+],
+[
+null,
+null,
+"Shim6 Protocol"
+],
+[
+null,
+null,
+"Wrapped Encapsulating Security Payload"
+],
+[
+null,
+null,
+"Robust Header Compression"
+],
+[
+null,
+null,
+"Ethernet"
+],
+[
+null,
+null,
+"ESP 用 AGGFRAG カプセル化ペイロード"
+],
+[
+null,
+null,
+"Network Service Header"
+],
+[
+null,
+null,
+"Homa"
+],
+[
+null,
+null,
+"Bit-stream Emulation"
+],
+[
+null,
+null,
+"実験とテストに使用"
+],
+[
+null,
+null,
+"実験とテストに使用"
+],
+[
+null,
+null,
+null
+]
+]

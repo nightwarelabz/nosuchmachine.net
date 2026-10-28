@@ -1,4 +1,5 @@
 import { createFrostPlate, type FrostPlate } from "./os-boot-frost";
+import { t } from "./os-i18n";
 
 export type BootStyle = "thinice" | "classic";
 export const BOOT_STYLE_KEY = "blacksite-boot-style-v1";
@@ -28,6 +29,21 @@ interface BootOptions {
 
 /** Presentation only: the caller still owns registration, restoration and sound. */
 export function startBootSequence({ overlay, lines, depth, emcon, storageKey, onReady }: BootOptions): void {
+  /* The plates' working labels read in the room's language too.
+     The frost subtitle above them is the boot ceremony's exempt
+     text (Chase's standing ruling) and is never touched. */
+  try {
+    const classicSkip = overlay.querySelector<HTMLElement>("#os-boot-classic [data-boot-skip]");
+    if (classicSkip) classicSkip.textContent = t("Skip boot");
+    const thiniceBtn = overlay.querySelector<HTMLElement>("[data-boot-thinice]");
+    if (thiniceBtn) thiniceBtn.textContent = t("Use Thinice next time");
+    const classicBtn = overlay.querySelector<HTMLElement>("[data-boot-classic]");
+    if (classicBtn) classicBtn.textContent = t("Classic boot");
+    const enter = overlay.querySelector<HTMLElement>("#os-boot-thinice [data-boot-skip]");
+    if (enter) for (const n of enter.childNodes) if (n.nodeType === 3 && n.textContent?.trim()) n.textContent = t("Enter system") + " ";
+    const cps = ["FIRMWARE", "FILESYSTEM", "RUNTIME", "SURFACE"];
+    overlay.querySelectorAll<HTMLElement>("[data-boot-checkpoint]").forEach((c, i) => { if (cps[i]) c.textContent = t(cps[i]); });
+  } catch { /* the plates stand as authored */ }
   const classic = overlay.querySelector<HTMLElement>("#os-boot-classic");
   const cold = overlay.querySelector<HTMLElement>("#os-boot-thinice");
   const text = overlay.querySelector<HTMLElement>("#os-boot-text");
@@ -74,7 +90,7 @@ export function startBootSequence({ overlay, lines, depth, emcon, storageKey, on
     if (hadColdFocus) classic?.querySelector<HTMLButtonElement>("[data-boot-skip]")?.focus({ preventScroll: true });
     if (!text) { finish(); return; }
     text.textContent = "";
-    if (announcement) announcement.textContent = "Starting BLACKSITE OS with classic boot.";
+    if (announcement) announcement.textContent = t("Starting BLACKSITE OS with classic boot.");
     let i = 0;
     const tick = () => {
       if (finished) return;
@@ -90,8 +106,8 @@ export function startBootSequence({ overlay, lines, depth, emcon, storageKey, on
   overlay.querySelector("[data-boot-classic]")?.addEventListener("click", () => { rememberBootStyle("classic", storageKey); runClassic(); }, { signal: listeners.signal });
   overlay.querySelector<HTMLButtonElement>("[data-boot-thinice]")?.addEventListener("click", (event) => {
     rememberBootStyle("thinice", storageKey);
-    (event.currentTarget as HTMLButtonElement).textContent = "Thinice selected";
-    if (announcement) announcement.textContent = "Thinice selected for the next boot.";
+    (event.currentTarget as HTMLButtonElement).textContent = t("Thinice selected");
+    if (announcement) announcement.textContent = t("Thinice selected for the next boot.");
   }, { signal: listeners.signal });
   document.addEventListener("keydown", (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
@@ -116,7 +132,7 @@ export function startBootSequence({ overlay, lines, depth, emcon, storageKey, on
     if (depthLabel) depthLabel.textContent = depth === 0 ? "SURFACE 00" : `NEST ${String(depth).padStart(2, "0")} · VOLATILE`;
     const emconLabel = overlay.querySelector("#os-boot-emcon");
     if (emconLabel) emconLabel.textContent = `EMCON ${emcon.toUpperCase()}`;
-    const phases = ["ESTABLISHING THE SURFACE", "MOUNTING THE LOCAL FILESYSTEM", "BRINGING THE RUNTIME ONLINE", "BLACKSITE IS NOW LIVE"];
+    const phases = [t("ESTABLISHING THE SURFACE"), t("MOUNTING THE LOCAL FILESYSTEM"), t("BRINGING THE RUNTIME ONLINE"), t("BLACKSITE IS NOW LIVE")];
     const details = [lines[0], lines[2], lines[3], `${lines[4]} · ${lines[5]}`];
     const checkpoints = [...overlay.querySelectorAll<HTMLElement>("[data-boot-checkpoint]")];
     const duration = reduced ? 420 : depth === 0 ? 4400 : Math.max(160, 680 / depth);
@@ -136,7 +152,7 @@ export function startBootSequence({ overlay, lines, depth, emcon, storageKey, on
         plate?.reveal(reduced ? 1 : Math.min(1, fraction * 1.25));
         if (phase !== previousPhase) {
           stage.textContent = `${String(phase + 1).padStart(2, "0")} · ${phases[phase]}`;
-          detail.textContent = details[phase] || "blacksite sh · ready";
+          detail.textContent = details[phase] || t("blacksite sh · ready");
           for (const [index, checkpoint] of checkpoints.entries()) checkpoint.toggleAttribute("data-active", index <= phase);
           if (announcement) announcement.textContent = phases[phase];
           previousPhase = phase;

@@ -25,6 +25,7 @@
  */
 
 import { skey } from "./os-depth";
+import { t, tf } from "./os-i18n";
 import { createLiveSource } from "./os-sigint-live";
 import { createAirSource } from "./os-sigint-air";
 
@@ -223,13 +224,13 @@ export function buildSigint(body: HTMLElement) {
   freqInput.value = "3.200";
   freqInput.setAttribute("aria-label", "Frequency in kHz");
   const freqUnit = el("span", "os-note", "kHz");
-  const power = el("button", "os-btn primary", "power");
-  const srcBand = el("button", "os-btn primary", "band");
-  const srcMic = el("button", "os-btn", "mic");
-  const srcFile = el("button", "os-btn", "file");
-  const srcLive = el("button", "os-btn", "stations");
-  const srcAir = el("button", "os-btn", "air");
-  const recBtn = el("button", "os-btn", "rec");
+  const power = el("button", "os-btn primary", t("power"));
+  const srcBand = el("button", "os-btn primary", t("band"));
+  const srcMic = el("button", "os-btn", t("mic"));
+  const srcFile = el("button", "os-btn", t("file"));
+  const srcLive = el("button", "os-btn", t("stations"));
+  const srcAir = el("button", "os-btn", t("air"));
+  const recBtn = el("button", "os-btn", t("rec"));
   const fileInput = document.createElement("input");
   fileInput.type = "file"; fileInput.accept = "audio/*"; fileInput.style.display = "none";
   head.append(freqInput, freqUnit, power, srcBand, srcMic, srcFile, srcLive, srcAir, recBtn, fileInput);
@@ -257,9 +258,9 @@ export function buildSigint(body: HTMLElement) {
   squelch.type = "range"; squelch.min = "-110"; squelch.max = "-40"; squelch.step = "1"; squelch.value = "-95";
   squelch.className = "os-sigint-slider"; squelch.setAttribute("aria-label", "Squelch");
   modes.append(el("span", "os-note", "bw"), bwSel, el("span", "os-note", "gain"), gain, el("span", "os-note", "sql"), squelch);
-  const markA = el("button", "os-btn", "mark A");
-  const markB = el("button", "os-btn", "mark B");
-  const markX = el("button", "os-btn", "✕ marks");
+  const markA = el("button", "os-btn", t("mark A"));
+  const markB = el("button", "os-btn", t("mark B"));
+  const markX = el("button", "os-btn", t("✕ marks"));
   modes.append(markA, markB, markX);
   const readout = el("p", "os-note os-sigint-readout", "");
 
@@ -268,8 +269,8 @@ export function buildSigint(body: HTMLElement) {
   copyPane.textContent = "";
   const copyBox = el("div", "os-sigint-pane");
   const copyHead = el("div", "os-sigint-copyhead");
-  const tabCw = el("button", "os-btn primary", "CW copy");
-  const tabRtty = el("button", "os-btn", "RTTY copy");
+  const tabCw = el("button", "os-btn primary", t("CW copy"));
+  const tabRtty = el("button", "os-btn", t("RTTY copy"));
   copyHead.append(el("h4", "", "COPY"), tabCw, tabRtty);
   const eye = document.createElement("canvas");
   eye.className = "os-sigint-eye"; eye.width = 220; eye.height = 64;
@@ -282,13 +283,13 @@ export function buildSigint(body: HTMLElement) {
 
   const logBox = el("div", "os-sigint-pane os-sigint-logbox");
   const logHead = el("div", "os-sigint-copyhead");
-  const logExport = el("button", "os-btn", "export log");
-  const logClear = el("button", "os-btn", "clear log");
+  const logExport = el("button", "os-btn", t("export log"));
+  const logClear = el("button", "os-btn", t("clear log"));
   logHead.append(el("h4", "", "INTERCEPT LOG"), logExport, logClear);
   const logPane = el("pre", "os-sigint-copy os-sigint-log");
   logBox.append(logHead, logPane);
 
-  const status = el("p", "os-note", "receiver off · receive only — the ear never speaks");
+  const status = el("p", "os-note", t("receiver off · receive only — the ear never speaks"));
   wrap.append(head, fall, modes, readout, lower, logBox, status);
   body.appendChild(wrap);
 
