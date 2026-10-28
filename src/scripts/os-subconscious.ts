@@ -42,6 +42,9 @@ const NEVER_WARM = new Set([
      the shipped surface are not named here at all: unregistered,
      they are already outside the app universe this set filters. */
   "games", "nexuiz",
+  /* the forensics folder and its rooms: evidence work is opened
+     deliberately, never prepared in the dark. */
+  "forensics", "fxworkbench", "fxevidence", "fxhash", "fxhex", "fxfile", "fxmeta", "fximage", "fxpcap", "fxstrings", "fxtime", "fxmail",
 ]);
 const CACHE_MAX = 2;
 const WARM_BUDGET = 6;
