@@ -21,6 +21,7 @@ import { buildNexuiz, nexuizStageFullscreen } from "./os-nexuiz";
 import { buildOrc } from "./os-orc";
 import { buildSimulacrum } from "./os-simulacrum";
 import { buildSigint } from "./os-sigint";
+import { buildTvApp, registerTvVerbs } from "./os-tv";
 import { iconEl } from "./os-icons";
 import { sfx, armAudio, soundGate, soundPrefs, setSoundPrefs } from "./os-sound";
 import { DEPTH, MAX_NEST, skey, sweepNestKeys } from "./os-depth";
@@ -179,6 +180,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   orc: { title: "orc", icon: "orc" },
   simulacrum: { title: "Simulacrum — a generated world", icon: "simulacrum" },
   sigint: { title: "sigint bench", icon: "sigint" },
+  tv: { title: "TV", icon: "tv" },
   phonehome: { title: "phonehome", icon: "phonehome" },
   toolchest: { title: "toolchest", icon: "toolchest" },
 };
@@ -337,6 +339,9 @@ export function openApp(app: string, arg?: string, opts?: { deferBuild?: boolean
      Same toggleMaximize every window answers to — a view state
      only; the lifecycle below is untouched. */
   if (app === "sigint") toggleMaximize(win);
+  /* TV opens enlarged on the same seam: it is a bench, and a
+     broadcast wants the whole desk. */
+  if (app === "tv") toggleMaximize(win);
   applyWinState(life, true);
   saveSession();
 }
@@ -435,6 +440,7 @@ function ensureBuilt(win: HTMLElement) {
   serveBuild(rec.app, rec.body, rec.arg);
   if (rec.app === "nexuiz") nexuizStageFullscreen(rec.body);
   if (rec.app === "sigint" && !rec.win.classList.contains("maxed")) toggleMaximize(rec.win);
+  if (rec.app === "tv" && !rec.win.classList.contains("maxed")) toggleMaximize(rec.win);
   applyWinState(rec, true);
 }
 function visibleWindows(): HTMLElement[] { return [...windows.values()].filter((w) => w.style.display !== "none"); }
@@ -603,7 +609,7 @@ function buildTerminal(body: HTMLElement) {
     setWallpaper: (kind) => setWallpaper(kind),
     setTheme: (name) => applyTheme(name),
   };
-  io.print(t("BLACKSITE OS — web edition. `help` for the 644, `limits` for the honest physics, `gauntlet` to watch the room test itself."), "dim");
+  io.print(t("BLACKSITE OS — web edition. `help` for the 645, `limits` for the honest physics, `gauntlet` to watch the room test itself."), "dim");
   io.print(t("doctrine: one knock, read, grade. public targets only."), "dim");
   // the launcher (start button / Ctrl-K) can hand this terminal a line
   // to run — and exactly ONE terminal answers: the one standing in a
@@ -1094,7 +1100,7 @@ function buildSystem(body: HTMLElement) {
   const cells: Array<[string, string]> = [
     [OS_RELEASE.version + " " + OS_RELEASE.codename, t("RELEASE")],
     [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, t("WORKING VERBS — IN-ROOM + EDGE")],
-    ["644", t("COMMANDS ON THE ROSTER")],
+    ["645", t("COMMANDS ON THE ROSTER")],
     [`${vs.files}`, t("FILES IN THE VFS")],
     [`${(vs.bytes / 1024).toFixed(1)} KB`, t("VFS CONTENT")],
     [`${(lsBytes / 1024).toFixed(1)} KB`, t("LOCAL STORAGE FOOTPRINT")],
@@ -1300,13 +1306,13 @@ function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSet
 function buildHelp(body: HTMLElement) {
   const search = document.createElement("input");
   search.className = "os-help-search";
-  search.placeholder = t("search the 644 — try 'smtp', 'modbus', 'jwt'…");
+  search.placeholder = t("search the 645 — try 'smtp', 'modbus', 'jwt'…");
   const listEl = el("div", "os-help-list");
   body.append(search, listEl);
   const render = (q: string) => {
     listEl.innerHTML = "";
     const rows = (roster as any[]).filter((r) => !q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || (r.descJa || "").includes(q) || r.section.includes(q));
-    const head = el("p", "os-note", tf("{n} of 644 commands · status is this room's honest standing", { n: rows.length }));
+    const head = el("p", "os-note", tf("{n} of 645 commands · status is this room's honest standing", { n: rows.length }));
     listEl.appendChild(head);
     for (const r of rows.slice(0, 150)) {
       const status = VERBS.get(r.verb)?.status || "LIMIT";
@@ -1507,6 +1513,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   orc: buildOrc,
   simulacrum: buildSimulacrum,
   sigint: buildSigint,
+  tv: (body, arg) => buildTvApp(body, os, arg),
   phonehome: (body) => buildPhonehomeApp(body, os),
 };
 
@@ -1608,7 +1615,7 @@ function buildDesktopIcons() {
     ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["forensics", "forensics", "Forensics"], ["files", "files", "files"], ["editor", "editor", "editor"],
     ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
     ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
-    ["chip8", "chip8", "CHIP-8"], ["ruby", "ruby", "ruby"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["phonehome", "phonehome", "phonehome"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
+    ["chip8", "chip8", "CHIP-8"], ["ruby", "ruby", "ruby"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["tv", "tv", "TV"], ["phonehome", "phonehome", "phonehome"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
     ["orc", "orc", "orc"],
   ];
   for (const [app, icon, label] of defs) {
@@ -1764,6 +1771,7 @@ function boot() {
   registerPhonehomeVerbs();
   registerForensicsVerbs();
   registerRubyVerbs();
+  registerTvVerbs();
   registerLimitReasons();
   initLang();
   applyTheme(os.theme);
@@ -1777,7 +1785,7 @@ function boot() {
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     t("memory: the browser provides · storage: local, yours"),
     DEPTH === 0 ? t("kernel: blacksite sh · vfs: mounted (persistent, this browser)") : tf("kernel: blacksite sh · vfs: mounted (volatile — nest {d} of {m} keeps nothing)", { d: DEPTH, m: MAX_NEST }),
-    tf("engines: javascript native · python skulpt · ruby wasm · verbs: {n} working of 644 on the roster", { n: [...VERBS.values()].filter((v) => v.status !== "LIMIT").length }),
+    tf("engines: javascript native · python skulpt · ruby wasm · verbs: {n} working of 645 on the roster", { n: [...VERBS.values()].filter((v) => v.status !== "LIMIT").length }),
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     t("doctrine loaded: one knock, read, grade."),
     "",

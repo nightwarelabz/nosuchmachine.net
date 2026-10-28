@@ -1,0 +1,3635 @@
+[
+ {
+  "id": "tvm-mz",
+  "name": "TVM",
+  "country": "Mozambique",
+  "code": "MZ",
+  "region": "Africa",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "general",
+  "stream": "https://stream.tvm.co.mz/hls/tvm/playlist.m3u8",
+  "site": "https://www.tvm.co.mz/"
+ },
+ {
+  "id": "faithafrica-za",
+  "name": "Faith Africa",
+  "country": "South Africa",
+  "code": "ZA",
+  "region": "Africa",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://faithnow-hls.secdn.net/faithnow-holland-channel/play/FaithAfrica.smil/playlist.m3u8",
+  "site": "https://africa.myfaith.tv/"
+ },
+ {
+  "id": "sabclehae-za",
+  "name": "SABC Lehae",
+  "country": "South Africa",
+  "code": "ZA",
+  "region": "Africa",
+  "languages": [
+   "English",
+   "Zulu",
+   "Swazi",
+   "South Ndebele",
+   "Xhosa",
+   "Tsonga",
+   "Venda",
+   "sfs"
+  ],
+  "category": "news",
+  "stream": "https://sabctretalh.cdn.mangomolo.com/lehae/smil:lehae.stream.smil/master.m3u8",
+  "site": "https://sabc-plus.com/"
+ },
+ {
+  "id": "sabcnews-za",
+  "name": "SABC News",
+  "country": "South Africa",
+  "code": "ZA",
+  "region": "Africa",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://sabconetanw.cdn.mangomolo.com/news/smil:news.stream.smil/master.m3u8",
+  "site": "http://www.sabc.co.za/"
+ },
+ {
+  "id": "dunyanawtv-af",
+  "name": "Dunya Naw TV",
+  "country": "Afghanistan",
+  "code": "AF",
+  "region": "Asia",
+  "languages": [
+   "Dari"
+  ],
+  "category": "general",
+  "stream": "https://dunyanhls.wns.live/hls/stream.m3u8"
+ },
+ {
+  "id": "cgtn-cn",
+  "name": "CGTN",
+  "country": "China",
+  "code": "CN",
+  "region": "Asia",
+  "languages": [
+   "English",
+   "Chinese"
+  ],
+  "category": "news",
+  "stream": "https://amg00405-rakutentv-cgtn-rakuten-i9tar.amagi.tv/master.m3u8",
+  "site": "https://www.cgtn.com/tv"
+ },
+ {
+  "id": "cgtnarabic-cn",
+  "name": "CGTN Arabic",
+  "country": "China",
+  "code": "CN",
+  "region": "Asia",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://dash3.antik.sk/live/test_cgtn_arb_tizen/playlist.m3u8",
+  "site": "https://arabic.cgtn.com/"
+ },
+ {
+  "id": "cgtndocumentary-cn",
+  "name": "CGTN Documentary",
+  "country": "China",
+  "code": "CN",
+  "region": "Asia",
+  "languages": [
+   "English"
+  ],
+  "category": "culture",
+  "stream": "https://amg00405-rakutentv-cgtndocumentary-rakuten-0ql8j.amagi.tv/master.m3u8",
+  "site": "https://www.cgtn.com/channel/documentary"
+ },
+ {
+  "id": "cgtnfrench-cn",
+  "name": "CGTN French",
+  "country": "China",
+  "code": "CN",
+  "region": "Asia",
+  "languages": [
+   "French"
+  ],
+  "category": "news",
+  "stream": "https://amg01314-cgtn-amg01314c2-rakuten-us-1319.playouts.now.amagi.tv/cgtn-fr-rakuten/playlist.m3u8",
+  "site": "https://francais.cgtn.com/"
+ },
+ {
+  "id": "cgtnglobalbiz-cn",
+  "name": "CGTN Global Biz",
+  "country": "China",
+  "code": "CN",
+  "region": "Asia",
+  "languages": [
+   "Chinese",
+   "English"
+  ],
+  "category": "business",
+  "stream": "https://fastlive.cctvplus.com/out/v1/2b3d8a0c805d437f9dc85b764c2ac599/index.m3u8"
+ },
+ {
+  "id": "voatvchina-cn",
+  "name": "VoA TV China",
+  "country": "China",
+  "code": "CN",
+  "region": "Asia",
+  "languages": [
+   "Chinese"
+  ],
+  "category": "general",
+  "stream": "https://voa-ingest.akamaized.net/hls/live/2033878/tvmc08/playlist.m3u8",
+  "site": "http://www.voachinese.com/"
+ },
+ {
+  "id": "aajkikhabar-in",
+  "name": "Aaj Ki Khabar",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Hindi"
+  ],
+  "category": "news",
+  "stream": "https://stream.ottlive.co.in/aajkikhabar/index.m3u8"
+ },
+ {
+  "id": "aajtak-in",
+  "name": "Aaj Tak",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Hindi"
+  ],
+  "category": "news",
+  "stream": "https://feeds.intoday.in/aajtak/api/aajtakhd/master.m3u8",
+  "site": "https://www.aajtak.in/livetv"
+ },
+ {
+  "id": "abpnews-in",
+  "name": "ABP News",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Hindi",
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://d1rc86nwwc9fag.cloudfront.net/vglive-sk-472500/abpnews/master.m3u8",
+  "site": "https://www.abplive.com/"
+ },
+ {
+  "id": "chardiklagurbaanitv-in",
+  "name": "Chardikla Gurbaani TV",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Punjabi"
+  ],
+  "category": "news",
+  "stream": "https://chardikalatimestv.gigabitcdn.net/in-chardikala/chardikala-gurbani-tv/playlist.m3u8",
+  "site": "https://timetv.news/live-tv/"
+ },
+ {
+  "id": "chardiklatimetv-in",
+  "name": "Chardikla Time TV",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Punjabi"
+  ],
+  "category": "news",
+  "stream": "https://chardikalagurbanitv.gigabitcdn.net/in-chardikala/chardikala-timetv/playlist.m3u8",
+  "site": "https://timetv.news/live-tv/"
+ },
+ {
+  "id": "etvcomedy-in",
+  "name": "ETV Comedy",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Telugu"
+  ],
+  "category": "general",
+  "stream": "https://cc-wie8j8y69d2uy.akamaized.net/WWBI/Amagi/ETV_Comedy_IN/playlist.m3u8"
+ },
+ {
+  "id": "etvjosh-in",
+  "name": "ETV Josh",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Telugu"
+  ],
+  "category": "general",
+  "stream": "https://cc-uyh1ow5zouoio.akamaized.net/WWBI/Amagi/ETV_Josh_IN/playlist.m3u8"
+ },
+ {
+  "id": "etvmusic-in",
+  "name": "ETV Music",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [],
+  "category": "music",
+  "stream": "https://cc-szivnms4rlah6.akamaized.net/WWBI/Amagi/ETV_Music_IN/playlist.m3u8"
+ },
+ {
+  "id": "isaiaruvi-in",
+  "name": "Isai Aruvi",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Tamil"
+  ],
+  "category": "music",
+  "stream": "https://segment.yuppcdn.net/140622/isaiaruvi/playlist.m3u8"
+ },
+ {
+  "id": "ndtvgoodtimes-in",
+  "name": "NDTV Good Times",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "English",
+   "Hindi",
+   "Tamil"
+  ],
+  "category": "culture",
+  "stream": "https://amg01448-samsungin-ndtvgoodtimes-samsungin-ad-gp.amagi.tv/playlist/amg01448-samsungin-ndtvgoodtimes-samsungin/playlist.m3u8",
+  "site": "https://www.mygoodtimes.in/"
+ },
+ {
+  "id": "ndtvprofit-in",
+  "name": "NDTV Profit",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [],
+  "category": "business",
+  "stream": "https://ndtvprofit.akamaized.net/hls/live/2107404/ndtvprofit/master_1.m3u8",
+  "site": "http://profit.ndtv.com/"
+ },
+ {
+  "id": "santvanichannel-in",
+  "name": "Santvani Channel",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "Hindi"
+  ],
+  "category": "general",
+  "stream": "https://d1msejlow1t3l4.cloudfront.net/fta/santwani/playlist.m3u8",
+  "site": "https://www.santvani.in/"
+ },
+ {
+  "id": "wion-in",
+  "name": "WION",
+  "country": "India",
+  "code": "IN",
+  "region": "Asia",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://d7x8z4yuq42qn.cloudfront.net/index_7.m3u8",
+  "site": "https://www.wionews.com/"
+ },
+ {
+  "id": "nhkworldpremium-jp",
+  "name": "NHK World Premium",
+  "country": "Japan",
+  "code": "JP",
+  "region": "Asia",
+  "languages": [
+   "English",
+   "Japanese",
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://media-tyo.hls.nhkworld.jp/hls/wp/live/master.m3u8",
+  "site": "http://www.nhkworldpremium.com/"
+ },
+ {
+  "id": "nhkworldjapan-jp",
+  "name": "NHK World-Japan",
+  "country": "Japan",
+  "code": "JP",
+  "region": "Asia",
+  "languages": [
+   "Japanese",
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://nhk.lls.pbs.org/index.m3u8",
+  "site": "https://www3.nhk.or.jp/nhkworld/"
+ },
+ {
+  "id": "vtv-mv",
+  "name": "VTV",
+  "country": "Maldives",
+  "code": "MV",
+  "region": "Asia",
+  "languages": [
+   "Dhivehi"
+  ],
+  "category": "news",
+  "stream": "https://sunplay-cdn.bitratelabs.com/live/local-channel/vtv-7a0f24809c234ea78d972b1f336ac1b9/index.m3u8",
+  "site": "https://www.vnews.mv/"
+ },
+ {
+  "id": "bloombergtvmongolia-mn",
+  "name": "Bloomberg TV Mongolia",
+  "country": "Mongolia",
+  "code": "MN",
+  "region": "Asia",
+  "languages": [
+   "Mongolian"
+  ],
+  "category": "business",
+  "stream": "https://cdn4.skygo.mn/live/disk1/BloombergMon/HLSv3-FTA/BloombergMon.m3u8",
+  "site": "http://bloombergtv.mn/"
+ },
+ {
+  "id": "etv-mn",
+  "name": "ETV",
+  "country": "Mongolia",
+  "code": "MN",
+  "region": "Asia",
+  "languages": [
+   "Mongolian"
+  ],
+  "category": "news",
+  "stream": "https://cdn4.skygo.mn/live/disk1/ETV/HLSv3-FTA/ETV.m3u8",
+  "site": "https://www.etv.mn/"
+ },
+ {
+  "id": "mrtventertainment-mm",
+  "name": "MRTV Entertainment",
+  "country": "Myanmar (Burma)",
+  "code": "MM",
+  "region": "Asia",
+  "languages": [
+   "Burmese"
+  ],
+  "category": "general",
+  "stream": "https://mrtvott.com/cache/MRTV-Ent-HD/master.m3u8",
+  "site": "https://mrtv.gov.mm/"
+ },
+ {
+  "id": "skynewsurdu-pk",
+  "name": "Sky News Urdu",
+  "country": "Pakistan",
+  "code": "PK",
+  "region": "Asia",
+  "languages": [
+   "Urdu"
+  ],
+  "category": "news",
+  "stream": "https://lbgo.bozztv.com/ssh101/ssh101/skynews/playlist.m3u8"
+ },
+ {
+  "id": "cna-sg",
+  "name": "CNA",
+  "country": "Singapore",
+  "code": "SG",
+  "region": "Asia",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://d2e1asnsl7br7b.cloudfront.net/7782e205e72f43aeb4a48ec97f66ebbe/index.m3u8",
+  "site": "https://www.channelnewsasia.com/"
+ },
+ {
+  "id": "cnainternational-sg",
+  "name": "CNA International",
+  "country": "Singapore",
+  "code": "SG",
+  "region": "Asia",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://freem3u.xyz/api/live/play.m3u8?vid=112",
+  "site": "https://www.channelnewsasia.com/international"
+ },
+ {
+  "id": "cnaoriginals-sg",
+  "name": "CNA Originals",
+  "country": "Singapore",
+  "code": "SG",
+  "region": "Asia",
+  "languages": [
+   "English"
+  ],
+  "category": "culture",
+  "stream": "https://amg01082-cna-amg01082c1-rlaxx-us-11304.playouts.now.amagi.tv/playlist.m3u8",
+  "site": "https://www.channelnewsasia.com/"
+ },
+ {
+  "id": "arirangradio-kr",
+  "name": "Arirang Radio",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "Korean"
+  ],
+  "category": "general",
+  "stream": "https://amdlive-ch02-ctnd-com.akamaized.net/arirang_3ch/smil:arirang_3ch.smil/playlist.m3u8",
+  "site": "https://www.arirang.com/radio"
+ },
+ {
+  "id": "arirangun-kr",
+  "name": "Arirang UN",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://amdlive-ch02-ctnd-com.akamaized.net/arirang_2ch/smil:arirang_2ch.smil/playlist.m3u8",
+  "site": "https://www.arirang.com/"
+ },
+ {
+  "id": "cjonstyle-kr",
+  "name": "CJ OnStyle",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "Korean"
+  ],
+  "category": "general",
+  "stream": "https://live-ch1.cjonstyle.net/cjmalllive/stream2/playlist.m3u8",
+  "site": "http://display.cjonstyle.com/"
+ },
+ {
+  "id": "cjonstyleplus-kr",
+  "name": "CJ OnStyle+",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "Korean"
+  ],
+  "category": "general",
+  "stream": "https://live-ch2.cjonstyle.net/cjosplus/live2/playlist.m3u8",
+  "site": "http://display.cjonstyle.com/"
+ },
+ {
+  "id": "ebsplus1-kr",
+  "name": "EBS Plus 1",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "Korean"
+  ],
+  "category": "science",
+  "stream": "https://ebsonair.ebs.co.kr/plus1familypc/familypc1m/playlist.m3u8",
+  "site": "http://www.ebsi.co.kr/"
+ },
+ {
+  "id": "ebsplus2-kr",
+  "name": "EBS Plus 2",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "English",
+   "Korean"
+  ],
+  "category": "science",
+  "stream": "https://ebsonair.ebs.co.kr/plus2familypc/familypc1m/playlist.m3u8",
+  "site": "https://primary.ebs.co.kr/main/primary"
+ },
+ {
+  "id": "kbsworld-kr",
+  "name": "KBS World",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "Korean",
+   "English"
+  ],
+  "category": "general",
+  "stream": "https://stream8.cinerama.uz/1448/playlist.m3u8",
+  "site": "http://kbsworld.kbs.co.kr/"
+ },
+ {
+  "id": "lotteonetv-kr",
+  "name": "Lotte OneTV",
+  "country": "South Korea",
+  "code": "KR",
+  "region": "Asia",
+  "languages": [
+   "Korean"
+  ],
+  "category": "general",
+  "stream": "https://onetvhlslive.lotteimall.com/lotteonetvlive/lotteonetvlive.mp4.m3u8",
+  "site": "http://www.lotteimall.com/onetv.lotte"
+ },
+ {
+  "id": "thaipbs-th",
+  "name": "Thai PBS",
+  "country": "Thailand",
+  "code": "TH",
+  "region": "Asia",
+  "languages": [
+   "Thai"
+  ],
+  "category": "general",
+  "stream": "https://live-us1.thaimomo.com/live-as/chThaipbshd-2/playlist.m3u8",
+  "site": "https://www.thaipbs.or.th/home"
+ },
+ {
+  "id": "onstyletv-vn",
+  "name": "ON Style TV",
+  "country": "Vietnam",
+  "code": "VN",
+  "region": "Asia",
+  "languages": [
+   "Vietnamese"
+  ],
+  "category": "culture",
+  "stream": "https://freem3u.xyz/api/live/play.m3u8?vid=184",
+  "site": "https://vtvcab.vn"
+ },
+ {
+  "id": "vtv5taynambo-vn",
+  "name": "VTV5 Tay Nam Bo",
+  "country": "Vietnam",
+  "code": "VN",
+  "region": "Asia",
+  "languages": [
+   "Vietnamese"
+  ],
+  "category": "general",
+  "stream": "https://dethich.pw/vtv5tnb/index.m3u8",
+  "site": "https://vtv.vn/"
+ },
+ {
+  "id": "vtv8-vn",
+  "name": "VTV8",
+  "country": "Vietnam",
+  "code": "VN",
+  "region": "Asia",
+  "languages": [
+   "Vietnamese"
+  ],
+  "category": "general",
+  "stream": "https://dethich.pw/vtv8/index.m3u8",
+  "site": "https://vtv.vn/"
+ },
+ {
+  "id": "cna-al",
+  "name": "CNA",
+  "country": "Albania",
+  "code": "AL",
+  "region": "Europe",
+  "languages": [
+   "Albanian"
+  ],
+  "category": "news",
+  "stream": "https://live1.mediadesk.al/cnatvlive.m3u8",
+  "site": "https://www.cna.al/"
+ },
+ {
+  "id": "orf1-at",
+  "name": "ORF 1",
+  "country": "Austria",
+  "code": "AT",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "general",
+  "stream": "https://test02.mdn.ors.at/orf/orf1/qxa/manifest.m3u8",
+  "site": "https://tv.orf.at/"
+ },
+ {
+  "id": "orfiii-at",
+  "name": "ORF III",
+  "country": "Austria",
+  "code": "AT",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "culture",
+  "stream": "https://orf3.mdn.ors.at/orf/orf3/qxa/manifest.m3u8",
+  "site": "http://tv.orf.at/"
+ },
+ {
+  "id": "redbulltv-at",
+  "name": "Red Bull TV",
+  "country": "Austria",
+  "code": "AT",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "sport",
+  "stream": "https://db34cc6127ac459db55cab5f97cd66b9.mediatailor.us-west-2.amazonaws.com/v1/master/ba62fe743df0fe93366eba3a257d792884136c7f/LINEAR-680-WORBAUENFAST-WHALETVPLUS/680/whaletvplus/hls/master/playlist.m3u8",
+  "site": "https://www.redbull.tv/"
+ },
+ {
+  "id": "vitebsk-by",
+  "name": "Vitebsk",
+  "country": "Belarus",
+  "code": "BY",
+  "region": "Europe",
+  "languages": [
+   "Russian"
+  ],
+  "category": "general",
+  "stream": "https://live.dc.beltelecom.by/vtv/vitebsk.stream/playlist.m3u8",
+  "site": "https://vtv.by/"
+ },
+ {
+  "id": "ebs-be",
+  "name": "EbS",
+  "country": "Belgium",
+  "code": "BE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "French",
+   "German",
+   "Italian",
+   "Spanish",
+   "Greek",
+   "Portuguese",
+   "Dutch",
+   "Danish",
+   "Finnish",
+   "Swedish",
+   "Czech",
+   "Estonian",
+   "Latvian",
+   "Lithuanian",
+   "Hungarian",
+   "Maltese",
+   "Polish",
+   "Slovak",
+   "Slovenian",
+   "Bulgarian",
+   "Romanian",
+   "Irish",
+   "Croatian",
+   "Ukrainian"
+  ],
+  "category": "general",
+  "stream": "https://streams.prd.commavservices.eu/live/ebs/index.m3u8",
+  "site": "https://audiovisual.ec.europa.eu/"
+ },
+ {
+  "id": "ebsplus-be",
+  "name": "EbS+",
+  "country": "Belgium",
+  "code": "BE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "French",
+   "German",
+   "Italian",
+   "Spanish",
+   "Greek",
+   "Portuguese",
+   "Dutch",
+   "Danish",
+   "Finnish",
+   "Swedish",
+   "Czech",
+   "Estonian",
+   "Latvian",
+   "Lithuanian",
+   "Hungarian",
+   "Maltese",
+   "Polish",
+   "Slovak",
+   "Slovenian",
+   "Bulgarian",
+   "Romanian",
+   "Irish",
+   "Croatian",
+   "Macedonian",
+   "Serbian",
+   "Albanian",
+   "Bosnian"
+  ],
+  "category": "general",
+  "stream": "https://streams.prd.commavservices.eu/live/ebsplus/index.m3u8",
+  "site": "https://audiovisual.ec.europa.eu/"
+ },
+ {
+  "id": "codefashiontv-bg",
+  "name": "Code Fashion TV",
+  "country": "Bulgaria",
+  "code": "BG",
+  "region": "Europe",
+  "languages": [
+   "Bulgarian"
+  ],
+  "category": "culture",
+  "stream": "https://cdn2.invivo.bg/Codefashion_5500/index.m3u8",
+  "site": "https://tv.codefashion.bg/"
+ },
+ {
+  "id": "ct24-cz",
+  "name": "CT24",
+  "country": "Czechia",
+  "code": "CZ",
+  "region": "Europe",
+  "languages": [
+   "Czech"
+  ],
+  "category": "news",
+  "stream": "https://dash2.antik.sk/live/ct24_avc_25p/playlist.m3u8",
+  "site": "https://ct24.ceskatelevize.cz/"
+ },
+ {
+  "id": "currenttimetv-cz",
+  "name": "Current Time TV",
+  "country": "Czechia",
+  "code": "CZ",
+  "region": "Europe",
+  "languages": [
+   "Russian"
+  ],
+  "category": "news",
+  "stream": "https://rfe-ingest.akamaized.net/hls/live/2033043/tvmc05/master.m3u8",
+  "site": "https://www.currenttime.tv/"
+ },
+ {
+  "id": "dvtvextra-cz",
+  "name": "DVTV Extra",
+  "country": "Czechia",
+  "code": "CZ",
+  "region": "Europe",
+  "languages": [
+   "Czech"
+  ],
+  "category": "general",
+  "stream": "https://antik.streaming.tivio.studio/channels/IxLi19VRasgu94bIaXbH/index.m3u8"
+ },
+ {
+  "id": "dancetvalgorhythm-ee",
+  "name": "DanceTV Algorhythm",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://m2b2.worldcast.tv:7443/dancetelevisionfour/dancetelevisionfour.m3u8",
+  "site": "https://www.dancetv.net/tech-house/"
+ },
+ {
+  "id": "dancetvdeephousedistrict-ee",
+  "name": "DanceTV Deep House District",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://m1b2.worldcast.tv/dancetelevisiontwo/dancetelevisiontwo.m3u8",
+  "site": "https://www.dancetv.net/deep-house/"
+ },
+ {
+  "id": "dancetvhousefloor-ee",
+  "name": "DanceTV House Floor",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://m2b2.worldcast.tv:7443/dancetelevisionfive/dancetelevisionfive.m3u8",
+  "site": "https://www.dancetv.net/house/"
+ },
+ {
+  "id": "dancetvtechnowarehouse-ee",
+  "name": "DanceTV Techno Warehouse",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://m2b2.worldcast.tv:7443/dancetelevisionthree/dancetelevisionthree.m3u8",
+  "site": "https://www.dancetv.net/techno/"
+ },
+ {
+  "id": "etv-ee",
+  "name": "ETV",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "Estonian"
+  ],
+  "category": "general",
+  "stream": "https://sb.err.ee/live/etv.m3u8",
+  "site": "http://etv.err.ee/"
+ },
+ {
+  "id": "etv2-ee",
+  "name": "ETV 2",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "Estonian"
+  ],
+  "category": "kids",
+  "stream": "https://sb.err.ee/live/etv2.m3u8",
+  "site": "http://etv2.err.ee/"
+ },
+ {
+  "id": "etvplus-ee",
+  "name": "ETV+",
+  "country": "Estonia",
+  "code": "EE",
+  "region": "Europe",
+  "languages": [
+   "Russian",
+   "Estonian"
+  ],
+  "category": "general",
+  "stream": "https://sb.err.ee/live/etvpluss.m3u8",
+  "site": "http://etvpluss.err.ee/"
+ },
+ {
+  "id": "mtv3-fi",
+  "name": "MTV3",
+  "country": "Finland",
+  "code": "FI",
+  "region": "Europe",
+  "languages": [],
+  "category": "general",
+  "stream": "https://live-fi.tvkaista.net/mtv3/live.m3u8",
+  "site": "https://www.mtv.fi/"
+ },
+ {
+  "id": "africanewsenglish-fr",
+  "name": "Africanews English",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [],
+  "category": "news",
+  "stream": "https://c3c275b999764df8a2dd55ffe2996818.mediatailor.eu-west-1.amazonaws.com/v1/master/0547f18649bd788bec7b67b746e47670f558b6b2/production-LiveChannel-6576/bitok/eyJzdGlkIjoiOTU0NDAyODQtOTU0My00Yzc2LThmZjQtNDRhY2YwYmQxYTYwIiwibWt0IjoicGwiLCJjaCI6NjYwNiwicHRmIjo1fQ==/26036/africanews-en.m3u8",
+  "site": "https://www.africanews.com/"
+ },
+ {
+  "id": "africanewsfrench-fr",
+  "name": "Africanews French",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "news",
+  "stream": "https://cdn-euronews.akamaized.net/live/eds/africanews-fr/25050/index.m3u8",
+  "site": "https://fr.africanews.com"
+ },
+ {
+  "id": "cnewsprime-fr",
+  "name": "CNEWS PRIME",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "news",
+  "stream": "https://raw.githubusercontent.com/Paradise-91/ParaTV/main/streams/canalplus/cnews-prime-dm.m3u8",
+  "site": "https://www.cnews.fr/le-direct-cnews-prime"
+ },
+ {
+  "id": "euronewsenglish-fr",
+  "name": "Euronews English",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://jmp2.uk/plu-61de96114757070008d33cae.m3u8",
+  "site": "https://www.euronews.com/"
+ },
+ {
+  "id": "euronewsfrench-fr",
+  "name": "Euronews French",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "news",
+  "stream": "https://2f6c5bf4.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmxheHhUVi1ldV9FdXJvbmV3c0ZyYW5jYWlzX0hMUw/playlist.m3u8",
+  "site": "https://fr.euronews.com/"
+ },
+ {
+  "id": "euronewsgerman-fr",
+  "name": "Euronews German",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "news",
+  "stream": "https://jmp2.uk/plu-6639d7d4b18d700008da5316.m3u8",
+  "site": "https://de.euronews.com/"
+ },
+ {
+  "id": "france24-fr",
+  "name": "France 24",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live.france24.com/hls/live/2037222-b/F24_AR_HI_HLS/master_5000.m3u8",
+  "site": "https://www.france24.com/"
+ },
+ {
+  "id": "france24-english",
+  "name": "France 24 English",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8"
+ },
+ {
+  "id": "france24-spanish",
+  "name": "France 24 Español",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://live.france24.com/hls/live/2037220-b/F24_ES_HI_HLS/master_5000.m3u8"
+ },
+ {
+  "id": "france24-french",
+  "name": "France 24 Français",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "news",
+  "stream": "https://live.france24.com/hls/live/2037179-b/F24_FR_HI_HLS/master_5000.m3u8"
+ },
+ {
+  "id": "persiananostalgia-fr",
+  "name": "Persiana Nostalgia",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "Persian"
+  ],
+  "category": "music",
+  "stream": "https://noshls.persiana.live/hls/stream.m3u8",
+  "site": "https://persianagroup.tv/"
+ },
+ {
+  "id": "traceafrica-fr",
+  "name": "Trace Africa",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "French"
+  ],
+  "category": "music",
+  "stream": "https://channels.trace.plus/Traceprod/AFRICA_FR_hd/index.m3u8",
+  "site": "http://trace.tv/trace-africa/"
+ },
+ {
+  "id": "traceafrikora-fr",
+  "name": "Trace Afrikora",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "music",
+  "stream": "https://channels.trace.plus/Traceprod/TERANGA_hd/index.m3u8",
+  "site": "https://trace.company/activities/television/trace-afrikora/"
+ },
+ {
+  "id": "traceayiti-fr",
+  "name": "Trace Ayiti",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "music",
+  "stream": "https://channels.trace.plus/Traceprod/AYITI_hd/index.m3u8",
+  "site": "https://trace.company/activities/television/trace-ayiti/"
+ },
+ {
+  "id": "tracebrazuca-fr",
+  "name": "Trace Brazuca",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "music",
+  "stream": "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01131-tracetv-tracebrazuca-samsungbr/playlist.m3u8",
+  "site": "https://trace.company/activities/television/trace-brazuca/"
+ },
+ {
+  "id": "tracesportstars-fr",
+  "name": "Trace Sport Stars",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "French"
+  ],
+  "category": "sport",
+  "stream": "https://lightning-tracesport-samsungau.amagi.tv/playlist.m3u8",
+  "site": "http://www.trace.tv/fr/tv/sport"
+ },
+ {
+  "id": "tv5mondestyle-fr",
+  "name": "TV5Monde Style",
+  "country": "France",
+  "code": "FR",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "culture",
+  "stream": "https://ott.tv5monde.com/Content/HLS/Live/channel(style1)/variant.m3u8",
+  "site": "https://apac.tv5monde.com/channels"
+ },
+ {
+  "id": "ardalpha-de",
+  "name": "ARD-alpha",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "science",
+  "stream": "https://mcdn.br.de/br/fs/ard_alpha/hls/de/master.m3u8",
+  "site": "https://www.br.de/fernsehen/ard-alpha/"
+ },
+ {
+  "id": "dazndartsxplutotv-de",
+  "name": "DAZN Darts x Pluto TV",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-64b67f0424ade50008a3be17.m3u8",
+  "site": "https://pluto.tv/live-tv/dazn-darts-x-pluto-tv-de/details"
+ },
+ {
+  "id": "daznheldinnenxplutotv-de",
+  "name": "DAZN Heldinnen x Pluto TV",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-64afe50c5dc16600087f3227.m3u8",
+  "site": "https://pluto.tv/live-tv/dazn-heldninnen-x-pluto-tv/details"
+ },
+ {
+  "id": "dw-arabic",
+  "name": "DW Arabic",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://dwamdstream103.akamaized.net/hls/live/2015526/dwstream103/master.m3u8"
+ },
+ {
+  "id": "dw-english",
+  "name": "DW English",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://amg01644-amg01644c1-amgplt0343.playout.now3.amagi.tv/ts-eu-w1-n2/playlist/amg01644-amg01644c1-amgplt0343/playlist.m3u8"
+ },
+ {
+  "id": "dw-espanol",
+  "name": "DW Español",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/master.m3u8"
+ },
+ {
+  "id": "plutotvanimales-de",
+  "name": "Pluto TV Animales",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "culture",
+  "stream": "https://jmp2.uk/plu-600ae6a78d801e0007117d21.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-animales-es/details"
+ },
+ {
+  "id": "plutotvanimals-de",
+  "name": "Pluto TV Animals",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "culture",
+  "stream": "https://jmp2.uk/plu-5d767ae7b456c8cf265ce922.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-animals-de-ptv1/details"
+ },
+ {
+  "id": "plutotvanimaux-de",
+  "name": "Pluto TV Animaux",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "culture",
+  "stream": "https://jmp2.uk/plu-60925a44f0350600075a1fdc.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-animaux-fr/details"
+ },
+ {
+  "id": "plutotvkidsclassics-de",
+  "name": "Pluto TV Kids Classics",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-609e7e423e9173000706a681.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-toons-clasico-es/details"
+ },
+ {
+  "id": "plutotvretrotoons-de",
+  "name": "Pluto TV Retro Toons",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-611e6a9b4bb5790007a6f0f8.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-retro-toons-fr/details"
+ },
+ {
+  "id": "plutotvsport-de",
+  "name": "Pluto TV Sport",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-608030eff4b6f70007e1684c.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-sport-it/details"
+ },
+ {
+  "id": "plutotvstartrekanimation-de",
+  "name": "Pluto TV Star Trek: Animation",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "German"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-69492467ae33e24d916e56cf.m3u8",
+  "site": "https://pluto.tv/live-tv/star-trek-animation/details"
+ },
+ {
+  "id": "plutotvsuperkids-de",
+  "name": "Pluto TV Super Kids",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "French"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-652557d93fd33c000802f995.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-super-kids/details"
+ },
+ {
+  "id": "plutotvteen-de",
+  "name": "Pluto TV Teen",
+  "country": "Germany",
+  "code": "DE",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-63eb944dc111bc0008fe7021.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-teen-es/details"
+ },
+ {
+  "id": "ertcosmos-gr",
+  "name": "ERT Cosmos",
+  "country": "Greece",
+  "code": "GR",
+  "region": "Europe",
+  "languages": [
+   "Greek"
+  ],
+  "category": "general",
+  "stream": "https://ert-ucdn.broadpeak-aas.com/bpk-tv/ERTCosmos/default/index.m3u8",
+  "site": "https://www.ert.gr/tv/program/ert-cosmos/"
+ },
+ {
+  "id": "ertnews-gr",
+  "name": "ERT News",
+  "country": "Greece",
+  "code": "GR",
+  "region": "Europe",
+  "languages": [
+   "Greek"
+  ],
+  "category": "news",
+  "stream": "https://ert-ucdn.broadpeak-aas.com/bpk-tv/ERTNews/default/index.m3u8",
+  "site": "https://www.ertnews.gr/"
+ },
+ {
+  "id": "ewtnbonumtv-hu",
+  "name": "EWTN/Bonum TV",
+  "country": "Hungary",
+  "code": "HU",
+  "region": "Europe",
+  "languages": [
+   "Hungarian"
+  ],
+  "category": "faith",
+  "stream": "https://dash2.antik.sk/live/ewtn_bonum/index.m3u8",
+  "site": "https://katolikus.tv/musorok/"
+ },
+ {
+  "id": "ruv-is",
+  "name": "RUV",
+  "country": "Iceland",
+  "code": "IS",
+  "region": "Europe",
+  "languages": [
+   "Icelandic"
+  ],
+  "category": "general",
+  "stream": "https://ruv-web-live.akamaized.net/streymi/ruverl/ruverl/stream1_.m3u8",
+  "site": "https://www.ruv.is/ruv/"
+ },
+ {
+  "id": "ruv2-is",
+  "name": "RUV 2",
+  "country": "Iceland",
+  "code": "IS",
+  "region": "Europe",
+  "languages": [
+   "Icelandic"
+  ],
+  "category": "general",
+  "stream": "https://ruvlive.akamaized.net/out/v1/2ff7673de40f419fa5164498fae89089/index.m3u8",
+  "site": "https://www.ruv.is/ruv2/"
+ },
+ {
+  "id": "auroraarte-it",
+  "name": "Aurora Arte",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "culture",
+  "stream": "https://59d7d6f47d7fc.streamlock.net/auroraarte/auroraarte/playlist.m3u8",
+  "site": "https://www.auroraarte.it/it/"
+ },
+ {
+  "id": "cafetv24-it",
+  "name": "CafeTV24",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "general",
+  "stream": "https://srvx1.selftv.video/cafe/live/playlist.m3u8"
+ },
+ {
+  "id": "cgentertainment-it",
+  "name": "CG Entertainment",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "general",
+  "stream": "https://cgentertainment-cgtv-1-it.samsung.wurl.tv/playlist.m3u8",
+  "site": "https://www.cgtv.it/"
+ },
+ {
+  "id": "la7-it",
+  "name": "LA7",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "general",
+  "stream": "https://d3k8wzt41aflvx.cloudfront.net/LA7HD/Live.m3u8",
+  "site": "https://www.la7.it/"
+ },
+ {
+  "id": "lombardiatv-it",
+  "name": "Lombardia TV",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "general",
+  "stream": "https://5db313b643fd8.streamlock.net/lmbiatv/lmbiatv/playlist.m3u8",
+  "site": "https://www.lombardiatv.com/"
+ },
+ {
+  "id": "rainews24-it",
+  "name": "Rai News 24",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "news",
+  "stream": "https://d3k8wzt41aflvx.cloudfront.net/RAINEWS24/Live.m3u8",
+  "site": "https://www.rainews.it/"
+ },
+ {
+  "id": "rtl1025best-it",
+  "name": "RTL 102.5 Best",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "music",
+  "stream": "https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S76960628/OEPHRUIctA0M/playlist_video.m3u8",
+  "site": "https://play.rtl.it/live/2/rtl-1025-best-tv/"
+ },
+ {
+  "id": "rtl1025brosis-it",
+  "name": "RTL 102.5 Bro&Sis",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "music",
+  "stream": "https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S75007890/MUGHuxc9dQ3b/playlist_video.m3u8",
+  "site": "https://play.rtl.it/live/16/bro-and-sis-tv/"
+ },
+ {
+  "id": "rtl1025caliente-it",
+  "name": "RTL 102.5 Caliente",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "music",
+  "stream": "https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S8448465/zTYa1Z5Op9ue/playlist_video.m3u8",
+  "site": "https://play.rtl.it/live/44/rtl-1025-caliente-tv/"
+ },
+ {
+  "id": "rtl1025disco-it",
+  "name": "RTL 102.5 Disco",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "music",
+  "stream": "https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S51100361/0Fb4R3k82b5Z/playlist_video.m3u8",
+  "site": "https://play.rtl.it/live/21/rtl-1025-doc-tv/"
+ },
+ {
+  "id": "rtl1025napule-it",
+  "name": "RTL 102.5 Napule",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "music",
+  "stream": "https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S27134503/0f9AhuwKlhnZ/playlist_video.m3u8",
+  "site": "https://play.rtl.it/live/20/rtl-1025-napule-tv/"
+ },
+ {
+  "id": "sportitalia-it",
+  "name": "Sportitalia",
+  "country": "Italy",
+  "code": "IT",
+  "region": "Europe",
+  "languages": [
+   "Italian"
+  ],
+  "category": "sport",
+  "stream": "https://edge-001.streamup.eu/sportitalia/sihd_abr/playlist.m3u8",
+  "site": "https://www.sportitalia.com/"
+ },
+ {
+  "id": "rtlgold-lu",
+  "name": "RTL Gold",
+  "country": "Luxembourg",
+  "code": "LU",
+  "region": "Europe",
+  "languages": [
+   "Luxembourgish"
+  ],
+  "category": "music",
+  "stream": "https://stream.rtl.lu/data/live/tele/rtlgold/playlist.m3u8",
+  "site": "https://play.rtl.lu/live/rtl-gold"
+ },
+ {
+  "id": "rtlteleletzebuerg-lu",
+  "name": "RTL Tele Letzebuerg",
+  "country": "Luxembourg",
+  "code": "LU",
+  "region": "Europe",
+  "languages": [
+   "Luxembourgish"
+  ],
+  "category": "general",
+  "stream": "https://live-edge.rtl.lu/channel1/smil:channel1/playlist.m3u8",
+  "site": "https://www.rtl.lu/tele"
+ },
+ {
+  "id": "rtlwebradiotv-lu",
+  "name": "RTL Web Radio TV",
+  "country": "Luxembourg",
+  "code": "LU",
+  "region": "Europe",
+  "languages": [
+   "Luxembourgish"
+  ],
+  "category": "general",
+  "stream": "https://rtlradio-streaming.rtl.lu/rtlradiowebtv/smil:rtlradiowebtv/playlist.m3u8",
+  "site": "https://play.rtl.lu/live/radio"
+ },
+ {
+  "id": "rtlzwee-lu",
+  "name": "RTL Zwee",
+  "country": "Luxembourg",
+  "code": "LU",
+  "region": "Europe",
+  "languages": [
+   "Luxembourgish",
+   "French",
+   "German"
+  ],
+  "category": "general",
+  "stream": "https://live-edge.rtl.lu/channel2/smil:channel2/playlist.m3u8",
+  "site": "http://www.rtl.lu/tele/"
+ },
+ {
+  "id": "1almeretv-nl",
+  "name": "1AlmereTV",
+  "country": "Netherlands",
+  "code": "NL",
+  "region": "Europe",
+  "languages": [
+   "Dutch"
+  ],
+  "category": "general",
+  "stream": "https://d3472rjicrodic.cloudfront.net/nlpo/clr-nlpo/709d5260/index.m3u8",
+  "site": "https://www.1almere.nl/"
+ },
+ {
+  "id": "beattv-nl",
+  "name": "BEATTV",
+  "country": "Netherlands",
+  "code": "NL",
+  "region": "Europe",
+  "languages": [
+   "Dutch"
+  ],
+  "category": "music",
+  "stream": "https://tv.beatfm.nl/live.m3u8",
+  "site": "https://beatfm.nl/"
+ },
+ {
+  "id": "merwetv-nl",
+  "name": "MerweTV",
+  "country": "Netherlands",
+  "code": "NL",
+  "region": "Europe",
+  "languages": [
+   "Dutch"
+  ],
+  "category": "general",
+  "stream": "https://d2ycaxub5x98iw.cloudfront.net/nlpo/clr-nlpo/merwetv/index.m3u8",
+  "site": "https://merwertv.nl/"
+ },
+ {
+  "id": "omroepbrabant-nl",
+  "name": "Omroep Brabant",
+  "country": "Netherlands",
+  "code": "NL",
+  "region": "Europe",
+  "languages": [
+   "Dutch"
+  ],
+  "category": "general",
+  "stream": "https://d3slqp9xhts6qb.cloudfront.net/live/omroepbrabant/tv/index.m3u8",
+  "site": "https://www.omroepbrabant.nl/tv"
+ },
+ {
+  "id": "omroepbrabantradio-nl",
+  "name": "Omroep Brabant Radio",
+  "country": "Netherlands",
+  "code": "NL",
+  "region": "Europe",
+  "languages": [
+   "Dutch"
+  ],
+  "category": "general",
+  "stream": "https://d3slqp9xhts6qb.cloudfront.net/live/omroepbrabant/visualradio/index.m3u8",
+  "site": "https://www.omroepbrabant.nl/radio"
+ },
+ {
+  "id": "omroepdommelland-nl",
+  "name": "Omroep Dommelland",
+  "country": "Netherlands",
+  "code": "NL",
+  "region": "Europe",
+  "languages": [
+   "Dutch"
+  ],
+  "category": "general",
+  "stream": "https://de68fck4398ez.cloudfront.net/nlpo/clr-nlpo/omroepdommelland/index.m3u8",
+  "site": "https://www.omroepdommelland.nl/"
+ },
+ {
+  "id": "tvmodum-no",
+  "name": "TVModum",
+  "country": "Norway",
+  "code": "NO",
+  "region": "Europe",
+  "languages": [
+   "Norwegian"
+  ],
+  "category": "general",
+  "stream": "https://cdn010.panaccess.com/5677_streams/TVMODUM/index.m3u8",
+  "site": "https://tvmodum.no/"
+ },
+ {
+  "id": "bialogardzkatelewizjakablowa-pl",
+  "name": "Bialogardzka Telewizja Kablowa",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "Polish"
+  ],
+  "category": "general",
+  "stream": "https://bsmbialogard.pl/live/index.m3u8",
+  "site": "https://btk.bsmbialogard.pl/"
+ },
+ {
+  "id": "drgmedicalexaminer-pl",
+  "name": "Dr G Medical Examiner",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "Polish"
+  ],
+  "category": "general",
+  "stream": "https://d39g1vxj2ef6in.cloudfront.net/v1/master/3fec3e5cac39a52b2132f9c66c83dae043dc17d4/prod-rakuten-stitched/master.m3u8?ads.xumo_channelId=88883008",
+  "site": "https://www.rakuten.tv/pl/live_channels/filmrise-dr-g-medical-examiner"
+ },
+ {
+  "id": "euronews-pl",
+  "name": "Euronews",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "Polish"
+  ],
+  "category": "news",
+  "stream": "https://cdn-euronews.akamaized.net/live/eds/euronews-pl/26382/index.m3u8",
+  "site": "https://pl.euronews.com/"
+ },
+ {
+  "id": "ewtnpoland-pl",
+  "name": "EWTN Poland",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "Polish"
+  ],
+  "category": "faith",
+  "stream": "https://cdn3.wowza.com/1/ZHdrMWt1NjlDSzFu/bzdDVG10/hls/live/playlist.m3u8",
+  "site": "https://ewtn.pl/"
+ },
+ {
+  "id": "telewizjaittv-pl",
+  "name": "Telewizja iTTV",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "Polish"
+  ],
+  "category": "general",
+  "stream": "https://5d84fe297ee2b.streamlock.net/sercanie/scj_florek.stream_aac/playlist.m3u8"
+ },
+ {
+  "id": "tvppolonia-pl",
+  "name": "TVP Polonia",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "Polish"
+  ],
+  "category": "general",
+  "stream": "https://dash2.antik.sk/live/test_tvp_polonia/playlist.m3u8",
+  "site": "https://polonia.tvp.pl/"
+ },
+ {
+  "id": "tvpworld-pl",
+  "name": "TVP World",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://dash2.antik.sk/live/test_tvp_world/playlist.m3u8",
+  "site": "https://tvpworld.com/"
+ },
+ {
+  "id": "worldbilliards-pl",
+  "name": "World Billiards",
+  "country": "Poland",
+  "code": "PL",
+  "region": "Europe",
+  "languages": [
+   "English"
+  ],
+  "category": "general",
+  "stream": "https://9a81dd4ee3884d0dbcacafaf0d81327a.mediatailor.us-east-1.amazonaws.com/v1/master/04fd913bb278d8775298c26fdca9d9841f37601f/RakutenTV-eu_BilliardsTV/playlist.m3u8"
+ },
+ {
+  "id": "euronewsromania-ro",
+  "name": "Euronews Romania",
+  "country": "Romania",
+  "code": "RO",
+  "region": "Europe",
+  "languages": [
+   "Romanian"
+  ],
+  "category": "news",
+  "stream": "https://hls02ns.antenaplay.ro/hls/euronews-ro-sd/index.m3u8",
+  "site": "https://www.euronews.ro/"
+ },
+ {
+  "id": "nostalgiatv-ro",
+  "name": "Nostalgia TV",
+  "country": "Romania",
+  "code": "RO",
+  "region": "Europe",
+  "languages": [
+   "Romanian"
+  ],
+  "category": "film",
+  "stream": "https://hls02ns.antenaplay.ro/hls/nostalgia-hd/index.m3u8"
+ },
+ {
+  "id": "lifetv-sk",
+  "name": "LifeTv",
+  "country": "Slovakia",
+  "code": "SK",
+  "region": "Europe",
+  "languages": [
+   "Slovak"
+  ],
+  "category": "faith",
+  "stream": "https://lifetv.mpks.sk/s.m3u8",
+  "site": "https://www.lifetv.sk/"
+ },
+ {
+  "id": "24horas-es",
+  "name": "24 Horas",
+  "country": "Spain",
+  "code": "ES",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://ztnr.rtve.es/ztnr/1694255.m3u8",
+  "site": "http://www.rtve.es/alacarta/tve/24-horas/"
+ },
+ {
+  "id": "24horascanarias-es",
+  "name": "24 Horas Canarias",
+  "country": "Spain",
+  "code": "ES",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://ztnr.rtve.es/ztnr/5473142.m3u8",
+  "site": "https://www.rtve.es/play/videos/directo/tve-canarias/24-h-can/"
+ },
+ {
+  "id": "24horascatalunya-es",
+  "name": "24 Horas Catalunya",
+  "country": "Spain",
+  "code": "ES",
+  "region": "Europe",
+  "languages": [
+   "Catalan",
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://ztnr.rtve.es/ztnr/4952053.m3u8",
+  "site": "https://www.rtve.es/play/videos/directo/tve-catalunya/24h-cat/"
+ },
+ {
+  "id": "ewtnespana-es",
+  "name": "EWTN Espana",
+  "country": "Spain",
+  "code": "ES",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "faith",
+  "stream": "https://cdn3.wowza.com/1/SmVrQmZCUXZhVDgz/b3J3MFJv/hls/q6xkg9py/480/chunklist.m3u8",
+  "site": "https://ewtn.es/"
+ },
+ {
+  "id": "fuerteventuratv-es",
+  "name": "Fuerteventura TV",
+  "country": "Spain",
+  "code": "ES",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://5c0956165db0b.streamlock.net/ftv/directo/.m3u8",
+  "site": "https://www.fuerteventuratv.net/"
+ },
+ {
+  "id": "telemadrid-es",
+  "name": "Telemadrid",
+  "country": "Spain",
+  "code": "ES",
+  "region": "Europe",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://live.telemadrid.cross-media.es/6389770581112/eu-central-1/6416060453001/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJob3N0IjoiajI5YjgyLmVncmVzcy5haGc3NmwiLCJhY2NvdW50X2lkIjoiNjQxNjA2MDQ1MzAwMSIsImVobiI6ImxpdmUudGVsZW1hZHJpZC5jcm9zcy1tZWRpYS5lcyIsImlzcyI6ImJsaXZlLXBsYXliYWNrLXNvdXJjZS1hcGkiLCJzdWIiOiJwYXRobWFwdG9rZW4iLCJhdWQiOlsiNjQxNjA2MDQ1MzAwMSJdLCJqdGkiOiI2Mzg5NzcwNTgxMTEyIn0.kqriAMUkHT6m0V6wkCHJum_EUyL4PAi1zJMKlfmYHEU/playlist-hls.m3u8"
+ },
+ {
+  "id": "plutotvdokumentar-se",
+  "name": "Pluto TV Dokumentar",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "Danish"
+  ],
+  "category": "culture",
+  "stream": "https://jmp2.uk/plu-62b30b0060a9ca0007d628b4.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-dokumentar-dk/details"
+ },
+ {
+  "id": "plutotvfishing-se",
+  "name": "Pluto TV Fishing",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "Danish"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-619e1874e0d3a7000729a036.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-fishing-dk/details"
+ },
+ {
+  "id": "plutotvhandboldhighlights-se",
+  "name": "Pluto TV Handbold Highlights",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "Danish"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-68dfa431cc3c6cd904053100.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-handbold-highlights-dk/details"
+ },
+ {
+  "id": "plutotvhandboldlive-se",
+  "name": "Pluto TV Handbold Live",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "Danish"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-6618f54baec96800081525ec.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-handbold-live-dk/details"
+ },
+ {
+  "id": "plutotvhandbollhighlights-se",
+  "name": "Pluto TV Handboll Highlights",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "Swedish"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-68dfa3e2cc3c6cd904052c41.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-handboll-highlights-se/details"
+ },
+ {
+  "id": "plutotvhandbolllive-se",
+  "name": "Pluto TV Handboll Live",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "Swedish"
+  ],
+  "category": "sport",
+  "stream": "https://jmp2.uk/plu-686faf533ffa5e0c912688e7.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-handboll-live-se/details"
+ },
+ {
+  "id": "plutotvjuniorklubben-se",
+  "name": "Pluto TV Juniorklubben",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "Danish"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-61c09a78bd194c0008decc28.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-juniorklubben-dk/details"
+ },
+ {
+  "id": "plutotvklassisketegnefilm-se",
+  "name": "Pluto TV Klassiske tegnefilm",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "Danish"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-67f508992ebe80e2929b5c98.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-klassiske-tegnefilm-dk/details"
+ },
+ {
+  "id": "plutotvklassisketegnefilmer-se",
+  "name": "Pluto TV Klassiske tegnefilmer",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "Norwegian"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-67f508f68ddd60c57dc44766.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-klassiske-tegnefilmer-no/details"
+ },
+ {
+  "id": "plutotvspace-se",
+  "name": "Pluto TV Space",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "Danish"
+  ],
+  "category": "culture",
+  "stream": "https://jmp2.uk/plu-61b86c6ef30f5d0007e4c6d1.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-space-dk/details"
+ },
+ {
+  "id": "plutotvtecknadeklassiker-se",
+  "name": "Pluto TV Tecknade klassiker",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "Swedish"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-67f5095a3481170e6843d95d.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-tecknade-klassiker-se/details"
+ },
+ {
+  "id": "plutotvtecknat-se",
+  "name": "Pluto TV Tecknat",
+  "country": "Sweden",
+  "code": "SE",
+  "region": "Europe",
+  "languages": [
+   "English",
+   "Swedish"
+  ],
+  "category": "kids",
+  "stream": "https://jmp2.uk/plu-61c0b6f028e94c000782684a.m3u8",
+  "site": "https://pluto.tv/live-tv/pluto-tv-tecknat-ptv1/details"
+ },
+ {
+  "id": "channel24-ua",
+  "name": "Channel 24",
+  "country": "Ukraine",
+  "code": "UA",
+  "region": "Europe",
+  "languages": [
+   "Ukrainian"
+  ],
+  "category": "news",
+  "stream": "https://streamvideol1.luxnet.ua/news24/smil:news24.stream.smil/playlist.m3u8",
+  "site": "https://24tv.ua/"
+ },
+ {
+  "id": "ewtnukraine-ua",
+  "name": "EWTN Ukraine",
+  "country": "Ukraine",
+  "code": "UA",
+  "region": "Europe",
+  "languages": [
+   "Ukrainian"
+  ],
+  "category": "faith",
+  "stream": "https://cdn3.wowza.com/1/WjduMm1tYnlwNXQx/M01NV3Uz/hls/live/playlist.m3u8",
+  "site": "https://ewtn.org.ua/"
+ },
+ {
+  "id": "mega-ua",
+  "name": "Mega",
+  "country": "Ukraine",
+  "code": "UA",
+  "region": "Europe",
+  "languages": [
+   "Ukrainian"
+  ],
+  "category": "general",
+  "stream": "https://cdn15.live-tv.cloud/ua_infinitas_tv/mega-abr/playlist.m3u8",
+  "site": "http://megatv.kiev.ua/"
+ },
+ {
+  "id": "ertcosmoscyprus-cy",
+  "name": "ERT Cosmos Cyprus",
+  "country": "Cyprus",
+  "code": "CY",
+  "region": "Middle East",
+  "languages": [
+   "Greek"
+  ],
+  "category": "general",
+  "stream": "https://ert-live.ascdn.broadpeak.io/bpk-tv/ERTCosmos_Cyprus/default/index.m3u8"
+ },
+ {
+  "id": "palestinetv-ir",
+  "name": "Palestinetv",
+  "country": "Iran",
+  "code": "IR",
+  "region": "Middle East",
+  "languages": [
+   "Arabic",
+   "Persian"
+  ],
+  "category": "general",
+  "stream": "https://ncdn.telewebion.ir/palestine/live/playlist.m3u8"
+ },
+ {
+  "id": "presstv-ir",
+  "name": "Press TV",
+  "country": "Iran",
+  "code": "IR",
+  "region": "Middle East",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://live.presstv.co.uk/hls/presstv.m3u8",
+  "site": "https://www.presstv.ir/"
+ },
+ {
+  "id": "tbnnejattv-ir",
+  "name": "TBN Nejat TV",
+  "country": "Iran",
+  "code": "IR",
+  "region": "Middle East",
+  "languages": [
+   "Persian"
+  ],
+  "category": "general",
+  "stream": "https://hls.nejat.live/hls/stream.m3u8",
+  "site": "https://nejattv.org/"
+ },
+ {
+  "id": "wisehumantv-ir",
+  "name": "WiseHumanTv",
+  "country": "Iran",
+  "code": "IR",
+  "region": "Middle East",
+  "languages": [
+   "Faroese"
+  ],
+  "category": "faith",
+  "stream": "https://avr.host247.net/live/WiseHumanTv/playlist.m3u8"
+ },
+ {
+  "id": "emantv-iq",
+  "name": "EmanTv",
+  "country": "Iraq",
+  "code": "IQ",
+  "region": "Middle East",
+  "languages": [
+   "Kurdish"
+  ],
+  "category": "kids",
+  "stream": "https://avr.host247.net/live/emantv/playlist.m3u8"
+ },
+ {
+  "id": "kan11-il",
+  "name": "Kan 11",
+  "country": "Israel",
+  "code": "IL",
+  "region": "Middle East",
+  "languages": [
+   "Hebrew"
+  ],
+  "category": "general",
+  "stream": "https://kancdn.medonecdn.net/livehls/oil/kancdn-live/live/kan11/live.livx/playlist.m3u8",
+  "site": "https://www.kan.org.il/"
+ },
+ {
+  "id": "aljazeera-qa",
+  "name": "Al Jazeera",
+  "country": "Qatar",
+  "code": "QA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-hls-apps-aja-fa.getaj.net/AJA/01.m3u8",
+  "site": "https://www.aljazeera.net/"
+ },
+ {
+  "id": "aljazeera2-qa",
+  "name": "Al Jazeera 2",
+  "country": "Qatar",
+  "code": "QA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-hls-web-aja2-gcp.thehlive.com/AJA2/index.m3u8"
+ },
+ {
+  "id": "aljazeeramubasher-qa",
+  "name": "Al Jazeera Mubasher",
+  "country": "Qatar",
+  "code": "QA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-hls-apps-ajm-fa.getaj.net/AJM/index.m3u8",
+  "site": "http://mubasher.aljazeera.net/"
+ },
+ {
+  "id": "aljazeeramubasher24-qa",
+  "name": "Al Jazeera Mubasher 24",
+  "country": "Qatar",
+  "code": "QA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-hls-apps-ajm24-fa.getaj.net/AJM24/index.m3u8",
+  "site": "https://www.aljazeeramubasher.net/"
+ },
+ {
+  "id": "aljazeeramubasherbroadcast2-qa",
+  "name": "Al Jazeera Mubasher Broadcast 2",
+  "country": "Qatar",
+  "code": "QA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-hls-apps-ajm2-fa.getaj.net/AJM2/index.m3u8",
+  "site": "https://www.aljazeeramubasher.net/"
+ },
+ {
+  "id": "alarabiyaenglish-sa",
+  "name": "Al Arabiya English",
+  "country": "Saudi Arabia",
+  "code": "SA",
+  "region": "Middle East",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://live.alarabiya.net/alarabiapublish/english/playlist_dvr.m3u8"
+ },
+ {
+  "id": "alhadath-sa",
+  "name": "Al Hadath",
+  "country": "Saudi Arabia",
+  "code": "SA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://shd-gcp-live.edgenextcdn.net/live/bitmovin-hadath/2ff87ec4c2f3ede35295a20637d9f8fd/index.m3u8",
+  "site": "https://www.alhadath.net/"
+ },
+ {
+  "id": "asharqdiscovery-sa",
+  "name": "Asharq Discovery",
+  "country": "Saudi Arabia",
+  "code": "SA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "culture",
+  "stream": "https://svs.itworkscdn.net/asharqdiscoverylive/asharqd.smil/playlist_dvr.m3u8",
+  "site": "https://asharqdiscovery.com"
+ },
+ {
+  "id": "asharqdocumentary-sa",
+  "name": "Asharq Documentary",
+  "country": "Saudi Arabia",
+  "code": "SA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "culture",
+  "stream": "https://svs.itworkscdn.net/asharqdocumentarylive/asharqdocumentary.smil/playlist_dvr.m3u8",
+  "site": "https://now.asharq.com/%D9%85%D8%A8%D8%A7%D8%B4%D8%B1-%D8%A7%D9%84%D8%B4%D8%B1%D9%82-%D8%A7%D9%84%D9%88%D8%AB%D8%A7%D8%A6%D9%82%D9%8A%D8%A9"
+ },
+ {
+  "id": "asharqnews-sa",
+  "name": "Asharq News",
+  "country": "Saudi Arabia",
+  "code": "SA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "business",
+  "stream": "https://live-news.asharq.com/asharq.m3u8",
+  "site": "https://asharq.com/"
+ },
+ {
+  "id": "asharqradio-sa",
+  "name": "Asharq Radio",
+  "country": "Saudi Arabia",
+  "code": "SA",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "business",
+  "stream": "https://svs.itworkscdn.net/asharqradiovlive/asharqradiov/playlist.m3u8",
+  "site": "https://asharqbusiness.com/radio/"
+ },
+ {
+  "id": "ahaber-tr",
+  "name": "A Haber",
+  "country": "Türkiye",
+  "code": "TR",
+  "region": "Middle East",
+  "languages": [
+   "Turkish"
+  ],
+  "category": "news",
+  "stream": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber.m3u8",
+  "site": "http://www.ahaber.com.tr/"
+ },
+ {
+  "id": "trthaber-tr",
+  "name": "TRT Haber",
+  "country": "Türkiye",
+  "code": "TR",
+  "region": "Middle East",
+  "languages": [
+   "Turkish"
+  ],
+  "category": "news",
+  "stream": "https://tv-trthaber.medya.trt.com.tr/master.m3u8",
+  "site": "https://www.trthaber.com/"
+ },
+ {
+  "id": "trtworld-tr",
+  "name": "TRT World",
+  "country": "Türkiye",
+  "code": "TR",
+  "region": "Middle East",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://mumbai-edge.smartplaytv.in/TRTWorld/index.m3u8",
+  "site": "https://www.trtworld.com/"
+ },
+ {
+  "id": "alarabiyabusiness-ae",
+  "name": "Al Arabiya Business",
+  "country": "United Arab Emirates",
+  "code": "AE",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "business",
+  "stream": "https://live.alarabiya.net/alarabiapublish/aswaaq.smil/playlist.m3u8",
+  "site": "https://www.alarabiya.net/aswaq"
+ },
+ {
+  "id": "alarabiyaprograms-ae",
+  "name": "Al Arabiya Programs",
+  "country": "United Arab Emirates",
+  "code": "AE",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "culture",
+  "stream": "https://live.alarabiya.net/alarabiapublish/aaprograms.smil/playlist.m3u8",
+  "site": "https://www.alarabiya.net/programs"
+ },
+ {
+  "id": "skynewsarabia-ae",
+  "name": "Sky News Arabia",
+  "country": "United Arab Emirates",
+  "code": "AE",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-stream.skynewsarabia.com/c-horizontal-channel/horizontal-stream/index.m3u8",
+  "site": "https://www.skynewsarabia.com/"
+ },
+ {
+  "id": "skynewsarabiavertical-ae",
+  "name": "Sky News Arabia Vertical",
+  "country": "United Arab Emirates",
+  "code": "AE",
+  "region": "Middle East",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://live-stream.skynewsarabia.com/c-vertical-channel/vertical-stream/index.m3u8",
+  "site": "https://www.skynewsarabia.com/"
+ },
+ {
+  "id": "cbcnewsnetwork-ca",
+  "name": "CBC News Network",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://d2ny9lo79ujali.cloudfront.net/CBC_News_International.m3u8",
+  "site": "http://www.cbc.ca/programguide/daily/today/cbc_news_network/"
+ },
+ {
+  "id": "hamdardtv-ca",
+  "name": "Hamdard TV",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "Punjabi"
+  ],
+  "category": "news",
+  "stream": "https://tv.hamdardtv.com/hamdard/index.m3u8",
+  "site": "https://www.hamdardtv.com/"
+ },
+ {
+  "id": "haunttv-ca",
+  "name": "HauntTV",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "film",
+  "stream": "https://amg01446-blueantmediacan-haunttvaussam-samsungau-vcnai.amagi.tv/playlist/amg01446-blueantmediacan-haunttvaussam-samsungau/playlist.m3u8",
+  "site": "https://haunt-tv.com/"
+ },
+ {
+  "id": "lovenature-ca",
+  "name": "Love Nature",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "general",
+  "stream": "https://pb-ehs1glsha1juy.akamaized.net/Love_Nature_4K.m3u8",
+  "site": "https://tv.lovenature.com/"
+ },
+ {
+  "id": "moviemusicbystingray-ca",
+  "name": "Movie Music by Stingray",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://lotus.stingray.com/manifest/cmusic-cme004-montreal/samsungtvplus/master.m3u8"
+ },
+ {
+  "id": "qelloconcertsbystingray-ca",
+  "name": "Qello Concerts by Stingray",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [],
+  "category": "music",
+  "stream": "https://d39g1vxj2ef6in.cloudfront.net/v1/master/3fec3e5cac39a52b2132f9c66c83dae043dc17d4/prod-rakuten-stitched/master.m3u8?ads.xumo_channelId=88883052",
+  "site": "https://qello.com/en/"
+ },
+ {
+  "id": "stingraycityscapes-ca",
+  "name": "Stingray Cityscapes",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://aka-live1050.delivery.roku.com/7572d640-7373-4137-8b14-a3afff395349/t2-origin/out/v1/live.m3u8",
+  "site": "https://www.stingray.com/consumer/products/cityscapes/"
+ },
+ {
+  "id": "stingrayclassicrock-ca",
+  "name": "Stingray Classic Rock",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://lotus.stingray.com/manifest/ose-101ads-montreal/samsungtvplus/master.m3u8"
+ },
+ {
+  "id": "stingrayclassica-ca",
+  "name": "Stingray Classica",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English",
+   "German",
+   "Spanish",
+   "French"
+  ],
+  "category": "music",
+  "stream": "https://lotus.stingray.com/manifest/classica-cla008-montreal/samsungtvplus/master.m3u8",
+  "site": "https://classica.stingray.com/"
+ },
+ {
+  "id": "zenlifebystingray-ca",
+  "name": "ZenLIFE by Stingray",
+  "country": "Canada",
+  "code": "CA",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "general",
+  "stream": "https://lotus.stingray.com/manifest/zenlife-zen001-montreal/samsungtvplus/master.m3u8",
+  "site": "https://stingray.com/consumer/products/zen-life/"
+ },
+ {
+  "id": "norteinformativotv-cr",
+  "name": "Norte Informativo TV",
+  "country": "Costa Rica",
+  "code": "CR",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://videohd.live:19360/8076/8076.m3u8",
+  "site": "https://norteinformativo.com/"
+ },
+ {
+  "id": "boncheslatinostv-do",
+  "name": "Bonches Latinos TV",
+  "country": "Dominican Republic",
+  "code": "DO",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://5790d294af2dc.streamlock.net/latinostv/latinostv/playlist.m3u8",
+  "site": "https://boncheslatinos.com/"
+ },
+ {
+  "id": "colorvision-do",
+  "name": "Color Vision",
+  "country": "Dominican Republic",
+  "code": "DO",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://cdn4.wind.do/streams/colorvision/colorvision_master.m3u8",
+  "site": "https://colorvision.com.do/"
+ },
+ {
+  "id": "elpuertotv-do",
+  "name": "El Puerto TV",
+  "country": "Dominican Republic",
+  "code": "DO",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "faith",
+  "stream": "https://5bf8041cb3fed.streamlock.net/PuertoTV/PuertoTV/playlist.m3u8",
+  "site": "https://elpuerto.com.do/"
+ },
+ {
+  "id": "latinatvinternacional-do",
+  "name": "Latina TV Internacional",
+  "country": "Dominican Republic",
+  "code": "DO",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://5790d294af2dc.streamlock.net/latinatv/latinatv/chunklist.m3u8",
+  "site": "https://latinatvinternacional.com/"
+ },
+ {
+  "id": "megacinetv-do",
+  "name": "Mega Cine TV",
+  "country": "Dominican Republic",
+  "code": "DO",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "film",
+  "stream": "https://cnn.hostlagarto.com/megacinetv/playlist.m3u8",
+  "site": "https://dominicanchannels.com/mega-cine-tv/"
+ },
+ {
+  "id": "teleradionorte-do",
+  "name": "TeleRadioNorte",
+  "country": "Dominican Republic",
+  "code": "DO",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://angelistic.live:3785/live/tvoficiallive.m3u8",
+  "site": "https://teleradionorte.com/"
+ },
+ {
+  "id": "megavisioncanal19-sv",
+  "name": "Megavision Canal 19",
+  "country": "El Salvador",
+  "code": "SV",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://mgvchannel19-ioriver-cdn.encoders.immergo.tv/master.m3u8",
+  "site": "https://megavision.com.sv/"
+ },
+ {
+  "id": "megavisioncanal21-sv",
+  "name": "Megavision Canal 21",
+  "country": "El Salvador",
+  "code": "SV",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://mgvchannel21-ioriver-cdn.encoders.immergo.tv/master.m3u8",
+  "site": "https://megavision.com.sv/"
+ },
+ {
+  "id": "penieltvbibliaabierta-gt",
+  "name": "Peniel TV Biblia Abierta",
+  "country": "Guatemala",
+  "code": "GT",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "faith",
+  "stream": "https://s.emisoras.tv:8081/penielbibliaabierta/index.m3u8"
+ },
+ {
+  "id": "aztecahonduras-hn",
+  "name": "Azteca Honduras",
+  "country": "Honduras",
+  "code": "HN",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://mdstrm.com/live-stream-playlist/65a1d2fd7e7f14355550d570.m3u8",
+  "site": "http://azteca.com.hn/"
+ },
+ {
+  "id": "aztecadeportesnetwork-mx",
+  "name": "Azteca Deportes Network",
+  "country": "Mexico",
+  "code": "MX",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "sport",
+  "stream": "https://live-manifest.production-public.tubi.io/live/6bf131c3-d664-424c-93c9-49188a788980/playlist.m3u8"
+ },
+ {
+  "id": "aztecainternacional-mx",
+  "name": "Azteca Internacional",
+  "country": "Mexico",
+  "code": "MX",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://azt-mun.otteravision.com/azt/mun/mun.m3u8"
+ },
+ {
+  "id": "giktvmx-mx",
+  "name": "GikTVMX",
+  "country": "Mexico",
+  "code": "MX",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "culture",
+  "stream": "https://pistream.ddns.net/hls/stream.m3u8",
+  "site": "https://giktvmx.g3radio.mx"
+ },
+ {
+  "id": "itvdeportes-mx",
+  "name": "ITV Deportes",
+  "country": "Mexico",
+  "code": "MX",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://thm-it-roku.otteravision.com/thm/it/it.m3u8"
+ },
+ {
+  "id": "mileniotelevision-mx",
+  "name": "Milenio Television",
+  "country": "Mexico",
+  "code": "MX",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://jmp2.uk/plu-652e922db4b047000825f975.m3u8",
+  "site": "https://www.milenio.com/mileniotv"
+ },
+ {
+  "id": "tvmarpuertovallarta-mx",
+  "name": "TV Mar Puerto Vallarta",
+  "country": "Mexico",
+  "code": "MX",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://5ca9af4645e15.streamlock.net/tvmarvallarta/videotvmarvallarta/playlist.m3u8",
+  "site": "https://tvmar.tv/"
+ },
+ {
+  "id": "olammetrotv-ni",
+  "name": "Olam Metro TV",
+  "country": "Nicaragua",
+  "code": "NI",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "faith",
+  "stream": "https://netzerstreaming.com:4433/hls/olammetro/index.m3u8",
+  "site": "https://olammetro.com/"
+ },
+ {
+  "id": "visionlatina-pa",
+  "name": "Vision Latina",
+  "country": "Panama",
+  "code": "PA",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "faith",
+  "stream": "https://cdn-cloudfront.us-east-1.prod.ingest.aws-infra.dacast.com/live/64917431-2f51-0a46-d4d0-04d111b2393f/master.m3u8",
+  "site": "https://visionlatinapanama.com/"
+ },
+ {
+  "id": "amazingfactstv-us",
+  "name": "Amazing Facts TV",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://hlspackager.akamaized.net/live/DB/AMAZING_FACTS/HLS/AMAZING_FACTS.m3u8",
+  "site": "https://www.amazingfacts.org/"
+ },
+ {
+  "id": "beinsportsxtra-us",
+  "name": "beIN SPORTS XTRA",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "sport",
+  "stream": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
+  "site": "https://www.beinsportsxtra.com/"
+ },
+ {
+  "id": "beinsportsxtraenespanol-us",
+  "name": "beIN SPORTS XTRA en Espanol",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "sport",
+  "stream": "https://dc1644a9jazgj.cloudfront.net/beIN_Sports_Xtra_Espanol.m3u8",
+  "site": "https://beinxtraespanol.com/"
+ },
+ {
+  "id": "billiardtv-us",
+  "name": "Billiard TV",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "sport",
+  "stream": "https://pb-wm04vonaerv0k.akamaized.net/billi.m3u8",
+  "site": "https://streamstak.com/billiardtv/"
+ },
+ {
+  "id": "bloombergtv-us",
+  "name": "Bloomberg TV",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "business",
+  "stream": "https://d8975dc3.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/U2Ftc3VuZy1nYl9CbG9vbWJlcmdUVlBsdXNfSExT/playlist.m3u8",
+  "site": "https://www.bloomberg.com/live/us/btv"
+ },
+ {
+  "id": "catholicfaithnetwork-us",
+  "name": "Catholic Faith Network",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://uni8rtmp.tulix.tv/cfntv/cfntv/playlist.m3u8",
+  "site": "http://www.cfntv.org/"
+ },
+ {
+  "id": "foxdeportes-us",
+  "name": "Fox Deportes",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "Spanish",
+   "English"
+  ],
+  "category": "sport",
+  "stream": "https://live-manifest.production-public.tubi.io/live/d906efca-1302-4e29-b0d9-9a1d7a305d69/playlist.m3u8",
+  "site": "https://www.foxdeportes.com/"
+ },
+ {
+  "id": "nashuaetv-us",
+  "name": "Nashua ETV",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "science",
+  "stream": "https://livestream.telvue.com/nashuanh2/f7b44cfafd5c52223d5498196c8a2e7b.sdp/playlist.m3u8",
+  "site": "https://www.nashuanh.gov/824/Nashua-ETV-Live-Stream"
+ },
+ {
+  "id": "oencantadordecaes-us",
+  "name": "O Encantador de Caes",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "science",
+  "stream": "https://jmp2.uk/plu-61099df8cee03b00074b2ecf.m3u8",
+  "site": "https://pluto.tv/en/live-tv/dog-whisperer-ptv1"
+ },
+ {
+  "id": "overtime-us",
+  "name": "Overtime",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "English"
+  ],
+  "category": "sport",
+  "stream": "https://d1a8aq6t30gkqj.cloudfront.net/v1/amc_overtime_1/samsungheadend_us/latest/main/hls/playlist_hd.m3u8",
+  "site": "https://watch.plex.tv/live-tv/channel/overtime"
+ },
+ {
+  "id": "plutotvmisterios-us",
+  "name": "Pluto TV Misterios",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "science",
+  "stream": "https://jmp2.uk/plu-5fac52f142044f00078e2a51.m3u8",
+  "site": "https://pluto.tv/en/live-tv/pluto-tv-misterios-ptv1"
+ },
+ {
+  "id": "plutotvnatureza-us",
+  "name": "Pluto TV Natureza",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "science",
+  "stream": "https://jmp2.uk/plu-5f1213ba0ecebc00070e170f.m3u8",
+  "site": "https://pluto.tv/en/live-tv/pluto-tv-natureza"
+ },
+ {
+  "id": "plutotvpaisagensporstingray-us",
+  "name": "Pluto TV Paisagens por Stingray",
+  "country": "United States",
+  "code": "US",
+  "region": "North America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "science",
+  "stream": "https://jmp2.uk/plu-604a8dedbca75b0007b1c753.m3u8",
+  "site": "https://pluto.tv/en/live-tv/pluto-tv-paisagens-por-stingray"
+ },
+ {
+  "id": "abcentertains-au",
+  "name": "ABC Entertains",
+  "country": "Australia",
+  "code": "AU",
+  "region": "Oceania",
+  "languages": [
+   "English"
+  ],
+  "category": "science",
+  "stream": "https://c.mjh.nz/abc-me.m3u8",
+  "site": "https://iview.abc.net.au/channel/abc2"
+ },
+ {
+  "id": "abcnews-au",
+  "name": "ABC News",
+  "country": "Australia",
+  "code": "AU",
+  "region": "Oceania",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://abc-news-dmd-streams-1.akamaized.net/out/v1/701126012d044971b3fa89406a440133/index.m3u8",
+  "site": "https://www.abc.net.au/news/newschannel/"
+ },
+ {
+  "id": "skynewsextra1-au",
+  "name": "Sky News Extra 1",
+  "country": "Australia",
+  "code": "AU",
+  "region": "Oceania",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://skynewsau-live.akamaized.net/hls/live/2002689/skynewsau-extra1/master.m3u8",
+  "site": "https://www.skynews.com.au/page/extra"
+ },
+ {
+  "id": "skynewsextra3-au",
+  "name": "Sky News Extra 3",
+  "country": "Australia",
+  "code": "AU",
+  "region": "Oceania",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://skynewsau-live.akamaized.net/hls/live/2002691/skynewsau-extra3/master.m3u8",
+  "site": "https://www.skynews.com.au/page/extra"
+ },
+ {
+  "id": "canal12venadotuerto-ar",
+  "name": "Canal 12 Venado Tuerto",
+  "country": "Argentina",
+  "code": "AR",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://nd106.republicaservers.com:4433/hls/diegologonitv/index.m3u8",
+  "site": "https://www.12informa.com.ar/"
+ },
+ {
+  "id": "canal50morteros-ar",
+  "name": "Canal 50 Morteros",
+  "country": "Argentina",
+  "code": "AR",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://online.coopmorteros.coop/canal50/vivo.m3u8",
+  "site": "https://canal50.tv/"
+ },
+ {
+  "id": "sicarditv-ar",
+  "name": "Sicardi TV",
+  "country": "Argentina",
+  "code": "AR",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://vivo.solumedia.com:19360/sicarditv/sicarditv.m3u8",
+  "site": "https://sicarditv.com.ar/"
+ },
+ {
+  "id": "rtp-bo",
+  "name": "RTP",
+  "country": "Bolivia",
+  "code": "BO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://rtp.noxun.net/hls720/stream3.m3u8",
+  "site": "http://www.rtpbolivia.com.bo/"
+ },
+ {
+  "id": "tvlatina-bo",
+  "name": "TV Latina",
+  "country": "Bolivia",
+  "code": "BO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://castv10.plugstreaming.com:19360/redtv/redtv.m3u8",
+  "site": "https://www.audiokiss.com/tvlatina/"
+ },
+ {
+  "id": "despertartv-br",
+  "name": "Despertar TV",
+  "country": "Brazil",
+  "code": "BR",
+  "region": "South America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "faith",
+  "stream": "https://br.conectmy.com.br/DespertarTV/index.m3u8",
+  "site": "https://despertartv.com.br/"
+ },
+ {
+  "id": "redemeionorte-br",
+  "name": "Rede Meio Norte",
+  "country": "Brazil",
+  "code": "BR",
+  "region": "South America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "general",
+  "stream": "https://maystreaming.cloudecast.com/redemeio/index.m3u8",
+  "site": "https://www.meionorte.com/tv-meionorte"
+ },
+ {
+  "id": "tvlatinasat-br",
+  "name": "TVLatinaSat",
+  "country": "Brazil",
+  "code": "BR",
+  "region": "South America",
+  "languages": [
+   "Portuguese"
+  ],
+  "category": "general",
+  "stream": "https://www.latinasat.com.br/hls/live/stream/index.m3u8",
+  "site": "https://latinasat.com.br/"
+ },
+ {
+  "id": "campoabiertotv-cl",
+  "name": "Campo Abierto TV",
+  "country": "Chile",
+  "code": "CL",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://v2.tustreaming.cl/catvlive/index.m3u8",
+  "site": "http://campoabierto.cl/home/senal-en-vivo/"
+ },
+ {
+  "id": "canal5puertomontt-cl",
+  "name": "Canal 5 Puerto Montt",
+  "country": "Chile",
+  "code": "CL",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://5ff3d9babae13.streamlock.net/aufymdjpjf/aufymdjpjf/playlist.m3u8",
+  "site": "https://canal5.cl/wp/"
+ },
+ {
+  "id": "caracolatv-cl",
+  "name": "Caracola TV",
+  "country": "Chile",
+  "code": "CL",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://wifispeed.trapemn.tv:1936/comunales/caracola-tv/chunks.m3u8",
+  "site": "https://www.caracolatv.cl/"
+ },
+ {
+  "id": "lametrotv-cl",
+  "name": "La Metro TV",
+  "country": "Chile",
+  "code": "CL",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://jireh-8-hls-video-us-isp.dps.live/hls-video/931b584451fa6dd1313ee66efbfd5802e3f3bcea/metropolitanatv/metropolitanatv.smil/playlist.m3u8",
+  "site": "https://lametrofm.cl/"
+ },
+ {
+  "id": "mega-cl",
+  "name": "Mega",
+  "country": "Chile",
+  "code": "CL",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://pantera1-100gb-cl-movistar.dps.live/mega/mega.smil/playlist.m3u8",
+  "site": "https://www.mega.cl/"
+ },
+ {
+  "id": "tvn3-cl",
+  "name": "TVN3",
+  "country": "Chile",
+  "code": "CL",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "film",
+  "stream": "https://mdstrm.com/live-stream-playlist/5653641561b4eba30a7e4929.m3u8",
+  "site": "https://www.tvn.cl/tvn3"
+ },
+ {
+  "id": "canalrcn-co",
+  "name": "Canal RCN",
+  "country": "Colombia",
+  "code": "CO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://barinaslive1.boldmss.com/RCN/RCN.isml/RCN.m3u8",
+  "site": "https://www.canalrcn.com/"
+ },
+ {
+  "id": "caracolinternacional-co",
+  "name": "Caracol Internacional",
+  "country": "Colombia",
+  "code": "CO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://streaming.onnethn.com/CARACOL_INTERNACIONAL/playlist.m3u8",
+  "site": "http://caracolinternacional.com/"
+ },
+ {
+  "id": "caracoltv-co",
+  "name": "Caracol TV",
+  "country": "Colombia",
+  "code": "CO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://barinaslive1.boldmss.com/CARACOL/CARACOL.isml/CARACOL.m3u8",
+  "site": "https://www.caracoltv.com/"
+ },
+ {
+  "id": "noticiasrcn-co",
+  "name": "Noticias RCN",
+  "country": "Colombia",
+  "code": "CO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://jmp2.uk/plu-67d9b0ebc290c9499046e88f.m3u8",
+  "site": "https://www.noticiasrcn.com/"
+ },
+ {
+  "id": "rcnmas-co",
+  "name": "RCN Mas",
+  "country": "Colombia",
+  "code": "CO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://rcntv-rcnmas-1-us.roku.wurl.tv/3000.m3u8",
+  "site": "https://www.rcntotal.com/"
+ },
+ {
+  "id": "rcnnovelas-co",
+  "name": "RCN Novelas",
+  "country": "Colombia",
+  "code": "CO",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://cdnlive.klicgo.net/rcnnovelas/live/playlist.m3u8",
+  "site": "https://www.rcnnovelas.com/"
+ },
+ {
+  "id": "megatv-py",
+  "name": "Mega TV",
+  "country": "Paraguay",
+  "code": "PY",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://www.desde-paraguay.com/mega.m3u8",
+  "site": "https://megacadena.com.py/tv/"
+ },
+ {
+  "id": "nandeportetepetv-py",
+  "name": "Nande Portetepe TV",
+  "country": "Paraguay",
+  "code": "PY",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "music",
+  "stream": "https://video.hostingcaaguazu.com:19360/nandeportetepe/nandeportetepe.m3u8"
+ },
+ {
+  "id": "latina-pe",
+  "name": "Latina",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://redirector.rudo.video/hls-video/567ffde3fa319fadf3419efda25619456231dfea/latina/latina.smil/playlist.m3u8",
+  "site": "https://www.latina.pe/"
+ },
+ {
+  "id": "latinaclasicos-pe",
+  "name": "Latina Clasicos",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "film",
+  "stream": "https://redirector.rudo.video/hls-video/plus226/latina2/latina2.smil/playlist.m3u8",
+  "site": "https://www.latina.pe/"
+ },
+ {
+  "id": "latinanoticias247-pe",
+  "name": "Latina Noticias 24/7",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "news",
+  "stream": "https://dai.google.com/linear/hls/event/oYQGDqEGTmGdHE_fz9oLlg/master.m3u8",
+  "site": "https://www.latina.pe/"
+ },
+ {
+  "id": "latinapodcast-pe",
+  "name": "Latina Podcast",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://redirector.rudo.video/hls-video/plus226/latina4/latina4.smil/playlist.m3u8",
+  "site": "https://latina.pe/"
+ },
+ {
+  "id": "megatvjaen-pe",
+  "name": "Mega TV Jaen",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://live-evg5.tv360.bitel.com.pe/bitel/megatv/playlist.m3u8",
+  "site": "https://megatvjaen.pe/"
+ },
+ {
+  "id": "nacionaltvperu-pe",
+  "name": "Nacional Tv Peru",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://play.agenciastreaming.com:8081/nacionaltv/index.m3u8",
+  "site": "https://nacionaltvperu.com/"
+ },
+ {
+  "id": "tvperuanisima-pe",
+  "name": "TV Peruanisima",
+  "country": "Peru",
+  "code": "PE",
+  "region": "South America",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "music",
+  "stream": "https://k20.usastreams.com:8081/tvperuanisima/index.m3u8",
+  "site": "http://tvperuanisima.com/"
+ },
+ {
+  "id": "rtnbdivertissement-bi",
+  "name": "RTNB Divertissement",
+  "country": "Burundi",
+  "code": "BI",
+  "region": "World",
+  "languages": [
+   "English",
+   "French",
+   "Kirundi",
+   "Swahili"
+  ],
+  "category": "general",
+  "stream": "https://tv2-stream.rtnb.bi/hls/master.m3u8",
+  "site": "https://www.rtnb.bi/"
+ },
+ {
+  "id": "nostvbonaire2-bq",
+  "name": "NosTV Bonaire 2",
+  "country": "Caribbean Netherlands",
+  "code": "BQ",
+  "region": "World",
+  "languages": [
+   "Papiamento",
+   "Dutch"
+  ],
+  "category": "general",
+  "stream": "https://stream2.nostvbonaire.com/hls/0/stream.m3u8",
+  "site": "https://www.nostvbonaire.com/"
+ },
+ {
+  "id": "ertsulovneba-ge",
+  "name": "Ertsulovneba",
+  "country": "Georgia",
+  "code": "GE",
+  "region": "World",
+  "languages": [
+   "Georgian"
+  ],
+  "category": "faith",
+  "stream": "https://stream.sstv.ge/live/sstv/playlist.m3u8",
+  "site": "https://www.televizia.org/ertsulovneba/"
+ },
+ {
+  "id": "etv-gp",
+  "name": "ETV",
+  "country": "Guadeloupe",
+  "code": "GP",
+  "region": "World",
+  "languages": [
+   "French",
+   "Guadeloupean Creole"
+  ],
+  "category": "general",
+  "stream": "https://edge12.vedge.infomaniak.com/livecast/ik:etvgp/manifest.m3u8",
+  "site": "https://www.etv.gp/"
+ },
+ {
+  "id": "telenorte-pr",
+  "name": "Telenorte",
+  "country": "Puerto Rico",
+  "code": "PR",
+  "region": "World",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "general",
+  "stream": "https://627bb251f23c7.streamlock.net:444/TopRadioTV/TopRadioTV/playlist.m3u8",
+  "site": "https://telenortepr.godaddysites.com/"
+ },
+ {
+  "id": "3abnrussia-ru",
+  "name": "3ABN Russia",
+  "country": "Russia",
+  "code": "RU",
+  "region": "World",
+  "languages": [
+   "Russian"
+  ],
+  "category": "faith",
+  "stream": "https://hls.tv.3angels.ru/stream.m3u8",
+  "site": "https://www.3angels.ru/"
+ },
+ {
+  "id": "kinoseriya-ru",
+  "name": "Kinoseriya",
+  "country": "Russia",
+  "code": "RU",
+  "region": "World",
+  "languages": [
+   "Russian"
+  ],
+  "category": "film",
+  "stream": "https://fs.uplink.kz/kinoseria/mono.m3u8?token=onlinetv",
+  "site": "https://www.nastroykino.ru/kinoserija/"
+ },
+ {
+  "id": "afrobeattventertainment-uk",
+  "name": "Afrobeat TV Entertainment",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://stream.ecable.tv/afrobeats/index.m3u8"
+ },
+ {
+  "id": "bbcarabic-uk",
+  "name": "BBC Arabic",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "news",
+  "stream": "https://vs-hls-pushb-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_arabic_tv/mobile_wifi_main_hd_abr_v2.m3u8",
+  "site": "https://www.bbc.com/arabic"
+ },
+ {
+  "id": "bbcearth-uk",
+  "name": "BBC Earth",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "culture",
+  "stream": "https://amg00793-amg00793c6-firetv-us-4067.playouts.now.amagi.tv/playlist.m3u8"
+ },
+ {
+  "id": "bbcnews-uk",
+  "name": "BBC News",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "news",
+  "stream": "https://pb-iiczlgfysam0q.akamaized.net/v1/amcnetworks_bbcnews_1/samsungheadend_us/latest/main/hls/playlist.m3u8",
+  "site": "https://www.bbc.co.uk/tv/bbcnews"
+ },
+ {
+  "id": "faithuk-uk",
+  "name": "Faith UK",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://faithnow-hls.secdn.net/faithnow-c-channel/play/FaithUK.smil/playlist.m3u8",
+  "site": "https://uk.myfaith.tv/"
+ },
+ {
+  "id": "faithworldtv-uk",
+  "name": "Faith World TV",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://faithworldtv.abs.tv/1826926230/index.m3u8",
+  "site": "https://www.faithworldtv.com/"
+ },
+ {
+  "id": "godtv-uk",
+  "name": "GOD TV",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://fl-dvr.iptvcdn.tv/chid_1/playlist.m3u8",
+  "site": "https://www.god.tv/"
+ },
+ {
+  "id": "godtvasia-uk",
+  "name": "GOD TV Asia",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "faith",
+  "stream": "https://d1msejlow1t3l4.cloudfront.net/211125/godtv/playlist.m3u8",
+  "site": "https://www.god.tv/"
+ },
+ {
+  "id": "mta3alarabia-uk",
+  "name": "MTA3 Al-Arabia",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "Arabic"
+  ],
+  "category": "faith",
+  "stream": "https://chlivemta1.akamaized.net/hls/live/2010556/mta3alarabia/playlist.m3u8",
+  "site": "https://www.mta.tv/"
+ },
+ {
+  "id": "skynewsweather-uk",
+  "name": "Sky News Weather",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "science",
+  "stream": "https://distro001-gb-hls1-prd.delivery.skycdp.com/easel_cdn/ngrp:weather_loop.stream_all/playlist.m3u8",
+  "site": "https://news.sky.com/weather"
+ },
+ {
+  "id": "totalmusicconcerts-uk",
+  "name": "Totalmusic Concerts",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "Spanish"
+  ],
+  "category": "music",
+  "stream": "https://cdn.global.elektamedia.com/live/c7eds/Totalmusic_Concerts/SA_LIVE_hls_enc/master.m3u8",
+  "site": "https://www.40mediagroup.com"
+ },
+ {
+  "id": "traceuk-uk",
+  "name": "Trace UK",
+  "country": "United Kingdom",
+  "code": "UK",
+  "region": "World",
+  "languages": [
+   "English"
+  ],
+  "category": "music",
+  "stream": "https://channels.trace.plus/Traceprod/UK_FAST_hd/index.m3u8",
+  "site": "https://trace.plus/app"
+ }
+]

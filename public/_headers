@@ -51,6 +51,26 @@
   Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   Cross-Origin-Embedder-Policy: require-corp
 
+# tv: the broadcast player frame. The OS page's policy admits no
+# blob: media — media-src falls back to default-src 'self' there,
+# and a MediaSource load is a blob: load, which Chromium refuses
+# under that word. So the player is a document of its own, on the
+# nexuiz play-frame precedent: the OS policy is not loosened by a
+# syllable, and this subtree's policy is scoped to exactly what a
+# player needs — its engine script, the same-origin relay, blob
+# media — framed by the house's own pages only; and it carries the
+# embedder policy, without which the OS page's own require-corp
+# refuses the frame outright (the same law the ruby section
+# records for its worker). The catalog and
+# the engine ride the same section; neither is a document and the
+# policy is inert on them.
+/tv/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; media-src 'self' blob:; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+  ! X-Frame-Options
+  X-Frame-Options: SAMEORIGIN
+  Cross-Origin-Embedder-Policy: require-corp
+
 # ruby: the CRuby worker and the interpreter wasm it hosts. The
 # worker is spawned from the OS scope, so its script must carry the
 # embedder policy itself (require-corp refuses a worker whose

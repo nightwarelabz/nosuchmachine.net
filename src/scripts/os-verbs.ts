@@ -1,7 +1,7 @@
 // BLACKSITE OS — the verb roster, ported from nightjar's Blacksite bench.
 // LIVE = runs in this room. EDGE = one knock through the site's guarded
 // edge functions. LIMIT verbs are registered in os-limits.ts with the
-// room's honest reason, and `help` shows the whole 644 either way.
+// room's honest reason, and `help` shows the whole 645 either way.
 import {
   BlacksiteOS, VERBS, verb, md5, mmh3, bToHex, hexToB, bToB64, b64ToB,
 } from "./os-shell";
@@ -161,7 +161,7 @@ function registerHouse() {
     const edge = [...VERBS.values()].filter((v) => v.status === "EDGE").length;
     return [
       `BLACKSITE OS ${OS_RELEASE.version} "${OS_RELEASE.codename}" — sysinfo`,
-      `verbs: ${VERBS.size} registered (${live} in-room, ${edge} edge) of 644 on the roster — the rest are named limits`,
+      `verbs: ${VERBS.size} registered (${live} in-room, ${edge} edge) of 645 on the roster — the rest are named limits`,
       `vfs: ${vs.files} files · ${(vs.bytes / 1024).toFixed(1)} KB of content`,
       `local storage footprint: ${(ls / 1024).toFixed(1)} KB (this room only)`,
       `processes on the board: ${ctx.os.procs.length} · journal entries: ${ctx.os.journal.length}`,
