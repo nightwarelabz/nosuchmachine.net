@@ -5,11 +5,11 @@
 import { connect } from "cloudflare:sockets";
 import { err, guardTarget, json } from "../_lib/guard";
 
-async function timeConnect(host: string, port: number, timeoutMs = 3000): Promise<number | null> {
+async function timeConnect(address: string, port: number, timeoutMs = 3000): Promise<number | null> {
   const started = Date.now();
   let socket: any = null;
   try {
-    socket = connect({ hostname: host, port }, { secureTransport: "off", allowHalfOpen: false });
+    socket = connect({ hostname: address, port }, { secureTransport: "off", allowHalfOpen: false });
     await Promise.race([socket.opened, new Promise((_, r) => setTimeout(() => r(new Error("t")), timeoutMs))]);
     return Date.now() - started;
   } catch {
@@ -31,14 +31,20 @@ export async function onRequestGet(context: any) {
   const count = countRaw === null ? 4 : Number(countRaw);
   if (!Number.isInteger(count) || count < 1 || count > 8) return err("Count must be 1-8.");
   let host: string;
+  let dial: string;
   try {
     const g = await guardTarget(q.get("host") || "");
     host = g.host;
+    // Dial the guard-verified address, never the name — a rebinding
+    // name must not answer public for the check and private for the
+    // dial (the ssh-bridge pinning shape; the guard never returns an
+    // empty address list, it refuses instead).
+    dial = g.addresses[0];
   } catch (e: any) {
     return err(String(e?.message || e));
   }
   const samples: Array<number | null> = [];
-  for (let i = 0; i < count; i++) samples.push(await timeConnect(host, port));
+  for (let i = 0; i < count; i++) samples.push(await timeConnect(dial, port));
   const ok = samples.filter((s): s is number => s !== null);
   return json({
     ok: true, host, port, samples,

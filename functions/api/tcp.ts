@@ -14,11 +14,11 @@ const SERVICE: Record<number, string> = {
 };
 export const COMMON_PORTS = Object.keys(SERVICE).map(Number);
 
-async function probe(host: string, port: number, timeoutMs = 3500) {
+async function probe(address: string, port: number, timeoutMs = 3500) {
   const started = Date.now();
   let socket: any = null;
   try {
-    socket = connect({ hostname: host, port }, { secureTransport: "off", allowHalfOpen: false });
+    socket = connect({ hostname: address, port }, { secureTransport: "off", allowHalfOpen: false });
     await Promise.race([
       socket.opened,
       new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs)),
@@ -80,8 +80,13 @@ export async function onRequestGet(context: any) {
   const cfHosted = addresses.length > 0 && addresses.every(isCf);
   const results: Awaited<ReturnType<typeof probe>>[] = [];
   // Small batches keep one request from becoming a scan cannon.
+  // Every dial goes to the guard-verified address, never the name:
+  // the guard resolved the name once and vetted what came back, so a
+  // rebinding name cannot answer public for the check and private for
+  // the dial (the ssh-bridge pinning shape). guardTarget never returns
+  // an empty address list — it refuses instead — so [0] always exists.
   for (let i = 0; i < ports.length; i += 6) {
-    results.push(...(await Promise.all(ports.slice(i, i + 6).map((p) => probe(host, p)))));
+    results.push(...(await Promise.all(ports.slice(i, i + 6).map((p) => probe(addresses[0], p)))));
   }
   results.sort((a, b) => a.port - b.port);
   const open = results.filter((r) => r.state === "open");

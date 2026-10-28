@@ -178,8 +178,8 @@ function buildClientHello(host: string): Uint8Array {
   return new Uint8Array([0x16, 0x03, 0x01, handshake.length >> 8, handshake.length & 0xff, ...handshake]);
 }
 
-async function readCertificateFlight(host: string, port: number, timeoutMs = 8000) {
-  const socket: any = connect({ hostname: host, port }, { secureTransport: "off", allowHalfOpen: false });
+async function readCertificateFlight(dial: string, sniHost: string, port: number, timeoutMs = 8000) {
+  const socket: any = connect({ hostname: dial, port }, { secureTransport: "off", allowHalfOpen: false });
   const deadline = Date.now() + timeoutMs;
   let writer: any = null;
   let reader: any = null;
@@ -190,7 +190,7 @@ async function readCertificateFlight(host: string, port: number, timeoutMs = 800
     await Promise.race([socket.opened, new Promise((_, r) => setTimeout(() => r(new Error("connect timeout")), timeoutMs))]);
     writer = socket.writable.getWriter();
     reader = socket.readable.getReader();
-    await writer.write(buildClientHello(host));
+    await writer.write(buildClientHello(sniHost));
     let buf = new Uint8Array(0);
     let serverVersion: number | null = null;
     let cipher: number | null = null;
@@ -312,7 +312,12 @@ export async function onRequestGet(context: any) {
   let flight: Awaited<ReturnType<typeof readCertificateFlight>> | null = null;
   let flightError = "";
   try {
-    flight = await readCertificateFlight(host, port);
+    // The socket dials the guard-verified address while the
+    // ClientHello keeps the name as its SNI: pinning the dial closes
+    // the rebinding window (a name answering public for the check and
+    // private for the dial) without breaking SNI routing or the
+    // grade — the same pinning shape as the ssh bridge.
+    flight = await readCertificateFlight(addresses[0], host, port);
   } catch (e: any) {
     flightError = String(e?.message || "handshake failed");
   }

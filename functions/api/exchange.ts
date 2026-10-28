@@ -29,9 +29,15 @@ export async function onRequestPost(context: any) {
   const port = Number(body?.port);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return err("Port must be 1-65535.");
   let host: string;
+  let dial: string;
   try {
     const g = await guardTarget(String(body?.host || ""));
     host = g.host;
+    // Dial the guard-verified address, never the name — a rebinding
+    // name must not answer public for the check and private for the
+    // dial (the ssh-bridge pinning shape; the guard never returns an
+    // empty address list, it refuses instead).
+    dial = g.addresses[0];
   } catch (e: any) {
     return err(String(e?.message || e));
   }
@@ -48,7 +54,7 @@ export async function onRequestPost(context: any) {
   const started = Date.now();
   let socket: any = null;
   try {
-    socket = connect({ hostname: host, port }, { secureTransport: "off", allowHalfOpen: false });
+    socket = connect({ hostname: dial, port }, { secureTransport: "off", allowHalfOpen: false });
     await Promise.race([
       socket.opened,
       new Promise((_, reject) => setTimeout(() => reject(new Error("connect timeout")), timeoutMs)),
