@@ -38,6 +38,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["phonehome", "a secure transmitter + reception field between two stations — WebRTC voice + text sealed station to station (ECDH + AES-GCM, signed signals); the edge rendezvous swaps signed signals only and hears nothing", "LIVE"],
     ["timelock", "RSW repeated-squaring seals (the Magic Box construction)", "LIVE"],
     ["gauntlet", "the room tests itself — crypto vectors, vfs, roster, engines", "LIVE"],
+    ["ivory-tower", "the clockwork observance coupled to AEGIS — Merkle-rooted room hashes, canary + register fingerprints, a hash-chained ledger; drift behind the funnel raises the watch, tampering hands the room to AEGIS", "LIVE"],
     ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
   ];
 }

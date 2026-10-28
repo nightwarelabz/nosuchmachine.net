@@ -7,6 +7,8 @@ import roster from "../data/blacksite-commands.json";
 import { identifyFile, hexdump as parseHexdump } from "./os-parse";
 import { sfx } from "./os-sound";
 import { skey } from "./os-depth";
+import { IvoryTower, hashText, merkleRoot } from "./os-ivory";
+import type { IvoryInput } from "./os-ivory";
 
 export interface ShellIO {
   print(text: string, cls?: string): void;
@@ -124,6 +126,7 @@ const VFS_KEY = skey("blacksite-vfs-v1");
 const MACRO_KEY = skey("blacksite-macros-v1");
 const SET_KEY = skey("blacksite-settings-v1");
 const AEGIS_KEY = skey("blacksite-aegis-v1");
+const IVORY_KEY = skey("blacksite-ivory-v1");
 
 /* ————— AEGIS —————
    Ransomware against this OS meets three facts it did not expect:
@@ -179,6 +182,12 @@ export class BlacksiteOS {
   private mirage = new Map<string, VNode | null>();
   private opLog: Array<{ t: number; w: number }> = [];
   private hotFiles = new Map<string, number>();
+  /* IVORY-TOWER: the clockwork observer coupled to AEGIS (os-ivory.ts).
+     It holds no write path to this filesystem — it hashes the room,
+     keeps a chained ledger under its own key, and when it finds
+     drift no funnel can account for, it asks AEGIS to trip. Its
+     state restores from its own register in load(). */
+  private ivoryTower = new IvoryTower();
   private booting = true;
 
   constructor() { this.load(); this.booting = false; }
@@ -220,6 +229,7 @@ export class BlacksiteOS {
     const parent = p.slice(0, p.lastIndexOf("/")) || "/";
     if (!this.isDir(parent)) throw new Error(`no such directory: ${parent}`);
     this.files.set(p, { type: "file", content, mtime: Date.now() });
+    this.ivoryTower.noteMutation(p, this.ownOps > 0);
     this.saveSoon();
   }
   write(path: string, content: string) {
@@ -233,6 +243,7 @@ export class BlacksiteOS {
     const parent = p.slice(0, p.lastIndexOf("/")) || "/";
     if (!this.isDir(parent)) throw new Error(`no such directory: ${parent}`);
     this.files.set(p, { type: "file", binary: bToB64(bytes), mtime: Date.now() });
+    this.ivoryTower.noteMutation(p, this.ownOps > 0);
     this.saveSoon();
   }
   mkdir(path: string) {
@@ -242,6 +253,7 @@ export class BlacksiteOS {
     if (!this.isDir(parent)) throw new Error(`no such directory: ${parent}`);
     if (this.files.has(p)) throw new Error(`already exists: ${p}`);
     this.files.set(p, { type: "dir", mtime: Date.now() });
+    this.ivoryTower.noteMutation(p, this.ownOps > 0);
     this.saveSoon();
   }
   remove(path: string, recursive = false) {
@@ -261,6 +273,7 @@ export class BlacksiteOS {
       // trips or holds any one of them, nothing is deleted at all.
       for (const k of [p, ...children]) if (this.aegisGateRemove(k)) return;
     }
+    for (const k of [p, ...children]) this.ivoryTower.noteMutation(k, this.ownOps > 0);
     children.forEach((k) => this.files.delete(k));
     this.files.delete(p);
     this.saveSoon();
@@ -403,6 +416,9 @@ export class BlacksiteOS {
       }
       try { localStorage.setItem(AEGIS_KEY, body()); } catch { /* volatile room — limits says so */ }
     }
+    /* The tower is told AEGIS's own hand moved its register, so an
+       observance never mistakes AEGIS's housekeeping for tampering. */
+    this.ivoryTower.noteAegis();
   }
   private aegisLoad() {
     try {
@@ -427,6 +443,7 @@ export class BlacksiteOS {
       this.log(`aegis: the room restored from the ${new Date(snap.at).toLocaleString()} snapshot (${snap.why}) — nothing the attack wrote survived the restore.`);
     }
     this.aegisPersist(); this.saveSoon();
+    this.ivoryBaseline("restore");
     return true;
   }
   aegisLift(adopt: boolean): number {
@@ -435,11 +452,71 @@ export class BlacksiteOS {
     this.mirage.clear(); this.aegis.contained = false; this.hotFiles.clear(); this.opLog = [];
     this.log(`aegis: containment lifted by the operator — the mirage's ${held} ${held === 1 ? "entry" : "entries"} ${adopt ? "adopted into the real room" : "discarded, unmourned"}.`);
     this.aegisPersist(); this.saveSoon();
+    this.ivoryBaseline("lift");
     return held;
   }
   aegisStatus() {
     const rec = this.recoverySnap();
     return { contained: this.aegis.contained, snaps: this.aegisSnaps.map((x) => ({ at: x.at, why: x.why })), trips: [...this.aegis.trips], mirage: this.mirage.size, recovery: !!rec, recoveryAt: rec ? rec.at : null, recoveryWhy: rec ? rec.why : null };
+  }
+
+  /* ————— IVORY-TOWER —————
+     The tower observes the REAL room (this.files), never the mirage:
+     under containment the real room is frozen by construction, and
+     the tower's silence then is itself the proof it held. */
+  private ivoryLeafHash(path: string, n: VNode): string {
+    return n.type === "dir" ? hashText(`ivory:dir\0${path}`) : hashText(n.binary ? `ivory:bin\0${n.binary}` : `ivory:txt\0${n.content ?? ""}`);
+  }
+  private ivoryInput(trigger: string): IvoryInput {
+    const raw = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
+    const print = (k: string): string | null => { const r = raw(k); return r === null ? null : hashText(r); };
+    const canaries: Record<string, string | null> = {};
+    for (const p of AEGIS_CANARIES) { const n = this.files.get(p); canaries[p] = n && n.type === "file" ? this.ivoryLeafHash(p, n) : null; }
+    return {
+      at: Date.now(), trigger,
+      files: [...this.files.entries()].map(([path, n]) => ({ path, hash: this.ivoryLeafHash(path, n) })),
+      canaries,
+      aegisPrint: print(AEGIS_KEY),
+      storePrints: { vfs: print(VFS_KEY), macros: print(MACRO_KEY), settings: print(SET_KEY) },
+      contained: this.aegis.contained,
+    };
+  }
+  private ivoryPersist() {
+    try { localStorage.setItem(IVORY_KEY, this.ivoryTower.serialize()); } catch { /* volatile room — the tower keeps its ledger in memory */ }
+  }
+  private ivoryLoad() {
+    try { const raw = localStorage.getItem(IVORY_KEY); if (raw) this.ivoryTower.restore(raw); } catch { /* a tower that cannot read its ledger starts one */ }
+  }
+  /** One observance of the clockwork. Findings are journaled; a
+   *  watch takes an ivory-watch snapshot while the room is still
+   *  exactly as the tower found it, and a trip hands the room to
+   *  AEGIS, whose containment is the sentence. */
+  ivoryObserveNow(trigger = "clock") {
+    const report = this.ivoryTower.observe(this.ivoryInput(trigger));
+    for (const f of report.findings) this.log(`ivory-tower: ${f.detail}.`);
+    const watch = report.findings.filter((f) => f.severity === "watch");
+    const trip = report.findings.filter((f) => f.severity === "trip");
+    if (watch.length && !this.aegis.contained) this.snapshotNow("ivory-watch");
+    if (watch.length || trip.length) {
+      try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:ivory", { detail: { state: report.state, findings: report.findings } })); } catch { /* headless — the journal still knows */ }
+    }
+    if (trip.length) this.aegisTrip(`ivory-tower: ${trip[0].detail}`);
+    this.ivoryPersist();
+    return report;
+  }
+  /** Re-baseline without judgment — the operator's own restore or
+   *  lift rewrote the room by hand. */
+  ivoryBaseline(trigger: string) {
+    const report = this.ivoryTower.baseline(this.ivoryInput(trigger));
+    this.ivoryPersist();
+    return report;
+  }
+  ivoryStatus() { return this.ivoryTower.status(); }
+  ivoryVerify() {
+    const chain = this.ivoryTower.verifyChain();
+    const now = merkleRoot(this.ivoryInput("verify").files);
+    const last = this.ivoryTower.status().root;
+    return { chainOk: chain.ok, chainAt: chain.at, rootOk: last === null || now === last, rootNow: now, rootLedger: last };
   }
 
   seed() {
@@ -479,6 +556,13 @@ export class BlacksiteOS {
         this.rawWrite("/home/operator/documents/keys-backup.txt", "keys backup — the encrypted archive (keys.tar.age) is kept off this machine.\nthis note is the whole of what is here: a pointer, not the keys.\n");
       } catch { /* a room that refuses decoys still has the breaker */ }
     }
+    /* The tower wakes last, over the room exactly as it was found,
+       and takes the boot observance: drift from the dark between
+       sessions is noted for what it is, and a broken ledger chain
+       or a canary altered in the dark trips containment before the
+       room has done anything else. */
+    this.ivoryLoad();
+    this.ivoryObserveNow("boot");
   }
   saveSoon() {
     if (this.saveTimer) clearTimeout(this.saveTimer);
@@ -487,6 +571,7 @@ export class BlacksiteOS {
         localStorage.setItem(VFS_KEY, JSON.stringify([...this.files.entries()]));
         localStorage.setItem(MACRO_KEY, JSON.stringify(Object.fromEntries(this.macros)));
         localStorage.setItem(SET_KEY, JSON.stringify({ emcon: this.emcon, theme: this.theme, wallpaper: this.wallpaper, tomatoes: this.tomatoes }));
+        this.ivoryTower.noteStore("vfs"); this.ivoryTower.noteStore("macros"); this.ivoryTower.noteStore("settings");
         this.persistFailed = false;
       } catch {
         /* storage full/blocked — the room runs volatile, and it SAYS so:
@@ -500,7 +585,7 @@ export class BlacksiteOS {
       }
     }, 250);
   }
-  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(skey("blacksite-relay-v2")); localStorage.removeItem(AEGIS_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.seed(); this.snapshotNow("boot"); }
+  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(skey("blacksite-relay-v2")); localStorage.removeItem(AEGIS_KEY); localStorage.removeItem(IVORY_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.ivoryTower = new IvoryTower(); this.seed(); this.snapshotNow("boot"); this.ivoryBaseline("reset"); }
   spawn(cmd: string): Proc {
     const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now(), ctrl: new AbortController() };
     this.procs.push(proc);
