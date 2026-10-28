@@ -2,6 +2,7 @@ import { defineConfig } from "astro/config";
 import { satteri } from "@astrojs/markdown-satteri";
 import { bookTableHastPlugin } from "./src/lib/book-table-hast.mjs";
 import { readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -33,7 +34,22 @@ const stampVersion = {
         const pkg = JSON.parse(readFileSync(join(fileURLToPath(new URL(".", import.meta.url)), "package.json"), "utf8"));
         if (typeof pkg.version === "string" && pkg.version) version = pkg.version;
       } catch { /* no version line — the plate shows chunk + built only */ }
-      writeFileSync(join(distDir, "version.json"), JSON.stringify({ chunk, built: new Date().toISOString(), version }) + "\n");
+      /* The byte seal: the stamp also carries the OS chunk's
+         SHA-256 and size, computed here, at the moment of launch.
+         The running system's integrity checker fetches the served
+         chunk and hashes it against this seal — byte for byte,
+         what the origin serves now must be what this build
+         produced, or the checker names it. */
+      let sha256 = null;
+      let bytes = null;
+      if (chunk) {
+        try {
+          const data = readFileSync(join(distDir, "_astro", chunk));
+          sha256 = createHash("sha256").update(data).digest("hex");
+          bytes = data.length;
+        } catch { /* no seal — the checker reports the stamp as pre-seal */ }
+      }
+      writeFileSync(join(distDir, "version.json"), JSON.stringify({ chunk, built: new Date().toISOString(), version, sha256, bytes }) + "\n");
     },
   },
 };

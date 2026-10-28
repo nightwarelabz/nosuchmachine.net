@@ -40,6 +40,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["gauntlet", "the room tests itself — crypto vectors, vfs, roster, engines", "LIVE"],
     ["ivory-tower", "the clockwork observance coupled to AEGIS — Merkle-rooted room hashes, canary + register fingerprints, a hash-chained ledger; drift behind the funnel raises the watch, tampering hands the room to AEGIS", "LIVE"],
     ["tripwire", "the full-system wire between AEGIS and the tower — every system register notarized at its own hand's write, the storage surface watched by a sentinel that blocks unaccounted writes on the spot; tamper with the defenses and the defaults restore and the room reboots", "LIVE"],
+    ["verify-integrity", "the checker — one read-only audit of the whole defense (the wire's seal, every register against the manifest, the census, the tower's chain, the room re-hashed, the sentinel, AEGIS) plus the launched system's own bytes hashed against the SHA-256 seal the build stamped into version.json at launch — byte for byte, what the origin serves must be what was launched. on the `integrity` verb and the System panel; any failed line warns the operator by toast, as does every tamper verdict anywhere in the system", "LIVE"],
     ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
   ];
 }
