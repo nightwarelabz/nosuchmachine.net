@@ -762,7 +762,7 @@ const TOWNSFOLK_NAMES = ["Aldric", "Berta", "Cato", "Dunna", "Elowen", "Fenn", "
 
 /* ————————————————— the game itself ————————————————— */
 export function buildWyrdfall(body: HTMLElement): void {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const esc = (s: string | undefined) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const wrap = document.createElement("div");
   wrap.className = "os-wy-wrap";
   wrap.innerHTML = `
