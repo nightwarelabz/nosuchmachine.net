@@ -67,6 +67,10 @@ export function buildOrc(body: HTMLElement, arg?: string) {
       if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
         url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
       }
+      // scheme law: only http and https ever navigate. A typed or
+      // handed-in javascript:/data:/file: URL is not a navigation —
+      // it is a search for those words.
+      if (!/^https?:/i.test(url)) url = `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
       addr.value = url;
       let u: URL;
       try { u = new URL(url); } catch { return; }
@@ -138,6 +142,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   const door = (url: string): { src: string; credless: boolean } => {
     let u: URL;
     try { u = new URL(url); } catch { return { src: url, credless: false }; }
+    if (u.protocol !== "http:" && u.protocol !== "https:") return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false };
     if (u.origin === window.location.origin) return { src: url, credless: false };
     if (HAS_CREDLESS && !lensForced) return { src: url, credless: true };
     return { src: `/lens?u=${encodeURIComponent(url)}`, credless: false };
@@ -149,6 +154,7 @@ export function buildOrc(body: HTMLElement, arg?: string) {
     if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
       url = /\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
     }
+    if (!/^https?:/i.test(url)) url = `https://duckduckgo.com/html/?q=${encodeURIComponent(url)}`;
     addr.value = url;
     const d = door(url);
     if (frameCredless !== d.credless) mountFrame(d.credless);

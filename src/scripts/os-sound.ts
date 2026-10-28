@@ -24,7 +24,7 @@ export function soundPrefs(): SoundPrefs {
 }
 export function setSoundPrefs(patch: Partial<SoundPrefs>): SoundPrefs {
   const next = { ...soundPrefs(), ...patch };
-  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* private modes keep no notes */ }
+  try { const body = JSON.stringify(next); const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("sound", body)) localStorage.setItem(KEY, body); } catch { /* private modes keep no notes */ }
   if (master && ctx) master.gain.setTargetAtTime(next.volume * 0.9, ctx.currentTime, 0.02);
   return next;
 }

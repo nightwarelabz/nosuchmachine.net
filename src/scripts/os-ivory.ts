@@ -328,6 +328,7 @@ export class IvoryTower {
 
   serialize(): string {
     return JSON.stringify({
+      wire: 1,
       entries: this.entries, state: this.state,
       lastLeaves: [...this.lastLeaves.entries()], lastCanaries: this.lastCanaries,
       lastAegisPrint: this.lastAegisPrint === undefined ? { u: 1 } : { v: this.lastAegisPrint },

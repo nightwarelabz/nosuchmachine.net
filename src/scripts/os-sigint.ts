@@ -336,7 +336,7 @@ export function buildSigint(body: HTMLElement) {
     if (clean.length < 6) return;
     intercepts.push({ t: Date.now(), mode: m, freq: atFreq, text: clean.slice(0, 220) });
     if (intercepts.length > 80) intercepts = intercepts.slice(-80);
-    try { localStorage.setItem(skey("sigint-log-v1"), JSON.stringify(intercepts)); } catch { /* private mode */ }
+    try { const body = JSON.stringify(intercepts); const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("sigintLog", body)) localStorage.setItem(skey("sigint-log-v1"), body); } catch { /* private mode */ }
     renderLog();
   };
   const renderLog = () => {
@@ -348,7 +348,7 @@ export function buildSigint(body: HTMLElement) {
   renderLog();
   logClear.addEventListener("click", () => {
     intercepts = [];
-    try { localStorage.removeItem(skey("sigint-log-v1")); } catch { /* noop */ }
+    try { const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("sigintLog", null)) localStorage.removeItem(skey("sigint-log-v1")); } catch { /* noop */ }
     renderLog();
   });
   logExport.addEventListener("click", () => {
@@ -1094,7 +1094,7 @@ export function buildSigint(body: HTMLElement) {
     window.clearInterval(housekeep);
     stopSource();
     if (ctx) { const c = ctx; ctx = null; void c.close().catch(() => {}); }
-    try { localStorage.setItem(skey(REG_KEY), JSON.stringify(stations.map(({ trail, freqHist, dbHist, ring, wHist, mergeW, extLo, extHi, lifeLo, lifeHi, ...rest }) => rest))); } catch { /* private mode */ }
+    try { const body = JSON.stringify(stations.map(({ trail, freqHist, dbHist, ring, wHist, mergeW, extLo, extHi, lifeLo, lifeHi, ...rest }) => rest)); const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("sigintRegistry", body)) localStorage.setItem(skey(REG_KEY), body); } catch { /* private mode */ }
   };
   body.addEventListener("os:suspend", () => {
     if (benchDisposed) return;

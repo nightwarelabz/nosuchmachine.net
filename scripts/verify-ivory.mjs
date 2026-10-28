@@ -23,13 +23,23 @@ class FakeDate extends Date {
   constructor(...args) { super(...(args.length ? args : [fakeNow])); }
   static now() { return fakeNow; }
 }
-function makeStorage() {
-  const map = new Map();
+function makeStorage(sharedMap) {
+  // a storage FACADE over a backing map: each module load (each
+  // simulated page realm) gets its own facade over the same map,
+  // exactly as a fresh browser realm gets a fresh localStorage
+  // object over the same store. Attacks written to the map
+  // directly are between-sessions attacks — no realm was alive
+  // to see them; attacks through a live facade pass the realm's
+  // storage surface, sentinel and all.
+  const map = sharedMap || new Map();
   return {
     map,
     getItem: (k) => (map.has(k) ? map.get(k) : null),
     setItem: (k, v) => { map.set(k, String(v)); },
     removeItem: (k) => { map.delete(k); },
+    clear: () => { map.clear(); },
+    get length() { return map.size; },
+    key: (i) => ([...map.keys()][i] ?? null),
   };
 }
 const timers = new Map();
@@ -38,7 +48,7 @@ function fakeSetTimeout(fn) { const id = timerSeq++; timers.set(id, fn); return 
 function fakeClearTimeout(id) { timers.delete(id); }
 function flushTimers() { const fns = [...timers.values()]; timers.clear(); for (const fn of fns) fn(); }
 
-function loadModule(source, requireMap, storage) {
+function loadModule(source, requireMap, storage, sessionMap) {
   const api = {};
   vm.runInNewContext(source, {
     exports: api, module: { exports: api },
@@ -46,7 +56,7 @@ function loadModule(source, requireMap, storage) {
       if (name in requireMap) return requireMap[name];
       throw new Error("unexpected require: " + name);
     },
-    localStorage: storage, Date: FakeDate,
+    localStorage: storage, sessionStorage: makeStorage(sessionMap), Date: FakeDate,
     setTimeout: fakeSetTimeout, clearTimeout: fakeClearTimeout,
     TextEncoder, TextDecoder, btoa, atob, console,
     AbortController, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
@@ -175,30 +185,37 @@ const room = { "/a": "alpha", "/b": "beta", [CAN]: "canary-song" };
 console.log("ivory layer 1: the tower alone — all assertions held");
 
 /* ————— layer 2: the tower in the real shell ————— */
+const tripwire = loadModule(transpile("src/scripts/os-tripwire.ts"), { "./os-ivory": ivory }, makeStorage());
+void tripwire;
 const shell = loadModule(transpile("src/scripts/os-shell.ts"), {
   "../data/blacksite-commands.json": [],
   "./os-parse": { identifyFile: () => null, hexdump: () => "" },
   "./os-sound": { sfx: () => {} },
   "./os-depth": { skey: (k) => k },
   "./os-ivory": ivory,
+  "./os-tripwire": tripwire,
 }, makeStorage()); // placeholder storage, replaced per scenario below
 
-function bootOS(storage) {
+function bootOS(shared, sessionShared) {
   // os-shell captured the localStorage global at load; rebuild the
-  // module per scenario so each room gets its own storage world.
-  return loadModule(transpile("src/scripts/os-shell.ts"), {
+  // module per scenario so each room gets its own storage world —
+  // a fresh facade over the scenario's shared backing map.
+  const storage = makeStorage(shared);
+  const mod = loadModule(transpile("src/scripts/os-shell.ts"), {
     "../data/blacksite-commands.json": [],
     "./os-parse": { identifyFile: () => null, hexdump: () => "" },
     "./os-sound": { sfx: () => {} },
     "./os-depth": { skey: (k) => k },
     "./os-ivory": ivory,
-  }, storage);
+    "./os-tripwire": tripwire,
+  }, storage, sessionShared);
+  return { ...mod, storage };
 }
 void shell;
 
 { // accounted work observes clean; a bypass is watched, then trips AEGIS
-  const storage = makeStorage();
-  const { BlacksiteOS } = bootOS(storage);
+  const shared = new Map();
+  const { BlacksiteOS, storage } = bootOS(shared);
   const os = new BlacksiteOS();
   assert.equal(os.aegis.contained, false);
   assert.ok(os.ivoryStatus().ticks >= 1, "the boot observance is in the ledger");
@@ -219,10 +236,11 @@ void shell;
   assert.equal(os.aegis.contained, false);
   r = os.ivoryObserveNow("clock");
   assert.ok(!r.findings.some((f) => f.severity === "trip"), "after the operator's restore the tower re-baselines and does not accuse the hand that feeds it");
+  void storage;
 }
 { // the slow drip: twelve patient funnel writes — watch, never containment
-  const storage = makeStorage();
-  const { BlacksiteOS } = bootOS(storage);
+  const shared = new Map();
+  const { BlacksiteOS } = bootOS(shared);
   const os = new BlacksiteOS();
   // the seeds land eleven seconds apart: an operator creating files,
   // not a burst — AEGIS's ten-in-ten-seconds breaker stays silent.
@@ -239,39 +257,234 @@ void shell;
   assert.equal(os.aegis.contained, false, "and AEGIS does not trip on rhythm — the drip was accounted work");
 }
 { // the canary, touched behind the funnel, trips at once
-  const storage = makeStorage();
-  const { BlacksiteOS } = bootOS(storage);
+  const shared = new Map();
+  const { BlacksiteOS } = bootOS(shared);
   const os = new BlacksiteOS();
   os.files.set(CAN, { type: "file", content: "the decoy, rewritten in silence", mtime: fakeNow });
   const r = os.ivoryObserveNow("clock");
   assert.ok(r.findings.some((f) => f.kind === "canary" && f.severity === "trip"), "canary drift behind the funnel trips");
   assert.equal(os.aegis.contained, true, "containment follows the tower's word");
 }
-{ // AEGIS's own register, rewritten in storage, trips at the next tick
-  const storage = makeStorage();
-  const { BlacksiteOS } = bootOS(storage);
+{ // AEGIS's register rewritten through the LIVE storage surface:
+  // the sentinel blocks the write and carries out the sentence in
+  // the same instant — no observance needs to run.
+  const shared = new Map();
+  const { BlacksiteOS, storage } = bootOS(shared);
   const os = new BlacksiteOS();
   os.ivoryObserveNow("clock");
-  storage.setItem("blacksite-aegis-v1", JSON.stringify({ contained: false, trips: [], snaps: [] }));
-  const r = os.ivoryObserveNow("clock");
-  assert.ok(r.findings.some((f) => f.kind === "aegis-register" && f.severity === "trip"), "a snapshot ring wiped in storage is convicted by its fingerprint");
-  assert.equal(os.aegis.contained, true);
+  const forged = JSON.stringify({ contained: false, trips: [], snaps: [] });
+  storage.setItem("blacksite-aegis-v1", forged);
+  assert.notEqual(storage.getItem("blacksite-aegis-v1"), forged, "the sentinel BLOCKED the unaccounted write — the forged register never landed");
+  assert.equal(JSON.parse(storage.getItem("blacksite-aegis-v1")).contained, true, "what stands in its place is the restored default — contained");
+  assert.equal(os.aegis.contained, true, "and the sentence landed in the same instant");
+  assert.ok(os.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("unaccounted hand inside the room")), "the wire recorded the AI-proofing accusation");
 }
-{ // a ledger rewritten between sessions trips at boot, before anything else
-  const storage = makeStorage();
-  const first = bootOS(storage);
+{ // the same rewrite written to the raw store behind the realm
+  // (a between-sessions hand, devtools on a closed room): the
+  // tripwire's manifest convicts it at the next observance —
+  // the notarized head no longer matches what storage holds.
+  const shared = new Map();
+  const { BlacksiteOS } = bootOS(shared);
+  const os = new BlacksiteOS();
+  os.ivoryObserveNow("clock");
+  shared.set("blacksite-aegis-v1", JSON.stringify({ wire: 1, contained: false, trips: [], snaps: [] }));
+  os.ivoryObserveNow("clock");
+  assert.equal(os.aegis.contained, true, "a snapshot ring wiped behind the realm restores the defaults at the next observance");
+  assert.ok(os.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("AEGIS's register")), "the wire's verdict names the rewritten register");
+}
+{ // a ledger rewritten between sessions: the tripwire convicts it
+  // at boot, before anything else — head mismatch against the
+  // notarized manifest, with the accusation in the wire's memory.
+  const shared = new Map();
+  const first = bootOS(shared);
   const os1 = new first.BlacksiteOS();
   os1.ivoryObserveNow("clock");
-  const raw = storage.getItem("blacksite-ivory-v1");
+  flushTimers();
+  const raw = shared.get("blacksite-ivory-v1");
   assert.ok(raw, "the tower persisted its ledger");
   const forged = JSON.parse(raw);
   forged.entries[0].findings = ["note:forged-history"];
-  storage.setItem("blacksite-ivory-v1", JSON.stringify(forged));
+  shared.set("blacksite-ivory-v1", JSON.stringify(forged));
   fakeNow += 60_000;
-  const second = bootOS(storage);
+  const second = bootOS(shared);
   const os2 = new second.BlacksiteOS();
-  assert.equal(os2.aegis.contained, true, "the broken chain tripped containment at boot");
-  assert.ok(os2.journal.some((j) => j.text.includes("ledger chain is broken")), "the journal names the broken chain");
+  assert.equal(os2.aegis.contained, true, "the forged ledger tripped the tripwire restore at boot");
+  assert.ok(os2.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("tower's ledger")), "the wire's memory names the forged ledger");
+  assert.ok(os2.journal.some((j) => j.text.includes("tripwire:")), "the journal carries the tripwire's word");
 }
 console.log("ivory layer 2: the tower in the shell — all assertions held");
+
+/* ————— layer 3: TRIPWIRE — the full-system wire ————— */
+const WIRE = "blacksite-tripwire-v1";
+const REBOOT = "blacksite-tripwire-reboot";
+{ // genesis: the wire strings itself over the whole system, and a
+  // healthy room reboots clean under it forever.
+  const shared = new Map(); const sess = new Map();
+  const b1 = bootOS(shared, sess);
+  const os = new b1.BlacksiteOS();
+  flushTimers();
+  const st = os.tripwireStatus();
+  assert.equal(st.state, "strung", "the wire is strung");
+  assert.equal(st.registers, 12, "twelve system registers are on the wire");
+  assert.ok(st.heads.aegis && st.heads.ivory && st.heads.vfs, "the defenses and the filesystem are notarized");
+  assert.ok(st.census >= 3, "the census saw the room's keys");
+  assert.equal(os.aegis.contained, false);
+  fakeNow += 60_000;
+  const b2 = bootOS(shared, sess);
+  const os2 = new b2.BlacksiteOS();
+  flushTimers();
+  assert.equal(os2.aegis.contained, false, "a healthy room boots clean under the wire");
+  assert.equal(os2.tripwireStatus().events.filter((e) => e.kind === "tamper").length, 0, "no accusations in a healthy room");
+  assert.ok(os2.tripwireStatus().boots >= 2, "the wire counts the boots");
+}
+{ // the cut wire: delete ONLY the tripwire register between
+  // sessions, in a marked room — verdict, defaults restored,
+  // reboot flagged once, and no loop.
+  const shared = new Map(); const sess = new Map();
+  const b1 = bootOS(shared, sess);
+  const os1 = new b1.BlacksiteOS();
+  os1.ivoryObserveNow("clock");
+  flushTimers();
+  assert.ok(shared.has(WIRE), "the wire register exists");
+  shared.delete(WIRE);
+  fakeNow += 60_000;
+  const b2 = bootOS(shared, sess);
+  const os2 = new b2.BlacksiteOS();
+  assert.equal(os2.aegis.contained, true, "a cut wire restores the defaults — containment — at boot");
+  assert.ok(os2.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("the wire was cut")), "the accusation is in the wire's rebuilt memory");
+  assert.ok(os2.aegisStatus().snaps.some((s) => s.why === "tripwire-restore"), "AEGIS re-genesis took the tripwire-restore snapshot");
+  const flag = JSON.parse(makeStorage(sess).getItem(REBOOT));
+  assert.equal(flag.count, 1, "the reboot was flagged exactly once");
+  fakeNow += 60_000;
+  const b3 = bootOS(shared, sess);
+  const os3 = new b3.BlacksiteOS();
+  flushTimers();
+  assert.equal(os3.tripwireStatus().events.filter((e) => e.kind === "tamper").length, 1, "the restored room does not accuse itself again — no reboot loop");
+  assert.equal(JSON.parse(makeStorage(sess).getItem(REBOOT)).count, 1, "the flag still says one reboot");
+  assert.equal(os3.aegis.contained, true, "containment holds until the operator lifts it");
+}
+{ // amnesia: AEGIS's register wiped between sessions.
+  const shared = new Map(); const sess = new Map();
+  const b1 = bootOS(shared, sess);
+  const os1 = new b1.BlacksiteOS();
+  flushTimers();
+  shared.delete("blacksite-aegis-v1");
+  fakeNow += 60_000;
+  const b2 = bootOS(shared, sess);
+  const os2 = new b2.BlacksiteOS();
+  assert.equal(os2.aegis.contained, true, "the amnesia attack restores the defaults");
+  assert.ok(os2.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("made to forget")), "the verdict names the amnesia");
+  void os1;
+}
+{ // the whole system: the SESSION register — written by its own
+  // hand through the sanctioned path, silent; rewritten in the
+  // dark, a verdict like any other.
+  const shared = new Map(); const sess = new Map();
+  const b1 = bootOS(shared, sess);
+  const os1 = new b1.BlacksiteOS();
+  assert.equal(os1.wireSanctionedWrite("session", JSON.stringify([{ app: "terminal" }])), true, "the sanctioned write path accepts the session register");
+  os1.ivoryObserveNow("clock");
+  assert.equal(os1.aegis.contained, false, "a sanctioned write is silent");
+  flushTimers();
+  shared.set("blacksite-session-v1", JSON.stringify([{ app: "terminal" }, { app: "phantom" }]));
+  fakeNow += 60_000;
+  const b2 = bootOS(shared, sess);
+  const os2 = new b2.BlacksiteOS();
+  assert.equal(os2.aegis.contained, true, "a session register rewritten in the dark trips the wire");
+  assert.ok(os2.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("session register")), "the verdict names the register");
+}
+{ // the sanctioned bridge covers the services: relay writes and
+  // accounted deletions (the SIGINT log's own clear) stay silent.
+  const shared = new Map(); const sess = new Map();
+  const { BlacksiteOS } = bootOS(shared, sess);
+  const os = new BlacksiteOS();
+  assert.equal(os.wireSanctionedWrite("relay", JSON.stringify({ v: 2, nick: "op" })), true);
+  assert.equal(os.wireSanctionedWrite("sigintLog", JSON.stringify([{ t: 1 }])), true);
+  assert.equal(os.wireSanctionedWrite("sigintLog", null), true, "an accounted deletion is a write like any other");
+  assert.equal(os.wireSanctionedWrite("bogus-register", "x"), false, "the bridge refuses a register the wire does not defend");
+  const r = os.ivoryObserveNow("clock");
+  assert.equal(os.aegis.contained, false, "sanctioned service writes never trip the wire");
+  assert.equal(os.tripwireStatus().events.filter((e) => e.kind === "tamper").length, 0);
+  void r;
+}
+{ // the sentinel against removal, and the plant law in-session.
+  const shared = new Map(); const sess = new Map();
+  const { BlacksiteOS, storage } = bootOS(shared, sess);
+  const os = new BlacksiteOS();
+  os.ivoryObserveNow("clock");
+  storage.removeItem("blacksite-ivory-v1");
+  assert.ok(storage.getItem("blacksite-ivory-v1") !== null, "the sentinel blocked the removal — the ledger still stands");
+  assert.equal(os.aegis.contained, true, "the removal attempt carried out the sentence in the instant");
+
+  const shared2 = new Map(); const sess2 = new Map();
+  const b2 = bootOS(shared2, sess2);
+  const os2 = new b2.BlacksiteOS();
+  b2.storage.setItem("blacksite-evil-v1", "{\"planted\":true}");
+  os2.ivoryObserveNow("clock");
+  assert.equal(os2.aegis.contained, true, "a planted register in the system namespace trips the wire at the next observance");
+  assert.ok(os2.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("planted")), "the verdict names the plant");
+}
+{ // the perimeter: game saves arrive and are censused, never
+  // notarized, never a verdict; a plant BETWEEN sessions (where an
+  // update could also legitimately land) is censused, not shot.
+  const shared = new Map(); const sess = new Map();
+  const { BlacksiteOS, storage } = bootOS(shared, sess);
+  const os = new BlacksiteOS();
+  storage.setItem("wyrdfall-save-v2", "{\"lvl\":3}");
+  storage.setItem("simulacrum-blooms-42", "[]");
+  os.ivoryObserveNow("clock");
+  assert.equal(os.aegis.contained, false, "perimeter writes are silent");
+  assert.ok(os.tripwireStatus().census >= 5, "the census adopted the perimeter keys");
+  flushTimers();
+  shared.set("blacksite-future-v1", "{}");
+  fakeNow += 60_000;
+  const b2 = bootOS(shared, sess);
+  const os2 = new b2.BlacksiteOS();
+  assert.equal(os2.aegis.contained, false, "a between-sessions arrival is censused, not convicted — updates land that way");
+}
+{ // the wire's own seal, handled in the dark.
+  const shared = new Map(); const sess = new Map();
+  const b1 = bootOS(shared, sess);
+  const os1 = new b1.BlacksiteOS();
+  flushTimers();
+  const wire = JSON.parse(shared.get(WIRE));
+  wire.boots = 999;
+  shared.set(WIRE, JSON.stringify(wire));
+  fakeNow += 60_000;
+  const b2 = bootOS(shared, sess);
+  const os2 = new b2.BlacksiteOS();
+  assert.equal(os2.aegis.contained, true, "a handled wire restores the defaults");
+  assert.ok(os2.tripwireStatus().events.some((e) => e.kind === "tamper" && e.detail.includes("seal is broken")), "the verdict names the broken seal");
+  void os1;
+}
+{ // ordinary operator violence stays lawful: trips, restores,
+  // lifts, resets — the wire never accuses the room's own hands.
+  const shared = new Map(); const sess = new Map();
+  const { BlacksiteOS } = bootOS(shared, sess);
+  const os = new BlacksiteOS();
+  for (let i = 0; i < 12; i++) os.write(`/tmp/burst-${i}.txt`, "x" + i);
+  flushTimers();
+  assert.equal(os.aegis.contained, true, "the burst tripped AEGIS itself");
+  assert.equal(os.aegisRestore(), true);
+  os.write("/tmp/after.txt", "aftermath");
+  flushTimers();
+  os.reset();
+  flushTimers();
+  os.ivoryObserveNow("clock");
+  assert.equal(os.tripwireStatus().events.filter((e) => e.kind === "tamper").length, 0, "no accusations across trips, restores, and a factory reset");
+  assert.equal(os.tripwireStatus().state, "strung");
+}
+{ // the injection watch: a CSP violation the browser caught is
+  // remembered by the wire — intelligence, never a sentence.
+  const shared = new Map(); const sess = new Map();
+  const { BlacksiteOS } = bootOS(shared, sess);
+  const os = new BlacksiteOS();
+  os.noteInjection("script-src refused https://evil.example/x.js");
+  const st = os.tripwireStatus();
+  assert.ok(st.events.some((e) => e.kind === "injection" && e.detail.includes("evil.example")), "the wire remembers the injection attempt");
+  assert.equal(st.state, "strung", "an observed injection is not a cut wire");
+  assert.equal(os.aegis.contained, false, "and it carries no sentence");
+  assert.ok(os.journal.some((j) => j.text.startsWith("injection:")), "the journal carries the watch's word");
+}
+console.log("tripwire layer 3: the full-system wire — all assertions held");
 console.log("verify-ivory: OK");

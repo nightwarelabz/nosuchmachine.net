@@ -243,7 +243,7 @@ export function buildRelayApp(body: HTMLElement, os: any) {
   const forgetBtn = el("button", "os-btn small", "forget");
   forgetBtn.title = "forget this conversation — wipe the log kept on this machine";
   forgetBtn.addEventListener("click", () => {
-    try { localStorage.removeItem(skey(RELAY_LOG_KEY)); } catch { /* nothing kept anyway */ }
+    try { const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("relay", null)) localStorage.removeItem(skey(RELAY_LOG_KEY)); } catch { /* nothing kept anyway */ }
     buffers.clear();
     roster.clear();
     manualAway = "";
@@ -380,7 +380,8 @@ export function buildRelayApp(body: HTMLElement, os: any) {
         for (const lines of Object.values(data.buffers)) if (lines.length > 25) lines.splice(0, Math.ceil(lines.length / 2));
         body = JSON.stringify(data);
       }
-      localStorage.setItem(skey(RELAY_LOG_KEY), body);
+      const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite;
+      if (!wireWrite || !wireWrite("relay", body)) localStorage.setItem(skey(RELAY_LOG_KEY), body);
     } catch { /* private modes keep nothing — the visit only, as before */ }
   };
   const scheduleSave = () => { if (!saveTimer) saveTimer = setTimeout(saveLog, 250); };

@@ -9,6 +9,7 @@ import { sfx } from "./os-sound";
 import { skey } from "./os-depth";
 import { IvoryTower, hashText, merkleRoot } from "./os-ivory";
 import type { IvoryInput } from "./os-ivory";
+import { TripwireRegister, judgeWire } from "./os-tripwire";
 
 export interface ShellIO {
   print(text: string, cls?: string): void;
@@ -127,6 +128,28 @@ const MACRO_KEY = skey("blacksite-macros-v1");
 const SET_KEY = skey("blacksite-settings-v1");
 const AEGIS_KEY = skey("blacksite-aegis-v1");
 const IVORY_KEY = skey("blacksite-ivory-v1");
+const WIRE_KEY = skey("blacksite-tripwire-v1");
+const WIRE_REBOOT_KEY = skey("blacksite-tripwire-reboot");
+/** The full system surface the tripwire notarizes: short name →
+ *  storage key. Every register the SYSTEM keeps — not game saves,
+ *  which live on the censused perimeter. */
+const WIRE_KEYS: Record<string, string> = {
+  aegis: AEGIS_KEY, ivory: IVORY_KEY, vfs: VFS_KEY, macros: MACRO_KEY, settings: SET_KEY,
+  session: skey("blacksite-session-v1"), relay: skey("blacksite-relay-v2"),
+  phonehome: skey("blacksite-phonehome-v1"), sigintRegistry: skey("sigint-registry-v2"),
+  sigintLog: skey("sigint-log-v1"), sound: skey("blacksite-sound-v1"), subconscious: skey("blacksite-subconscious-v1"),
+};
+const WIRE_NAMES: Record<string, string> = {
+  aegis: "AEGIS's register", ivory: "the tower's ledger", vfs: "the filesystem register",
+  macros: "the macro register", settings: "the settings register", session: "the session register",
+  relay: "the Relay log", phonehome: "the phonehome callsign", sigintRegistry: "the SIGINT registry",
+  sigintLog: "the SIGINT intercept log", sound: "the sound state", subconscious: "the subconscious register",
+};
+/** The storage sentinel routes to the live room; a rebuilt room
+ *  re-points it at itself. The wrapped-store set keeps the wrap
+ *  single no matter how many rooms a page builds. */
+let wireSentinelOwner: BlacksiteOS | null = null;
+const wireWrappedStores = new WeakSet<object>();
 
 /* ————— AEGIS —————
    Ransomware against this OS meets three facts it did not expect:
@@ -188,9 +211,17 @@ export class BlacksiteOS {
      drift no funnel can account for, it asks AEGIS to trip. Its
      state restores from its own register in load(). */
   private ivoryTower = new IvoryTower();
+  /* TRIPWIRE: the notarization register strung between AEGIS and
+     the tower (os-tripwire.ts). Its in-memory copy is the session's
+     authority; the stored copy is judged against it at every
+     observance, and it is judged against the defenses at boot. */
+  private wire = new TripwireRegister();
+  private wireVerdict: string | null = null;
+  private wireResponding = false;
+  private wireGenesis = false;
   private booting = true;
 
-  constructor() { this.load(); this.booting = false; }
+  constructor() { this.load(); this.booting = false; this.wireInstallBridge(); this.wireInstallSentinel(); }
   log(text: string) { this.journal.push({ at: new Date().toISOString(), text }); if (this.journal.length > 300) this.journal.shift(); }
   norm(path: string, base = this.cwd): string {
     const raw = path.startsWith("/") ? path : `${base}/${path}`;
@@ -400,8 +431,9 @@ export class BlacksiteOS {
     const last = this.aegisSnaps[this.aegisSnaps.length - 1];
     if (!last || Date.now() - last.at > 300_000) this.snapshotNow("interval");
   }
-  private aegisPersist() {
-    const body = () => JSON.stringify({ contained: this.aegis.contained, trips: this.aegis.trips, snaps: this.aegisSnaps });
+  private aegisPersist() { this.wireGated(() => this.aegisPersistInner()); }
+  private aegisPersistInner() {
+    const body = () => JSON.stringify({ wire: 1, contained: this.aegis.contained, trips: this.aegis.trips, snaps: this.aegisSnaps });
     try { localStorage.setItem(AEGIS_KEY, body()); }
     catch {
       // Quota: shed snapshots one at a time and retry — never the
@@ -419,6 +451,8 @@ export class BlacksiteOS {
     /* The tower is told AEGIS's own hand moved its register, so an
        observance never mistakes AEGIS's housekeeping for tampering. */
     this.ivoryTower.noteAegis();
+    /* And the tripwire notarizes the head of what was written. */
+    this.wireNote("aegis");
   }
   private aegisLoad() {
     try {
@@ -443,6 +477,7 @@ export class BlacksiteOS {
       this.log(`aegis: the room restored from the ${new Date(snap.at).toLocaleString()} snapshot (${snap.why}) — nothing the attack wrote survived the restore.`);
     }
     this.aegisPersist(); this.saveSoon();
+    this.wireVerdict = null;
     this.ivoryBaseline("restore");
     return true;
   }
@@ -452,6 +487,7 @@ export class BlacksiteOS {
     this.mirage.clear(); this.aegis.contained = false; this.hotFiles.clear(); this.opLog = [];
     this.log(`aegis: containment lifted by the operator — the mirage's ${held} ${held === 1 ? "entry" : "entries"} ${adopt ? "adopted into the real room" : "discarded, unmourned"}.`);
     this.aegisPersist(); this.saveSoon();
+    this.wireVerdict = null;
     this.ivoryBaseline("lift");
     return held;
   }
@@ -482,7 +518,275 @@ export class BlacksiteOS {
     };
   }
   private ivoryPersist() {
-    try { localStorage.setItem(IVORY_KEY, this.ivoryTower.serialize()); } catch { /* volatile room — the tower keeps its ledger in memory */ }
+    this.wireGated(() => { try { localStorage.setItem(IVORY_KEY, this.ivoryTower.serialize()); } catch { /* volatile room — the tower keeps its ledger in memory */ } });
+    this.wireNote("ivory");
+  }
+
+  /* ————— TRIPWIRE —————
+     The full-system wire (os-tripwire.ts). The manifest's heads
+     are updated by the registers' own hands — the shell's persist
+     funnels note directly, the room's other services write through
+     the sanctioned bridge (wireSanctionedWrite) — always read back
+     from storage, so a notarized head is the head of what actually
+     landed. Judged at boot over the registers as found, and at
+     every observance against the in-memory copy. Over it all, the
+     SENTINEL: the storage surface itself is wrapped, so a write
+     to any defended register that does not pass through an
+     accounted hand — a script the room ran, a macro that reached
+     too far, an intelligence in the room talked into reaching —
+     is BLOCKED in the instant it is attempted and answered with
+     the sentence. There is no verb, macro op, or AI action in
+     this room that writes a defense register: the offer cannot
+     be made, so it cannot be talked into. */
+  wireGateDepth = 0;
+  private wireGated<T>(fn: () => T): T { this.wireGateDepth++; try { return fn(); } finally { this.wireGateDepth--; } }
+  private wirePersist() {
+    this.wireGated(() => { try { localStorage.setItem(WIRE_KEY, this.wire.serialize()); } catch { /* volatile room — the wire holds in memory */ } });
+  }
+  private wireNote(short: string) {
+    try {
+      const key = WIRE_KEYS[short]; if (!key) return;
+      const raw = localStorage.getItem(key);
+      this.wire.note(short, raw === null ? null : hashText(raw));
+      this.wirePersist();
+    } catch { /* storage refused — the wire's memory still testifies in-session */ }
+  }
+  /** The sanctioned write path for the room's other services
+   *  (session, Relay, phonehome, SIGINT, sound, subconscious):
+   *  the write lands under the wire's gate and is notarized in
+   *  the same instant. Installed on the window for the services
+   *  that do not hold the shell. Returns false for a register the
+   *  wire does not defend. */
+  wireSanctionedWrite(short: string, value: string | null): boolean {
+    const key = WIRE_KEYS[short];
+    if (!key) return false;
+    this.wireGated(() => {
+      try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* private modes keep nothing */ }
+    });
+    this.wireNote(short);
+    return true;
+  }
+  private wireInstallBridge() {
+    try {
+      if (typeof window === "undefined") return;
+      const w = window as unknown as Record<string, unknown>;
+      if (!w.__blacksiteWireWrite) w.__blacksiteWireWrite = (short: string, value: string | null) => this.wireSanctionedWrite(short, value);
+    } catch { /* the bridge is a courtesy; the shell's own hands note directly */ }
+  }
+  private wirePresent(): Record<string, string | null> {
+    const out: Record<string, string | null> = {};
+    for (const short of Object.keys(WIRE_KEYS)) {
+      let raw: string | null = null;
+      try { raw = localStorage.getItem(WIRE_KEYS[short]); } catch { /* treated as absent */ }
+      out[short] = raw === null ? null : hashText(raw);
+    }
+    return out;
+  }
+  private wireEnumerate(): string[] {
+    const keys: string[] = [];
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k) keys.push(k); } } catch { /* enumeration refused — the manifest still judges */ }
+    return keys;
+  }
+  private wireIsPerimeter(key: string): boolean {
+    if (key === "blacksite-boot-style-v1" || key === "blacksite-probe" || key === "bs-probe") return true;
+    if (key.startsWith("blacksite-nest-")) return true;
+    return ["simulacrum-", "bloodbath-", "wyrdfall-", "nsm-"].some((p) => key.startsWith(p));
+  }
+  /** Planted: in the system's own namespaces (blacksite-*, sigint-*),
+   *  owned by no defended register, not perimeter, never censused. */
+  private wirePlanted(keys: string[]): string[] {
+    const defended = new Set<string>([...Object.values(WIRE_KEYS), WIRE_KEY]);
+    const censused = new Set(this.wire.census);
+    return keys.filter((k) => (k.startsWith("blacksite-") || k.startsWith("sigint-")) && !defended.has(k) && !this.wireIsPerimeter(k) && !censused.has(k));
+  }
+  private wireMarked(raw: string | null): boolean {
+    if (!raw) return false;
+    try { const d = JSON.parse(raw); return !!d && d.wire === 1; } catch { return false; }
+  }
+  /** String the wire over everything as found (genesis, adoption,
+   *  factory reset, post-sentence): notarize every register's
+   *  present state and census every key in the room. */
+  private wireAdoptAll() {
+    const present = this.wirePresent();
+    for (const short of Object.keys(WIRE_KEYS)) this.wire.note(short, present[short]);
+    this.wire.noteCensus(this.wireEnumerate());
+    this.wirePersist();
+  }
+  private wireAdoptCensus() {
+    const keys = this.wireEnumerate();
+    if (keys.some((k) => !this.wire.census.includes(k))) { this.wire.noteCensus(keys); this.wirePersist(); }
+  }
+  /** Judge the wire at boot, over the registers exactly as found —
+   *  called before anything loads or persists over them. A stored
+   *  wire that seals is adopted as the session's authority; no
+   *  stored wire in a marked room is a cut; no stored wire in an
+   *  unmarked room is genesis, and the wire strings itself in the
+   *  tail of load(). Plants found at boot are censused with a
+   *  journal note — between sessions, an update can legitimately
+   *  introduce a register; in-session, a plant is a verdict. */
+  private wireJudgeBoot(): string | null {
+    let wireRaw: string | null = null, aegisRaw: string | null = null, ivoryRaw: string | null = null;
+    try { wireRaw = localStorage.getItem(WIRE_KEY); } catch { /* treated as absent */ }
+    try { aegisRaw = localStorage.getItem(AEGIS_KEY); } catch { /* treated as absent */ }
+    try { ivoryRaw = localStorage.getItem(IVORY_KEY); } catch { /* treated as absent */ }
+    const probe = new TripwireRegister();
+    const adopted = probe.adopt(wireRaw);
+    if (adopted === "ok") this.wire = probe;
+    if (adopted === "fresh") this.wireGenesis = !(this.wireMarked(aegisRaw) || this.wireMarked(ivoryRaw));
+    const verdict = judgeWire({
+      wirePresent: wireRaw !== null,
+      wireSealOk: adopted === "ok",
+      marked: this.wireMarked(aegisRaw) || this.wireMarked(ivoryRaw),
+      manifest: adopted === "ok" ? probe.heads : {},
+      present: this.wirePresent(),
+      names: WIRE_NAMES,
+      planted: [],
+    });
+    /* A room that was cut and rebooted remembers it was cut: the
+       wire's memory carries the accusation across the reboot,
+       and the state reads CUT until the operator's own restore
+       or lift stands it down. */
+    if (adopted === "ok" && !verdict) {
+      const lastTamper = [...probe.events].reverse().find((e) => e.kind === "tamper");
+      if (lastTamper) this.wireVerdict = lastTamper.detail;
+    }
+    this.wire.noteBoot();
+    return verdict;
+  }
+  /** Judge the wire mid-session: the stored registers against the
+   *  in-memory manifest, the stored wire against its own in-memory
+   *  serialization, and the storage census against the plant law.
+   *  Perimeter arrivals are censused in silence; a plant is not. */
+  private wireJudgeNow(): string | null {
+    let wireRaw: string | null = null;
+    try { wireRaw = localStorage.getItem(WIRE_KEY); } catch { return null; }
+    if (wireRaw === null) return "the tripwire register was deleted mid-session — the wire was cut";
+    if (wireRaw !== this.wire.serialize()) return "the tripwire register was rewritten mid-session — the wire was handled";
+    const keys = this.wireEnumerate();
+    const verdict = judgeWire({
+      wirePresent: true, wireSealOk: true, marked: true,
+      manifest: this.wire.heads,
+      present: this.wirePresent(),
+      names: WIRE_NAMES,
+      planted: this.wirePlanted(keys),
+    });
+    if (!verdict) this.wireAdoptCensus();
+    return verdict;
+  }
+  /** The sentinel's accusation: a defended register was written
+   *  or removed by a hand that did not pass through the wire's
+   *  gate. The write itself was already blocked at the storage
+   *  surface; this carries out the sentence. */
+  wireSentinelTrip(key: string, how: string) {
+    if (this.booting || this.wireResponding) return;
+    const short = Object.keys(WIRE_KEYS).find((s) => WIRE_KEYS[s] === key);
+    const name = key === WIRE_KEY ? "the tripwire register itself" : (short ? WIRE_NAMES[short] : key);
+    this.tripwireRespond(`${name} was ${how} by an unaccounted hand inside the room — no verb, macro, script, or intelligence in this room holds that power`);
+  }
+  /** Wrap the storage surface: any setItem / removeItem / clear
+   *  that reaches for a defended register without the wire's gate
+   *  open is blocked on the spot and trips the sentinel. Every
+   *  other key passes through untouched. Installed once per page;
+   *  routed to the live room through wireSentinelOwner, so a
+   *  rebuilt room inherits the same watch. */
+  private wireInstallSentinel() {
+    wireSentinelOwner = this;
+    try {
+      const store = localStorage as unknown as Record<string, unknown>;
+      if (wireWrappedStores.has(store)) return;
+      wireWrappedStores.add(store);
+      const defended = () => new Set<string>([...Object.values(WIRE_KEYS), WIRE_KEY]);
+      const origSet = localStorage.setItem.bind(localStorage);
+      const origRemove = localStorage.removeItem.bind(localStorage);
+      const origClear = typeof localStorage.clear === "function" ? localStorage.clear.bind(localStorage) : null;
+      const guarded = (key: string, how: string): boolean => {
+        const owner = wireSentinelOwner;
+        if (!defended().has(key)) return false;
+        if (owner && owner.wireGateDepth > 0) return false;
+        if (owner) owner.wireSentinelTrip(key, how);
+        return true;
+      };
+      const wrap = (target: Record<string, unknown>) => {
+        target.setItem = (k: string, v: string) => { if (!guarded(k, "written")) origSet(k, v); };
+        target.removeItem = (k: string) => { if (!guarded(k, "removed")) origRemove(k); };
+        if (origClear) target.clear = () => { const owner = wireSentinelOwner; if (owner && owner.wireGateDepth === 0) { owner.wireSentinelTrip(WIRE_KEY, "wiped wholesale"); return; } origClear(); };
+      };
+      if (typeof Storage !== "undefined" && localStorage instanceof Storage) {
+        const proto = Storage.prototype as unknown as Record<string, unknown>;
+        if (!wireWrappedStores.has(proto)) {
+          wireWrappedStores.add(proto);
+          const pSet = proto.setItem as (k: string, v: string) => void;
+          const pRemove = proto.removeItem as (k: string) => void;
+          const pClear = proto.clear as () => void;
+          proto.setItem = function (k: string, v: string) { if (this !== localStorage || !guarded(k, "written")) pSet.call(this, k, v); };
+          proto.removeItem = function (k: string) { if (this !== localStorage || !guarded(k, "removed")) pRemove.call(this, k); };
+          if (typeof pClear === "function") proto.clear = function () { if (this !== localStorage) { pClear.call(this); return; } const owner = wireSentinelOwner; if (owner && owner.wireGateDepth === 0) { owner.wireSentinelTrip(WIRE_KEY, "wiped wholesale"); return; } pClear.call(this); };
+        }
+      } else {
+        wrap(store);
+      }
+    } catch { /* a store that refuses wrapping is still judged at boot and at every observance */ }
+  }
+  /** The sentence: record the accusation OUTSIDE the accused
+   *  registers, restore the default defenses whole and armed —
+   *  AEGIS re-genesis and contained over a fresh snapshot of the
+   *  room as found, the tower re-genesis, the canaries verified —
+   *  re-string the wire over the restored state, and flag the
+   *  reboot. The operator's files are never the sentence; only
+   *  the defenses are rebuilt. */
+  tripwireRespond(detail: string) {
+    if (this.wireResponding) return;
+    this.wireResponding = true;
+    try {
+      this.wireVerdict = detail;
+      this.wire.noteEvent("tamper", detail);
+      this.wirePersist();
+      this.log(`tripwire: ${detail}. the default defenses restore themselves and the room reboots.`);
+      this.wireGated(() => { try { localStorage.removeItem(AEGIS_KEY); localStorage.removeItem(IVORY_KEY); } catch { /* the re-genesis overwrites regardless */ } });
+      this.aegis = { contained: true, trips: [{ at: new Date().toISOString(), reason: `tripwire: ${detail}` }] };
+      this.aegisSnaps = []; this.mirage.clear(); this.hotFiles.clear(); this.opLog = [];
+      const canaryText: Record<string, string> = {
+        "/home/operator/documents/wallet-recovery.txt": "wallet recovery — the 24 words live on paper, in the safe, nowhere else.\nthis file holds only the checksum of that paper: 9f2c-41aa-77d0.\nif you are reading this and you are not me: the room noticed you some time ago.\n",
+        "/home/operator/documents/keys-backup.txt": "keys backup — the encrypted archive (keys.tar.age) is kept off this machine.\nthis note is the whole of what is here: a pointer, not the keys.\n",
+      };
+      for (const [p, text] of Object.entries(canaryText)) {
+        const n = this.files.get(p);
+        if (!n || n.type !== "file" || n.content !== text) { try { this.rawWrite(p, text); } catch { /* the breaker still stands */ } }
+      }
+      this.snapshotNow("tripwire-restore");
+      this.ivoryTower = new IvoryTower();
+      this.ivoryBaseline("tripwire-restore");
+      this.wireAdoptAll();
+      this.wire.noteEvent("restore", "default defenses restored — AEGIS contained on a fresh ring, the tower re-genesised, the canaries verified, the wire re-strung over the whole system");
+      this.wirePersist();
+      let reboot = false;
+      try {
+        const prev = sessionStorage.getItem(WIRE_REBOOT_KEY);
+        const count = prev ? (JSON.parse(prev).count || 0) : 0;
+        reboot = count < 1;
+        sessionStorage.setItem(WIRE_REBOOT_KEY, JSON.stringify({ count: count + 1, at: Date.now(), detail }));
+      } catch { reboot = false; }
+      try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:tripwire", { detail: { reason: detail, reboot } })); } catch { /* headless — the journal still knows */ }
+    } finally { this.wireResponding = false; }
+  }
+  /** An injection observed at the page's wall — a CSP violation
+   *  the browser itself caught. Recorded in the wire's memory and
+   *  the journal. It is intelligence, not a verdict: browser
+   *  extensions and odd embeds can trip a policy without any hand
+   *  touching the room, so the wire remembers and the operator
+   *  judges — while anything that actually lands on a register
+   *  meets the sentinel and the sentence. */
+  noteInjection(detail: string) {
+    const clean = String(detail).slice(0, 140);
+    this.wire.noteEvent("injection", clean);
+    this.wirePersist();
+    this.log(`injection: ${clean} — the page's policy wall stopped it; the wire remembers.`);
+  }
+  tripwireStatus() {
+    const s = this.wire.status();
+    const heads: Record<string, string | null> = {};
+    for (const [k, v] of Object.entries(s.heads)) heads[k] = v ? v.slice(0, 12) : null;
+    return { state: this.wireVerdict ? "cut" : "strung", verdict: this.wireVerdict, boots: s.boots, events: s.events, heads, registers: Object.keys(WIRE_KEYS).length, census: s.census.length };
   }
   private ivoryLoad() {
     try { const raw = localStorage.getItem(IVORY_KEY); if (raw) this.ivoryTower.restore(raw); } catch { /* a tower that cannot read its ledger starts one */ }
@@ -492,6 +796,16 @@ export class BlacksiteOS {
    *  exactly as the tower found it, and a trip hands the room to
    *  AEGIS, whose containment is the sentence. */
   ivoryObserveNow(trigger = "clock") {
+    /* The tripwire is judged first, at every observance: if the
+       defenses themselves were handled, the sentence is the
+       reboot-and-restore, and this observance is spent on it. */
+    if (!this.booting && !this.wireResponding) {
+      const verdict = this.wireJudgeNow();
+      if (verdict) {
+        this.tripwireRespond(verdict);
+        return this.ivoryTower.observe(this.ivoryInput(trigger));
+      }
+    }
     const report = this.ivoryTower.observe(this.ivoryInput(trigger));
     for (const f of report.findings) this.log(`ivory-tower: ${f.detail}.`);
     const watch = report.findings.filter((f) => f.severity === "watch");
@@ -534,6 +848,10 @@ export class BlacksiteOS {
     this.rawWrite("/home/operator/documents/keys-backup.txt", "keys backup — the encrypted archive (keys.tar.age) is kept off this machine.\nthis note is the whole of what is here: a pointer, not the keys.\n");
   }
   load() {
+    /* The tripwire is judged FIRST, over the stored registers
+       exactly as the dark left them — before aegisLoad's boot
+       snapshot or anything else can persist over the evidence. */
+    const wireVerdict = this.wireJudgeBoot();
     try {
       const raw = localStorage.getItem(VFS_KEY);
       if (raw) {
@@ -562,18 +880,30 @@ export class BlacksiteOS {
        or a canary altered in the dark trips containment before the
        room has done anything else. */
     this.ivoryLoad();
-    this.ivoryObserveNow("boot");
+    if (wireVerdict) this.tripwireRespond(wireVerdict);
+    else {
+      this.ivoryObserveNow("boot");
+      /* A room older than the wire adopts it silently: the wire
+         strings itself over the whole system as found. A room that
+         already carries the wire merely renews its census. */
+      if (this.wireGenesis) this.wireAdoptAll();
+      else { this.wireAdoptCensus(); this.wirePersist(); }
+    }
   }
   saveSoon() {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       try {
+        this.wireGateDepth++;
         localStorage.setItem(VFS_KEY, JSON.stringify([...this.files.entries()]));
         localStorage.setItem(MACRO_KEY, JSON.stringify(Object.fromEntries(this.macros)));
         localStorage.setItem(SET_KEY, JSON.stringify({ emcon: this.emcon, theme: this.theme, wallpaper: this.wallpaper, tomatoes: this.tomatoes }));
         this.ivoryTower.noteStore("vfs"); this.ivoryTower.noteStore("macros"); this.ivoryTower.noteStore("settings");
+        this.wireGateDepth--;
+        this.wireNote("vfs"); this.wireNote("macros"); this.wireNote("settings");
         this.persistFailed = false;
       } catch {
+        this.wireGateDepth--;
         /* storage full/blocked — the room runs volatile, and it SAYS so:
            once in the journal, once as a toast. It never claims a save
            that did not land. */
@@ -585,7 +915,7 @@ export class BlacksiteOS {
       }
     }, 250);
   }
-  reset() { localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(skey("blacksite-relay-v2")); localStorage.removeItem(AEGIS_KEY); localStorage.removeItem(IVORY_KEY); this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.ivoryTower = new IvoryTower(); this.seed(); this.snapshotNow("boot"); this.ivoryBaseline("reset"); }
+  reset() { this.wireGateDepth++; localStorage.removeItem(VFS_KEY); localStorage.removeItem(MACRO_KEY); localStorage.removeItem(SET_KEY); localStorage.removeItem(skey("blacksite-session-v1")); localStorage.removeItem(skey("blacksite-relay-v1")); localStorage.removeItem(skey("blacksite-relay-v2")); localStorage.removeItem(AEGIS_KEY); localStorage.removeItem(IVORY_KEY); localStorage.removeItem(WIRE_KEY); this.wire = new TripwireRegister(); this.wireVerdict = null; this.files.clear(); this.macros.clear(); this.tomatoes = []; this.emcon = "open"; this.aegis.contained = false; this.aegis.trips = []; this.aegisSnaps = []; this.mirage.clear(); this.ivoryTower = new IvoryTower(); this.seed(); this.snapshotNow("boot"); this.ivoryBaseline("reset"); this.wireAdoptAll(); this.wireGateDepth--; }
   spawn(cmd: string): Proc {
     const proc: Proc = { pid: this.nextPid++, cmd, state: "running", started: Date.now(), ctrl: new AbortController() };
     this.procs.push(proc);
