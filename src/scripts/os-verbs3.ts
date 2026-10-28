@@ -733,7 +733,7 @@ function registerSelfTests() {
       ["path normalization", () => ctx.os.norm("/a/b/../c") === "/a/c"],
       ["mmh3('') is 0", () => mmh3(new Uint8Array(0)) === 0],
       ["subnet of the room", () => ctx.os.norm("..", "/home/operator") === "/home"],
-      ["644-command roster present", async () => { const { default: r } = await import("../data/blacksite-commands.json"); return (r as any[]).length === 644; }],
+      ["645-command roster present", async () => { const { default: r } = await import("../data/blacksite-commands.json"); return (r as any[]).length === 645; }],
       ["python engine answers", async () => { const Sk = await loadSkulpt(); return !!Sk; }],
       ["scheme engine evaluates", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runScheme("(define (fact n) (if (< n 2) 1 (* n (fact (- n 1))))) (display (fact 10))", { out: (t: string) => lines.push(t) }); return lines.join("") === "3628800"; }],
       ["brainfuck engine prints HI", async () => { const m = await import("./os-engines2"); const lines: string[] = []; m.runBrainfuck("++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.", "", { out: (t: string) => lines.push(t) }); return lines.join("").startsWith("Hello"); }],

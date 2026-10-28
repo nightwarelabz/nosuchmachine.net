@@ -62,6 +62,9 @@ export interface LiveSource {
   panel: HTMLElement;
   activate: () => void;
   deactivate: () => void;
+  suspend: () => void;
+  resume: () => void;
+  isPlaying: () => boolean;
   setGain: (v: number) => void;
 }
 
@@ -493,6 +496,18 @@ export function createLiveSource(hooks: LiveHooks): LiveSource {
       stopPlayback();
       panel.hidden = true;
     },
+    /* The window lifecycle's words, and they are NOT the switch's:
+       a source switch ends playback (the operator chose another
+       source), but a suspend is only the window being put away —
+       minimized, covered, tab hidden. Playback ends only on close,
+       on the operator's stop/pause, on an EMCON rise, or on a
+       switch; never on being hidden. (2026-10-28: suspend used to
+       borrow this deactivate, destroyed the playing element, and
+       activate() could not restore what stopPlayback had nulled —
+       minimizing the bench killed the station, for good.) */
+    suspend: () => { panel.hidden = true; },
+    resume: () => { panel.hidden = false; },
+    isPlaying: () => !!playing,
     setGain: (v: number) => {
       if (!playing) return;
       if (playing.route === "graph" && playing.gnode) playing.gnode.gain.value = v;

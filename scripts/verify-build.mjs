@@ -375,7 +375,7 @@ assert.ok(!rosterRaw.includes("â"), "the command roster must carry no UTF-8-as-
 // carries the Ruby engine as same-origin assets (the interpreter
 // is a build artifact of scripts/build-ruby.mjs, never committed).
 const rosterRowsJ = JSON.parse(rosterRaw);
-assert.equal(rosterRowsJ.length, 644, "the roster stands at 644 rows (642 + the lang and ruby verbs)");
+assert.equal(rosterRowsJ.length, 645, "the roster stands at 645 rows (644 + the tv verb)");
 assert.ok(rosterRowsJ.every((r) => typeof r.descJa === "string" && r.descJa.trim().length > 0), "every roster row must carry a non-empty descJa");
 const jaDictSrc = fs.readFileSync("src/scripts/os-i18n-ja.ts", "utf8");
 assert.ok(!/[\u0080-\u009F]/.test(jaDictSrc), "the Japanese dictionary must carry no C1 control characters");
@@ -405,6 +405,26 @@ assert.equal(rubyWasmSize, rubyManifest.bytes, "the ruby parts must sum to the m
 assert.ok(rubyWasmSize > 20_000_000 && rubyWasmSize < 40_000_000, `ruby.wasm size looks wrong: ${rubyWasmSize}`);
 const rubyWorkerJs = fs.readFileSync(path.join(root, "ruby/ruby-worker.js"), "utf8");
 assert.ok(rubyWorkerJs.includes("full_message"), "the built ruby worker must carry the run driver");
+
+/* the TV room stands in the build: the pinned hls.js engine beside
+   a catalog that parses, carries the breadth it claims (100+
+   channels, 30+ countries), streams https HLS only, and stays
+   C1-clean. The catalog is a build-time-verified snapshot — this
+   gate proves its shape, not tonight's weather on any stream. */
+const tvEngineJs = fs.readFileSync(path.join(root, "tv/hls.js"), "utf8");
+assert.ok(tvEngineJs.length > 400_000, "dist must carry the hls.js engine at tv/hls.js");
+assert.ok(fs.existsSync(path.join(root, "tv/player.html")), "dist must carry the TV player frame at tv/player.html");
+assert.ok(fs.readFileSync(path.join(root, "tv/player.js"), "utf8").includes("tv:play"), "the built TV player frame must carry the room's message protocol");
+const tvChannels = JSON.parse(fs.readFileSync(path.join(root, "tv/channels.json"), "utf8"));
+assert.ok(Array.isArray(tvChannels) && tvChannels.length >= 100, `the TV catalog must carry 100+ channels, carries ${Array.isArray(tvChannels) ? tvChannels.length : "none"}`);
+assert.ok(new Set(tvChannels.map((c) => c.code)).size >= 30, "the TV catalog must span 30+ countries");
+assert.ok(tvChannels.every((c) => typeof c.stream === "string" && c.stream.startsWith("https://") && c.stream.includes(".m3u8")), "every TV channel stream must be an https HLS playlist");
+assert.ok(tvChannels.every((c) => c.id && c.name && c.country && c.region && c.category && Array.isArray(c.languages)), "every TV channel must carry id, name, country, region, category and languages");
+assert.equal(new Set(tvChannels.map((c) => c.id)).size, tvChannels.length, "TV channel ids must be unique");
+const c1ReT = /[\u0080-\u009f]/;
+assert.ok(!tvChannels.some((c) => c1ReT.test(JSON.stringify(c))), "the TV catalog must be C1-clean");
+assert.ok(osSrcR.includes('["tv", "tv", "TV"]'), "desktop defs must stand TV on the desk");
+assert.ok(osSrcR.includes("registerTvVerbs()"), "os.ts must register the tv verb");
 assert.ok(astroJs.includes("blacksite-lang-v1"), "the OS bundle must carry the language register");
 assert.ok(osSrcR.includes('["phonehome", "phonehome", "phonehome"]'), "desktop defs must stand phonehome on the desk");
 assert.ok(osSrcR.includes("registerPhonehomeVerbs()"), "os.ts must register the phonehome verb");

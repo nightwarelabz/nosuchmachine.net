@@ -19,3 +19,6 @@ node_modules/
 
 # ruby engine build artifacts (scripts/build-ruby.mjs)
 /public/ruby/
+
+# tv player engine build artifact (scripts/build-tv.mjs)
+/public/tv/hls.js

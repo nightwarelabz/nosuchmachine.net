@@ -1087,8 +1087,15 @@ export function buildSigint(body: HTMLElement) {
   /* ---- window lifecycle (os:suspend / os:resume / os:dispose) ----
      Suspend is not power-off: sources survive, only the draw chain
      stops and the audio clock halts (which pauses the worklet's DSP
-     with it). The live-stations source routes around ctx, so it is
-     deactivated separately and restored on resume. */
+     with it) — with one exception, and it is a law, not a nicety:
+     a live station PLAYING is playback, and playback ends only on
+     close, on the operator's stop/pause, on an EMCON rise, or on a
+     source switch. Never on the window being put away. So a playing
+     station holds the clock open and the live source is hidden,
+     never deactivated: deactivate is the switch's word, and it
+     destroys the playing element. (2026-10-28: suspend borrowed it,
+     and minimizing the bench killed the station for good — the
+     resume side's activate() had nothing left to restore.) */
   const teardownBench = () => {
     if (benchDisposed) return;
     benchDisposed = true;
@@ -1102,9 +1109,9 @@ export function buildSigint(body: HTMLElement) {
     suspended = true;
     if (drawHandle) { cancelAnimationFrame(drawHandle); drawHandle = 0; }
     ctxWasRunning = !!(ctx && ctx.state === "running");
-    if (ctxWasRunning && ctx) void ctx.suspend();
+    if (ctxWasRunning && ctx && !live.isPlaying()) void ctx.suspend();
     liveWasOn = liveOn;
-    if (liveOn) { live.deactivate(); liveOn = false; }
+    if (liveOn) live.suspend();
     airWasOn = airOn;
     if (airOn) { air.deactivate(); airOn = false; }
   });
@@ -1113,7 +1120,7 @@ export function buildSigint(body: HTMLElement) {
     suspended = false;
     if (ctxWasRunning && ctx && ctx.state === "suspended") void ctx.resume();
     ctxWasRunning = false;
-    if (liveWasOn) { live.activate(); liveOn = true; liveWasOn = false; }
+    if (liveWasOn) { live.resume(); liveWasOn = false; }
     if (airWasOn) { air.activate(); airOn = true; airWasOn = false; }
     if (!drawHandle && body.isConnected) drawHandle = requestAnimationFrame(draw);
   });
