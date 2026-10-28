@@ -309,6 +309,14 @@ assert.ok(qcPatch010.includes('"connect thisissparta2"'), "the door's connect to
 // rendezvous exists. The bundle pins read the built OS chunk.
 assert.ok(osSrcR.includes('phonehome: { title: "phonehome", icon: "phonehome" }'), "APPS must register phonehome");
 assert.ok(osSrcR.includes("function defaultWallpaper()") && osSrcR.includes('? "mare" : "monolith"') && osSrcR.includes("defaultWallpaper()"), "the un-chosen wallpaper default must split by device: mare on mobile, monolith on desktop (Chase, 2026-10-27)");
+// ——— roster encoding pin (Chase's screenshot, 2026-10-27) ———
+// The roster JSON ships to the toolchest and help windows verbatim.
+// It must never carry mojibake again: C1 control characters
+// (U+0080–U+009F — the tofu boxes) or a UTF-8-as-Latin-1 "â" are
+// data corruption, not a font gap, and the build refuses them.
+const rosterRaw = fs.readFileSync("src/data/blacksite-commands.json", "utf8");
+assert.ok(!/[\u0080-\u009F]/.test(rosterRaw), "the command roster must carry no C1 control characters (mojibake from the 2026-10-27 toolchest harvest)");
+assert.ok(!rosterRaw.includes("â"), "the command roster must carry no UTF-8-as-Latin-1 mojibake (â)");
 assert.ok(osSrcR.includes('["phonehome", "phonehome", "phonehome"]'), "desktop defs must stand phonehome on the desk");
 assert.ok(osSrcR.includes("registerPhonehomeVerbs()"), "os.ts must register the phonehome verb");
 assert.ok(astroJs.includes("nsm.phonehome.signal.v1"), "OS bundle must carry the phonehome signal schema");
