@@ -2563,1256 +2563,1256 @@
  },
  {
   "section": "network tools",
-  "cmd": "netcalc <a.b.c.d/prefix> â the full subnet breakdown",
+  "cmd": "netcalc <a.b.c.d/prefix> — the full subnet breakdown",
   "verb": "netcalc",
-  "desc": "netcalc <a.b.c.d/prefix> â the full subnet breakdown"
+  "desc": "netcalc <a.b.c.d/prefix> — the full subnet breakdown"
  },
  {
   "section": "network tools",
-  "cmd": "cidr <a.b.c.d/prefix> â address count and range, compact",
+  "cmd": "cidr <a.b.c.d/prefix> — address count and range, compact",
   "verb": "cidr",
-  "desc": "cidr <a.b.c.d/prefix> â address count and range, compact"
+  "desc": "cidr <a.b.c.d/prefix> — address count and range, compact"
  },
  {
   "section": "network tools",
-  "cmd": "wildcard <a.b.c.d/prefix> â the Cisco-style wildcard mask and the range it matches",
+  "cmd": "wildcard <a.b.c.d/prefix> — the Cisco-style wildcard mask and the range it matches",
   "verb": "wildcard",
-  "desc": "wildcard <a.b.c.d/prefix> â the Cisco-style wildcard mask and the range it matches"
+  "desc": "wildcard <a.b.c.d/prefix> — the Cisco-style wildcard mask and the range it matches"
  },
  {
   "section": "network tools",
-  "cmd": "supernet <cidr> <cidr> [â¦] â the smallest supernet covering them all",
+  "cmd": "supernet <cidr> <cidr> […] — the smallest supernet covering them all",
   "verb": "supernet",
-  "desc": "supernet <cidr> <cidr> [â¦] â the smallest supernet covering them all"
+  "desc": "supernet <cidr> <cidr> […] — the smallest supernet covering them all"
  },
  {
   "section": "network tools",
-  "cmd": "vlsm <base-cidr> <hosts> [hostsâ¦] â carve a block into subnets by need, largest first",
+  "cmd": "vlsm <base-cidr> <hosts> [hosts…] — carve a block into subnets by need, largest first",
   "verb": "vlsm",
-  "desc": "vlsm <base-cidr> <hosts> [hostsâ¦] â carve a block into subnets by need, largest first"
+  "desc": "vlsm <base-cidr> <hosts> [hosts…] — carve a block into subnets by need, largest first"
  },
  {
   "section": "network tools",
-  "cmd": "iprange <first> <last> â count a range, list it when it is small",
+  "cmd": "iprange <first> <last> — count a range, list it when it is small",
   "verb": "iprange",
-  "desc": "iprange <first> <last> â count a range, list it when it is small"
+  "desc": "iprange <first> <last> — count a range, list it when it is small"
  },
  {
   "section": "network tools",
-  "cmd": "ip2int <a.b.c.d> â an address as a 32-bit integer",
+  "cmd": "ip2int <a.b.c.d> — an address as a 32-bit integer",
   "verb": "ip2int",
-  "desc": "ip2int <a.b.c.d> â an address as a 32-bit integer"
+  "desc": "ip2int <a.b.c.d> — an address as a 32-bit integer"
  },
  {
   "section": "network tools",
-  "cmd": "int2ip <n> â a 32-bit integer as an address",
+  "cmd": "int2ip <n> — a 32-bit integer as an address",
   "verb": "int2ip",
-  "desc": "int2ip <n> â a 32-bit integer as an address"
+  "desc": "int2ip <n> — a 32-bit integer as an address"
  },
  {
   "section": "network tools",
-  "cmd": "ip2hex <a.b.c.d> â an address in hex",
+  "cmd": "ip2hex <a.b.c.d> — an address in hex",
   "verb": "ip2hex",
-  "desc": "ip2hex <a.b.c.d> â an address in hex"
+  "desc": "ip2hex <a.b.c.d> — an address in hex"
  },
  {
   "section": "network tools",
-  "cmd": "hex2ip <0xâ¦> â a hex word as an address",
+  "cmd": "hex2ip <0x…> — a hex word as an address",
   "verb": "hex2ip",
-  "desc": "hex2ip <0xâ¦> â a hex word as an address"
+  "desc": "hex2ip <0x…> — a hex word as an address"
  },
  {
   "section": "network tools",
-  "cmd": "ipbin <a.b.c.d> â an address in dotted binary",
+  "cmd": "ipbin <a.b.c.d> — an address in dotted binary",
   "verb": "ipbin",
-  "desc": "ipbin <a.b.c.d> â an address in dotted binary"
+  "desc": "ipbin <a.b.c.d> — an address in dotted binary"
  },
  {
   "section": "network tools",
-  "cmd": "ipinfo <address> â class, kind, and forms of an IPv4 or IPv6 address",
+  "cmd": "ipinfo <address> — class, kind, and forms of an IPv4 or IPv6 address",
   "verb": "ipinfo",
-  "desc": "ipinfo <address> â class, kind, and forms of an IPv4 or IPv6 address"
+  "desc": "ipinfo <address> — class, kind, and forms of an IPv4 or IPv6 address"
  },
  {
   "section": "network tools",
-  "cmd": "iprev <a.b.c.d> â the reverse-DNS name of an address",
+  "cmd": "iprev <a.b.c.d> — the reverse-DNS name of an address",
   "verb": "iprev",
-  "desc": "iprev <a.b.c.d> â the reverse-DNS name of an address"
+  "desc": "iprev <a.b.c.d> — the reverse-DNS name of an address"
  },
  {
   "section": "network tools",
-  "cmd": "ipv6x <address> â expand an IPv6 address to all eight groups",
+  "cmd": "ipv6x <address> — expand an IPv6 address to all eight groups",
   "verb": "ipv6x",
-  "desc": "ipv6x <address> â expand an IPv6 address to all eight groups"
+  "desc": "ipv6x <address> — expand an IPv6 address to all eight groups"
  },
  {
   "section": "network tools",
-  "cmd": "ipv6c <address> â compress an IPv6 address to its shortest form",
+  "cmd": "ipv6c <address> — compress an IPv6 address to its shortest form",
   "verb": "ipv6c",
-  "desc": "ipv6c <address> â compress an IPv6 address to its shortest form"
+  "desc": "ipv6c <address> — compress an IPv6 address to its shortest form"
  },
  {
   "section": "network tools",
-  "cmd": "ip6rev <address> â the ip6.arpa reverse-DNS name of an IPv6 address",
+  "cmd": "ip6rev <address> — the ip6.arpa reverse-DNS name of an IPv6 address",
   "verb": "ip6rev",
-  "desc": "ip6rev <address> â the ip6.arpa reverse-DNS name of an IPv6 address"
+  "desc": "ip6rev <address> — the ip6.arpa reverse-DNS name of an IPv6 address"
  },
  {
   "section": "network tools",
-  "cmd": "v6subnet <prefix/len> <new-len> [n] â split an IPv6 prefix, showing the first n children",
+  "cmd": "v6subnet <prefix/len> <new-len> [n] — split an IPv6 prefix, showing the first n children",
   "verb": "v6subnet",
-  "desc": "v6subnet <prefix/len> <new-len> [n] â split an IPv6 prefix, showing the first n children"
+  "desc": "v6subnet <prefix/len> <new-len> [n] — split an IPv6 prefix, showing the first n children"
  },
  {
   "section": "network tools",
-  "cmd": "v6map <address> â an IPv4 address in IPv6 mapped form, or the IPv4 inside a mapped address",
+  "cmd": "v6map <address> — an IPv4 address in IPv6 mapped form, or the IPv4 inside a mapped address",
   "verb": "v6map",
-  "desc": "v6map <address> â an IPv4 address in IPv6 mapped form, or the IPv4 inside a mapped address"
+  "desc": "v6map <address> — an IPv4 address in IPv6 mapped form, or the IPv4 inside a mapped address"
  },
  {
   "section": "network tools",
-  "cmd": "mac <address> â a MAC address in every house style, with its flag bits read",
+  "cmd": "mac <address> — a MAC address in every house style, with its flag bits read",
   "verb": "mac",
-  "desc": "mac <address> â a MAC address in every house style, with its flag bits read"
+  "desc": "mac <address> — a MAC address in every house style, with its flag bits read"
  },
  {
   "section": "network tools",
-  "cmd": "eui64 <mac> â the EUI-64 identifier and link-local address a MAC makes",
+  "cmd": "eui64 <mac> — the EUI-64 identifier and link-local address a MAC makes",
   "verb": "eui64",
-  "desc": "eui64 <mac> â the EUI-64 identifier and link-local address a MAC makes"
+  "desc": "eui64 <mac> — the EUI-64 identifier and link-local address a MAC makes"
  },
  {
   "section": "network tools",
-  "cmd": "ula [n] â fresh RFC 4193 unique-local IPv6 prefixes",
+  "cmd": "ula [n] — fresh RFC 4193 unique-local IPv6 prefixes",
   "verb": "ula",
-  "desc": "ula [n] â fresh RFC 4193 unique-local IPv6 prefixes"
+  "desc": "ula [n] — fresh RFC 4193 unique-local IPv6 prefixes"
  },
  {
   "section": "network tools",
-  "cmd": "netmask <prefix|mask|all> â netmask, wildcard, and host count in every notation",
+  "cmd": "netmask <prefix|mask|all> — netmask, wildcard, and host count in every notation",
   "verb": "netmask",
-  "desc": "netmask <prefix|mask|all> â netmask, wildcard, and host count in every notation"
+  "desc": "netmask <prefix|mask|all> — netmask, wildcard, and host count in every notation"
  },
  {
   "section": "network tools",
-  "cmd": "innet <cidr> <address> â is the address inside the block?",
+  "cmd": "innet <cidr> <address> — is the address inside the block?",
   "verb": "innet",
-  "desc": "innet <cidr> <address> â is the address inside the block?"
+  "desc": "innet <cidr> <address> — is the address inside the block?"
  },
  {
   "section": "network tools",
-  "cmd": "overlap <cidr> <cidr> â how two blocks relate",
+  "cmd": "overlap <cidr> <cidr> — how two blocks relate",
   "verb": "overlap",
-  "desc": "overlap <cidr> <cidr> â how two blocks relate"
+  "desc": "overlap <cidr> <cidr> — how two blocks relate"
  },
  {
   "section": "network tools",
-  "cmd": "ip2cidr <first> <last> â the smallest single CIDR covering a range",
+  "cmd": "ip2cidr <first> <last> — the smallest single CIDR covering a range",
   "verb": "ip2cidr",
-  "desc": "ip2cidr <first> <last> â the smallest single CIDR covering a range"
+  "desc": "ip2cidr <first> <last> — the smallest single CIDR covering a range"
  },
  {
   "section": "network tools",
-  "cmd": "mtu <link-mtu> [pppoe|gre|vxlan|wireguard|vlan|ipsecâ¦] â the payload room left after encapsulation",
+  "cmd": "mtu <link-mtu> [pppoe|gre|vxlan|wireguard|vlan|ipsec…] — the payload room left after encapsulation",
   "verb": "mtu",
-  "desc": "mtu <link-mtu> [pppoe|gre|vxlan|wireguard|vlan|ipsecâ¦] â the payload room left after encapsulation"
+  "desc": "mtu <link-mtu> [pppoe|gre|vxlan|wireguard|vlan|ipsec…] — the payload room left after encapsulation"
  },
  {
   "section": "network tools",
-  "cmd": "bdp <rate> <rtt-ms> â the bandwidth-delay product: how much must be in flight",
+  "cmd": "bdp <rate> <rtt-ms> — the bandwidth-delay product: how much must be in flight",
   "verb": "bdp",
-  "desc": "bdp <rate> <rtt-ms> â the bandwidth-delay product: how much must be in flight"
+  "desc": "bdp <rate> <rtt-ms> — the bandwidth-delay product: how much must be in flight"
  },
  {
   "section": "network tools",
-  "cmd": "dscp <codepoint|name|tos> â DSCP classes, codepoints, and TOS bytes",
+  "cmd": "dscp <codepoint|name|tos> — DSCP classes, codepoints, and TOS bytes",
   "verb": "dscp",
-  "desc": "dscp <codepoint|name|tos> â DSCP classes, codepoints, and TOS bytes"
+  "desc": "dscp <codepoint|name|tos> — DSCP classes, codepoints, and TOS bytes"
  },
  {
   "section": "network tools",
-  "cmd": "svc <port|service> â the IANA service registry: what a port is for",
+  "cmd": "svc <port|service> — the IANA service registry: what a port is for",
   "verb": "svc",
-  "desc": "svc <port|service> â the IANA service registry: what a port is for"
+  "desc": "svc <port|service> — the IANA service registry: what a port is for"
  },
  {
   "section": "data tools",
-  "cmd": "cipher <0x00,0x00|name> â the IANA TLS cipher-suite registry",
+  "cmd": "cipher <0x00,0x00|name> — the IANA TLS cipher-suite registry",
   "verb": "cipher",
-  "desc": "cipher <0x00,0x00|name> â the IANA TLS cipher-suite registry"
+  "desc": "cipher <0x00,0x00|name> — the IANA TLS cipher-suite registry"
  },
  {
   "section": "data tools",
-  "cmd": "mime <extension|type> â MIME types and their extensions (mime-db)",
+  "cmd": "mime <extension|type> — MIME types and their extensions (mime-db)",
   "verb": "mime",
-  "desc": "mime <extension|type> â MIME types and their extensions (mime-db)"
+  "desc": "mime <extension|type> — MIME types and their extensions (mime-db)"
  },
  {
   "section": "data tools",
-  "cmd": "tz [zone] â time zones: search them, or read the hour in one",
+  "cmd": "tz [zone] — time zones: search them, or read the hour in one",
   "verb": "tz",
-  "desc": "tz [zone] â time zones: search them, or read the hour in one"
+  "desc": "tz [zone] — time zones: search them, or read the hour in one"
  },
  {
   "section": "data tools",
-  "cmd": "country <code|name> â ISO 3166 country codes",
+  "cmd": "country <code|name> — ISO 3166 country codes",
   "verb": "country",
-  "desc": "country <code|name> â ISO 3166 country codes"
+  "desc": "country <code|name> — ISO 3166 country codes"
  },
  {
   "section": "data tools",
-  "cmd": "currency <code|name> â ISO 4217 currency codes",
+  "cmd": "currency <code|name> — ISO 4217 currency codes",
   "verb": "currency",
-  "desc": "currency <code|name> â ISO 4217 currency codes"
+  "desc": "currency <code|name> — ISO 4217 currency codes"
  },
  {
   "section": "data tools",
-  "cmd": "language <code|name> â ISO 639 language codes",
+  "cmd": "language <code|name> — ISO 639 language codes",
   "verb": "language",
-  "desc": "language <code|name> â ISO 639 language codes"
+  "desc": "language <code|name> — ISO 639 language codes"
  },
  {
   "section": "network tools",
-  "cmd": "proto <number|keyword> â the IANA protocol-number registry (what rides in IPv4 protocol / IPv6 next-header)",
+  "cmd": "proto <number|keyword> — the IANA protocol-number registry (what rides in IPv4 protocol / IPv6 next-header)",
   "verb": "proto",
-  "desc": "proto <number|keyword> â the IANA protocol-number registry (what rides in IPv4 protocol / IPv6 next-header)"
+  "desc": "proto <number|keyword> — the IANA protocol-number registry (what rides in IPv4 protocol / IPv6 next-header)"
  },
  {
   "section": "network tools",
-  "cmd": "http <code|words> â HTTP status codes and what they actually mean",
+  "cmd": "http <code|words> — HTTP status codes and what they actually mean",
   "verb": "http",
-  "desc": "http <code|words> â HTTP status codes and what they actually mean"
+  "desc": "http <code|words> — HTTP status codes and what they actually mean"
  },
  {
   "section": "network tools",
-  "cmd": "dnstype <type> â DNS record types, one line each",
+  "cmd": "dnstype <type> — DNS record types, one line each",
   "verb": "dnstype",
-  "desc": "dnstype <type> â DNS record types, one line each"
+  "desc": "dnstype <type> — DNS record types, one line each"
  },
  {
   "section": "data tools",
-  "cmd": "signal <number|name> â POSIX signals: default action and meaning",
+  "cmd": "signal <number|name> — POSIX signals: default action and meaning",
   "verb": "signal",
-  "desc": "signal <number|name> â POSIX signals: default action and meaning"
+  "desc": "signal <number|name> — POSIX signals: default action and meaning"
  },
  {
   "section": "data tools",
-  "cmd": "errno <number|name> â Linux error numbers and what they are telling you",
+  "cmd": "errno <number|name> — Linux error numbers and what they are telling you",
   "verb": "errno",
-  "desc": "errno <number|name> â Linux error numbers and what they are telling you"
+  "desc": "errno <number|name> — Linux error numbers and what they are telling you"
  },
  {
   "section": "data tools",
-  "cmd": "magic <hex|extension> â file signatures: name bytes, or name the type from its first bytes",
+  "cmd": "magic <hex|extension> — file signatures: name bytes, or name the type from its first bytes",
   "verb": "magic",
-  "desc": "magic <hex|extension> â file signatures: name bytes, or name the type from its first bytes"
+  "desc": "magic <hex|extension> — file signatures: name bytes, or name the type from its first bytes"
  },
  {
   "section": "data tools",
-  "cmd": "b32e <text|file> â base32 encode (RFC 4648)",
+  "cmd": "b32e <text|file> — base32 encode (RFC 4648)",
   "verb": "b32e",
-  "desc": "b32e <text|file> â base32 encode (RFC 4648)"
+  "desc": "b32e <text|file> — base32 encode (RFC 4648)"
  },
  {
   "section": "data tools",
-  "cmd": "b32d <text> â base32 decode",
+  "cmd": "b32d <text> — base32 decode",
   "verb": "b32d",
-  "desc": "b32d <text> â base32 decode"
+  "desc": "b32d <text> — base32 decode"
  },
  {
   "section": "data tools",
-  "cmd": "b58e <text|file> â base58 encode (Bitcoin alphabet)",
+  "cmd": "b58e <text|file> — base58 encode (Bitcoin alphabet)",
   "verb": "b58e",
-  "desc": "b58e <text|file> â base58 encode (Bitcoin alphabet)"
+  "desc": "b58e <text|file> — base58 encode (Bitcoin alphabet)"
  },
  {
   "section": "data tools",
-  "cmd": "b58d <text> â base58 decode",
+  "cmd": "b58d <text> — base58 decode",
   "verb": "b58d",
-  "desc": "b58d <text> â base58 decode"
+  "desc": "b58d <text> — base58 decode"
  },
  {
   "section": "data tools",
-  "cmd": "b85e <text|file> â Ascii85 encode",
+  "cmd": "b85e <text|file> — Ascii85 encode",
   "verb": "b85e",
-  "desc": "b85e <text|file> â Ascii85 encode"
+  "desc": "b85e <text|file> — Ascii85 encode"
  },
  {
   "section": "data tools",
-  "cmd": "b85d <text> â Ascii85 decode",
+  "cmd": "b85d <text> — Ascii85 decode",
   "verb": "b85d",
-  "desc": "b85d <text> â Ascii85 decode"
+  "desc": "b85d <text> — Ascii85 decode"
  },
  {
   "section": "data tools",
-  "cmd": "b64url [-d] <text|file> â base64url, the URL-safe armour with no padding",
+  "cmd": "b64url [-d] <text|file> — base64url, the URL-safe armour with no padding",
   "verb": "b64url",
-  "desc": "b64url [-d] <text|file> â base64url, the URL-safe armour with no padding"
+  "desc": "b64url [-d] <text|file> — base64url, the URL-safe armour with no padding"
  },
  {
   "section": "data tools",
-  "cmd": "urlenc <text> â percent-encode for a URL",
+  "cmd": "urlenc <text> — percent-encode for a URL",
   "verb": "urlenc",
-  "desc": "urlenc <text> â percent-encode for a URL"
+  "desc": "urlenc <text> — percent-encode for a URL"
  },
  {
   "section": "data tools",
-  "cmd": "urldec <text> â decode percent-encoding",
+  "cmd": "urldec <text> — decode percent-encoding",
   "verb": "urldec",
-  "desc": "urldec <text> â decode percent-encoding"
+  "desc": "urldec <text> — decode percent-encoding"
  },
  {
   "section": "data tools",
-  "cmd": "htmlenc <text> â escape text for HTML",
+  "cmd": "htmlenc <text> — escape text for HTML",
   "verb": "htmlenc",
-  "desc": "htmlenc <text> â escape text for HTML"
+  "desc": "htmlenc <text> — escape text for HTML"
  },
  {
   "section": "data tools",
-  "cmd": "htmldec <text> â unescape HTML entities",
+  "cmd": "htmldec <text> — unescape HTML entities",
   "verb": "htmldec",
-  "desc": "htmldec <text> â unescape HTML entities"
+  "desc": "htmldec <text> — unescape HTML entities"
  },
  {
   "section": "data tools",
-  "cmd": "unie <text> â escape text as \\uXXXX sequences",
+  "cmd": "unie <text> — escape text as \\uXXXX sequences",
   "verb": "unie",
-  "desc": "unie <text> â escape text as \\uXXXX sequences"
+  "desc": "unie <text> — escape text as \\uXXXX sequences"
  },
  {
   "section": "data tools",
-  "cmd": "unid <text> â read \\uXXXX and \\u{â¦} escapes back to text",
+  "cmd": "unid <text> — read \\uXXXX and \\u{…} escapes back to text",
   "verb": "unid",
-  "desc": "unid <text> â read \\uXXXX and \\u{â¦} escapes back to text"
+  "desc": "unid <text> — read \\uXXXX and \\u{…} escapes back to text"
  },
  {
   "section": "data tools",
-  "cmd": "qpenc <text> â quoted-printable encode (RFC 2045)",
+  "cmd": "qpenc <text> — quoted-printable encode (RFC 2045)",
   "verb": "qpenc",
-  "desc": "qpenc <text> â quoted-printable encode (RFC 2045)"
+  "desc": "qpenc <text> — quoted-printable encode (RFC 2045)"
  },
  {
   "section": "data tools",
-  "cmd": "qpdec <text> â quoted-printable decode",
+  "cmd": "qpdec <text> — quoted-printable decode",
   "verb": "qpdec",
-  "desc": "qpdec <text> â quoted-printable decode"
+  "desc": "qpdec <text> — quoted-printable decode"
  },
  {
   "section": "data tools",
-  "cmd": "rot <n> <text> â Caesar shift by n (rot13's general)",
+  "cmd": "rot <n> <text> — Caesar shift by n (rot13's general)",
   "verb": "rot",
-  "desc": "rot <n> <text> â Caesar shift by n (rot13's general)"
+  "desc": "rot <n> <text> — Caesar shift by n (rot13's general)"
  },
  {
   "section": "data tools",
-  "cmd": "rot47 <text> â ROT47 over the printable ASCII band",
+  "cmd": "rot47 <text> — ROT47 over the printable ASCII band",
   "verb": "rot47",
-  "desc": "rot47 <text> â ROT47 over the printable ASCII band"
+  "desc": "rot47 <text> — ROT47 over the printable ASCII band"
  },
  {
   "section": "data tools",
-  "cmd": "morse [-d] <text> â Morse code, both ways",
+  "cmd": "morse [-d] <text> — Morse code, both ways",
   "verb": "morse",
-  "desc": "morse [-d] <text> â Morse code, both ways"
+  "desc": "morse [-d] <text> — Morse code, both ways"
  },
  {
   "section": "data tools",
-  "cmd": "nato <text> â spell it in the phonetic alphabet",
+  "cmd": "nato <text> — spell it in the phonetic alphabet",
   "verb": "nato",
-  "desc": "nato <text> â spell it in the phonetic alphabet"
+  "desc": "nato <text> — spell it in the phonetic alphabet"
  },
  {
   "section": "data tools",
-  "cmd": "bintext <text> â text as binary bytes",
+  "cmd": "bintext <text> — text as binary bytes",
   "verb": "bintext",
-  "desc": "bintext <text> â text as binary bytes"
+  "desc": "bintext <text> — text as binary bytes"
  },
  {
   "section": "data tools",
-  "cmd": "textbin <bits> â binary bytes back to text",
+  "cmd": "textbin <bits> — binary bytes back to text",
   "verb": "textbin",
-  "desc": "textbin <bits> â binary bytes back to text"
+  "desc": "textbin <bits> — binary bytes back to text"
  },
  {
   "section": "data tools",
-  "cmd": "octtext <text> â text as octal bytes",
+  "cmd": "octtext <text> — text as octal bytes",
   "verb": "octtext",
-  "desc": "octtext <text> â text as octal bytes"
+  "desc": "octtext <text> — text as octal bytes"
  },
  {
   "section": "data tools",
-  "cmd": "textoct <octal> â octal bytes back to text",
+  "cmd": "textoct <octal> — octal bytes back to text",
   "verb": "textoct",
-  "desc": "textoct <octal> â octal bytes back to text"
+  "desc": "textoct <octal> — octal bytes back to text"
  },
  {
   "section": "data tools",
-  "cmd": "puny [-d] <domain> â punycode an international domain, or read xn-- back",
+  "cmd": "puny [-d] <domain> — punycode an international domain, or read xn-- back",
   "verb": "puny",
-  "desc": "puny [-d] <domain> â punycode an international domain, or read xn-- back"
+  "desc": "puny [-d] <domain> — punycode an international domain, or read xn-- back"
  },
  {
   "section": "data tools",
-  "cmd": "uuenc <text|file> â uuencode, the old mail armour",
+  "cmd": "uuenc <text|file> — uuencode, the old mail armour",
   "verb": "uuenc",
-  "desc": "uuenc <text|file> â uuencode, the old mail armour"
+  "desc": "uuenc <text|file> — uuencode, the old mail armour"
  },
  {
   "section": "data tools",
-  "cmd": "uudec <text> â uudecode back to bytes, shown as text",
+  "cmd": "uudec <text> — uudecode back to bytes, shown as text",
   "verb": "uudec",
-  "desc": "uudec <text> â uudecode back to bytes, shown as text"
+  "desc": "uudec <text> — uudecode back to bytes, shown as text"
  },
  {
   "section": "data tools",
-  "cmd": "a1z26 [-d] <text> â letters as numbers (a=1 â¦ z=26), both ways",
+  "cmd": "a1z26 [-d] <text> — letters as numbers (a=1 … z=26), both ways",
   "verb": "a1z26",
-  "desc": "a1z26 [-d] <text> â letters as numbers (a=1 â¦ z=26), both ways"
+  "desc": "a1z26 [-d] <text> — letters as numbers (a=1 … z=26), both ways"
  },
  {
   "section": "data tools",
-  "cmd": "escquote <text> â quote a string so a POSIX shell takes it literally",
+  "cmd": "escquote <text> — quote a string so a POSIX shell takes it literally",
   "verb": "escquote",
-  "desc": "escquote <text> â quote a string so a POSIX shell takes it literally"
+  "desc": "escquote <text> — quote a string so a POSIX shell takes it literally"
  },
  {
   "section": "data tools",
-  "cmd": "regexesc <text> â escape a string for a regular expression",
+  "cmd": "regexesc <text> — escape a string for a regular expression",
   "verb": "regexesc",
-  "desc": "regexesc <text> â escape a string for a regular expression"
+  "desc": "regexesc <text> — escape a string for a regular expression"
  },
  {
   "section": "data tools",
-  "cmd": "jsonesc <text> â escape a string for a JSON string literal",
+  "cmd": "jsonesc <text> — escape a string for a JSON string literal",
   "verb": "jsonesc",
-  "desc": "jsonesc <text> â escape a string for a JSON string literal"
+  "desc": "jsonesc <text> — escape a string for a JSON string literal"
  },
  {
   "section": "data tools",
-  "cmd": "jsonunesc <text> â read a JSON string literal back",
+  "cmd": "jsonunesc <text> — read a JSON string literal back",
   "verb": "jsonunesc",
-  "desc": "jsonunesc <text> â read a JSON string literal back"
+  "desc": "jsonunesc <text> — read a JSON string literal back"
  },
  {
   "section": "data tools",
-  "cmd": "soundex <wordâ¦> â Soundex codes, the census-taker's phonetic hash",
+  "cmd": "soundex <word…> — Soundex codes, the census-taker's phonetic hash",
   "verb": "soundex",
-  "desc": "soundex <wordâ¦> â Soundex codes, the census-taker's phonetic hash"
+  "desc": "soundex <word…> — Soundex codes, the census-taker's phonetic hash"
  },
  {
   "section": "data tools",
-  "cmd": "crc16 [-a arc|modbus|xmodem|ccitt] <text|file> â CRC-16 in its common flavours",
+  "cmd": "crc16 [-a arc|modbus|xmodem|ccitt] <text|file> — CRC-16 in its common flavours",
   "verb": "crc16",
-  "desc": "crc16 [-a arc|modbus|xmodem|ccitt] <text|file> â CRC-16 in its common flavours"
+  "desc": "crc16 [-a arc|modbus|xmodem|ccitt] <text|file> — CRC-16 in its common flavours"
  },
  {
   "section": "data tools",
-  "cmd": "crc8 <text|file> â CRC-8 (poly 0x07) of the input",
+  "cmd": "crc8 <text|file> — CRC-8 (poly 0x07) of the input",
   "verb": "crc8",
-  "desc": "crc8 <text|file> â CRC-8 (poly 0x07) of the input"
+  "desc": "crc8 <text|file> — CRC-8 (poly 0x07) of the input"
  },
  {
   "section": "data tools",
-  "cmd": "adler32 <text|file> â the Adler-32 checksum (zlib's)",
+  "cmd": "adler32 <text|file> — the Adler-32 checksum (zlib's)",
   "verb": "adler32",
-  "desc": "adler32 <text|file> â the Adler-32 checksum (zlib's)"
+  "desc": "adler32 <text|file> — the Adler-32 checksum (zlib's)"
  },
  {
   "section": "data tools",
-  "cmd": "fnv <text|file> â FNV-1a 32-bit hash",
+  "cmd": "fnv <text|file> — FNV-1a 32-bit hash",
   "verb": "fnv",
-  "desc": "fnv <text|file> â FNV-1a 32-bit hash"
+  "desc": "fnv <text|file> — FNV-1a 32-bit hash"
  },
  {
   "section": "data tools",
-  "cmd": "fnv64 <text|file> â FNV-1a 64-bit hash",
+  "cmd": "fnv64 <text|file> — FNV-1a 64-bit hash",
   "verb": "fnv64",
-  "desc": "fnv64 <text|file> â FNV-1a 64-bit hash"
+  "desc": "fnv64 <text|file> — FNV-1a 64-bit hash"
  },
  {
   "section": "data tools",
-  "cmd": "sha384 <text|file> â SHA-384 of the text, or of the named tree file",
+  "cmd": "sha384 <text|file> — SHA-384 of the text, or of the named tree file",
   "verb": "sha384",
-  "desc": "sha384 <text|file> â SHA-384 of the text, or of the named tree file"
+  "desc": "sha384 <text|file> — SHA-384 of the text, or of the named tree file"
  },
  {
   "section": "data tools",
-  "cmd": "checksum <file> â every house digest of a tree file at once",
+  "cmd": "checksum <file> — every house digest of a tree file at once",
   "verb": "checksum",
-  "desc": "checksum <file> â every house digest of a tree file at once"
+  "desc": "checksum <file> — every house digest of a tree file at once"
  },
  {
   "section": "data tools",
-  "cmd": "pbkdf2 <password> <salt> [iterations] â PBKDF2-HMAC-SHA256, 32 bytes out",
+  "cmd": "pbkdf2 <password> <salt> [iterations] — PBKDF2-HMAC-SHA256, 32 bytes out",
   "verb": "pbkdf2",
-  "desc": "pbkdf2 <password> <salt> [iterations] â PBKDF2-HMAC-SHA256, 32 bytes out"
+  "desc": "pbkdf2 <password> <salt> [iterations] — PBKDF2-HMAC-SHA256, 32 bytes out"
  },
  {
   "section": "data tools",
-  "cmd": "hashid <hash> â name a hash by its shape",
+  "cmd": "hashid <hash> — name a hash by its shape",
   "verb": "hashid",
-  "desc": "hashid <hash> â name a hash by its shape"
+  "desc": "hashid <hash> — name a hash by its shape"
  },
  {
   "section": "data tools",
-  "cmd": "fp <hex> â a digest dressed as a fingerprint: colon pairs, and the SSH-style base64",
+  "cmd": "fp <hex> — a digest dressed as a fingerprint: colon pairs, and the SSH-style base64",
   "verb": "fp",
-  "desc": "fp <hex> â a digest dressed as a fingerprint: colon pairs, and the SSH-style base64"
+  "desc": "fp <hex> — a digest dressed as a fingerprint: colon pairs, and the SSH-style base64"
  },
  {
   "section": "data tools",
-  "cmd": "uuid7 â a time-ordered UUID, version 7",
+  "cmd": "uuid7 — a time-ordered UUID, version 7",
   "verb": "uuid7",
-  "desc": "uuid7 â a time-ordered UUID, version 7"
+  "desc": "uuid7 — a time-ordered UUID, version 7"
  },
  {
   "section": "data tools",
-  "cmd": "uuidinfo <uuid> â version, variant, and (for v7) its birth time",
+  "cmd": "uuidinfo <uuid> — version, variant, and (for v7) its birth time",
   "verb": "uuidinfo",
-  "desc": "uuidinfo <uuid> â version, variant, and (for v7) its birth time"
+  "desc": "uuidinfo <uuid> — version, variant, and (for v7) its birth time"
  },
  {
   "section": "network tools",
-  "cmd": "randmac â a fresh locally-administered unicast MAC",
+  "cmd": "randmac — a fresh locally-administered unicast MAC",
   "verb": "randmac",
-  "desc": "randmac â a fresh locally-administered unicast MAC"
+  "desc": "randmac — a fresh locally-administered unicast MAC"
  },
  {
   "section": "network tools",
-  "cmd": "randip [cidr] â a random IPv4 address, or a random host inside a block",
+  "cmd": "randip [cidr] — a random IPv4 address, or a random host inside a block",
   "verb": "randip",
-  "desc": "randip [cidr] â a random IPv4 address, or a random host inside a block"
+  "desc": "randip [cidr] — a random IPv4 address, or a random host inside a block"
  },
  {
   "section": "network tools",
-  "cmd": "randip6 [prefix/len] â a random IPv6 address, or a random one inside a prefix",
+  "cmd": "randip6 [prefix/len] — a random IPv6 address, or a random one inside a prefix",
   "verb": "randip6",
-  "desc": "randip6 [prefix/len] â a random IPv6 address, or a random one inside a prefix"
+  "desc": "randip6 [prefix/len] — a random IPv6 address, or a random one inside a prefix"
  },
  {
   "section": "network tools",
-  "cmd": "randport â a random ephemeral port",
+  "cmd": "randport — a random ephemeral port",
   "verb": "randport",
-  "desc": "randport â a random ephemeral port"
+  "desc": "randport — a random ephemeral port"
  },
  {
   "section": "data tools",
-  "cmd": "randtoken [bytes] [hex|b64] â random bytes as a token",
+  "cmd": "randtoken [bytes] [hex|b64] — random bytes as a token",
   "verb": "randtoken",
-  "desc": "randtoken [bytes] [hex|b64] â random bytes as a token"
+  "desc": "randtoken [bytes] [hex|b64] — random bytes as a token"
  },
  {
   "section": "data tools",
-  "cmd": "password [length] [-s] â a fresh password from the room's dice (crypto-random)",
+  "cmd": "password [length] [-s] — a fresh password from the room's dice (crypto-random)",
   "verb": "password",
-  "desc": "password [length] [-s] â a fresh password from the room's dice (crypto-random)"
+  "desc": "password [length] [-s] — a fresh password from the room's dice (crypto-random)"
  },
  {
   "section": "data tools",
-  "cmd": "passphrase [words] â a diceware-style passphrase from the house list",
+  "cmd": "passphrase [words] — a diceware-style passphrase from the house list",
   "verb": "passphrase",
-  "desc": "passphrase [words] â a diceware-style passphrase from the house list"
+  "desc": "passphrase [words] — a diceware-style passphrase from the house list"
  },
  {
   "section": "data tools",
-  "cmd": "pwcheck <password> â an honest entropy estimate of a password",
+  "cmd": "pwcheck <password> — an honest entropy estimate of a password",
   "verb": "pwcheck",
-  "desc": "pwcheck <password> â an honest entropy estimate of a password"
+  "desc": "pwcheck <password> — an honest entropy estimate of a password"
  },
  {
   "section": "data tools",
-  "cmd": "nanoid [length] â a compact URL-safe id",
+  "cmd": "nanoid [length] — a compact URL-safe id",
   "verb": "nanoid",
-  "desc": "nanoid [length] â a compact URL-safe id"
+  "desc": "nanoid [length] — a compact URL-safe id"
  },
  {
   "section": "data tools",
-  "cmd": "ulid [-d <ulid>] â mint a ULID, or read the time inside one",
+  "cmd": "ulid [-d <ulid>] — mint a ULID, or read the time inside one",
   "verb": "ulid",
-  "desc": "ulid [-d <ulid>] â mint a ULID, or read the time inside one"
+  "desc": "ulid [-d <ulid>] — mint a ULID, or read the time inside one"
  },
  {
   "section": "data tools",
-  "cmd": "objectid [-d <id>] â mint a Mongo-style ObjectId, or read the time inside one",
+  "cmd": "objectid [-d <id>] — mint a Mongo-style ObjectId, or read the time inside one",
   "verb": "objectid",
-  "desc": "objectid [-d <id>] â mint a Mongo-style ObjectId, or read the time inside one"
+  "desc": "objectid [-d <id>] — mint a Mongo-style ObjectId, or read the time inside one"
  },
  {
   "section": "data tools",
-  "cmd": "dice <NdM[+K]> â roll the dice, honestly (crypto-random)",
+  "cmd": "dice <NdM[+K]> — roll the dice, honestly (crypto-random)",
   "verb": "dice",
-  "desc": "dice <NdM[+K]> â roll the dice, honestly (crypto-random)"
+  "desc": "dice <NdM[+K]> — roll the dice, honestly (crypto-random)"
  },
  {
   "section": "data tools",
-  "cmd": "snowflake <id> â read the timestamp inside a Discord/Twitter-style snowflake",
+  "cmd": "snowflake <id> — read the timestamp inside a Discord/Twitter-style snowflake",
   "verb": "snowflake",
-  "desc": "snowflake <id> â read the timestamp inside a Discord/Twitter-style snowflake"
+  "desc": "snowflake <id> — read the timestamp inside a Discord/Twitter-style snowflake"
  },
  {
   "section": "data tools",
-  "cmd": "pick <a> <b> [câ¦] â the room chooses, fairly",
+  "cmd": "pick <a> <b> [c…] — the room chooses, fairly",
   "verb": "pick",
-  "desc": "pick <a> <b> [câ¦] â the room chooses, fairly"
+  "desc": "pick <a> <b> [c…] — the room chooses, fairly"
  },
  {
   "section": "data tools",
-  "cmd": "shuffle [file] â shuffle lines (stdin or a tree file)",
+  "cmd": "shuffle [file] — shuffle lines (stdin or a tree file)",
   "verb": "shuffle",
-  "desc": "shuffle [file] â shuffle lines (stdin or a tree file)"
+  "desc": "shuffle [file] — shuffle lines (stdin or a tree file)"
  },
  {
   "section": "admin tools",
-  "cmd": "chmod <mode> â read a mode in octal or symbols, get both and what it grants",
+  "cmd": "chmod <mode> — read a mode in octal or symbols, get both and what it grants",
   "verb": "chmod",
-  "desc": "chmod <mode> â read a mode in octal or symbols, get both and what it grants"
+  "desc": "chmod <mode> — read a mode in octal or symbols, get both and what it grants"
  },
  {
   "section": "admin tools",
-  "cmd": "umask [mask] â what a umask leaves for new files and directories",
+  "cmd": "umask [mask] — what a umask leaves for new files and directories",
   "verb": "umask",
-  "desc": "umask [mask] â what a umask leaves for new files and directories"
+  "desc": "umask [mask] — what a umask leaves for new files and directories"
  },
  {
   "section": "admin tools",
-  "cmd": "cronx <5-field expr> â a cron expression explained field by field",
+  "cmd": "cronx <5-field expr> — a cron expression explained field by field",
   "verb": "cronx",
-  "desc": "cronx <5-field expr> â a cron expression explained field by field"
+  "desc": "cronx <5-field expr> — a cron expression explained field by field"
  },
  {
   "section": "admin tools",
-  "cmd": "cronnext <5-field expr> [n] â the next n times a cron line fires",
+  "cmd": "cronnext <5-field expr> [n] — the next n times a cron line fires",
   "verb": "cronnext",
-  "desc": "cronnext <5-field expr> [n] â the next n times a cron line fires"
+  "desc": "cronnext <5-field expr> [n] — the next n times a cron line fires"
  },
  {
   "section": "admin tools",
-  "cmd": "unit <name> --exec=<cmd> [--user --desc --restart --after --wantedby] â a systemd service unit, written",
+  "cmd": "unit <name> --exec=<cmd> [--user --desc --restart --after --wantedby] — a systemd service unit, written",
   "verb": "unit",
-  "desc": "unit <name> --exec=<cmd> [--user --desc --restart --after --wantedby] â a systemd service unit, written"
+  "desc": "unit <name> --exec=<cmd> [--user --desc --restart --after --wantedby] — a systemd service unit, written"
  },
  {
   "section": "admin tools",
-  "cmd": "systimer <name> --calendar=<spec> --service=<unit> â a systemd timer unit",
+  "cmd": "systimer <name> --calendar=<spec> --service=<unit> — a systemd timer unit",
   "verb": "systimer",
-  "desc": "systimer <name> --calendar=<spec> --service=<unit> â a systemd timer unit"
+  "desc": "systimer <name> --calendar=<spec> --service=<unit> — a systemd timer unit"
  },
  {
   "section": "admin tools",
-  "cmd": "fstab <device> <mount> <fs> [options] [dump] [pass] â an /etc/fstab line, explained",
+  "cmd": "fstab <device> <mount> <fs> [options] [dump] [pass] — an /etc/fstab line, explained",
   "verb": "fstab",
-  "desc": "fstab <device> <mount> <fs> [options] [dump] [pass] â an /etc/fstab line, explained"
+  "desc": "fstab <device> <mount> <fs> [options] [dump] [pass] — an /etc/fstab line, explained"
  },
  {
   "section": "admin tools",
-  "cmd": "sudoers <user> [--cmd=<path>] [-n] â a sudoers line, and its blast radius",
+  "cmd": "sudoers <user> [--cmd=<path>] [-n] — a sudoers line, and its blast radius",
   "verb": "sudoers",
-  "desc": "sudoers <user> [--cmd=<path>] [-n] â a sudoers line, and its blast radius"
+  "desc": "sudoers <user> [--cmd=<path>] [-n] — a sudoers line, and its blast radius"
  },
  {
   "section": "admin tools",
-  "cmd": "sshconf <host> [--hostname --user --port --key --proxy] â an ssh_config stanza",
+  "cmd": "sshconf <host> [--hostname --user --port --key --proxy] — an ssh_config stanza",
   "verb": "sshconf",
-  "desc": "sshconf <host> [--hostname --user --port --key --proxy] â an ssh_config stanza"
+  "desc": "sshconf <host> [--hostname --user --port --key --proxy] — an ssh_config stanza"
  },
  {
   "section": "admin tools",
-  "cmd": "resolvconf <nsâ¦> [--search=domain] â a resolv.conf, written",
+  "cmd": "resolvconf <ns…> [--search=domain] — a resolv.conf, written",
   "verb": "resolvconf",
-  "desc": "resolvconf <nsâ¦> [--search=domain] â a resolv.conf, written"
+  "desc": "resolvconf <ns…> [--search=domain] — a resolv.conf, written"
  },
  {
   "section": "admin tools",
-  "cmd": "logrot <path> [--size --rotate --compress --daily] â a logrotate block",
+  "cmd": "logrot <path> [--size --rotate --compress --daily] — a logrotate block",
   "verb": "logrot",
-  "desc": "logrot <path> [--size --rotate --compress --daily] â a logrotate block"
+  "desc": "logrot <path> [--size --rotate --compress --daily] — a logrotate block"
  },
  {
   "section": "admin tools",
-  "cmd": "sla <percent> â an availability promise turned into allowed downtime",
+  "cmd": "sla <percent> — an availability promise turned into allowed downtime",
   "verb": "sla",
-  "desc": "sla <percent> â an availability promise turned into allowed downtime"
+  "desc": "sla <percent> — an availability promise turned into allowed downtime"
  },
  {
   "section": "admin tools",
-  "cmd": "bw <size> <rate|time> â transfer time, or the rate a deadline demands",
+  "cmd": "bw <size> <rate|time> — transfer time, or the rate a deadline demands",
   "verb": "bw",
-  "desc": "bw <size> <rate|time> â transfer time, or the rate a deadline demands"
+  "desc": "bw <size> <rate|time> — transfer time, or the rate a deadline demands"
  },
  {
   "section": "admin tools",
-  "cmd": "dbm <value dBm|mW> â decibel-milliwatts and milliwatts, both directions",
+  "cmd": "dbm <value dBm|mW> — decibel-milliwatts and milliwatts, both directions",
   "verb": "dbm",
-  "desc": "dbm <value dBm|mW> â decibel-milliwatts and milliwatts, both directions"
+  "desc": "dbm <value dBm|mW> — decibel-milliwatts and milliwatts, both directions"
  },
  {
   "section": "admin tools",
-  "cmd": "freq <value|wavelength> â frequency â wavelength, and the band it lives in",
+  "cmd": "freq <value|wavelength> — frequency ↔ wavelength, and the band it lives in",
   "verb": "freq",
-  "desc": "freq <value|wavelength> â frequency â wavelength, and the band it lives in"
+  "desc": "freq <value|wavelength> — frequency ↔ wavelength, and the band it lives in"
  },
  {
   "section": "admin tools",
-  "cmd": "raid <0|1|5|6|10> <disks> <disk-size> â usable capacity and how many deaths it survives",
+  "cmd": "raid <0|1|5|6|10> <disks> <disk-size> — usable capacity and how many deaths it survives",
   "verb": "raid",
-  "desc": "raid <0|1|5|6|10> <disks> <disk-size> â usable capacity and how many deaths it survives"
+  "desc": "raid <0|1|5|6|10> <disks> <disk-size> — usable capacity and how many deaths it survives"
  },
  {
   "section": "admin tools",
-  "cmd": "disk <size> [fs] â what a filesystem really leaves of a disk",
+  "cmd": "disk <size> [fs] — what a filesystem really leaves of a disk",
   "verb": "disk",
-  "desc": "disk <size> [fs] â what a filesystem really leaves of a disk"
+  "desc": "disk <size> [fs] — what a filesystem really leaves of a disk"
  },
  {
   "section": "admin tools",
-  "cmd": "ttl <seconds> â a DNS TTL in human terms, with the trade named",
+  "cmd": "ttl <seconds> — a DNS TTL in human terms, with the trade named",
   "verb": "ttl",
-  "desc": "ttl <seconds> â a DNS TTL in human terms, with the trade named"
+  "desc": "ttl <seconds> — a DNS TTL in human terms, with the trade named"
  },
  {
   "section": "admin tools",
-  "cmd": "soaserial [serial] â the next SOA serial (date scheme), or today's first",
+  "cmd": "soaserial [serial] — the next SOA serial (date scheme), or today's first",
   "verb": "soaserial",
-  "desc": "soaserial [serial] â the next SOA serial (date scheme), or today's first"
+  "desc": "soaserial [serial] — the next SOA serial (date scheme), or today's first"
  },
  {
   "section": "admin tools",
-  "cmd": "spf --ip4=<net> [--include=<domain>] [-a] [-mx] â an SPF record, built",
+  "cmd": "spf --ip4=<net> [--include=<domain>] [-a] [-mx] — an SPF record, built",
   "verb": "spf",
-  "desc": "spf --ip4=<net> [--include=<domain>] [-a] [-mx] â an SPF record, built"
+  "desc": "spf --ip4=<net> [--include=<domain>] [-a] [-mx] — an SPF record, built"
  },
  {
   "section": "admin tools",
-  "cmd": "dmarc --p=<none|quarantine|reject> [--rua=<mail>] [--pct=n] â a DMARC record, built",
+  "cmd": "dmarc --p=<none|quarantine|reject> [--rua=<mail>] [--pct=n] — a DMARC record, built",
   "verb": "dmarc",
-  "desc": "dmarc --p=<none|quarantine|reject> [--rua=<mail>] [--pct=n] â a DMARC record, built"
+  "desc": "dmarc --p=<none|quarantine|reject> [--rua=<mail>] [--pct=n] — a DMARC record, built"
  },
  {
   "section": "admin tools",
-  "cmd": "cachectl [--max-age=n] [--public|--private] [--immutable] [--swr=n] â a Cache-Control header, built and read",
+  "cmd": "cachectl [--max-age=n] [--public|--private] [--immutable] [--swr=n] — a Cache-Control header, built and read",
   "verb": "cachectl",
-  "desc": "cachectl [--max-age=n] [--public|--private] [--immutable] [--swr=n] â a Cache-Control header, built and read"
+  "desc": "cachectl [--max-age=n] [--public|--private] [--immutable] [--swr=n] — a Cache-Control header, built and read"
  },
  {
   "section": "admin tools",
-  "cmd": "cors --origin=<origin|*> [--methods] [--creds] â the CORS response headers a browser wants",
+  "cmd": "cors --origin=<origin|*> [--methods] [--creds] — the CORS response headers a browser wants",
   "verb": "cors",
-  "desc": "cors --origin=<origin|*> [--methods] [--creds] â the CORS response headers a browser wants"
+  "desc": "cors --origin=<origin|*> [--methods] [--creds] — the CORS response headers a browser wants"
  },
  {
   "section": "admin tools",
-  "cmd": "csp [--default --script --style --img --connect] â a Content-Security-Policy header, built",
+  "cmd": "csp [--default --script --style --img --connect] — a Content-Security-Policy header, built",
   "verb": "csp",
-  "desc": "csp [--default --script --style --img --connect] â a Content-Security-Policy header, built"
+  "desc": "csp [--default --script --style --img --connect] — a Content-Security-Policy header, built"
  },
  {
   "section": "admin tools",
-  "cmd": "cookie <name> <value> [--max-age=n] [--secure] [--httponly] [--samesite] [--path] â a Set-Cookie header, built",
+  "cmd": "cookie <name> <value> [--max-age=n] [--secure] [--httponly] [--samesite] [--path] — a Set-Cookie header, built",
   "verb": "cookie",
-  "desc": "cookie <name> <value> [--max-age=n] [--secure] [--httponly] [--samesite] [--path] â a Set-Cookie header, built"
+  "desc": "cookie <name> <value> [--max-age=n] [--secure] [--httponly] [--samesite] [--path] — a Set-Cookie header, built"
  },
  {
   "section": "admin tools",
-  "cmd": "curlgen --url=<u> [--method --data --header --user --insecure] â a curl command, assembled",
+  "cmd": "curlgen --url=<u> [--method --data --header --user --insecure] — a curl command, assembled",
   "verb": "curlgen",
-  "desc": "curlgen --url=<u> [--method --data --header --user --insecure] â a curl command, assembled"
+  "desc": "curlgen --url=<u> [--method --data --header --user --insecure] — a curl command, assembled"
  },
  {
   "section": "admin tools",
-  "cmd": "magicpacket <mac> â a Wake-on-LAN magic packet, as hex (the room builds it; it does not send it)",
+  "cmd": "magicpacket <mac> — a Wake-on-LAN magic packet, as hex (the room builds it; it does not send it)",
   "verb": "magicpacket",
-  "desc": "magicpacket <mac> â a Wake-on-LAN magic packet, as hex (the room builds it; it does not send it)"
+  "desc": "magicpacket <mac> — a Wake-on-LAN magic packet, as hex (the room builds it; it does not send it)"
  },
  {
   "section": "admin tools",
-  "cmd": "htpasswd <user> <password> â an Apache {SHA} password line",
+  "cmd": "htpasswd <user> <password> — an Apache {SHA} password line",
   "verb": "htpasswd",
-  "desc": "htpasswd <user> <password> â an Apache {SHA} password line"
+  "desc": "htpasswd <user> <password> — an Apache {SHA} password line"
  },
  {
   "section": "admin tools",
-  "cmd": "robotstxt [--disallow=/path] [--sitemap=<url>] [--all=allow|deny] â a robots.txt, written",
+  "cmd": "robotstxt [--disallow=/path] [--sitemap=<url>] [--all=allow|deny] — a robots.txt, written",
   "verb": "robotstxt",
-  "desc": "robotstxt [--disallow=/path] [--sitemap=<url>] [--all=allow|deny] â a robots.txt, written"
+  "desc": "robotstxt [--disallow=/path] [--sitemap=<url>] [--all=allow|deny] — a robots.txt, written"
  },
  {
   "section": "admin tools",
-  "cmd": "gitignore <node|python|macos|go|rust|general> [â¦] â .gitignore lines for a stack",
+  "cmd": "gitignore <node|python|macos|go|rust|general> […] — .gitignore lines for a stack",
   "verb": "gitignore",
-  "desc": "gitignore <node|python|macos|go|rust|general> [â¦] â .gitignore lines for a stack"
+  "desc": "gitignore <node|python|macos|go|rust|general> […] — .gitignore lines for a stack"
  },
  {
   "section": "admin tools",
-  "cmd": "license <spdx-id> â open-source licenses: the short honest read, full text for MIT",
+  "cmd": "license <spdx-id> — open-source licenses: the short honest read, full text for MIT",
   "verb": "license",
-  "desc": "license <spdx-id> â open-source licenses: the short honest read, full text for MIT"
+  "desc": "license <spdx-id> — open-source licenses: the short honest read, full text for MIT"
  },
  {
   "section": "admin tools",
-  "cmd": "epoch [unix|iso|now] â seconds â dates, both ways, with the age of the moment",
+  "cmd": "epoch [unix|iso|now] — seconds ↔ dates, both ways, with the age of the moment",
   "verb": "epoch",
-  "desc": "epoch [unix|iso|now] â seconds â dates, both ways, with the age of the moment"
+  "desc": "epoch [unix|iso|now] — seconds ↔ dates, both ways, with the age of the moment"
  },
  {
   "section": "admin tools",
-  "cmd": "weekday <date> â the day of the week, day of the year, and ISO week of a date",
+  "cmd": "weekday <date> — the day of the week, day of the year, and ISO week of a date",
   "verb": "weekday",
-  "desc": "weekday <date> â the day of the week, day of the year, and ISO week of a date"
+  "desc": "weekday <date> — the day of the week, day of the year, and ISO week of a date"
  },
  {
   "section": "admin tools",
-  "cmd": "age <date> [date] â the span between two dates (or a date and now)",
+  "cmd": "age <date> [date] — the span between two dates (or a date and now)",
   "verb": "age",
-  "desc": "age <date> [date] â the span between two dates (or a date and now)"
+  "desc": "age <date> [date] — the span between two dates (or a date and now)"
  },
  {
   "section": "admin tools",
-  "cmd": "tzdiff <zone> <zone> â the offset between two zones, right now",
+  "cmd": "tzdiff <zone> <zone> — the offset between two zones, right now",
   "verb": "tzdiff",
-  "desc": "tzdiff <zone> <zone> â the offset between two zones, right now"
+  "desc": "tzdiff <zone> <zone> — the offset between two zones, right now"
  },
  {
   "section": "admin tools",
-  "cmd": "bizdays <from> <to> â business days between two dates",
+  "cmd": "bizdays <from> <to> — business days between two dates",
   "verb": "bizdays",
-  "desc": "bizdays <from> <to> â business days between two dates"
+  "desc": "bizdays <from> <to> — business days between two dates"
  },
  {
   "section": "admin tools",
-  "cmd": "leapyear <year> â is it a leap year, and why",
+  "cmd": "leapyear <year> — is it a leap year, and why",
   "verb": "leapyear",
-  "desc": "leapyear <year> â is it a leap year, and why"
+  "desc": "leapyear <year> — is it a leap year, and why"
  },
  {
   "section": "admin tools",
-  "cmd": "easter <year> â Easter Sunday (Western), by the computus",
+  "cmd": "easter <year> — Easter Sunday (Western), by the computus",
   "verb": "easter",
-  "desc": "easter <year> â Easter Sunday (Western), by the computus"
+  "desc": "easter <year> — Easter Sunday (Western), by the computus"
  },
  {
   "section": "admin tools",
-  "cmd": "moonphase [date] â the moon's age and face tonight (or any night)",
+  "cmd": "moonphase [date] — the moon's age and face tonight (or any night)",
   "verb": "moonphase",
-  "desc": "moonphase [date] â the moon's age and face tonight (or any night)"
+  "desc": "moonphase [date] — the moon's age and face tonight (or any night)"
  },
  {
   "section": "admin tools",
-  "cmd": "httpdate [date] â a date in HTTP's own format (IMF-fixdate)",
+  "cmd": "httpdate [date] — a date in HTTP's own format (IMF-fixdate)",
   "verb": "httpdate",
-  "desc": "httpdate [date] â a date in HTTP's own format (IMF-fixdate)"
+  "desc": "httpdate [date] — a date in HTTP's own format (IMF-fixdate)"
  },
  {
   "section": "admin tools",
-  "cmd": "semver <a> [b] [--bump=major|minor|patch] â read, compare, and bump versions",
+  "cmd": "semver <a> [b] [--bump=major|minor|patch] — read, compare, and bump versions",
   "verb": "semver",
-  "desc": "semver <a> [b] [--bump=major|minor|patch] â read, compare, and bump versions"
+  "desc": "semver <a> [b] [--bump=major|minor|patch] — read, compare, and bump versions"
  },
  {
   "section": "data tools",
-  "cmd": "slug <text> â a URL slug from any text",
+  "cmd": "slug <text> — a URL slug from any text",
   "verb": "slug",
-  "desc": "slug <text> â a URL slug from any text"
+  "desc": "slug <text> — a URL slug from any text"
  },
  {
   "section": "data tools",
-  "cmd": "titlecase <text> â Title Case, with the small words kept small",
+  "cmd": "titlecase <text> — Title Case, with the small words kept small",
   "verb": "titlecase",
-  "desc": "titlecase <text> â Title Case, with the small words kept small"
+  "desc": "titlecase <text> — Title Case, with the small words kept small"
  },
  {
   "section": "data tools",
-  "cmd": "textcase <upper|lower|camel|pascal|snake|kebab|const|flat> <text> â one text, every house style",
+  "cmd": "textcase <upper|lower|camel|pascal|snake|kebab|const|flat> <text> — one text, every house style",
   "verb": "textcase",
-  "desc": "textcase <upper|lower|camel|pascal|snake|kebab|const|flat> <text> â one text, every house style"
+  "desc": "textcase <upper|lower|camel|pascal|snake|kebab|const|flat> <text> — one text, every house style"
  },
  {
   "section": "data tools",
-  "cmd": "dedupe [file] â remove duplicate lines, keeping first sightings in order",
+  "cmd": "dedupe [file] — remove duplicate lines, keeping first sightings in order",
   "verb": "dedupe",
-  "desc": "dedupe [file] â remove duplicate lines, keeping first sightings in order"
+  "desc": "dedupe [file] — remove duplicate lines, keeping first sightings in order"
  },
  {
   "section": "data tools",
-  "cmd": "jsonfmt [-m] [file] â pretty-print JSON (or minify with -m); validates as it goes",
+  "cmd": "jsonfmt [-m] [file] — pretty-print JSON (or minify with -m); validates as it goes",
   "verb": "jsonfmt",
-  "desc": "jsonfmt [-m] [file] â pretty-print JSON (or minify with -m); validates as it goes"
+  "desc": "jsonfmt [-m] [file] — pretty-print JSON (or minify with -m); validates as it goes"
  },
  {
   "section": "data tools",
-  "cmd": "jsonq <path> [file] â pull a value out of JSON by its dot path (a.b.0.c)",
+  "cmd": "jsonq <path> [file] — pull a value out of JSON by its dot path (a.b.0.c)",
   "verb": "jsonq",
-  "desc": "jsonq <path> [file] â pull a value out of JSON by its dot path (a.b.0.c)"
+  "desc": "jsonq <path> [file] — pull a value out of JSON by its dot path (a.b.0.c)"
  },
  {
   "section": "data tools",
-  "cmd": "csv2json [file] â CSV with a header row, as JSON objects",
+  "cmd": "csv2json [file] — CSV with a header row, as JSON objects",
   "verb": "csv2json",
-  "desc": "csv2json [file] â CSV with a header row, as JSON objects"
+  "desc": "csv2json [file] — CSV with a header row, as JSON objects"
  },
  {
   "section": "data tools",
-  "cmd": "json2csv [file] â a JSON array of objects, as CSV",
+  "cmd": "json2csv [file] — a JSON array of objects, as CSV",
   "verb": "json2csv",
-  "desc": "json2csv [file] â a JSON array of objects, as CSV"
+  "desc": "json2csv [file] — a JSON array of objects, as CSV"
  },
  {
   "section": "data tools",
-  "cmd": "wrap [width] [file] â wrap text to a width (default 76)",
+  "cmd": "wrap [width] [file] — wrap text to a width (default 76)",
   "verb": "wrap",
-  "desc": "wrap [width] [file] â wrap text to a width (default 76)"
+  "desc": "wrap [width] [file] — wrap text to a width (default 76)"
  },
  {
   "section": "data tools",
-  "cmd": "count [file] â characters, words, lines, sentences, bytes",
+  "cmd": "count [file] — characters, words, lines, sentences, bytes",
   "verb": "count",
-  "desc": "count [file] â characters, words, lines, sentences, bytes"
+  "desc": "count [file] — characters, words, lines, sentences, bytes"
  },
  {
   "section": "data tools",
-  "cmd": "wordfreq [n] [file] â the most common words in the text",
+  "cmd": "wordfreq [n] [file] — the most common words in the text",
   "verb": "wordfreq",
-  "desc": "wordfreq [n] [file] â the most common words in the text"
+  "desc": "wordfreq [n] [file] — the most common words in the text"
  },
  {
   "section": "data tools",
-  "cmd": "numlines [file] â the lines, numbered",
+  "cmd": "numlines [file] — the lines, numbered",
   "verb": "numlines",
-  "desc": "numlines [file] â the lines, numbered"
+  "desc": "numlines [file] — the lines, numbered"
  },
  {
   "section": "data tools",
-  "cmd": "trimlines [-e] [file] â trim every line (and drop empties with -e)",
+  "cmd": "trimlines [-e] [file] — trim every line (and drop empties with -e)",
   "verb": "trimlines",
-  "desc": "trimlines [-e] [file] â trim every line (and drop empties with -e)"
+  "desc": "trimlines [-e] [file] — trim every line (and drop empties with -e)"
  },
  {
   "section": "data tools",
-  "cmd": "charfreq <text> â character frequencies of a text",
+  "cmd": "charfreq <text> — character frequencies of a text",
   "verb": "charfreq",
-  "desc": "charfreq <text> â character frequencies of a text"
+  "desc": "charfreq <text> — character frequencies of a text"
  },
  {
   "section": "data tools",
-  "cmd": "filetype <file> â name a tree file by its bytes, not its name",
+  "cmd": "filetype <file> — name a tree file by its bytes, not its name",
   "verb": "filetype",
-  "desc": "filetype <file> â name a tree file by its bytes, not its name"
+  "desc": "filetype <file> — name a tree file by its bytes, not its name"
  },
  {
   "section": "data tools",
-  "cmd": "pem2der <file|text> â strip PEM armour to DER, shown as hex",
+  "cmd": "pem2der <file|text> — strip PEM armour to DER, shown as hex",
   "verb": "pem2der",
-  "desc": "pem2der <file|text> â strip PEM armour to DER, shown as hex"
+  "desc": "pem2der <file|text> — strip PEM armour to DER, shown as hex"
  },
  {
   "section": "data tools",
-  "cmd": "der2pem <file> [label] â dress DER bytes in PEM armour",
+  "cmd": "der2pem <file> [label] — dress DER bytes in PEM armour",
   "verb": "der2pem",
-  "desc": "der2pem <file> [label] â dress DER bytes in PEM armour"
+  "desc": "der2pem <file> [label] — dress DER bytes in PEM armour"
  },
  {
   "section": "data tools",
-  "cmd": "urlparse <url> â a URL taken apart on the bench",
+  "cmd": "urlparse <url> — a URL taken apart on the bench",
   "verb": "urlparse",
-  "desc": "urlparse <url> â a URL taken apart on the bench"
+  "desc": "urlparse <url> — a URL taken apart on the bench"
  },
  {
   "section": "data tools",
-  "cmd": "urlnorm <url> â a URL normalised: case, default ports, dot segments, sorted query",
+  "cmd": "urlnorm <url> — a URL normalised: case, default ports, dot segments, sorted query",
   "verb": "urlnorm",
-  "desc": "urlnorm <url> â a URL normalised: case, default ports, dot segments, sorted query"
+  "desc": "urlnorm <url> — a URL normalised: case, default ports, dot segments, sorted query"
  },
  {
   "section": "data tools",
-  "cmd": "queryparse <query|url> â a query string as a table",
+  "cmd": "queryparse <query|url> — a query string as a table",
   "verb": "queryparse",
-  "desc": "queryparse <query|url> â a query string as a table"
+  "desc": "queryparse <query|url> — a query string as a table"
  },
  {
   "section": "data tools",
-  "cmd": "emailcheck <address> â is this email address well-formed, and where does it bend?",
+  "cmd": "emailcheck <address> — is this email address well-formed, and where does it bend?",
   "verb": "emailcheck",
-  "desc": "emailcheck <address> â is this email address well-formed, and where does it bend?"
+  "desc": "emailcheck <address> — is this email address well-formed, and where does it bend?"
  },
  {
   "section": "data tools",
-  "cmd": "ieee <float|hex> â IEEE-754 bits of a float (double), or the float inside bits",
+  "cmd": "ieee <float|hex> — IEEE-754 bits of a float (double), or the float inside bits",
   "verb": "ieee",
-  "desc": "ieee <float|hex> â IEEE-754 bits of a float (double), or the float inside bits"
+  "desc": "ieee <float|hex> — IEEE-754 bits of a float (double), or the float inside bits"
  },
  {
   "section": "data tools",
-  "cmd": "varint [-d] <n|hex> â protobuf-style varint (LEB128), both ways",
+  "cmd": "varint [-d] <n|hex> — protobuf-style varint (LEB128), both ways",
   "verb": "varint",
-  "desc": "varint [-d] <n|hex> â protobuf-style varint (LEB128), both ways"
+  "desc": "varint [-d] <n|hex> — protobuf-style varint (LEB128), both ways"
  },
  {
   "section": "data tools",
-  "cmd": "baseconv <n> <from> <to> â a number between bases 2 and 36",
+  "cmd": "baseconv <n> <from> <to> — a number between bases 2 and 36",
   "verb": "baseconv",
-  "desc": "baseconv <n> <from> <to> â a number between bases 2 and 36"
+  "desc": "baseconv <n> <from> <to> — a number between bases 2 and 36"
  },
  {
   "section": "data tools",
-  "cmd": "roman <n|numeral> â Roman numerals, both ways",
+  "cmd": "roman <n|numeral> — Roman numerals, both ways",
   "verb": "roman",
-  "desc": "roman <n|numeral> â Roman numerals, both ways"
+  "desc": "roman <n|numeral> — Roman numerals, both ways"
  },
  {
   "section": "data tools",
-  "cmd": "coord <lat,lon> â coordinates: decimal â degrees-minutes-seconds",
+  "cmd": "coord <lat,lon> — coordinates: decimal ↔ degrees-minutes-seconds",
   "verb": "coord",
-  "desc": "coord <lat,lon> â coordinates: decimal â degrees-minutes-seconds"
+  "desc": "coord <lat,lon> — coordinates: decimal ↔ degrees-minutes-seconds"
  },
  {
   "section": "data tools",
-  "cmd": "geohash [-d] <lat,lon|hash> [precision] â geohash, both ways",
+  "cmd": "geohash [-d] <lat,lon|hash> [precision] — geohash, both ways",
   "verb": "geohash",
-  "desc": "geohash [-d] <lat,lon|hash> [precision] â geohash, both ways"
+  "desc": "geohash [-d] <lat,lon|hash> [precision] — geohash, both ways"
  },
  {
   "section": "data tools",
-  "cmd": "maiden <lat,lon> â the Maidenhead grid square of a place (the ham locator)",
+  "cmd": "maiden <lat,lon> — the Maidenhead grid square of a place (the ham locator)",
   "verb": "maiden",
-  "desc": "maiden <lat,lon> â the Maidenhead grid square of a place (the ham locator)"
+  "desc": "maiden <lat,lon> — the Maidenhead grid square of a place (the ham locator)"
  },
  {
   "section": "data tools",
-  "cmd": "gcd <a> <b> â the greatest common divisor",
+  "cmd": "gcd <a> <b> — the greatest common divisor",
   "verb": "gcd",
-  "desc": "gcd <a> <b> â the greatest common divisor"
+  "desc": "gcd <a> <b> — the greatest common divisor"
  },
  {
   "section": "data tools",
-  "cmd": "lcm <a> <b> â the least common multiple",
+  "cmd": "lcm <a> <b> — the least common multiple",
   "verb": "lcm",
-  "desc": "lcm <a> <b> â the least common multiple"
+  "desc": "lcm <a> <b> — the least common multiple"
  },
  {
   "section": "data tools",
-  "cmd": "prime <n> â is it prime, what are its factors, what prime comes next",
+  "cmd": "prime <n> — is it prime, what are its factors, what prime comes next",
   "verb": "prime",
-  "desc": "prime <n> â is it prime, what are its factors, what prime comes next"
+  "desc": "prime <n> — is it prime, what are its factors, what prime comes next"
  },
  {
   "section": "data tools",
-  "cmd": "pct <part> <whole> â a part as a percentage of a whole",
+  "cmd": "pct <part> <whole> — a part as a percentage of a whole",
   "verb": "pct",
-  "desc": "pct <part> <whole> â a part as a percentage of a whole"
+  "desc": "pct <part> <whole> — a part as a percentage of a whole"
  },
  {
   "section": "data tools",
-  "cmd": "pctchg <from> <to> â the percentage change between two numbers",
+  "cmd": "pctchg <from> <to> — the percentage change between two numbers",
   "verb": "pctchg",
-  "desc": "pctchg <from> <to> â the percentage change between two numbers"
+  "desc": "pctchg <from> <to> — the percentage change between two numbers"
  },
  {
   "section": "data tools",
-  "cmd": "ratio <w> <h> â an aspect ratio, simplified",
+  "cmd": "ratio <w> <h> — an aspect ratio, simplified",
   "verb": "ratio",
-  "desc": "ratio <w> <h> â an aspect ratio, simplified"
+  "desc": "ratio <w> <h> — an aspect ratio, simplified"
  },
  {
   "section": "data tools",
-  "cmd": "fib <n> â the nth Fibonacci number, exact",
+  "cmd": "fib <n> — the nth Fibonacci number, exact",
   "verb": "fib",
-  "desc": "fib <n> â the nth Fibonacci number, exact"
+  "desc": "fib <n> — the nth Fibonacci number, exact"
  },
  {
   "section": "data tools",
-  "cmd": "fact <n> â n factorial, exact",
+  "cmd": "fact <n> — n factorial, exact",
   "verb": "fact",
-  "desc": "fact <n> â n factorial, exact"
+  "desc": "fact <n> — n factorial, exact"
  },
  {
   "section": "data tools",
-  "cmd": "temp <value[C|F|K]> â temperatures in all three scales",
+  "cmd": "temp <value[C|F|K]> — temperatures in all three scales",
   "verb": "temp",
-  "desc": "temp <value[C|F|K]> â temperatures in all three scales"
+  "desc": "temp <value[C|F|K]> — temperatures in all three scales"
  },
  {
   "section": "data tools",
-  "cmd": "conv <value> <from> <to> â units: length, mass, data, speed, pressure (mm cm m km in ft yd mi nmi Â· mg g kg t oz lb Â· B KB MB GB TB KiB MiB GiB TiB bit Â· mps kmh mph kn fps Â· Pa hPa kPa bar atm psi mmHg inHg)",
+  "cmd": "conv <value> <from> <to> — units: length, mass, data, speed, pressure (mm cm m km in ft yd mi nmi · mg g kg t oz lb · B KB MB GB TB KiB MiB GiB TiB bit · mps kmh mph kn fps · Pa hPa kPa bar atm psi mmHg inHg)",
   "verb": "conv",
-  "desc": "conv <value> <from> <to> â units: length, mass, data, speed, pressure (mm cm m km in ft yd mi nmi Â· mg g kg t oz lb Â· B KB MB GB TB KiB MiB GiB TiB bit Â· mps kmh mph kn fps Â· Pa hPa kPa bar atm psi mmHg inHg)"
+  "desc": "conv <value> <from> <to> — units: length, mass, data, speed, pressure (mm cm m km in ft yd mi nmi · mg g kg t oz lb · B KB MB GB TB KiB MiB GiB TiB bit · mps kmh mph kn fps · Pa hPa kPa bar atm psi mmHg inHg)"
  },
  {
   "section": "data tools",
-  "cmd": "bitops <a> <and|or|xor|shl|shr|not> [b] â bitwise work with the bits shown",
+  "cmd": "bitops <a> <and|or|xor|shl|shr|not> [b] — bitwise work with the bits shown",
   "verb": "bitops",
-  "desc": "bitops <a> <and|or|xor|shl|shr|not> [b] â bitwise work with the bits shown"
+  "desc": "bitops <a> <and|or|xor|shl|shr|not> [b] — bitwise work with the bits shown"
  },
  {
   "section": "data tools",
-  "cmd": "twos <n> [bits] â a number in two's complement at a width",
+  "cmd": "twos <n> [bits] — a number in two's complement at a width",
   "verb": "twos",
-  "desc": "twos <n> [bits] â a number in two's complement at a width"
+  "desc": "twos <n> [bits] — a number in two's complement at a width"
  },
  {
   "section": "data tools",
-  "cmd": "endian <hex> â byte-swap a hex word (endianness flip)",
+  "cmd": "endian <hex> — byte-swap a hex word (endianness flip)",
   "verb": "endian",
-  "desc": "endian <hex> â byte-swap a hex word (endianness flip)"
+  "desc": "endian <hex> — byte-swap a hex word (endianness flip)"
  },
  {
   "section": "data tools",
-  "cmd": "bcd [-d] <n|hex> â binary-coded decimal, both ways",
+  "cmd": "bcd [-d] <n|hex> — binary-coded decimal, both ways",
   "verb": "bcd",
-  "desc": "bcd [-d] <n|hex> â binary-coded decimal, both ways"
+  "desc": "bcd [-d] <n|hex> — binary-coded decimal, both ways"
  },
  {
   "section": "data tools",
-  "cmd": "gray [-d] <n> â Gray code, both ways",
+  "cmd": "gray [-d] <n> — Gray code, both ways",
   "verb": "gray",
-  "desc": "gray [-d] <n> â Gray code, both ways"
+  "desc": "gray [-d] <n> — Gray code, both ways"
  },
  {
   "section": "data tools",
-  "cmd": "hamming <a> <b> â the Hamming distance between two strings or hex words",
+  "cmd": "hamming <a> <b> — the Hamming distance between two strings or hex words",
   "verb": "hamming",
-  "desc": "hamming <a> <b> â the Hamming distance between two strings or hex words"
+  "desc": "hamming <a> <b> — the Hamming distance between two strings or hex words"
  },
  {
   "section": "data tools",
-  "cmd": "lev <a> <b> â the Levenshtein edit distance between two strings",
+  "cmd": "lev <a> <b> — the Levenshtein edit distance between two strings",
   "verb": "lev",
-  "desc": "lev <a> <b> â the Levenshtein edit distance between two strings"
+  "desc": "lev <a> <b> — the Levenshtein edit distance between two strings"
  },
  {
   "section": "data tools",
-  "cmd": "anagram <a> <b> â are they anagrams?",
+  "cmd": "anagram <a> <b> — are they anagrams?",
   "verb": "anagram",
-  "desc": "anagram <a> <b> â are they anagrams?"
+  "desc": "anagram <a> <b> — are they anagrams?"
  },
  {
   "section": "data tools",
-  "cmd": "palindrome <text> â does it read the same backwards?",
+  "cmd": "palindrome <text> — does it read the same backwards?",
   "verb": "palindrome",
-  "desc": "palindrome <text> â does it read the same backwards?"
+  "desc": "palindrome <text> — does it read the same backwards?"
  },
  {
   "section": "data tools",
-  "cmd": "isbn <isbn> â validate an ISBN-10 or ISBN-13, and convert",
+  "cmd": "isbn <isbn> — validate an ISBN-10 or ISBN-13, and convert",
   "verb": "isbn",
-  "desc": "isbn <isbn> â validate an ISBN-10 or ISBN-13, and convert"
+  "desc": "isbn <isbn> — validate an ISBN-10 or ISBN-13, and convert"
  },
  {
   "section": "data tools",
-  "cmd": "luhn <digits> â the Luhn check: validate, or complete with -c",
+  "cmd": "luhn <digits> — the Luhn check: validate, or complete with -c",
   "verb": "luhn",
-  "desc": "luhn <digits> â the Luhn check: validate, or complete with -c"
+  "desc": "luhn <digits> — the Luhn check: validate, or complete with -c"
  },
  {
   "section": "data tools",
-  "cmd": "iban <iban> â validate an IBAN (mod-97) and read its parts",
+  "cmd": "iban <iban> — validate an IBAN (mod-97) and read its parts",
   "verb": "iban",
-  "desc": "iban <iban> â validate an IBAN (mod-97) and read its parts"
+  "desc": "iban <iban> — validate an IBAN (mod-97) and read its parts"
  },
  {
   "section": "data tools",
-  "cmd": "ean <ean> â validate an EAN-8 / EAN-13 / UPC check digit",
+  "cmd": "ean <ean> — validate an EAN-8 / EAN-13 / UPC check digit",
   "verb": "ean",
-  "desc": "ean <ean> â validate an EAN-8 / EAN-13 / UPC check digit"
+  "desc": "ean <ean> — validate an EAN-8 / EAN-13 / UPC check digit"
  },
  {
   "section": "network tools",
-  "cmd": "oui <mac|prefix> â who burned this MAC's first three bytes",
+  "cmd": "oui <mac|prefix> — who burned this MAC's first three bytes",
   "verb": "oui",
-  "desc": "oui <mac|prefix> â who burned this MAC's first three bytes"
+  "desc": "oui <mac|prefix> — who burned this MAC's first three bytes"
  },
  {
   "section": "network tools",
-  "cmd": "rcode <number|name> â DNS response codes, read plain",
+  "cmd": "rcode <number|name> — DNS response codes, read plain",
   "verb": "rcode",
-  "desc": "rcode <number|name> â DNS response codes, read plain"
+  "desc": "rcode <number|name> — DNS response codes, read plain"
  },
  {
   "section": "network tools",
-  "cmd": "dnsclass [class] â the DNS classes: IN, CH, HS, and what a class even is",
+  "cmd": "dnsclass [class] — the DNS classes: IN, CH, HS, and what a class even is",
   "verb": "dnsclass",
-  "desc": "dnsclass [class] â the DNS classes: IN, CH, HS, and what a class even is"
+  "desc": "dnsclass [class] — the DNS classes: IN, CH, HS, and what a class even is"
  },
  {
   "section": "network tools",
-  "cmd": "tlsver [version] â the TLS/SSL family tree, with the dates of death",
+  "cmd": "tlsver [version] — the TLS/SSL family tree, with the dates of death",
   "verb": "tlsver",
-  "desc": "tlsver [version] â the TLS/SSL family tree, with the dates of death"
+  "desc": "tlsver [version] — the TLS/SSL family tree, with the dates of death"
  },
  {
   "section": "data tools",
-  "cmd": "crc32c <text|file> â CRC-32C (Castagnoli), the iSCSI/SSE4.2 flavour",
+  "cmd": "crc32c <text|file> — CRC-32C (Castagnoli), the iSCSI/SSE4.2 flavour",
   "verb": "crc32c",
-  "desc": "crc32c <text|file> â CRC-32C (Castagnoli), the iSCSI/SSE4.2 flavour"
+  "desc": "crc32c <text|file> — CRC-32C (Castagnoli), the iSCSI/SSE4.2 flavour"
  },
  {
   "section": "data tools",
-  "cmd": "distance <lat,lon> <lat,lon> â the great-circle distance between two places",
+  "cmd": "distance <lat,lon> <lat,lon> — the great-circle distance between two places",
   "verb": "distance",
-  "desc": "distance <lat,lon> <lat,lon> â the great-circle distance between two places"
+  "desc": "distance <lat,lon> <lat,lon> — the great-circle distance between two places"
  },
  {
   "section": "data tools",
-  "cmd": "bearing <lat,lon> <lat,lon> â the initial great-circle bearing from here to there",
+  "cmd": "bearing <lat,lon> <lat,lon> — the initial great-circle bearing from here to there",
   "verb": "bearing",
-  "desc": "bearing <lat,lon> <lat,lon> â the initial great-circle bearing from here to there"
+  "desc": "bearing <lat,lon> <lat,lon> — the initial great-circle bearing from here to there"
  },
  {
   "section": "data tools",
-  "cmd": "dewpoint <tempC> <rh%> â the dew point of air (Magnus)",
+  "cmd": "dewpoint <tempC> <rh%> — the dew point of air (Magnus)",
   "verb": "dewpoint",
-  "desc": "dewpoint <tempC> <rh%> â the dew point of air (Magnus)"
+  "desc": "dewpoint <tempC> <rh%> — the dew point of air (Magnus)"
  },
  {
   "section": "data tools",
-  "cmd": "windchill <tempC> <kmh> â what moving air makes cold feel like",
+  "cmd": "windchill <tempC> <kmh> — what moving air makes cold feel like",
   "verb": "windchill",
-  "desc": "windchill <tempC> <kmh> â what moving air makes cold feel like"
+  "desc": "windchill <tempC> <kmh> — what moving air makes cold feel like"
  },
  {
   "section": "data tools",
-  "cmd": "heatindex <tempC> <rh%> â what humid heat does to a body (Rothfusz)",
+  "cmd": "heatindex <tempC> <rh%> — what humid heat does to a body (Rothfusz)",
   "verb": "heatindex",
-  "desc": "heatindex <tempC> <rh%> â what humid heat does to a body (Rothfusz)"
+  "desc": "heatindex <tempC> <rh%> — what humid heat does to a body (Rothfusz)"
  },
  {
   "section": "data tools",
-  "cmd": "paper <a4|letter|â¦> â paper sizes in mm and inches",
+  "cmd": "paper <a4|letter|…> — paper sizes in mm and inches",
   "verb": "paper",
-  "desc": "paper <a4|letter|â¦> â paper sizes in mm and inches"
+  "desc": "paper <a4|letter|…> — paper sizes in mm and inches"
  },
  {
   "section": "data tools",
-  "cmd": "ppi <px-wide> <px-high> <inches-diagonal> â a screen's pixel density",
+  "cmd": "ppi <px-wide> <px-high> <inches-diagonal> — a screen's pixel density",
   "verb": "ppi",
-  "desc": "ppi <px-wide> <px-high> <inches-diagonal> â a screen's pixel density"
+  "desc": "ppi <px-wide> <px-high> <inches-diagonal> — a screen's pixel density"
  },
  {
   "section": "data tools",
-  "cmd": "unicode <char|U+XXXX> â a character's papers: codepoint, UTF-8, block",
+  "cmd": "unicode <char|U+XXXX> — a character's papers: codepoint, UTF-8, block",
   "verb": "unicode",
-  "desc": "unicode <char|U+XXXX> â a character's papers: codepoint, UTF-8, block"
+  "desc": "unicode <char|U+XXXX> — a character's papers: codepoint, UTF-8, block"
  },
  {
   "section": "data tools",
-  "cmd": "utf8 <text> â a text as UTF-8 bytes, with the census",
+  "cmd": "utf8 <text> — a text as UTF-8 bytes, with the census",
   "verb": "utf8",
-  "desc": "utf8 <text> â a text as UTF-8 bytes, with the census"
+  "desc": "utf8 <text> — a text as UTF-8 bytes, with the census"
  },
  {
   "section": "data tools",
-  "cmd": "bech32 [-d] <hrp> <hex> | <bech32> â SegWit's armour (BIP-173), both ways",
+  "cmd": "bech32 [-d] <hrp> <hex> | <bech32> — SegWit's armour (BIP-173), both ways",
   "verb": "bech32",
-  "desc": "bech32 [-d] <hrp> <hex> | <bech32> â SegWit's armour (BIP-173), both ways"
+  "desc": "bech32 [-d] <hrp> <hex> | <bech32> — SegWit's armour (BIP-173), both ways"
  },
  {
   "section": "data tools",
-  "cmd": "sri <file|text> â a Subresource Integrity string for a resource",
+  "cmd": "sri <file|text> — a Subresource Integrity string for a resource",
   "verb": "sri",
-  "desc": "sri <file|text> â a Subresource Integrity string for a resource"
+  "desc": "sri <file|text> — a Subresource Integrity string for a resource"
  },
  {
   "section": "data tools",
-  "cmd": "spdx <id|word> â SPDX license identifiers, searched",
+  "cmd": "spdx <id|word> — SPDX license identifiers, searched",
   "verb": "spdx",
-  "desc": "spdx <id|word> â SPDX license identifiers, searched"
+  "desc": "spdx <id|word> — SPDX license identifiers, searched"
  }
 ]
