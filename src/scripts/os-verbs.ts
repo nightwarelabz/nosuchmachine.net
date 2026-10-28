@@ -289,6 +289,33 @@ function registerHouse() {
     lines.push("what trips it: a ransom note's shape, ten mutations in ten seconds, existing files turning to high-entropy noise, a hand on the decoy files in ~/documents. what it cannot do: reach outside this tab. nothing on the attacker's own machine is touched — the backfire is that the attack spends itself on a mirage, the room restores, and the attempt stays in the journal.");
     return lines.join("\n");
   });
+  verb("ivory", "LIVE", "ivory [status|observe|ledger|verify] — the clockwork observance coupled to AEGIS", async (ctx) => {
+    const sub = (ctx.args[0] || "status").toLowerCase();
+    if (sub === "observe") {
+      const r = ctx.os.ivoryObserveNow("manual");
+      return r.findings.length
+        ? "ivory-tower: observance " + r.entry.seq + " — " + r.findings.map((f) => f.detail).join("; ") + "."
+        : "ivory-tower: observance " + r.entry.seq + " — the room is exactly as the last observance left it. root " + r.root.slice(0, 16) + "…";
+    }
+    if (sub === "verify") {
+      const v = ctx.os.ivoryVerify();
+      return [
+        "ledger chain: " + (v.chainOk ? "holds — every observance still chained to the one before" : "BROKEN at observance " + v.chainAt),
+        "merkle root: " + (v.rootOk ? "the room still hashes to the ledger's root" : "the room no longer hashes to the ledger's root — run `ivory observe` to name the drift"),
+      ].join("\n");
+    }
+    const st = ctx.os.ivoryStatus();
+    if (sub === "ledger") {
+      if (!st.ledger.length) return "ivory-tower: the ledger is empty — the tower has not observed yet.";
+      return ["the ledger — hash-chained, oldest kept first:", ...st.ledger.map((e) => "  #" + e.seq + "  " + new Date(e.at).toLocaleTimeString() + "  " + e.trigger.padEnd(7) + " root " + e.root.slice(0, 12) + "…" + (e.findings.length ? "  " + e.findings.join(" · ") : ""))].join("\n");
+    }
+    return [
+      "IVORY-TOWER: " + (st.state === "watch" ? "ON WATCH — drift was found that no hand in this room accounts for; AEGIS holds an ivory-watch snapshot and the next drift trips containment." : "calm — the clock ticks, the room matches its measure."),
+      "observances: " + st.ticks + " kept in the ledger (chain " + st.chain + ")" + (st.lastAt ? " · last at " + new Date(st.lastAt).toLocaleTimeString() + " (" + st.lastTrigger + ")" : ""),
+      "merkle root: " + (st.root ? st.root.slice(0, 24) + "…" : "—") + " — one hash swearing for every file in the room",
+      "what it does: every thirty seconds the tower hashes the whole room, the decoy canaries by content, AEGIS's own snapshot register, and the persistence registers — and asks whether the room's own hand did what it finds. drift behind the funnel raises the watch; drift again, a canary altered in the dark, AEGIS's register tampered with, or the ledger's chain broken hands the room to AEGIS. a slow, patient cadence of ordinary writes raises the watch but never the trip — rhythm is suspicion, not proof.",
+    ].join("\n");
+  });
   verb("wallpaper", "LIVE", "wallpaper [monolith|mare|stars|plasma|mandelbrot|none] — the thinice monolith, the mare, or art the room generates", async (ctx) => {
     const kind = ctx.args[0] || "stars";
     if (!["monolith", "mare", "stars", "plasma", "mandelbrot", "none"].includes(kind)) return "wallpapers: monolith, mare, stars, plasma, mandelbrot, none.";

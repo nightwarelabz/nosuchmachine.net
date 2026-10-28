@@ -309,6 +309,20 @@ assert.ok(qcPatch010.includes('"connect thisissparta2"'), "the door's connect to
 // rendezvous exists. The bundle pins read the built OS chunk.
 assert.ok(osSrcR.includes('phonehome: { title: "phonehome", icon: "phonehome" }'), "APPS must register phonehome");
 assert.ok(osSrcR.includes("function defaultWallpaper()") && osSrcR.includes('? "mare" : "monolith"') && osSrcR.includes("defaultWallpaper()"), "the un-chosen wallpaper default must split by device: mare on mobile, monolith on desktop (Chase, 2026-10-27)");
+// ——— IVORY-TOWER pins (2026-10-27) ———
+// The clockwork observance coupled to AEGIS must ship in the built
+// OS: its module markers in the bundle, its verb and clock in the
+// wiring, its register key in the shell, and its headless proof
+// (scripts/verify-ivory.mjs) green as part of this verify.
+const ivorySrc = fs.readFileSync("src/scripts/os-ivory.ts", "utf8");
+assert.ok(ivorySrc.includes("class IvoryTower") && ivorySrc.includes("merkleRoot"), "os-ivory.ts must carry the tower and its Merkle root");
+const shellSrcI = fs.readFileSync("src/scripts/os-shell.ts", "utf8");
+assert.ok(shellSrcI.includes('skey("blacksite-ivory-v1")'), "the shell must keep the tower's ledger under its own key");
+assert.ok(shellSrcI.includes("ivoryObserveNow(\"boot\")"), "the shell must take the boot observance");
+assert.ok(osSrcR.includes('os.ivoryObserveNow("clock")'), "os.ts must run the tower's thirty-second clock");
+assert.ok(astroJs.includes("ivory-tower:"), "the built OS bundle must carry the tower's journal voice");
+assert.ok(astroJs.includes("blacksite-ivory-v1"), "the built OS bundle must carry the tower's register key");
+execFileSync(process.execPath, ["scripts/verify-ivory.mjs"], { stdio: "inherit" });
 // ——— roster encoding pin (Chase's screenshot, 2026-10-27) ———
 // The roster JSON ships to the toolchest and help windows verbatim.
 // It must never carry mojibake again: C1 control characters

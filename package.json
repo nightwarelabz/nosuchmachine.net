@@ -14,7 +14,8 @@
     "test:boot": "node scripts/verify-boot.mjs",
     "sync:book": "node scripts/sync-orange-book.mjs",
     "sync:book:offline": "node scripts/sync-orange-book.mjs --offline",
-    "build:pages": "npm run sync:book && npm run check && npm run build && npm run verify"
+    "build:pages": "npm run sync:book && npm run check && npm run build && npm run verify",
+    "test:ivory": "node scripts/verify-ivory.mjs"
   },
   "engines": {
     "node": ">=22.23.3"

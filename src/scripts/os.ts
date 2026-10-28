@@ -31,6 +31,20 @@ const os = new BlacksiteOS();
 /* AEGIS keeps its own cadence: a snapshot every five minutes of room
    life, so a mass-encryption run always has a recent past to undo to. */
 setInterval(() => { try { os.maybeSnapshot(); } catch { /* the watch does not break the room */ } }, 60_000);
+/* IVORY-TOWER keeps its own clock: an observance every thirty
+   seconds — the whole room hashed, the canaries and registers
+   fingerprinted, the drift (if any) named. AEGIS is the hands;
+   this is the eyes, and the eyes blink on a schedule. */
+setInterval(() => { try { os.ivoryObserveNow("clock"); } catch { /* the tower does not break the room */ } }, 30_000);
+/* When the tower raises the watch, the desk hears about it —
+   quietly, as a toast; a trip is AEGIS's banner to raise. */
+window.addEventListener("blacksite:ivory", (e) => {
+  const detail = (e as CustomEvent).detail || {};
+  const findings = Array.isArray(detail.findings) ? detail.findings : [];
+  if (findings.some((f: any) => f.severity === "watch")) {
+    document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "ivory-tower: the watch is raised — drift no hand in this room accounts for. `ivory` in the terminal names it." } }));
+  }
+});
 /* When containment trips, the desk itself says so — a banner over the
    wallpaper, with the way out named. */
 window.addEventListener("blacksite:aegis", (e) => {
@@ -1028,7 +1042,21 @@ function buildSystem(body: HTMLElement) {
   const liftBtn = el("button", "os-btn", "lift containment");
   liftBtn.addEventListener("click", () => { os.aegisLift(false); body.innerHTML = ""; buildSystem(body); });
   arow.append(snapBtn, restoreBtn, ...(ast.contained ? [liftBtn] : []));
-  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow);
+  const ih = el("h3", "", "IVORY-TOWER");
+  const ist = os.ivoryStatus();
+  const istate = el("p", "os-note", ist.state === "watch"
+    ? "ON WATCH — drift was found that no hand in this room accounts for. AEGIS holds an ivory-watch snapshot; the next drift, a canary altered behind the funnel, or a tampered register trips containment."
+    : "Calm, and ticking. Every thirty seconds the tower hashes the whole room into one Merkle root, checks the decoy canaries by content, and fingerprints AEGIS's own register and the persistence registers — then asks whether the room's own hand did what it finds.");
+  if (ist.state === "watch") istate.style.color = "var(--os-accent)";
+  const iinfo = el("p", "os-note", "observances: " + ist.ticks + " in the ledger · chain " + ist.chain + (ist.root ? "\nmerkle root: " + ist.root.slice(0, 32) + "…" : "") + (ist.lastAt ? "\nlast observance: " + new Date(ist.lastAt).toLocaleTimeString() + " (" + ist.lastTrigger + ")" : ""));
+  iinfo.style.whiteSpace = "pre-line";
+  const irow = el("div", "os-sys-actions");
+  const observeBtn = el("button", "os-btn", "observe now");
+  observeBtn.addEventListener("click", () => { os.ivoryObserveNow("manual"); body.innerHTML = ""; buildSystem(body); });
+  const verifyBtn = el("button", "os-btn", "verify the chain");
+  verifyBtn.addEventListener("click", () => { const v = os.ivoryVerify(); document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: v.chainOk && v.rootOk ? "ivory-tower: the chain holds and the room hashes to its root." : "ivory-tower: verification FAILED — chain " + (v.chainOk ? "holds" : "broken at " + v.chainAt) + ", root " + (v.rootOk ? "matches" : "differs") + "." } })); });
+  irow.append(observeBtn, verifyBtn);
+  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow, ih, istate, iinfo, irow);
   body.appendChild(wrap);
 }
 
