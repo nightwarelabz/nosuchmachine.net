@@ -18,7 +18,7 @@
  * frame-src https: (see public/_headers). */
 
 import { DEPTH, MAX_NEST } from "./os-depth";
-import { t, tf } from "./os-i18n";
+import { t } from "./os-i18n";
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
