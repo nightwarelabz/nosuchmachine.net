@@ -9,6 +9,9 @@ import { registerToolchestVerbs } from "./os-toolchest";
 import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { registerPhonehomeVerbs, buildPhonehomeApp } from "./os-phonehome";
+import { FORENSICS_FOLDER, FORENSICS_KEYS, buildWorkbench, registerForensicsVerbs } from "./os-forensics";
+import { buildHashLab, buildHexLab, buildFileLab, buildMetadataLab, buildImageLab } from "./os-fx-apps";
+import { buildPcapLab, buildStringsLab, buildTimelineLab, buildMailLab, buildEvidenceLocker } from "./os-fx-apps2";
 import { buildRelayApp } from "./os-irc";
 import { buildPhantomApp } from "./os-phantom";
 import { buildWolf3d } from "./os-wolf3d";
@@ -143,6 +146,18 @@ const APPS: Record<string, { title: string; icon: string }> = {
   bottle: { title: "bottle", icon: "bottle" },
   system: { title: "system", icon: "system" },
   games: { title: "games", icon: "games" },
+  forensics: { title: "Forensics", icon: "forensics" },
+  fxworkbench: { title: "Workbench", icon: "fxworkbench" },
+  fxevidence: { title: "Evidence", icon: "fxevidence" },
+  fxhash: { title: "Hash Lab", icon: "fxhash" },
+  fxhex: { title: "Hex Lab", icon: "fxhex" },
+  fxfile: { title: "File Lab", icon: "fxfile" },
+  fxmeta: { title: "Metadata Lab", icon: "fxmeta" },
+  fximage: { title: "Image Lab", icon: "fximage" },
+  fxpcap: { title: "PCAP Lab", icon: "fxpcap" },
+  fxstrings: { title: "Strings & IOC", icon: "fxstrings" },
+  fxtime: { title: "Timeline Lab", icon: "fxtime" },
+  fxmail: { title: "Mail Lab", icon: "fxmail" },
   chip8: { title: "CHIP-8 Console", icon: "chip8" },
   ssh: { title: "ssh", icon: "ssh" },
   relay: { title: "relaychat", icon: "relay" },
@@ -576,7 +591,7 @@ function buildTerminal(body: HTMLElement) {
     setWallpaper: (kind) => setWallpaper(kind),
     setTheme: (name) => applyTheme(name),
   };
-  io.print("BLACKSITE OS — web edition. `help` for the 636, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
+  io.print("BLACKSITE OS — web edition. `help` for the 642, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
   io.print("doctrine: one knock, read, grade. public targets only.", "dim");
   // the launcher (start button / Ctrl-K) can hand this terminal a line
   // to run — and exactly ONE terminal answers: the one standing in a
@@ -1064,7 +1079,7 @@ function buildSystem(body: HTMLElement) {
   const cells: Array<[string, string]> = [
     [OS_RELEASE.version + " " + OS_RELEASE.codename, "RELEASE"],
     [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, "WORKING VERBS — IN-ROOM + EDGE"],
-    ["636", "COMMANDS ON THE ROSTER"],
+    ["642", "COMMANDS ON THE ROSTER"],
     [`${vs.files}`, "FILES IN THE VFS"],
     [`${(vs.bytes / 1024).toFixed(1)} KB`, "VFS CONTENT"],
     [`${(lsBytes / 1024).toFixed(1)} KB`, "LOCAL STORAGE FOOTPRINT"],
@@ -1260,13 +1275,13 @@ function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSet
 function buildHelp(body: HTMLElement) {
   const search = document.createElement("input");
   search.className = "os-help-search";
-  search.placeholder = "search the 636 — try 'smtp', 'modbus', 'jwt'…";
+  search.placeholder = "search the 642 — try 'smtp', 'modbus', 'jwt'…";
   const listEl = el("div", "os-help-list");
   body.append(search, listEl);
   const render = (q: string) => {
     listEl.innerHTML = "";
     const rows = (roster as any[]).filter((r) => !q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || r.section.includes(q));
-    const head = el("p", "os-note", `${rows.length} of 636 commands · status is this room's honest standing`);
+    const head = el("p", "os-note", `${rows.length} of 642 commands · status is this room's honest standing`);
     listEl.appendChild(head);
     for (const r of rows.slice(0, 150)) {
       const status = VERBS.get(r.verb)?.status || "LIMIT";
@@ -1395,6 +1410,21 @@ function buildGamesFolder(body: HTMLElement) {
   }
   body.appendChild(wrap);
 }
+/* The Forensics folder is the games folder's twin: membership is
+   single-sourced in FORENSICS_FOLDER (os-forensics.ts), read by
+   this folder, the desktop defs and the launcher alike. */
+function buildForensicsFolder(body: HTMLElement) {
+  const wrap = el("div", "os-games");
+  for (const [app, label] of FORENSICS_FOLDER) {
+    const meta = APPS[app];
+    if (!meta) continue;
+    const b = el("button", "os-icon");
+    b.append(iconEl(meta.icon, "os-icon-glyph"), el("span", "os-icon-label", label));
+    b.addEventListener("click", () => openApp(app));
+    wrap.appendChild(b);
+  }
+  body.appendChild(wrap);
+}
 
 const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   terminal: buildTerminal, files: buildFiles, editor: buildEditor, processes: buildProcesses,
@@ -1402,6 +1432,18 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   bottle: (body) => buildBottleApp(body, os),
   system: buildSystem,
   games: buildGamesFolder,
+  forensics: buildForensicsFolder,
+  fxworkbench: (body) => buildWorkbench(body, os),
+  fxevidence: (body) => buildEvidenceLocker(body, os),
+  fxhash: (body, arg) => buildHashLab(body, os, arg),
+  fxhex: (body, arg) => buildHexLab(body, os, arg),
+  fxfile: (body, arg) => buildFileLab(body, os, arg),
+  fxmeta: (body, arg) => buildMetadataLab(body, os, arg),
+  fximage: (body, arg) => buildImageLab(body, os, arg),
+  fxpcap: (body, arg) => buildPcapLab(body, os, arg),
+  fxstrings: (body, arg) => buildStringsLab(body, os, arg),
+  fxtime: (body, arg) => buildTimelineLab(body, os, arg),
+  fxmail: (body, arg) => buildMailLab(body, os, arg),
   toolchest: buildToolchest,
   chip8: buildChip8,
   ssh: buildSsh,
@@ -1641,6 +1683,7 @@ function boot() {
   registerToolchestVerbs();
   registerBottleVerbs();
   registerPhonehomeVerbs();
+  registerForensicsVerbs();
   registerLimitReasons();
   applyTheme(os.theme);
   document.addEventListener("pointerdown", armAudio);
@@ -1653,7 +1696,7 @@ function boot() {
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
     "memory: the browser provides · storage: local, yours",
     DEPTH === 0 ? "kernel: blacksite sh · vfs: mounted (persistent, this browser)" : `kernel: blacksite sh · vfs: mounted (volatile — nest ${DEPTH} of ${MAX_NEST} keeps nothing)`,
-    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 636 on the roster`,
+    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 642 on the roster`,
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
     "doctrine loaded: one knock, read, grade.",
     "",
@@ -1686,7 +1729,7 @@ function boot() {
   // desktop icons
   const icons = document.getElementById("os-icons")!;
   const defs: Array<[string, string, string]> = [
-    ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["files", "files", "files"], ["editor", "editor", "editor"],
+    ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["forensics", "forensics", "Forensics"], ["files", "files", "files"], ["editor", "editor", "editor"],
     ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
     ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
     ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["phonehome", "phonehome", "phonehome"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
@@ -1816,7 +1859,7 @@ function openLauncher() {
   desk.appendChild(box);
   launcherEl = box;
   let selected = 0;
-  const appDefs: Array<[string, string, string]> = Object.entries(APPS).filter(([k]) => !GAME_KEYS.has(k)).map(([k, v]) => [k, v.title, v.icon]);
+  const appDefs: Array<[string, string, string]> = Object.entries(APPS).filter(([k]) => !GAME_KEYS.has(k) && !FORENSICS_KEYS.has(k)).map(([k, v]) => [k, v.title, v.icon]);
   const render = () => {
     list.innerHTML = "";
     const q = input.value.trim().toLowerCase();

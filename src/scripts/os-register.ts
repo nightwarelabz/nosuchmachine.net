@@ -42,6 +42,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["tripwire", "the full-system wire between AEGIS and the tower — every system register notarized at its own hand's write, the storage surface watched by a sentinel that blocks unaccounted writes on the spot; tamper with the defenses and the defaults restore and the room reboots", "LIVE"],
     ["verify-integrity", "the checker — one read-only audit of the whole defense (the wire's seal, every register against the manifest, the census, the tower's chain, the room re-hashed, the sentinel, AEGIS) plus the launched system's own bytes hashed against the SHA-256 seal the build stamped into version.json at launch — byte for byte, what the origin serves must be what was launched. on the `integrity` verb and the System panel; any failed line warns the operator by toast, as does every tamper verdict anywhere in the system", "LIVE"],
     ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
+    ["forensics", "the evidence bench — 11 rooms in the Forensics folder: workbench (VFS cases, hash-at-intake, chain of custody), evidence locker (/evidence, AES-256-GCM .fxbag bags), hash, hex, file, metadata, image, pcap, strings & IOC, timeline and mail labs; 6 terminal verbs (fxcase, fxhash, fxmagic, fxstrings, fxioc, fxmeta); zero network — every byte is examined in this tab", "LIVE"],
   ];
 }
 
