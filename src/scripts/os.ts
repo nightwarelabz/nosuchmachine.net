@@ -45,6 +45,40 @@ window.addEventListener("blacksite:ivory", (e) => {
     document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "ivory-tower: the watch is raised — drift no hand in this room accounts for. `ivory` in the terminal names it." } }));
   }
 });
+/* TRIPWIRE: when the wire is cut, the desk says so in the wire's
+   own banner, and the room reboots itself onto the restored
+   default defenses. The reboot is flagged in session storage so
+   the fresh boot can announce why it happened — once; the shell
+   refuses to flag a second reboot in a session, so a tamper that
+   persists holds containment instead of looping the room. */
+function tripwireBanner(text: string) {
+  document.querySelector(".os-tripwire-banner")?.remove();
+  const b = el("div", "os-aegis-banner os-tripwire-banner");
+  b.append(el("strong", "", "TRIPWIRE — "), document.createTextNode(text + " "));
+  const sys = el("button", "os-btn small", "open system");
+  sys.addEventListener("click", () => { b.remove(); openApp("system"); });
+  const x = el("button", "os-btn small", "stand down");
+  x.addEventListener("click", () => b.remove());
+  b.append(sys, x);
+  document.querySelector(".os-desktop")?.appendChild(b);
+}
+window.addEventListener("blacksite:tripwire", (e) => {
+  const detail = (e as CustomEvent).detail || {};
+  tripwireBanner(`${detail.reason || "the defenses were tampered with"}. the default defenses have been restored and containment holds.`);
+  if (detail.reboot) setTimeout(() => { try { location.reload(); } catch { /* the banner already said it */ } }, 1800);
+});
+/* The injection watch: when the page's own policy wall stops
+   something — a script the CSP refused, an object, a frame that
+   had no business loading — the browser reports it, and the wire
+   remembers. Throttled: an extension misbehaving on the page can
+   fire these in bursts, and the wire's memory is eight lines. */
+let lastInjectionNote = 0;
+document.addEventListener("securitypolicyviolation", (e) => {
+  const now = Date.now();
+  if (now - lastInjectionNote < 5000) return;
+  lastInjectionNote = now;
+  try { os.noteInjection(`${e.violatedDirective} refused ${String(e.blockedURI || "inline").slice(0, 60)}${e.sourceFile ? ` from ${e.sourceFile.slice(0, 60)}` : ""}`); } catch { /* the journal is a courtesy here */ }
+});
 /* When containment trips, the desk itself says so — a banner over the
    wallpaper, with the way out named. */
 window.addEventListener("blacksite:aegis", (e) => {
@@ -116,7 +150,9 @@ function saveSession() {
         list.push({ app, arg: app === "editor" ? key.slice(7) || undefined : undefined, l: win.style.left, t: win.style.top, w: win.style.width, h: win.style.height, maxed: win.classList.contains("maxed"), min: win.style.display === "none", z: parseInt(win.style.zIndex || "0", 10) || 0 });
       }
       list.sort((a, b) => a.z - b.z);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(list));
+      const body = JSON.stringify(list);
+      const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite;
+      if (!wireWrite || !wireWrite("session", body)) localStorage.setItem(SESSION_KEY, body);
     } catch { /* a disk that keeps nothing still gets a desk */ }
   }, 250);
 }
@@ -1056,7 +1092,15 @@ function buildSystem(body: HTMLElement) {
   const verifyBtn = el("button", "os-btn", "verify the chain");
   verifyBtn.addEventListener("click", () => { const v = os.ivoryVerify(); document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: v.chainOk && v.rootOk ? "ivory-tower: the chain holds and the room hashes to its root." : "ivory-tower: verification FAILED — chain " + (v.chainOk ? "holds" : "broken at " + v.chainAt) + ", root " + (v.rootOk ? "matches" : "differs") + "." } })); });
   irow.append(observeBtn, verifyBtn);
-  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow, ih, istate, iinfo, irow);
+  const th = el("h3", "", "TRIPWIRE");
+  const tw = os.tripwireStatus();
+  const tstate = el("p", "os-note", tw.state === "cut"
+    ? "CUT — " + tw.verdict + " The default defenses were restored and the room rebooted onto them; containment holds until you lift it."
+    : "Strung across the whole system. Every register the room keeps — AEGIS, the tower's ledger, the filesystem, macros, settings, the session, the Relay log, the phonehome callsign, the SIGINT registry and log, the sound state, the subconscious — is notarized here the moment its own hand writes it, and the storage surface itself is watched: a write to any of them by an unaccounted hand — a script, a macro, an intelligence in the room — is blocked on the spot. Tamper with the defenses and the accusation is recorded outside them, AEGIS and the tower restore their armed defaults, and the room reboots itself onto the restored defenses, once.");
+  if (tw.state === "cut") tstate.style.color = "var(--os-accent)";
+  const tinfo = el("p", "os-note", "registers notarized: " + tw.registers + " · storage keys censused: " + tw.census + " · boots under this wire: " + tw.boots + (tw.events.length ? "\nthe wire's memory:\n" + tw.events.map((e) => "  " + new Date(e.at).toLocaleString() + "  " + e.kind + " — " + e.detail).join("\n") : ""));
+  tinfo.style.whiteSpace = "pre-line";
+  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow, ih, istate, iinfo, irow, th, tstate, tinfo);
   body.appendChild(wrap);
 }
 
@@ -1564,6 +1608,7 @@ function boot() {
   document.addEventListener("pointerdown", armAudio);
   document.addEventListener("keydown", armAudio);
   window.addEventListener("blacksite:aegis", () => sfx("aegis"));
+  window.addEventListener("blacksite:tripwire", () => sfx("aegis"));
   soundGate(() => os.emcon === "alpha");
   const overlay = document.getElementById("os-boot")!;
   const lines = [
@@ -1582,6 +1627,20 @@ function boot() {
       sfx("live");
       restoreSession();
       if (os.aegis.contained) window.dispatchEvent(new CustomEvent("blacksite:aegis", { detail: { reason: "containment held from before the restart" } }));
+      /* A room that rebooted itself over a cut tripwire announces
+         why — once. The flag's count stays, so the shell's
+         one-reboot-per-session law still holds. */
+      try {
+        const flagRaw = sessionStorage.getItem(skey("blacksite-tripwire-reboot"));
+        if (flagRaw) {
+          const flag = JSON.parse(flagRaw);
+          if (flag && !flag.announced) {
+            flag.announced = true;
+            sessionStorage.setItem(skey("blacksite-tripwire-reboot"), JSON.stringify(flag));
+            tripwireBanner(`this room rebooted itself: ${flag.detail || "the defenses were tampered with"}. the default defenses were restored before the reboot and containment holds — \`aegis restore\` or \`aegis lift\` in the terminal is the way back, when you judge it right.`);
+          }
+        }
+      } catch { /* the journal knows, even if the desk cannot say */ }
       const h = window.location.hash.slice(1);
       if (h && APPS[h]) openApp(h);
     },

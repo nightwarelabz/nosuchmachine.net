@@ -39,6 +39,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["timelock", "RSW repeated-squaring seals (the Magic Box construction)", "LIVE"],
     ["gauntlet", "the room tests itself — crypto vectors, vfs, roster, engines", "LIVE"],
     ["ivory-tower", "the clockwork observance coupled to AEGIS — Merkle-rooted room hashes, canary + register fingerprints, a hash-chained ledger; drift behind the funnel raises the watch, tampering hands the room to AEGIS", "LIVE"],
+    ["tripwire", "the full-system wire between AEGIS and the tower — every system register notarized at its own hand's write, the storage surface watched by a sentinel that blocks unaccounted writes on the spot; tamper with the defenses and the defaults restore and the room reboots", "LIVE"],
     ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
   ];
 }

@@ -71,7 +71,7 @@ export function wakeSubconscious(hooks: SubHooks): Subconscious {
     if (raw) st = { ...fresh(), ...(JSON.parse(raw) as Partial<SubState>) };
   } catch { /* a memory that cannot be read is simply a young one */ }
   const save = () => {
-    try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* this visit only */ }
+    try { const body = JSON.stringify(st); const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("subconscious", body)) localStorage.setItem(KEY, body); } catch { /* this visit only */ }
   };
 
   /* ——— the dream, such as it is: after a long absence the

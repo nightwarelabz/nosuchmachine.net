@@ -762,6 +762,7 @@ const TOWNSFOLK_NAMES = ["Aldric", "Berta", "Cato", "Dunna", "Elowen", "Fenn", "
 
 /* ————————————————— the game itself ————————————————— */
 export function buildWyrdfall(body: HTMLElement): void {
+  const esc = (s: string | undefined) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const wrap = document.createElement("div");
   wrap.className = "os-wy-wrap";
   wrap.innerHTML = `
@@ -2102,10 +2103,10 @@ export function buildWyrdfall(body: HTMLElement): void {
       return `<div>${names[k] || k} — standing ${v}</div>`;
     }).join("");
     const questRows = quests.length
-      ? quests.map((q) => `<div class="os-wy-qrow">${q.kind === "cull" ? `Cull in ${DUNGEONS[q.dungeon].name} — ${q.done}/${q.target}` : q.kind === "fetch" ? `Reliquary from ${DUNGEONS[q.dungeon].name} — ${q.done >= q.target ? "recovered" : "waiting in the deep"}` : `Letter to ${q.destName} — ${q.done >= q.target ? "delivered" : "sealed"}`} <em>(${q.giver})</em></div>`).join("")
+      ? quests.map((q) => `<div class="os-wy-qrow">${q.kind === "cull" ? `Cull in ${DUNGEONS[q.dungeon].name} — ${q.done}/${q.target}` : q.kind === "fetch" ? `Reliquary from ${DUNGEONS[q.dungeon].name} — ${q.done >= q.target ? "recovered" : "waiting in the deep"}` : `Letter to ${esc(q.destName)} — ${q.done >= q.target ? "delivered" : "sealed"}`} <em>(${esc(q.giver)})</em></div>`).join("")
       : "<div>No work carried. Guilds and innkeepers always have some.</div>";
     sheetBody.innerHTML = `
-      <div class="os-wy-shead"><b>${s.name}</b> — level ${s.level} ${s.cls}</div>
+      <div class="os-wy-shead"><b>${esc(s.name)}</b> — level ${s.level} ${s.cls}</div>
       <div>Health ${Math.ceil(s.hp)} / ${maxHp(s)} · Magicka ${Math.floor(s.mp)} / ${maxMp(s)} · Gold ${s.gold}</div>
       <div>Weapon — ${WEAPONS[s.weapon].name}</div>
       <div class="os-wy-sect">Skills — they rise by use; five gains make a level at rest</div>

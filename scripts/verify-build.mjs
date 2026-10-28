@@ -322,6 +322,28 @@ assert.ok(shellSrcI.includes("ivoryObserveNow(\"boot\")"), "the shell must take 
 assert.ok(osSrcR.includes('os.ivoryObserveNow("clock")'), "os.ts must run the tower's thirty-second clock");
 assert.ok(astroJs.includes("ivory-tower:"), "the built OS bundle must carry the tower's journal voice");
 assert.ok(astroJs.includes("blacksite-ivory-v1"), "the built OS bundle must carry the tower's register key");
+// TRIPWIRE (src/scripts/os-tripwire.ts): the full-system wire —
+// the sealed manifest over every system register, the census and
+// plant law, the sentinel on the storage surface, and the
+// reboot-and-restore sentence. Its machine is proven by the same
+// harness run below (layer 3); these pins keep the wire from
+// being quietly unwired.
+const wireSrc = fs.readFileSync("src/scripts/os-tripwire.ts", "utf8");
+assert.ok(wireSrc.includes("class TripwireRegister") && wireSrc.includes("judgeWire"), "os-tripwire.ts must carry the register and its judge");
+assert.ok(shellSrcI.includes('skey("blacksite-tripwire-v1")'), "the shell must keep the wire under its own key");
+assert.ok(shellSrcI.includes("wireInstallSentinel"), "the shell must install the storage sentinel");
+assert.ok(shellSrcI.includes("wireSanctionedWrite"), "the shell must offer the sanctioned write path");
+assert.ok(shellSrcI.includes("tripwireRespond"), "the shell must carry out the sentence");
+assert.ok(astroJs.includes("blacksite-tripwire-v1"), "the built OS bundle must carry the wire's register key");
+assert.ok(astroJs.includes("tripwire:"), "the built OS bundle must carry the wire's journal voice");
+// Injection hardening on the same surface: the CSP-violation
+// watch feeds the wire, and the orc room's scheme law keeps
+// javascript:/data: URLs from ever reaching a frame.
+assert.ok(astroJs.includes("securitypolicyviolation"), "the built OS bundle must carry the injection watch");
+const orcSrcW = fs.readFileSync("src/scripts/os-orc.ts", "utf8");
+assert.ok(orcSrcW.includes('u.protocol !== "http:"'), "the orc room must refuse non-http(s) schemes before framing");
+const wyrdfallSrcW = fs.readFileSync("src/scripts/os-wyrdfall.ts", "utf8");
+assert.ok(wyrdfallSrcW.includes("esc(s.name)"), "the wyrdfall sheet must escape the character name it renders as HTML");
 execFileSync(process.execPath, ["scripts/verify-ivory.mjs"], { stdio: "inherit" });
 // ——— roster encoding pin (Chase's screenshot, 2026-10-27) ———
 // The roster JSON ships to the toolchest and help windows verbatim.

@@ -93,7 +93,7 @@ async function identityFromJson(text: string): Promise<PhoneIdentity> {
 let identity: PhoneIdentity | null = null;
 let callsign = "";
 try { callsign = localStorage.getItem(skey(STORE_KEY)) || ""; } catch { /* storage is optional */ }
-function saveCallsign() { try { localStorage.setItem(skey(STORE_KEY), callsign); } catch { /* optional */ } }
+function saveCallsign() { try { const wireWrite = (window as unknown as { __blacksiteWireWrite?: (s: string, v: string | null) => boolean }).__blacksiteWireWrite; if (!wireWrite || !wireWrite("phonehome", callsign)) localStorage.setItem(skey(STORE_KEY), callsign); } catch { /* optional */ } }
 async function ensureIdentity(): Promise<PhoneIdentity> {
   if (!identity) identity = await makeIdentity();
   return identity;

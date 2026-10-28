@@ -316,6 +316,16 @@ function registerHouse() {
       "what it does: every thirty seconds the tower hashes the whole room, the decoy canaries by content, AEGIS's own snapshot register, and the persistence registers — and asks whether the room's own hand did what it finds. drift behind the funnel raises the watch; drift again, a canary altered in the dark, AEGIS's register tampered with, or the ledger's chain broken hands the room to AEGIS. a slow, patient cadence of ordinary writes raises the watch but never the trip — rhythm is suspicion, not proof.",
     ].join("\n");
   });
+  verb("tripwire", "LIVE", "tripwire — the wire strung between AEGIS and the tower; if the defenses are tampered with, the defaults restore and the room reboots", async (ctx) => {
+    const st = ctx.os.tripwireStatus();
+    const lines = [
+      "TRIPWIRE: " + (st.state === "cut" ? "CUT — " + st.verdict + ". the default defenses were restored and the room rebooted onto them; containment holds until you lift it." : "strung across the whole system — " + st.registers + " registers notarized, " + st.census + " storage keys censused, and the registers testify to one another at every observance."),
+      "boots under this wire: " + st.boots + " · AEGIS head " + (st.heads.aegis ? st.heads.aegis + "…" : "—") + " · tower head " + (st.heads.ivory ? st.heads.ivory + "…" : "—") + " · filesystem head " + (st.heads.vfs ? st.heads.vfs + "…" : "—"),
+      "what it does: every register the system keeps is notarized here the moment its own hand writes it — and the storage surface itself is watched, so a write to any of them by an unaccounted hand is blocked in the instant it is attempted. no verb, macro, script, or intelligence in this room can write a defense register at all: the offer cannot be made, so it cannot be talked into. wipe a register, rewrite one, plant one, or cut this wire itself, and the mismatch is a verdict, not a warning: the accusation is recorded here, outside the accused registers, AEGIS and the tower are re-genesis'd to their armed defaults over a fresh snapshot of the room as found, the canaries are verified, and the room reboots itself onto the restored defenses — once; a second tamper in the same session holds containment without looping. game saves and world data live on the censused perimeter — watched for plants, never notarized.",
+    ];
+    if (st.events.length) lines.push("the wire's memory:", ...st.events.map((e) => "  " + new Date(e.at).toLocaleString() + "  " + e.kind + " — " + e.detail));
+    return lines.join("\n");
+  });
   verb("wallpaper", "LIVE", "wallpaper [monolith|mare|stars|plasma|mandelbrot|none] — the thinice monolith, the mare, or art the room generates", async (ctx) => {
     const kind = ctx.args[0] || "stars";
     if (!["monolith", "mare", "stars", "plasma", "mandelbrot", "none"].includes(kind)) return "wallpapers: monolith, mare, stars, plasma, mandelbrot, none.";
