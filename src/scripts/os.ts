@@ -10,6 +10,8 @@ import { registerLimitReasons } from "./os-limits";
 import { registerBottleVerbs, buildBottleApp } from "./os-bottle";
 import { registerPhonehomeVerbs, buildPhonehomeApp } from "./os-phonehome";
 import { FORENSICS_FOLDER, FORENSICS_KEYS, buildWorkbench, registerForensicsVerbs } from "./os-forensics";
+import { t, tf, lang, setLang, rosterDesc, initLang } from "./os-i18n";
+import { buildRubyApp, registerRubyVerbs } from "./os-ruby";
 import { buildHashLab, buildHexLab, buildFileLab, buildMetadataLab, buildImageLab } from "./os-fx-apps";
 import { buildPcapLab, buildStringsLab, buildTimelineLab, buildMailLab, buildEvidenceLocker } from "./os-fx-apps2";
 import { buildRelayApp } from "./os-irc";
@@ -77,9 +79,9 @@ function tripwireBanner(text: string) {
   document.querySelector(".os-tripwire-banner")?.remove();
   const b = el("div", "os-aegis-banner os-tripwire-banner");
   b.append(el("strong", "", "TRIPWIRE — "), document.createTextNode(text + " "));
-  const sys = el("button", "os-btn small", "open system");
+  const sys = el("button", "os-btn small", t("open system"));
   sys.addEventListener("click", () => { b.remove(); openApp("system"); });
-  const x = el("button", "os-btn small", "stand down");
+  const x = el("button", "os-btn small", t("stand down"));
   x.addEventListener("click", () => b.remove());
   b.append(sys, x);
   document.querySelector(".os-desktop")?.appendChild(b);
@@ -109,9 +111,9 @@ window.addEventListener("blacksite:aegis", (e) => {
   document.querySelector(".os-aegis-banner")?.remove();
   const b = el("div", "os-aegis-banner");
   b.append(el("strong", "", "AEGIS — containment. "), document.createTextNode(`the real filesystem is frozen and the attack is writing to a mirage. (${detail.reason || "bulk mutation"}) `));
-  const sys = el("button", "os-btn small", "open system");
+  const sys = el("button", "os-btn small", t("open system"));
   sys.addEventListener("click", () => { b.remove(); openApp("system"); });
-  const x = el("button", "os-btn small", "stand down");
+  const x = el("button", "os-btn small", t("stand down"));
   x.addEventListener("click", () => b.remove());
   b.append(sys, x);
   document.querySelector(".os-desktop")?.appendChild(b);
@@ -133,6 +135,15 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 function root(): HTMLElement { return document.getElementById("os-root")!; }
 function tdDecode(bytes: Uint8Array): string { return new TextDecoder().decode(bytes); }
 function desktop(): HTMLElement { return document.querySelector(".os-desktop")!; }
+
+/* An app's name in the room's language: APPS carries the English,
+   and every surface that speaks a title asks here, so the desk, the
+   window heads, the taskbar and the launcher all change tongue with
+   one word from the language register (os-i18n.ts). */
+function appTitle(app: string): string {
+  const meta = APPS[app];
+  return meta ? t(meta.title) : app;
+}
 
 const APPS: Record<string, { title: string; icon: string }> = {
   terminal: { title: "terminal", icon: "terminal" },
@@ -159,6 +170,7 @@ const APPS: Record<string, { title: string; icon: string }> = {
   fxtime: { title: "Timeline Lab", icon: "fxtime" },
   fxmail: { title: "Mail Lab", icon: "fxmail" },
   chip8: { title: "CHIP-8 Console", icon: "chip8" },
+  ruby: { title: "ruby", icon: "ruby" },
   ssh: { title: "ssh", icon: "ssh" },
   relay: { title: "relaychat", icon: "relay" },
   phantom: { title: "phantom", icon: "phantom" },
@@ -271,14 +283,14 @@ export function openApp(app: string, arg?: string, opts?: { deferBuild?: boolean
   win.style.zIndex = String(++zTop);
   const head = el("header", "os-win-head");
   const title = el("span", "os-win-title");
-  title.append(iconEl(meta.icon, "os-win-icon"), document.createTextNode(meta.title + (app === "editor" && arg ? ` — ${arg}` : "")));
+  title.append(iconEl(meta.icon, "os-win-icon"), document.createTextNode(appTitle(app) + (app === "editor" && arg ? ` — ${arg}` : "")));
   const controls = el("span", "os-win-controls");
   const minBtn = el("button", "os-win-btn", "–");
-  minBtn.setAttribute("aria-label", "Minimize");
+  minBtn.setAttribute("aria-label", t("Minimize"));
   const maxBtn = el("button", "os-win-btn", "☐");
-  maxBtn.setAttribute("aria-label", "Maximize");
+  maxBtn.setAttribute("aria-label", t("Maximize"));
   const closeBtn = el("button", "os-win-btn os-win-close", "×");
-  closeBtn.setAttribute("aria-label", "Close");
+  closeBtn.setAttribute("aria-label", t("Close"));
   controls.append(minBtn, maxBtn, closeBtn);
   head.append(title, controls);
   const body = el("div", "os-win-body");
@@ -294,7 +306,7 @@ export function openApp(app: string, arg?: string, opts?: { deferBuild?: boolean
   (win as any)._life = life;
   body.dataset.osState = "suspended";
   sfx("open");
-  addTaskbarButton(key, meta.title, win);
+  addTaskbarButton(key, appTitle(app), win);
   head.addEventListener("pointerdown", (e) => { if ((e.target as HTMLElement).closest("button")) return; startDrag(e, win); });
   resize.addEventListener("pointerdown", (e) => startResize(e, win));
   win.addEventListener("pointerdown", () => focusWindow(win));
@@ -343,14 +355,14 @@ let winMenuEl: HTMLElement | null = null;
 function toggleWinMenu() {
   if (winMenuEl) { winMenuEl.remove(); winMenuEl = null; return; }
   const panel = el("div", "os-launcher os-winmenu");
-  panel.appendChild(el("div", "os-winmenu-head", "open windows — tap one to bring it forward"));
+  panel.appendChild(el("div", "os-winmenu-head", t("open windows — tap one to bring it forward")));
   document.querySelectorAll<HTMLElement>(".os-task-btn").forEach((b) => {
     const key = b.dataset.task || "";
     const row = el("div", "os-winmenu-row");
     const go = el("button", "os-winmenu-go", b.textContent || key);
     go.addEventListener("click", () => { const w = windows.get(key); if (w) { ensureBuilt(w); w.style.display = ""; focusWindow(w); } toggleWinMenu(); });
     const x = el("button", "os-winmenu-x", "×");
-    x.title = "close the window";
+    x.title = t("close the window");
     x.addEventListener("click", () => { windows.get(key)?.querySelector<HTMLElement>(".os-win-close")?.click(); toggleWinMenu(); });
     row.append(go, x);
     panel.appendChild(row);
@@ -566,14 +578,14 @@ function buildTerminal(body: HTMLElement) {
   input.className = "os-term-input";
   input.setAttribute("autocomplete", "off");
   input.setAttribute("spellcheck", "false");
-  input.setAttribute("aria-label", "Terminal input");
+  input.setAttribute("aria-label", t("Terminal input"));
   const copyBtn = document.createElement("button");
   copyBtn.className = "os-btn small";
-  copyBtn.textContent = "copy";
-  copyBtn.title = "copy the whole transcript";
+  copyBtn.textContent = t("copy");
+  copyBtn.title = t("copy the whole transcript");
   copyBtn.addEventListener("click", () => {
     const text = [...transcript.children].map((c) => c.textContent || "").join("\n");
-    void navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = "copied ✓"; setTimeout(() => (copyBtn.textContent = "copy"), 1400); });
+    void navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = t("copied ✓"); setTimeout(() => (copyBtn.textContent = t("copy")), 1400); });
   });
   line.append(prompt, input, copyBtn);
   body.append(transcript, line);
@@ -591,8 +603,8 @@ function buildTerminal(body: HTMLElement) {
     setWallpaper: (kind) => setWallpaper(kind),
     setTheme: (name) => applyTheme(name),
   };
-  io.print("BLACKSITE OS — web edition. `help` for the 642, `limits` for the honest physics, `gauntlet` to watch the room test itself.", "dim");
-  io.print("doctrine: one knock, read, grade. public targets only.", "dim");
+  io.print(t("BLACKSITE OS — web edition. `help` for the 644, `limits` for the honest physics, `gauntlet` to watch the room test itself."), "dim");
+  io.print(t("doctrine: one knock, read, grade. public targets only."), "dim");
   // the launcher (start button / Ctrl-K) can hand this terminal a line
   // to run — and exactly ONE terminal answers: the one standing in a
   // window. Every terminal ever built keeps a listener on the
@@ -615,6 +627,7 @@ function buildTerminal(body: HTMLElement) {
   });
   let histIdx = os.history.length;
   input.addEventListener("keydown", async (e) => {
+    if (e.isComposing) return;
     if (e.key === "Enter") {
       const cmd = input.value;
       input.value = "";
@@ -663,16 +676,16 @@ function buildFiles(body: HTMLElement) {
   let current = os.cwd;
   const bar = el("div", "os-files-bar");
   const pathLabel = el("span", "os-files-path");
-  const upBtn = el("button", "os-btn", "↑ up");
-  const importBtn = el("button", "os-btn", "import file…");
-  const newFileBtn = el("button", "os-btn", "new file");
-  const newDirBtn = el("button", "os-btn", "new folder");
+  const upBtn = el("button", "os-btn", t("↑ up"));
+  const importBtn = el("button", "os-btn", t("import file…"));
+  const newFileBtn = el("button", "os-btn", t("new file"));
+  const newDirBtn = el("button", "os-btn", t("new folder"));
   const fileInput = document.createElement("input");
   fileInput.type = "file"; fileInput.hidden = true;
   bar.append(pathLabel, upBtn, importBtn, newFileBtn, newDirBtn, fileInput);
   const list = el("div", "os-files-list");
   const preview = el("pre", "os-plain os-files-preview");
-  preview.textContent = "select a file to inspect it — the room's parsers read its bones (format, headers, strings) without opening it.";
+  preview.textContent = t("select a file to inspect it — the room's parsers read its bones (format, headers, strings) without opening it.");
   body.append(bar, list, preview);
   const render = () => {
     pathLabel.textContent = current;
@@ -684,14 +697,15 @@ function buildFiles(body: HTMLElement) {
       row.append(iconEl(isDir ? "files" : "file", "os-file-icon"), document.createTextNode(`${name}${isDir ? "/" : ""}`));
       row.addEventListener("dblclick", () => {
         if (isDir) { current = path; render(); }
+        else if (name.endsWith(".rb")) openApp("ruby", path);
         else openApp("editor", path);
       });
       row.addEventListener("click", () => {
         list.querySelectorAll(".os-file-row").forEach((r) => r.classList.remove("selected"));
         row.classList.add("selected");
-        if (isDir) { preview.textContent = `${path}/ — a folder. double-click to enter.`; return; }
+        if (isDir) { preview.textContent = tf("{path}/ — a folder. double-click to enter.", { path }); return; }
         const bytes = os.readBytes(path);
-        if (!bytes) { preview.textContent = "could not read that file."; return; }
+        if (!bytes) { preview.textContent = t("could not read that file."); return; }
         const id = identifyFile(bytes, name);
         // the parser's text verdicts carry names — "Plain text",
         // "JSON", "XML document", "Script (shebang)" — never the bare
@@ -700,13 +714,13 @@ function buildFiles(body: HTMLElement) {
         // cap 0) left this head empty for every file in the room.
         const isText = /text|json|xml|script/i.test(id.kind);
         const head = isText ? tdDecode(bytes.slice(0, 1200)) : hexdump(bytes.slice(0, 128));
-        preview.textContent = `${name} — ${id.summary} · ${bytes.length} bytes\n\n${head}`;
+        preview.textContent = `${name} — ${id.summary} · ${bytes.length} ${t("bytes")}\n\n${head}`;
       });
       const actions = el("span", "os-file-actions");
       if (!isDir) {
-        const dl = el("button", "os-btn small", "download");
+        const dl = el("button", "os-btn small", t("download"));
         dl.addEventListener("click", (e) => { e.stopPropagation(); downloadFile(path); });
-        const run = el("button", "os-btn small", "run");
+        const run = el("button", "os-btn small", t("run"));
         run.addEventListener("click", (e) => {
           e.stopPropagation();
           // the output lands in THIS window's preview pane — the
@@ -718,13 +732,13 @@ function buildFiles(body: HTMLElement) {
         });
         actions.append(dl, run);
       }
-      const del = el("button", "os-btn small danger", "delete");
+      const del = el("button", "os-btn small danger", t("delete"));
       del.addEventListener("click", (e) => { e.stopPropagation(); try { os.remove(path, true); render(); } catch (err: any) { alert(err?.message || err); } });
       actions.append(del);
       row.appendChild(actions);
       list.appendChild(row);
     }
-    if (!os.list(current).length) list.appendChild(el("p", "os-note", "(empty folder)"));
+    if (!os.list(current).length) list.appendChild(el("p", "os-note", t("(empty folder)")));
   };
   upBtn.addEventListener("click", () => { current = os.norm(current + "/.."); render(); });
   importBtn.addEventListener("click", () => fileInput.click());
@@ -740,8 +754,8 @@ function buildFiles(body: HTMLElement) {
     os.log(`imported ${f.name} (${f.size} bytes) into ${current}`);
     render();
   });
-  newFileBtn.addEventListener("click", () => { const name = prompt("New file name:"); if (name) { try { os.write(os.norm(`${current}/${name}`), ""); render(); } catch (e: any) { alert(e?.message || e); } } });
-  newDirBtn.addEventListener("click", () => { const name = prompt("New folder name:"); if (name) { try { os.mkdir(os.norm(`${current}/${name}`)); render(); } catch (e: any) { alert(e?.message || e); } } });
+  newFileBtn.addEventListener("click", () => { const name = prompt(t("New file name:")); if (name) { try { os.write(os.norm(`${current}/${name}`), ""); render(); } catch (e: any) { alert(e?.message || e); } } });
+  newDirBtn.addEventListener("click", () => { const name = prompt(t("New folder name:")); if (name) { try { os.mkdir(os.norm(`${current}/${name}`)); render(); } catch (e: any) { alert(e?.message || e); } } });
   body.addEventListener("os:focus-arg", ((e: CustomEvent) => { if (e.detail === "import") fileInput.click(); }) as EventListener);
   render();
 }
@@ -776,18 +790,19 @@ function buildEditor(body: HTMLElement, arg?: string) {
   let commandLine = "";
   let dirty = false;
   const setStatus = (extra = "") => { status.textContent = `${path} — ${mode.toUpperCase()}${dirty ? " [+]" : ""}${extra ? " · " + extra : ""}`; };
-  setStatus("i for insert · Esc normal · :w save · :q leave");
+  setStatus(t("i for insert · Esc normal · :w save · :q leave"));
   area.addEventListener("input", () => { dirty = true; setStatus(); });
-  const save = (): boolean => { try { os.write(path, area.value); dirty = false; setStatus("written"); return true; } catch (e: any) { setStatus(`write failed: ${e?.message || e} — nothing was saved, and the buffer is still here`); return false; } };
+  const save = (): boolean => { try { os.write(path, area.value); dirty = false; setStatus(t("written")); return true; } catch (e: any) { setStatus(tf("write failed: {e} — nothing was saved, and the buffer is still here", { e: e?.message || e })); return false; } };
   const quit = () => { body.closest<HTMLElement>(".os-window")?.querySelector<HTMLButtonElement>(".os-win-close")?.click(); };
   area.addEventListener("keydown", (e) => {
+    if (e.isComposing) return;
     if (mode === "command") {
       e.preventDefault();
       if (e.key === "Enter") {
         const cmd = commandLine.trim();
         commandLine = ""; mode = "normal";
         if (cmd === "w") save();
-        else if (cmd === "q") { if (dirty) setStatus("unsaved — :q! to abandon"); else quit(); }
+        else if (cmd === "q") { if (dirty) setStatus(t("unsaved — :q! to abandon")); else quit(); }
         // :wq quits only on a save that LANDED — a failed write keeps
         // the editor open with the buffer intact and the reason in
         // the status line. (It used to quit unconditionally, and the
@@ -795,7 +810,7 @@ function buildEditor(body: HTMLElement, arg?: string) {
         else if (cmd === "wq") { if (save()) quit(); }
         else if (cmd === "q!") quit();
         else if (cmd.startsWith("w ")) { try { os.write(cmd.slice(2).trim(), area.value); dirty = false; setStatus("written"); } catch (err: any) { setStatus(String(err?.message || err)); } }
-        else setStatus(`not a room command: :${cmd}`);
+        else setStatus(tf("not a room command: :{cmd}", { cmd }));
         // no trailing setStatus() here: every branch above leaves the
         // word it means in the status line — a blanket refresh after
         // them wiped save's failure line the instant it was written.
@@ -841,7 +856,7 @@ function buildChip8(body: HTMLElement, arg?: string) {
   const bar = el("div", "os-files-bar");
   const sel = document.createElement("select");
   sel.className = "os-bottle-select";
-  const demoOpt = document.createElement("option"); demoOpt.value = ""; demoOpt.textContent = "built-in demo";
+  const demoOpt = document.createElement("option"); demoOpt.value = ""; demoOpt.textContent = t("built-in demo");
   sel.appendChild(demoOpt);
   const roms: string[] = [];
   const scan = (dir: string) => { for (const n of os.list(dir)) { const p = (dir === "/" ? "" : dir) + "/" + n; if (os.isDir(p)) { if (!p.startsWith("/sys")) scan(p); } else if (n.endsWith(".ch8")) roms.push(p); } };
@@ -851,14 +866,14 @@ function buildChip8(body: HTMLElement, arg?: string) {
   const status = el("span", "os-note", "");
   bar.append(sel, status);
   wrap.append(bar, canvas);
-  const keysNote = el("p", "os-note", "keys: 1 2 3 4 / Q W E R / A S D F / Z X C V map to the hex pad. click the screen, then play.");
+  const keysNote = el("p", "os-note", t("keys: 1 2 3 4 / Q W E R / A S D F / Z X C V map to the hex pad. click the screen, then play."));
   wrap.appendChild(keysNote);
   body.appendChild(wrap);
   const cpu = new Chip8();
   const KEYMAP: Record<string, number> = { "1": 1, "2": 2, "3": 3, "4": 0xc, q: 4, w: 5, e: 6, r: 0xd, a: 7, s: 8, d: 9, f: 0xe, z: 0xa, x: 0, c: 0xb, v: 0xf };
   const load = () => {
     cpu.load(sel.value ? (os.readBytes(sel.value) || CHIP8_DEMO) : CHIP8_DEMO);
-    status.textContent = sel.value || "built-in demo";
+    status.textContent = sel.value || t("built-in demo");
   };
   sel.addEventListener("change", load);
   const down = (e: KeyboardEvent) => { const k = KEYMAP[e.key.toLowerCase()]; if (k !== undefined) { cpu.keys[k] = 1; e.preventDefault(); } };
@@ -911,16 +926,16 @@ const ANSI_FG = ["#3a4458", "#ff5f57", "#3ddc84", "#ffb02e", "#58a6ff", "#d368d8
 function buildSsh(body: HTMLElement, arg?: string) {
   const wrap = el("div", "os-ssh");
   const bar = el("div", "os-files-bar");
-  const hostIn = document.createElement("input"); hostIn.className = "os-bottle-input"; hostIn.placeholder = "host"; hostIn.style.flex = "1";
+  const hostIn = document.createElement("input"); hostIn.className = "os-bottle-input"; hostIn.placeholder = t("host"); hostIn.style.flex = "1";
   const portIn = document.createElement("input"); portIn.className = "os-bottle-input"; portIn.placeholder = "22"; portIn.style.width = "64px"; portIn.value = "22";
-  const userIn = document.createElement("input"); userIn.className = "os-bottle-input"; userIn.placeholder = "user"; userIn.style.width = "110px";
-  const connectBtn = el("button", "os-btn", "connect");
+  const userIn = document.createElement("input"); userIn.className = "os-bottle-input"; userIn.placeholder = t("user"); userIn.style.width = "110px";
+  const connectBtn = el("button", "os-btn", t("connect"));
   bar.append(hostIn, portIn, userIn, connectBtn);
   if (arg) {
     const m = arg.match(/^(?:([^@]+)@)?([^:]+)(?::(\d+))?$/);
     if (m) { userIn.value = m[1] || ""; hostIn.value = m[2] || ""; if (m[3]) portIn.value = m[3]; }
   }
-  const status = el("p", "os-note", "the room's own client. curve25519 + aes-gcm; the host key's fingerprint must be trusted by your hand before any password moves. the wire rides this site's bridge as ciphertext.");
+  const status = el("p", "os-note", t("the room's own client. curve25519 + aes-gcm; the host key's fingerprint must be trusted by your hand before any password moves. the wire rides this site's bridge as ciphertext."));
   const promptRow = el("div", "os-ssh-prompt"); promptRow.style.display = "none";
   const screenEl = el("div", "os-ssh-screen");
   screenEl.tabIndex = 0;
@@ -951,10 +966,10 @@ function buildSsh(body: HTMLElement, arg?: string) {
   const gridText = () => grid.map((row) => row.map((c) => c.ch).join("").replace(/\s+$/, "")).join("\n");
   const mkCopy = (label: string, getText: () => string) => {
     const b = el("button", "os-btn small", label);
-    b.addEventListener("click", () => { void navigator.clipboard.writeText(getText()).then(() => { const old = b.textContent; b.textContent = "copied ✓"; setTimeout(() => (b.textContent = old), 1400); }); screenEl.focus(); });
+    b.addEventListener("click", () => { void navigator.clipboard.writeText(getText()).then(() => { const old = b.textContent; b.textContent = t("copied ✓"); setTimeout(() => (b.textContent = old), 1400); }); screenEl.focus(); });
     return b;
   };
-  copyBar.append(mkCopy("copy screen", gridText), mkCopy("copy scrollback", () => [...scrollback, gridText()].join("\n")));
+  copyBar.append(mkCopy(t("copy screen"), gridText), mkCopy(t("copy scrollback"), () => [...scrollback, gridText()].join("\n")));
   wrap.insertBefore(copyBar, screenEl);
   const scrollUp = () => { scrollback.push(grid[0].map((c) => c.ch).join("").replace(/\s+$/, "")); if (scrollback.length > 400) scrollback.shift(); grid.shift(); grid.push(Array.from({ length: cols }, blank)); };
   const decoder = new TextDecoder();
@@ -1001,21 +1016,21 @@ function buildSsh(body: HTMLElement, arg?: string) {
     const lab = el("span", "os-note", label);
     const input = document.createElement("input");
     input.className = "os-bottle-input"; input.type = secret ? "password" : "text"; input.style.flex = "1";
-    const ok = el("button", "os-btn", "send");
-    const cancel = el("button", "os-btn", "cancel");
+    const ok = el("button", "os-btn", t("send"));
+    const cancel = el("button", "os-btn", t("cancel"));
     promptRow.append(lab, input, ok, cancel);
     promptRow.style.display = "flex";
 
     const done = (v: string | null) => { promptRow.style.display = "none"; promptRow.innerHTML = ""; screenEl.focus(); resolve(v); };
     ok.addEventListener("click", () => done(input.value));
     cancel.addEventListener("click", () => done(null));
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") done(input.value); e.stopPropagation(); });
+    input.addEventListener("keydown", (e) => { if (e.isComposing) return; if (e.key === "Enter") done(input.value); e.stopPropagation(); });
   });
   const confirmKey = (fingerprint: string, algorithm: string): Promise<boolean> => new Promise((resolve) => {
     promptRow.innerHTML = "";
-    const lab = el("span", "os-note", `host key ${algorithm} — ${fingerprint} — trust this key?`);
-    const ok = el("button", "os-btn", "trust & continue");
-    const no = el("button", "os-btn danger", "refuse");
+    const lab = el("span", "os-note", tf("host key {algo} — {fp} — trust this key?", { algo: algorithm, fp: fingerprint }));
+    const ok = el("button", "os-btn", t("trust & continue"));
+    const no = el("button", "os-btn danger", t("refuse"));
     promptRow.append(lab, ok, no);
     promptRow.style.display = "flex";
     ok.addEventListener("click", () => { promptRow.style.display = "none"; promptRow.innerHTML = ""; resolve(true); });
@@ -1026,9 +1041,9 @@ function buildSsh(body: HTMLElement, arg?: string) {
     const refusal = os.gate("active");
     if (refusal) { status.textContent = refusal; return; }
     const host = hostIn.value.trim(); const port = Number(portIn.value) || 22; const user = userIn.value.trim();
-    if (!host || !user) { status.textContent = "host and user, both — then connect."; return; }
+    if (!host || !user) { status.textContent = t("host and user, both — then connect."); return; }
     connectBtn.setAttribute("disabled", "true");
-    status.textContent = `connecting to ${user}@${host}:${port} through the bridge…`;
+    status.textContent = tf("connecting to {u}@{h}:{p} through the bridge…", { u: user, h: host, p: port });
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
     ws = new WebSocket(`${proto}//${location.host}/api/ssh-bridge?host=${encodeURIComponent(host)}&port=${port}`);
     ws.binaryType = "arraybuffer";
@@ -1038,13 +1053,13 @@ function buildSsh(body: HTMLElement, arg?: string) {
       onStatus: (m) => { status.textContent = m; },
       onData: (bytes) => feedText(decoder.decode(bytes, { stream: true })),
       confirmHostKey: confirmKey,
-      getPassword: () => askInWindow(`password for ${user}@${host}`, true),
-      onClose: (reason) => { status.textContent = `closed — ${reason}`; connectBtn.removeAttribute("disabled"); try { ws?.close(); } catch { /* gone */ } },
+      getPassword: () => askInWindow(tf("password for {u}@{h}", { u: user, h: host }), true),
+      onClose: (reason) => { status.textContent = tf("closed — {reason}", { reason }); connectBtn.removeAttribute("disabled"); try { ws?.close(); } catch { /* gone */ } },
     }, user);
-    ws.addEventListener("open", () => { open = true; for (const b of queue) ws!.send(b as BufferSource); queue.length = 0; void session!.connect(cols, rows).catch((e: any) => { status.textContent = `failed — ${e?.message || e}`; connectBtn.removeAttribute("disabled"); }); });
+    ws.addEventListener("open", () => { open = true; for (const b of queue) ws!.send(b as BufferSource); queue.length = 0; void session!.connect(cols, rows).catch((e: any) => { status.textContent = tf("failed — {e}", { e: e?.message || e }); connectBtn.removeAttribute("disabled"); }); });
     ws.addEventListener("message", (ev) => { if (ev.data instanceof ArrayBuffer) session?.feed(new Uint8Array(ev.data)); });
-    ws.addEventListener("close", () => { if (session) status.textContent = "closed — the bridge let go."; connectBtn.removeAttribute("disabled"); });
-    ws.addEventListener("error", () => { status.textContent = "the bridge did not answer — the target may be unreachable or refused by the guard."; connectBtn.removeAttribute("disabled"); });
+    ws.addEventListener("close", () => { if (session) status.textContent = t("closed — the bridge let go."); connectBtn.removeAttribute("disabled"); });
+    ws.addEventListener("error", () => { status.textContent = t("the bridge did not answer — the target may be unreachable or refused by the guard."); connectBtn.removeAttribute("disabled"); });
   };
   connectBtn.addEventListener("click", connect);
   screenEl.addEventListener("keydown", (e) => {
@@ -1077,19 +1092,19 @@ function buildSystem(body: HTMLElement) {
   const liveCount = [...VERBS.values()].filter((v) => v.status === "LIVE").length;
   const edgeCount = [...VERBS.values()].filter((v) => v.status === "EDGE").length;
   const cells: Array<[string, string]> = [
-    [OS_RELEASE.version + " " + OS_RELEASE.codename, "RELEASE"],
-    [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, "WORKING VERBS — IN-ROOM + EDGE"],
-    ["642", "COMMANDS ON THE ROSTER"],
-    [`${vs.files}`, "FILES IN THE VFS"],
-    [`${(vs.bytes / 1024).toFixed(1)} KB`, "VFS CONTENT"],
-    [`${(lsBytes / 1024).toFixed(1)} KB`, "LOCAL STORAGE FOOTPRINT"],
-    [`${Math.floor((Date.now() - BOOT_AT) / 1000)}s`, "UPTIME (THIS BOOT)"],
-    [os.emcon.toUpperCase(), "EMCON CONDITION"],
+    [OS_RELEASE.version + " " + OS_RELEASE.codename, t("RELEASE")],
+    [`${liveCount + edgeCount} (${liveCount} + ${edgeCount})`, t("WORKING VERBS — IN-ROOM + EDGE")],
+    ["644", t("COMMANDS ON THE ROSTER")],
+    [`${vs.files}`, t("FILES IN THE VFS")],
+    [`${(vs.bytes / 1024).toFixed(1)} KB`, t("VFS CONTENT")],
+    [`${(lsBytes / 1024).toFixed(1)} KB`, t("LOCAL STORAGE FOOTPRINT")],
+    [`${Math.floor((Date.now() - BOOT_AT) / 1000)}s`, t("UPTIME (THIS BOOT)")],
+    [os.emcon.toUpperCase(), t("EMCON CONDITION")],
   ];
   for (const [v, k] of cells) { const c = el("div", "os-sys-stat"); c.append(el("strong", "", v), el("span", "", k)); stats.appendChild(c); }
-  const h = el("h3", "", "THE COMPONENT REGISTER");
+  const h = el("h3", "", t("THE COMPONENT REGISTER"));
   const table = el("table", "os-sys-table");
-  const head = el("tr"); head.append(el("th", "", "COMPONENT"), el("th", "", "WHAT IT IS"), el("th", "", "STATE"));
+  const head = el("tr"); head.append(el("th", "", t("COMPONENT")), el("th", "", t("WHAT IT IS")), el("th", "", t("STATE")));
   table.appendChild(head);
   const facts = { live: [...VERBS.values()].filter((v) => v.status === "LIVE").length, edge: [...VERBS.values()].filter((v) => v.status === "EDGE").length, emcon: os.emcon, skReady: typeof (window as any).Sk !== "undefined" };
   for (const [name, what, state] of registerRows(facts)) {
@@ -1098,49 +1113,49 @@ function buildSystem(body: HTMLElement) {
     tr.append(el("td", "", name), el("td", "", what), tdState);
     table.appendChild(tr);
   }
-  const note = el("p", "os-note", "The register is the WUCI OS discipline carried to the web: components are declared, budgets are visible, and limits are named instead of hidden. Run `posture` in the terminal for the room's graded self-assessment, `register` for this table as text.");
-  const refresh = el("button", "os-btn", "refresh the budgets");
+  const note = el("p", "os-note", t("The register is the WUCI OS discipline carried to the web: components are declared, budgets are visible, and limits are named instead of hidden. Run `posture` in the terminal for the room's graded self-assessment, `register` for this table as text."));
+  const refresh = el("button", "os-btn", t("refresh the budgets"));
   refresh.addEventListener("click", () => { body.innerHTML = ""; buildSystem(body); });
   const ah = el("h3", "", "AEGIS");
   const ast = os.aegisStatus();
   const astate = el("p", "os-note", ast.contained
-    ? "CONTAINED — the real filesystem is frozen. Everything written since the trip lives in the mirage: visible to whoever wrote it, weightless to the room. Restore, or lift and judge the mirage yourself."
-    : "Standing watch. Snapshots at boot, every five minutes, and at the first whisper of noise; bulk mutation, entropy runs, ransom-note shapes, and hands on the decoy files in ~/documents trip containment — and containment answers with a mirage.");
+    ? t("CONTAINED — the real filesystem is frozen. Everything written since the trip lives in the mirage: visible to whoever wrote it, weightless to the room. Restore, or lift and judge the mirage yourself.")
+    : t("Standing watch. Snapshots at boot, every five minutes, and at the first whisper of noise; bulk mutation, entropy runs, ransom-note shapes, and hands on the decoy files in ~/documents trip containment — and containment answers with a mirage."));
   if (ast.contained) astate.style.color = "var(--os-accent)";
   const ainfo = el("p", "os-note", `snapshots: ${ast.snaps.length ? ast.snaps.map((x) => `${new Date(x.at).toLocaleTimeString()} (${x.why})`).join(" · ") : "none"}\nrecovery point: ${ast.recovery ? `kept — ${new Date(ast.recoveryAt!).toLocaleTimeString()} (${ast.recoveryWhy})` : "NONE — no pre-incident snapshot survives"}${ast.trips.length ? `\ntrips: ${ast.trips.map((t) => t.reason).join(" · ")}` : ""}`);
   ainfo.style.whiteSpace = "pre-line";
   const arow = el("div", "os-sys-actions");
-  const snapBtn = el("button", "os-btn", "snapshot now");
+  const snapBtn = el("button", "os-btn", t("snapshot now"));
   snapBtn.addEventListener("click", () => { os.snapshotNow("manual"); body.innerHTML = ""; buildSystem(body); });
-  const restoreBtn = el("button", "os-btn", "restore last good snapshot");
+  const restoreBtn = el("button", "os-btn", t("restore last good snapshot"));
   restoreBtn.addEventListener("click", () => { os.aegisRestore(); body.innerHTML = ""; buildSystem(body); });
-  const liftBtn = el("button", "os-btn", "lift containment");
+  const liftBtn = el("button", "os-btn", t("lift containment"));
   liftBtn.addEventListener("click", () => { os.aegisLift(false); body.innerHTML = ""; buildSystem(body); });
   arow.append(snapBtn, restoreBtn, ...(ast.contained ? [liftBtn] : []));
   const ih = el("h3", "", "IVORY-TOWER");
   const ist = os.ivoryStatus();
   const istate = el("p", "os-note", ist.state === "watch"
-    ? "ON WATCH — drift was found that no hand in this room accounts for. AEGIS holds an ivory-watch snapshot; the next drift, a canary altered behind the funnel, or a tampered register trips containment."
-    : "Calm, and ticking. Every thirty seconds the tower hashes the whole room into one Merkle root, checks the decoy canaries by content, and fingerprints AEGIS's own register and the persistence registers — then asks whether the room's own hand did what it finds.");
+    ? t("ON WATCH — drift was found that no hand in this room accounts for. AEGIS holds an ivory-watch snapshot; the next drift, a canary altered behind the funnel, or a tampered register trips containment.")
+    : t("Calm, and ticking. Every thirty seconds the tower hashes the whole room into one Merkle root, checks the decoy canaries by content, and fingerprints AEGIS's own register and the persistence registers — then asks whether the room's own hand did what it finds."));
   if (ist.state === "watch") istate.style.color = "var(--os-accent)";
   const iinfo = el("p", "os-note", "observances: " + ist.ticks + " in the ledger · chain " + ist.chain + (ist.root ? "\nmerkle root: " + ist.root.slice(0, 32) + "…" : "") + (ist.lastAt ? "\nlast observance: " + new Date(ist.lastAt).toLocaleTimeString() + " (" + ist.lastTrigger + ")" : ""));
   iinfo.style.whiteSpace = "pre-line";
   const irow = el("div", "os-sys-actions");
-  const observeBtn = el("button", "os-btn", "observe now");
+  const observeBtn = el("button", "os-btn", t("observe now"));
   observeBtn.addEventListener("click", () => { os.ivoryObserveNow("manual"); body.innerHTML = ""; buildSystem(body); });
-  const verifyBtn = el("button", "os-btn", "verify the chain");
+  const verifyBtn = el("button", "os-btn", t("verify the chain"));
   verifyBtn.addEventListener("click", () => { const v = os.ivoryVerify(); document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: v.chainOk && v.rootOk ? "ivory-tower: the chain holds and the room hashes to its root." : "ivory-tower: verification FAILED — chain " + (v.chainOk ? "holds" : "broken at " + v.chainAt) + ", root " + (v.rootOk ? "matches" : "differs") + "." } })); });
   irow.append(observeBtn, verifyBtn);
   const th = el("h3", "", "TRIPWIRE");
   const tw = os.tripwireStatus();
   const tstate = el("p", "os-note", tw.state === "cut"
-    ? "CUT — " + tw.verdict + " The default defenses were restored and the room rebooted onto them; containment holds until you lift it."
-    : "Strung across the whole system. Every register the room keeps — AEGIS, the tower's ledger, the filesystem, macros, settings, the session, the Relay log, the phonehome callsign, the SIGINT registry and log, the sound state, the subconscious — is notarized here the moment its own hand writes it, and the storage surface itself is watched: a write to any of them by an unaccounted hand — a script, a macro, an intelligence in the room — is blocked on the spot. Tamper with the defenses and the accusation is recorded outside them, AEGIS and the tower restore their armed defaults, and the room reboots itself onto the restored defenses, once.");
+    ? "CUT — " + tw.verdict + " " + t("The default defenses were restored and the room rebooted onto them; containment holds until you lift it.")
+    : t("Strung across the whole system. Every register the room keeps — AEGIS, the tower's ledger, the filesystem, macros, settings, the session, the Relay log, the phonehome callsign, the SIGINT registry and log, the sound state, the subconscious — is notarized here the moment its own hand writes it, and the storage surface itself is watched: a write to any of them by an unaccounted hand — a script, a macro, an intelligence in the room — is blocked on the spot. Tamper with the defenses and the accusation is recorded outside them, AEGIS and the tower restore their armed defaults, and the room reboots itself onto the restored defenses, once."));
   if (tw.state === "cut") tstate.style.color = "var(--os-accent)";
   const tinfo = el("p", "os-note", "registers notarized: " + tw.registers + " · storage keys censused: " + tw.census + " · boots under this wire: " + tw.boots + (tw.events.length ? "\nthe wire's memory:\n" + tw.events.map((e) => "  " + new Date(e.at).toLocaleString() + "  " + e.kind + " — " + e.detail).join("\n") : ""));
   tinfo.style.whiteSpace = "pre-line";
   const trow = el("div", "os-sys-actions");
-  const integrityBtn = el("button", "os-btn", "verify integrity");
+  const integrityBtn = el("button", "os-btn", t("verify integrity"));
   integrityBtn.addEventListener("click", async () => {
     os.ivoryObserveNow("manual");
     const r = await os.verifyIntegrityFull();
@@ -1150,8 +1165,8 @@ function buildSystem(body: HTMLElement) {
   });
   trow.append(integrityBtn);
   const iline = el("p", "os-note", lastIntegrity
-    ? (lastIntegrity.ok ? "the checker last ran at " + new Date(lastIntegrity.at).toLocaleTimeString() + " — every line held." : "the checker last ran at " + new Date(lastIntegrity.at).toLocaleTimeString() + " — FAILED: " + lastIntegrity.failures.join("; ") + ".")
-    : "the checker has not run this visit. it re-reads the wire's seal, every register against the manifest, the census, the ledger chain, re-hashes the room, and hashes the launched system's own bytes against the seal the build stamped at launch — and warns you here and by toast if anything fails.");
+    ? (lastIntegrity.ok ? tf("the checker last ran at {at} — every line held.", { at: new Date(lastIntegrity.at).toLocaleTimeString() }) : tf("the checker last ran at {at} — FAILED: {f}.", { at: new Date(lastIntegrity.at).toLocaleTimeString(), f: lastIntegrity.failures.join("; ") }))
+    : t("the checker has not run this visit. it re-reads the wire's seal, every register against the manifest, the census, the ledger chain, re-hashes the room, and hashes the launched system's own bytes against the seal the build stamped at launch — and warns you here and by toast if anything fails."));
   if (lastIntegrity && !lastIntegrity.ok) iline.style.color = "var(--os-accent)";
   wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow, ih, istate, iinfo, irow, th, tstate, tinfo, trow, iline);
   body.appendChild(wrap);
@@ -1159,43 +1174,43 @@ function buildSystem(body: HTMLElement) {
 
 /* ---------------- Processes / Journal / Gauntlet / Settings / Help ---------------- */
 function buildProcesses(body: HTMLElement) {
-  const deskHead = el("div", "os-launch-head", "DESK PROCESSES");
+  const deskHead = el("div", "os-launch-head", t("DESK PROCESSES"));
   const desk = el("div", "os-desk-procs");
-  const shellHead = el("div", "os-launch-head", "SHELL PROCESSES");
+  const shellHead = el("div", "os-launch-head", t("SHELL PROCESSES"));
   const pre = el("pre", "os-plain");
   body.append(deskHead, desk, shellHead, pre);
   const render = () => {
     desk.innerHTML = "";
-    if (!deskProcs.size) desk.append(el("div", "os-desk-proc", "no windows stand open."));
+    if (!deskProcs.size) desk.append(el("div", "os-desk-proc", t("no windows stand open.")));
     for (const p of deskProcs.values()) {
       const life = (p.win as any)._life as LifeRec | undefined;
       const st = p.win.style.display === "none" ? "minimized" : life?.state === "suspended" ? "suspended" : p.win.classList.contains("focused") ? "focused" : "running";
       const row = el("div", "os-desk-proc");
-      row.append(el("span", "os-desk-proc-main", `${p.pid}  ${p.app} — ${st} · ${Math.floor((Date.now() - p.since) / 1000)}s`));
-      const go = el("button", "os-btn small", "focus");
+      row.append(el("span", "os-desk-proc-main", `${p.pid}  ${p.app} — ${t(st)} · ${Math.floor((Date.now() - p.since) / 1000)}s`));
+      const go = el("button", "os-btn small", t("focus"));
       go.addEventListener("click", () => { ensureBuilt(p.win); focusWindow(p.win); });
-      const kill = el("button", "os-btn small", "close");
+      const kill = el("button", "os-btn small", t("close"));
       kill.addEventListener("click", () => p.win.querySelector<HTMLElement>(".os-win-close")?.click());
       row.append(go, kill);
       desk.append(row);
     }
-    pre.textContent = ["  PID  STATE    ELAPSED  COMMAND", ...os.procs.slice(-30).map((p) => `${String(p.pid).padStart(5)}  ${p.state.padEnd(8)} ${String(Math.floor((Date.now() - p.started) / 1000)).padStart(6)}s  ${p.cmd}`)].join("\n") || "no processes yet.";
+    pre.textContent = [t("  PID  STATE    ELAPSED  COMMAND"), ...os.procs.slice(-30).map((p) => `${String(p.pid).padStart(5)}  ${p.state.padEnd(8)} ${String(Math.floor((Date.now() - p.started) / 1000)).padStart(6)}s  ${p.cmd}`)].join("\n") || t("no processes yet.");
   };
   render();
   const timer = setInterval(() => { if (!body.isConnected) { clearInterval(timer); return; } render(); }, 1000);
 }
 function buildJournal(body: HTMLElement) {
   const pre = el("pre", "os-plain");
-  const refresh = el("button", "os-btn", "refresh");
-  refresh.addEventListener("click", () => { pre.textContent = os.journal.map((j) => `${j.at}  ${j.text}`).join("\n") || "the journal is empty."; });
+  const refresh = el("button", "os-btn", t("refresh"));
+  refresh.addEventListener("click", () => { pre.textContent = os.journal.map((j) => `${j.at}  ${j.text}`).join("\n") || t("the journal is empty."); });
   body.append(refresh, pre);
   refresh.click();
 }
 function buildGauntlet(body: HTMLElement) {
   const outPane = el("div", "os-term-out");
   const row = el("div", "os-btnrow");
-  const runG = el("button", "os-btn primary", "RUN THE GAUNTLET");
-  const runD = el("button", "os-btn", "RUN DIAGNOSE");
+  const runG = el("button", "os-btn primary", t("RUN THE GAUNTLET"));
+  const runD = el("button", "os-btn", t("RUN DIAGNOSE"));
   row.append(runG, runD);
   body.append(row, outPane);
   const io: ShellIO = { print: (t, cls) => { const c = termCls(t, cls); if (c === "err") sfx("err"); const p = el("pre", "os-term-text" + (c ? ` ${c}` : "")); p.textContent = t; outPane.appendChild(p); }, clear: () => (outPane.innerHTML = ""), openApp, setWallpaper, setTheme: applyTheme };
@@ -1204,29 +1219,29 @@ function buildGauntlet(body: HTMLElement) {
 }
 function buildSettings(body: HTMLElement) {
   const wrap = el("div", "os-settings");
-  const themeTitle = el("h3", "", "Theme");
+  const themeTitle = el("h3", "", t("Theme"));
   const themeRow = el("div", "os-btnrow");
   themeRow.appendChild(el("span", "os-btn primary", "thinice — current"));
-  const bootTitle = el("h3", "", "Boot screen");
+  const bootTitle = el("h3", "", t("Boot screen"));
   const bootRow = el("div", "os-btnrow");
   for (const style of ["thinice", "classic"] as const) {
-    const b = el("button", "os-btn" + (preferredBootStyle(skey(BOOT_STYLE_KEY)) === style ? " primary" : ""), style === "thinice" ? "thinice — frost" : "classic — original");
+    const b = el("button", "os-btn" + (preferredBootStyle(skey(BOOT_STYLE_KEY)) === style ? " primary" : ""), style === "thinice" ? t("thinice — frost") : t("classic — original"));
     b.type = "button";
     b.setAttribute("aria-pressed", String(preferredBootStyle(skey(BOOT_STYLE_KEY)) === style));
     b.addEventListener("click", () => { rememberBootStyle(style, skey(BOOT_STYLE_KEY)); buildSettingsRefresh(body); });
     bootRow.appendChild(b);
   }
-  const bootNote = el("p", "os-note", "Applies on the next boot. Enter or Escape skips the sequence. Add ?boot=classic or ?boot=thinice to the URL for a one-time override.");
+  const bootNote = el("p", "os-note", t("Applies on the next boot. Enter or Escape skips the sequence. Add ?boot=classic or ?boot=thinice to the URL for a one-time override."));
   const emconTitle = el("h3", "", "EMCON");
   const emconRow = el("div", "os-btnrow");
   for (const c of ["open", "charlie", "bravo", "alpha"] as const) { const b = el("button", "os-btn" + (os.emcon === c ? " primary" : ""), c.toUpperCase()); b.addEventListener("click", () => { if (os.emcon !== c) { os.emcon = c; os.saveSoon(); updateEmconChip(); sfx(c === "alpha" ? "deny" : "beep"); } buildSettingsRefresh(body); }); emconRow.appendChild(b); }
-  const wpTitle = el("h3", "", "Wallpaper");
+  const wpTitle = el("h3", "", t("Wallpaper"));
   const wpRow = el("div", "os-btnrow");
   {
     const b = el("button", "os-wp-thumb");
     const img = document.createElement("img");
     img.src = "/monolith.webp"; img.alt = ""; img.className = "os-wp-canvas"; img.loading = "lazy";
-    b.append(img, el("span", "", "monolith"));
+    b.append(img, el("span", "", t("monolith")));
     b.addEventListener("click", () => setWallpaper("monolith"));
     wpRow.appendChild(b);
   }
@@ -1234,59 +1249,69 @@ function buildSettings(body: HTMLElement) {
     const b = el("button", "os-wp-thumb");
     const img = document.createElement("img");
     img.src = "/nightmare.webp"; img.alt = ""; img.className = "os-wp-canvas"; img.loading = "lazy";
-    b.append(img, el("span", "", "nightmare"));
+    b.append(img, el("span", "", t("nightmare")));
     b.addEventListener("click", () => setWallpaper("mare"));
     wpRow.appendChild(b);
   }
   for (const w of ["stars", "plasma", "mandelbrot"]) {
     const b = el("button", "os-wp-thumb");
     const thumb = paintWallpaper(w, 132, 82); thumb.className = "os-wp-canvas";
-    const label = el("span", "", w);
+    const label = el("span", "", t(w));
     b.append(thumb, label);
     b.addEventListener("click", () => setWallpaper(w));
     wpRow.appendChild(b);
   }
-  { const b = el("button", "os-btn", "none — bare black"); b.addEventListener("click", () => setWallpaper("none")); wpRow.appendChild(b); }
-  const soundTitle = el("h3", "", "Sound");
+  { const b = el("button", "os-btn", t("none — bare black")); b.addEventListener("click", () => setWallpaper("none")); wpRow.appendChild(b); }
+  const soundTitle = el("h3", "", t("Sound"));
   const soundRow = el("div", "os-btnrow");
   {
     const sp = soundPrefs();
-    const sToggle = el("button", "os-btn" + (sp.enabled ? " primary" : ""), sp.enabled ? "sound ON" : "sound OFF");
+    const sToggle = el("button", "os-btn" + (sp.enabled ? " primary" : ""), sp.enabled ? t("sound ON") : t("sound OFF"));
     sToggle.addEventListener("click", () => { setSoundPrefs({ enabled: !soundPrefs().enabled }); if (soundPrefs().enabled) { armAudio(); sfx("open"); } buildSettingsRefresh(body); });
     const vol = document.createElement("input");
     vol.type = "range"; vol.min = "0"; vol.max = "100"; vol.value = String(Math.round(sp.volume * 100));
-    vol.setAttribute("aria-label", "sound volume");
+    vol.setAttribute("aria-label", t("sound volume"));
     vol.style.accentColor = "var(--os-accent)";
     vol.addEventListener("input", () => setSoundPrefs({ volume: Number(vol.value) / 100 }));
     vol.addEventListener("change", () => { armAudio(); sfx("ping"); });
-    const sTest = el("button", "os-btn", "test the voice");
+    const sTest = el("button", "os-btn", t("test the voice"));
     sTest.addEventListener("click", () => { armAudio(); sfx("live"); });
     soundRow.append(sToggle, vol, sTest);
   }
-  const soundNote = el("p", "os-note", "Every sound is synthesized in this tab — oscillators and filtered noise, no audio files. The browser forbids sound before your first click or keypress, so the room arms then. EMCON alpha silences the voice entirely, whatever the toggle says.");
-  const dangerTitle = el("h3", "", "The reset");
-  const resetBtn = el("button", "os-btn danger", "FACTORY RESET THE ROOM (wipes files, macros, settings)");
-  resetBtn.addEventListener("click", () => { if (confirm("Wipe the room back to first boot?")) { os.reset(); applyTheme(os.theme); updateEmconChip(); window.location.reload(); } });
-  const note = el("p", "os-note", "Files live in this browser's storage. A cleared browser is a wiped room. EMCON gates every wire verb: bravo refuses active probes, alpha refuses the wire entirely — try it, the refusals speak.");
-  wrap.append(themeTitle, themeRow, bootTitle, bootRow, bootNote, emconTitle, emconRow, wpTitle, wpRow, soundTitle, soundRow, soundNote, dangerTitle, resetBtn, note);
+  const soundNote = el("p", "os-note", t("Every sound is synthesized in this tab — oscillators and filtered noise, no audio files. The browser forbids sound before your first click or keypress, so the room arms then. EMCON alpha silences the voice entirely, whatever the toggle says."));
+  const langTitleEl = el("h3", "", t("Language"));
+  const langRow = el("div", "os-btnrow");
+  for (const [code, label] of [["en", "English"], ["ja", "日本語"]] as Array<["en" | "ja", string]>) {
+    const b = el("button", "os-btn" + (lang() === code ? " primary" : ""), label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(lang() === code));
+    b.addEventListener("click", () => { setLang(code); buildSettingsRefresh(body); });
+    langRow.appendChild(b);
+  }
+  const langNote = el("p", "os-note", t("The room's own tongue: the desk, the windows, help, the roster and the toolchest. Program output, file contents and the wire's words are data, and are never translated."));
+  const dangerTitle = el("h3", "", t("The reset"));
+  const resetBtn = el("button", "os-btn danger", t("FACTORY RESET THE ROOM (wipes files, macros, settings)"));
+  resetBtn.addEventListener("click", () => { if (confirm(t("Wipe the room back to first boot?"))) { os.reset(); applyTheme(os.theme); updateEmconChip(); window.location.reload(); } });
+  const note = el("p", "os-note", t("Files live in this browser's storage. A cleared browser is a wiped room. EMCON gates every wire verb: bravo refuses active probes, alpha refuses the wire entirely — try it, the refusals speak."));
+  wrap.append(themeTitle, themeRow, bootTitle, bootRow, bootNote, emconTitle, emconRow, wpTitle, wpRow, soundTitle, soundRow, soundNote, langTitleEl, langRow, langNote, dangerTitle, resetBtn, note);
   body.appendChild(wrap);
 }
 function buildSettingsRefresh(body: HTMLElement) { body.innerHTML = ""; buildSettings(body); }
 function buildHelp(body: HTMLElement) {
   const search = document.createElement("input");
   search.className = "os-help-search";
-  search.placeholder = "search the 642 — try 'smtp', 'modbus', 'jwt'…";
+  search.placeholder = t("search the 644 — try 'smtp', 'modbus', 'jwt'…");
   const listEl = el("div", "os-help-list");
   body.append(search, listEl);
   const render = (q: string) => {
     listEl.innerHTML = "";
-    const rows = (roster as any[]).filter((r) => !q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || r.section.includes(q));
-    const head = el("p", "os-note", `${rows.length} of 642 commands · status is this room's honest standing`);
+    const rows = (roster as any[]).filter((r) => !q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || (r.descJa || "").includes(q) || r.section.includes(q));
+    const head = el("p", "os-note", tf("{n} of 644 commands · status is this room's honest standing", { n: rows.length }));
     listEl.appendChild(head);
     for (const r of rows.slice(0, 150)) {
       const status = VERBS.get(r.verb)?.status || "LIMIT";
       const row = el("div", "os-help-row");
-      row.append(el("span", `os-status ${status.toLowerCase()}`, status), el("code", "", r.cmd), el("span", "os-help-desc", r.desc));
+      row.append(el("span", `os-status ${status.toLowerCase()}`, status), el("code", "", r.cmd), el("span", "os-help-desc", rosterDesc(r)));
       listEl.appendChild(row);
     }
   };
@@ -1315,34 +1340,42 @@ const TOOLCHEST_SETS: Array<[string, string, string]> = [
   ["signals", "signals", "POSIX signals"],
   ["errno", "errno", "Linux error numbers"],
 ];
+/* Which columns of each registry are prose, and so read in
+   Japanese from the companion tables under /toolchest-ja/ when the
+   room's language is Japanese. Every other column — names, numbers,
+   codes, identifiers — is registered data and is never translated. */
+const JA_SET_COLS: Record<string, number[]> = {
+  http: [2], errno: [2], signals: [2, 3], dnstypes: [1], protocols: [2], magic: [2],
+};
 function buildToolchest(body: HTMLElement) {
   const search = document.createElement("input");
   search.className = "os-help-search";
-  search.placeholder = "search the chest — try 'subnet', 'ssh', 'mime', 'ports'…";
+  search.placeholder = t("search the chest — try 'subnet', 'ssh', 'mime', 'ports'…");
   const cats = el("div", "os-btnrow");
   const listEl = el("div", "os-help-list");
   body.append(search, cats, listEl);
   let active = "network tools";
   const setCache = new Map<string, any[]>();
+  const setJaCache = new Map<string, Array<string[] | null> | null>();
   const runInTerminal = (cmd: string) => {
     openApp("terminal");
     setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: cmd })), 60);
   };
   const renderVerbs = (q: string) => {
     listEl.innerHTML = "";
-    const rs = (roster as any[]).filter((r) => r.section === active && (!q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q)));
-    listEl.appendChild(el("p", "os-note", `${rs.length} tools · click a row and it runs in the terminal`));
+    const rs = (roster as any[]).filter((r) => r.section === active && (!q || r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || (r.descJa || "").includes(q)));
+    listEl.appendChild(el("p", "os-note", tf("{n} tools · click a row and it runs in the terminal", { n: rs.length })));
     for (const r of rs.slice(0, 200)) {
       const status = VERBS.get(r.verb)?.status || "LIMIT";
       const row = el("div", "os-help-row");
-      row.append(el("span", `os-status ${status.toLowerCase()}`, status), el("code", "", r.cmd), el("span", "os-help-desc", r.desc));
+      row.append(el("span", `os-status ${status.toLowerCase()}`, status), el("code", "", r.cmd), el("span", "os-help-desc", rosterDesc(r)));
       row.addEventListener("click", () => runInTerminal(r.verb));
       listEl.appendChild(row);
     }
   };
   const renderSet = async (q: string) => {
     listEl.innerHTML = "";
-    listEl.appendChild(el("p", "os-note", "loading the registry…"));
+    listEl.appendChild(el("p", "os-note", t("loading the registry…")));
     let rs = setCache.get(active);
     if (!rs) {
       try {
@@ -1352,20 +1385,38 @@ function buildToolchest(body: HTMLElement) {
         setCache.set(active, rs);
       } catch {
         listEl.innerHTML = "";
-        listEl.appendChild(el("p", "os-note", `the ${active} registry could not be loaded — it ships with the site as /toolchest/${active}.json.`));
+        listEl.appendChild(el("p", "os-note", tf("the {id} registry could not be loaded — it ships with the site as /toolchest/{id}.json.", { id: active })));
         return;
+      }
+    }
+    /* In Japanese the prose columns of a registry read from the
+       companion table (/toolchest-ja/<id>.json, rows parallel to
+       the dataset's): names, numbers and identifiers are the data
+       and stay exactly as registered. A dataset with no companion
+       reads in English, as registered. */
+    let ja: Array<string[] | null> | null = null;
+    if (lang() === "ja" && JA_SET_COLS[active]) {
+      ja = setJaCache.get(active) ?? null;
+      if (!setJaCache.has(active)) {
+        try {
+          const res = await fetch(`/toolchest-ja/${active}.json`);
+          if (res.ok) { ja = (await res.json()) as Array<string[] | null>; setJaCache.set(active, ja); }
+          else setJaCache.set(active, null);
+        } catch { setJaCache.set(active, null); }
       }
     }
     const hits = q ? rs.filter((r) => JSON.stringify(r).toLowerCase().includes(q)) : rs;
     listEl.innerHTML = "";
-    listEl.appendChild(el("p", "os-note", `${hits.length} of ${rs.length} entries`));
+    listEl.appendChild(el("p", "os-note", tf("{a} of {b} entries", { a: hits.length, b: rs.length })));
     for (const r of hits.slice(0, 200)) {
       const row = el("div", "os-help-row");
       const cells = (r as any[]).map((c) => Array.isArray(c) ? c.join(", ") : String(c));
+      const jr = ja?.[rs.indexOf(r)];
+      if (jr) JA_SET_COLS[active].forEach((col, i) => { if (jr[i]) cells[col] = jr[i]; });
       row.append(el("code", "", cells[0]), el("span", "os-help-desc", cells.slice(1).join(" — ")));
       listEl.appendChild(row);
     }
-    if (hits.length > 200) listEl.appendChild(el("p", "os-note", `… and ${hits.length - 200} more — narrow the search`));
+    if (hits.length > 200) listEl.appendChild(el("p", "os-note", tf("… and {n} more — narrow the search", { n: hits.length - 200 })));
   };
   const render = () => {
     const q = search.value.trim().toLowerCase();
@@ -1373,14 +1424,15 @@ function buildToolchest(body: HTMLElement) {
     else renderVerbs(q);
   };
   const chips: HTMLButtonElement[] = [];
-  const chip = (id: string, label: string) => {
+  const chip = (id: string, label: string, intro?: string) => {
     const b = el("button", "os-btn" + (active === id ? " primary" : ""), label) as HTMLButtonElement;
+    if (intro) b.title = intro;
     b.addEventListener("click", () => { active = id; for (const c of chips) c.className = "os-btn"; b.className = "os-btn primary"; render(); });
     chips.push(b);
     return b;
   };
-  for (const s of ["network tools", "admin tools", "data tools"]) cats.appendChild(chip(s, s.replace(" tools", "")));
-  for (const [id, label] of TOOLCHEST_SETS) cats.appendChild(chip(id, label));
+  for (const s of ["network tools", "admin tools", "data tools"]) cats.appendChild(chip(s, t(s.replace(" tools", ""))));
+  for (const [id, label, intro] of TOOLCHEST_SETS) cats.appendChild(chip(id, t(label), t(intro)));
   search.addEventListener("input", render);
   render();
 }
@@ -1404,7 +1456,7 @@ function buildGamesFolder(body: HTMLElement) {
     const meta = APPS[app];
     if (!meta) continue;
     const b = el("button", "os-icon");
-    b.append(iconEl(meta.icon, "os-icon-glyph"), el("span", "os-icon-label", label));
+    b.append(iconEl(meta.icon, "os-icon-glyph"), el("span", "os-icon-label", t(label)));
     b.addEventListener("click", () => openApp(app));
     wrap.appendChild(b);
   }
@@ -1419,7 +1471,7 @@ function buildForensicsFolder(body: HTMLElement) {
     const meta = APPS[app];
     if (!meta) continue;
     const b = el("button", "os-icon");
-    b.append(iconEl(meta.icon, "os-icon-glyph"), el("span", "os-icon-label", label));
+    b.append(iconEl(meta.icon, "os-icon-glyph"), el("span", "os-icon-label", t(label)));
     b.addEventListener("click", () => openApp(app));
     wrap.appendChild(b);
   }
@@ -1446,6 +1498,7 @@ const BUILDERS: Record<string, (body: HTMLElement, arg?: string) => void> = {
   fxmail: (body, arg) => buildMailLab(body, os, arg),
   toolchest: buildToolchest,
   chip8: buildChip8,
+  ruby: (body, arg) => buildRubyApp(body, os, arg),
   ssh: buildSsh,
   relay: (body) => buildRelayApp(body, os),
   phantom: buildPhantomApp,
@@ -1545,6 +1598,32 @@ function paintWallpaper(kind: string, W: number, H: number): HTMLCanvasElement {
   g.fillStyle = vig; g.fillRect(0, 0, W, H);
   return canvas;
 }
+/* The desktop icons, built by one hand so boot and a language
+   switch draw the same desk. The ruby room stands with the engines:
+   after the CHIP-8 console, before the wire rooms. */
+function buildDesktopIcons() {
+  const icons = document.getElementById("os-icons")!;
+  icons.innerHTML = "";
+  const defs: Array<[string, string, string]> = [
+    ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["forensics", "forensics", "Forensics"], ["files", "files", "files"], ["editor", "editor", "editor"],
+    ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
+    ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
+    ["chip8", "chip8", "CHIP-8"], ["ruby", "ruby", "ruby"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["phonehome", "phonehome", "phonehome"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
+    ["orc", "orc", "orc"],
+  ];
+  for (const [app, icon, label] of defs) {
+    const b = el("button", "os-icon");
+    b.append(iconEl(icon, "os-icon-glyph"), el("span", "os-icon-label", t(label)));
+    b.addEventListener("dblclick", () => openApp(app, app === "editor" ? os.norm(`${os.cwd}/notes.txt`) : undefined));
+    b.addEventListener("click", () => openApp(app, app === "editor" ? os.norm(`${os.cwd}/notes.txt`) : undefined));
+    icons.appendChild(b);
+  }
+  const suiteIcon = el("button", "os-icon");
+  suiteIcon.append(iconEl("bench", "os-icon-glyph"), el("span", "os-icon-label", t("bench")));
+  suiteIcon.addEventListener("click", () => { sfx("send"); window.location.href = "/bench/"; });
+  icons.appendChild(suiteIcon);
+}
+
 function updateEmconChip() {
   const chip = document.getElementById("os-emcon-chip");
   if (chip) { chip.textContent = `EMCON ${os.emcon.toUpperCase()}`; chip.dataset.level = os.emcon; }
@@ -1617,7 +1696,7 @@ function startUpdateWatch(): void {
     dropToast();
     const bar = document.createElement("div");
     bar.className = "os-update-bar";
-    bar.textContent = "BLACKSITE has been updated — reloading onto the new build…";
+    bar.textContent = t("BLACKSITE has been updated — reloading onto the new build…");
     document.body.appendChild(bar);
     setTimeout(() => location.reload(), 3500);
   };
@@ -1630,7 +1709,7 @@ function startUpdateWatch(): void {
       // A nexuiz window restored minimized and never opened holds no
       // game (it was never built), so it does not hold the update.
       holdMode = "wait"; deadline = 0;
-      showToast("server is about to refresh for an update… waiting for haxiuz to close.");
+      showToast(t("server is about to refresh for an update… waiting for haxiuz to close."));
       return;
     }
     if (windows.size > 0) {
@@ -1638,7 +1717,7 @@ function startUpdateWatch(): void {
       const left = deadline - Date.now();
       if (left <= 0) { takeUpdate(); return; }
       const s = Math.ceil(left / 1000);
-      showToast(`server is about to refresh for an update… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} remaining.`);
+      showToast(tf("server is about to refresh for an update… {t} remaining.", { t: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` }));
       return;
     }
     takeUpdate(); // a bare desk takes the update at once
@@ -1684,7 +1763,9 @@ function boot() {
   registerBottleVerbs();
   registerPhonehomeVerbs();
   registerForensicsVerbs();
+  registerRubyVerbs();
   registerLimitReasons();
+  initLang();
   applyTheme(os.theme);
   document.addEventListener("pointerdown", armAudio);
   document.addEventListener("keydown", armAudio);
@@ -1694,13 +1775,13 @@ function boot() {
   const overlay = document.getElementById("os-boot")!;
   const lines = [
     "NIGHTWARE LABZ BIOS — blacksite web firmware 2.0 · NOETHER",
-    "memory: the browser provides · storage: local, yours",
-    DEPTH === 0 ? "kernel: blacksite sh · vfs: mounted (persistent, this browser)" : `kernel: blacksite sh · vfs: mounted (volatile — nest ${DEPTH} of ${MAX_NEST} keeps nothing)`,
-    `engines: javascript native · python skulpt · verbs: ${[...VERBS.values()].filter((v) => v.status !== "LIMIT").length} working of 642 on the roster`,
+    t("memory: the browser provides · storage: local, yours"),
+    DEPTH === 0 ? t("kernel: blacksite sh · vfs: mounted (persistent, this browser)") : tf("kernel: blacksite sh · vfs: mounted (volatile — nest {d} of {m} keeps nothing)", { d: DEPTH, m: MAX_NEST }),
+    tf("engines: javascript native · python skulpt · ruby wasm · verbs: {n} working of 644 on the roster", { n: [...VERBS.values()].filter((v) => v.status !== "LIMIT").length }),
     `emcon: ${os.emcon.toUpperCase()} · theme: ${os.theme}`,
-    "doctrine loaded: one knock, read, grade.",
+    t("doctrine loaded: one knock, read, grade."),
     "",
-    "BLACKSITE IS NOW LIVE",
+    t("BLACKSITE IS NOW LIVE"),
   ];
   startBootSequence({
     overlay, lines, depth: DEPTH, emcon: os.emcon, storageKey: skey(BOOT_STYLE_KEY),
@@ -1726,26 +1807,7 @@ function boot() {
       if (h && APPS[h]) openApp(h);
     },
   });
-  // desktop icons
-  const icons = document.getElementById("os-icons")!;
-  const defs: Array<[string, string, string]> = [
-    ["terminal", "terminal", "terminal"], ["games", "games", "games"], ["forensics", "forensics", "Forensics"], ["files", "files", "files"], ["editor", "editor", "editor"],
-    ["processes", "processes", "processes"], ["gauntlet", "gauntlet", "gauntlet"], ["journal", "journal", "journal"],
-    ["help", "help", "help"], ["settings", "settings", "settings"], ["bottle", "bottle", "bottle"], ["system", "system", "system"],
-    ["chip8", "chip8", "CHIP-8"], ["ssh", "ssh", "ssh"], ["sigint", "sigint", "sigint bench"], ["phonehome", "phonehome", "phonehome"], ["toolchest", "toolchest", "toolchest"], ["relay", "relay", "relaychat"], ["phantom", "phantom", "phantom"],
-    ["orc", "orc", "orc"],
-  ];
-  for (const [app, icon, label] of defs) {
-    const b = el("button", "os-icon");
-    b.append(iconEl(icon, "os-icon-glyph"), el("span", "os-icon-label", label));
-    b.addEventListener("dblclick", () => openApp(app, app === "editor" ? os.norm(`${os.cwd}/notes.txt`) : undefined));
-    b.addEventListener("click", () => openApp(app, app === "editor" ? os.norm(`${os.cwd}/notes.txt`) : undefined));
-    icons.appendChild(b);
-  }
-  const suiteIcon = el("button", "os-icon");
-  suiteIcon.append(iconEl("bench", "os-icon-glyph"), el("span", "os-icon-label", "bench"));
-  suiteIcon.addEventListener("click", () => { sfx("send"); window.location.href = "/bench/"; });
-  icons.appendChild(suiteIcon);
+  buildDesktopIcons();
   // clock
   const clock = document.getElementById("os-clock")!;
   const tickClock = () => { const narrow = window.matchMedia("(max-width: 760px)").matches; clock.textContent = new Date().toLocaleTimeString([], narrow ? { hour: "2-digit", minute: "2-digit" } : { hour: "2-digit", minute: "2-digit", second: "2-digit" }); };
@@ -1800,6 +1862,44 @@ function boot() {
     isOpen: (app) => windows.has(app),
     appIds: () => Object.keys(APPS),
   });
+  window.addEventListener("blacksite:langchange", relangChrome);
+  relangChrome();
+}
+
+/* ——— the language switch, answered ———
+   The desk changes tongue without a reload: the root takes the
+   Japanese font class, the icons are redrawn, every open window's
+   head and taskbar button re-speak their titles, and the stateless
+   chrome rooms (the folders, settings, help, the toolchest) are
+   rebuilt whole in the new language. Stateful rooms keep the body
+   they were built in until they are opened again — the language
+   register's standing rule, stated in os-i18n.ts. */
+function relangChrome() {
+  const r = root();
+  r.classList.toggle("os-ja-root", lang() === "ja");
+  r.setAttribute("lang", lang());
+  buildDesktopIcons();
+  document.getElementById("os-winmenu-btn")?.setAttribute("title", t("open windows"));
+  for (const [key, win] of windows) {
+    const app = key.split(":")[0];
+    const meta = APPS[app];
+    if (!meta) continue;
+    const life = (win as any)._life as LifeRec | undefined;
+    const titleEl = win.querySelector<HTMLElement>(".os-win-title");
+    if (titleEl) titleEl.replaceChildren(iconEl(meta.icon, "os-win-icon"), document.createTextNode(appTitle(app) + (app === "editor" && life?.arg ? ` — ${life.arg}` : "")));
+    const btns = win.querySelectorAll<HTMLElement>(".os-win-btn");
+    btns[0]?.setAttribute("aria-label", t("Minimize"));
+    btns[1]?.setAttribute("aria-label", t("Maximize"));
+    btns[2]?.setAttribute("aria-label", t("Close"));
+    const tb = document.querySelector<HTMLElement>(`[data-task="${CSS.escape(key)}"]`);
+    if (tb) tb.replaceChildren(iconEl(meta.icon, "os-task-icon"), document.createTextNode(appTitle(app)));
+    if (life?.built && ["games", "forensics", "settings", "help", "toolchest"].includes(app)) {
+      const body = win.querySelector<HTMLElement>(".os-win-body");
+      if (body) { body.innerHTML = ""; BUILDERS[app]?.(body); }
+    }
+  }
+  if (winMenuEl) toggleWinMenu();
+  if (launcherEl) { closeLauncher(false); openLauncher(); }
 }
 
 /* ---------------- toasts + the start launcher ---------------- */
@@ -1852,27 +1952,27 @@ function openLauncher() {
   const desk = desktop();
   const box = el("div", "os-launcher");
   const input = document.createElement("input");
-  input.placeholder = "launch an app, or type a command and press Enter…";
+  input.placeholder = t("launch an app, or type a command and press Enter…");
   input.setAttribute("aria-label", "Launcher");
   const list = el("div", "os-launcher-list");
   box.append(input, list);
   desk.appendChild(box);
   launcherEl = box;
   let selected = 0;
-  const appDefs: Array<[string, string, string]> = Object.entries(APPS).filter(([k]) => !GAME_KEYS.has(k) && !FORENSICS_KEYS.has(k)).map(([k, v]) => [k, v.title, v.icon]);
+  const appDefs: Array<[string, string, string]> = Object.entries(APPS).filter(([k]) => !GAME_KEYS.has(k) && !FORENSICS_KEYS.has(k)).map(([k, v]) => [k, t(v.title), v.icon]);
   const render = () => {
     list.innerHTML = "";
     const q = input.value.trim().toLowerCase();
     const items: Array<{ label: string; small: string; icon?: string; section?: string; go: () => void }> = [];
-    for (const [key, label, icon] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: "APP", icon, section: "APPS", go: () => openApp(key) });
+    for (const [key, label, icon] of appDefs) if (!q || label.toLowerCase().includes(q)) items.push({ label, small: t("APP"), icon, section: t("APPS"), go: () => openApp(key) });
     if (!q) {
-      items.push({ label: "tile all windows", small: "ACTION", icon: "grid", section: "ACTIONS", go: tileWindows });
-      items.push({ label: "cascade all windows", small: "ACTION", icon: "system", section: "ACTIONS", go: cascadeWindows });
-      items.push({ label: "close all windows", small: "ACTION", icon: "gauntlet", section: "ACTIONS", go: closeAllWindows });
+      items.push({ label: t("tile all windows"), small: t("ACTION"), icon: "grid", section: t("ACTIONS"), go: tileWindows });
+      items.push({ label: t("cascade all windows"), small: t("ACTION"), icon: "system", section: t("ACTIONS"), go: cascadeWindows });
+      items.push({ label: t("close all windows"), small: t("ACTION"), icon: "gauntlet", section: t("ACTIONS"), go: closeAllWindows });
     }
     if (q) {
       const cmdItems: Array<{ label: string; small: string; section?: string; go: () => void }> = [];
-      for (const [name, def] of VERBS) if (name.includes(q)) cmdItems.push({ label: `▸_ ${name}`, small: def.status, section: "COMMANDS — ENTER RUNS IN THE TERMINAL", go: () => { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: name })), 60); } });
+      for (const [name, def] of VERBS) if (name.includes(q)) cmdItems.push({ label: `▸_ ${name}`, small: def.status, section: t("COMMANDS — ENTER RUNS IN THE TERMINAL"), go: () => { openApp("terminal"); setTimeout(() => document.dispatchEvent(new CustomEvent("blacksite:run", { detail: name })), 60); } });
       items.push(...cmdItems.slice(0, 8));
     }
     let lastSection = "";
@@ -1892,6 +1992,7 @@ function openLauncher() {
   };
   input.addEventListener("input", () => { selected = 0; render(); });
   input.addEventListener("keydown", (e) => {
+    if (e.isComposing) return;
     const items = (box as any)._items as Array<{ go: () => void }> || [];
     if (e.key === "ArrowDown") { e.preventDefault(); selected = Math.min(items.length - 1, selected + 1); render(); }
     else if (e.key === "ArrowUp") { e.preventDefault(); selected = Math.max(0, selected - 1); render(); }

@@ -18,6 +18,7 @@
  * frame-src https: (see public/_headers). */
 
 import { DEPTH, MAX_NEST } from "./os-depth";
+import { t, tf } from "./os-i18n";
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -33,16 +34,16 @@ export function buildOrc(body: HTMLElement, arg?: string) {
   face.src = "/orc/orc-256.png";
   face.alt = "orc";
   const heroText = el("div");
-  heroText.append(el("h3", "", "ORC"));
+  heroText.append(el("h3", "", t("ORC")));
   hero.append(face, heroText);
   const bar = el("div", "os-files-bar");
   const addr = document.createElement("input");
   addr.className = "os-bottle-input";
   addr.style.flex = "1";
   addr.setAttribute("aria-label", "Address");
-  addr.placeholder = "address or search";
-  const go = el("button", "os-btn", "go");
-  const lens = el("button", "os-btn", "lens");
+  addr.placeholder = t("address or search");
+  const go = el("button", "os-btn", t("go"));
+  const lens = el("button", "os-btn", t("lens"));
   const get = el("a", "os-btn", "get orc");
   get.setAttribute("href", "https://github.com/nightwarelabz/orc/releases/latest");
   get.setAttribute("target", "_blank");

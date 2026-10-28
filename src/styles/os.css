@@ -115,6 +115,27 @@
 .os-emcon-chip[data-level="alpha"] { color: #ff848c; border-color: #7a2027; }
 .os-clock { font-size: 0.7rem; color: var(--os-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+/* the ruby room */
+.os-ruby { display: flex; flex-direction: column; gap: 0.55rem; height: 100%; }
+.os-ruby-bar { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.os-ruby-path { flex: 1 1 12rem; background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line); border-radius: 3px; font: inherit; font-size: 0.77rem; padding: 0.4rem 0.55rem; }
+.os-ruby-edrow { display: flex; flex: 1 1 40%; min-height: 8rem; border: 1px solid var(--os-line-soft); border-radius: 3px; background: #03050a; overflow: hidden; }
+.os-ruby-gutter { margin: 0; padding: 0.6rem 0.45rem; text-align: right; color: var(--os-muted); font-size: 0.76rem; line-height: 1.55; overflow: hidden; user-select: none; border-right: 1px solid var(--os-line-soft); }
+.os-ruby-area { flex: 1; background: transparent; color: var(--os-ink); border: 0; font: inherit; font-size: 0.79rem; line-height: 1.55; padding: 0.6rem; resize: none; white-space: pre; overflow: auto; }
+.os-ruby-area:focus { outline: 1px solid var(--os-accent); }
+.os-ruby-out { flex: 1 1 30%; min-height: 5rem; margin: 0; overflow: auto; background: #03050a; border: 1px solid var(--os-line-soft); border-radius: 3px; padding: 0.6rem; font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.os-ruby-err { color: var(--os-bad, #ff7a7a); }
+.os-ruby-inrow { display: flex; gap: 0.45rem; align-items: center; }
+.os-ruby-inlabel { color: var(--os-muted); font-size: 0.77rem; }
+.os-ruby-inline { flex: 1; background: #03050a; color: var(--os-ink); border: 1px solid var(--os-line); border-radius: 3px; font: inherit; font-size: 0.77rem; padding: 0.4rem 0.55rem; }
+
+/* Japanese rendering: the platform's own Japanese faces — no
+   webfont is ever downloaded. Applies to everything the OS draws
+   while ja is the room's tongue (os.ts stamps .os-ja-root). */
+.os-ja-root, .os-ja-root input, .os-ja-root textarea, .os-ja-root select, .os-ja-root button {
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", sans-serif;
+}
+
 /* ————— terminal ————— */
 .os-term-body { display: flex; flex-direction: column; overflow: hidden; }
 .os-term-out { flex: 1; overflow-y: auto; padding-right: 4px; }

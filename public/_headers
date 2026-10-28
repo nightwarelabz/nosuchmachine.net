@@ -51,6 +51,16 @@
   Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
   Cross-Origin-Embedder-Policy: require-corp
 
+# ruby: the CRuby worker and the interpreter wasm it hosts. The
+# worker is spawned from the OS scope, so its script must carry the
+# embedder policy itself (require-corp refuses a worker whose
+# response does not), and the subtree needs wasm evaluation like
+# every other engine subtree.
+/ruby/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' wss:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Cross-Origin-Embedder-Policy: require-corp
+
 # wolf3d: the js-dos player and the DOSBox wasm it hosts. The worker
 # that runs the machine is served from this subtree, so it needs the
 # same wasm-unsafe-eval + embedder policy as the OS scope it serves —

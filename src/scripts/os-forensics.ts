@@ -13,6 +13,7 @@
  * in the house.
  */
 import { verb, type BlacksiteOS, type VerbDef } from "./os-shell";
+import { t, tf } from "./os-i18n";
 type FxCtx = Parameters<VerbDef["run"]>[0];
 import {
   hashAll, identifyMagic, loadMagic, extractStrings, extractIocs, parseExif,
@@ -150,14 +151,14 @@ export function openInApp(os: BlacksiteOS, app: string, vfsPath: string) {
 export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
   body.textContent = "";
   const root = fxEl("div", "os-fx", body);
-  fxNote(root, "cases and evidence on the house VFS · every intake is hashed and logged · nothing leaves this tab");
+  fxNote(root, t("cases and evidence on the house VFS · every intake is hashed and logged · nothing leaves this tab"));
 
   const bar = fxEl("div", "os-fx-bar", root);
   const sel = fxEl("select", "os-fx-input", bar) as HTMLSelectElement;
   const nameIn = fxEl("input", "os-fx-input", bar) as HTMLInputElement;
-  nameIn.placeholder = "new case name";
-  const createBtn = fxEl("button", "os-btn", bar, "create case");
-  const delBtn = fxEl("button", "os-btn", bar, "delete case");
+  nameIn.placeholder = t("new case name");
+  const createBtn = fxEl("button", "os-btn", bar, t("create case"));
+  const delBtn = fxEl("button", "os-btn", bar, t("delete case"));
   const status = fxNote(root, "");
 
   const main = fxEl("div", "os-fx-main", root);
@@ -165,7 +166,7 @@ export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
   function refreshSel() {
     const names = listCases(os);
     sel.textContent = "";
-    const blank = fxEl("option", "", sel, "— no case open —") as HTMLOptionElement;
+    const blank = fxEl("option", "", sel, t("— no case open —")) as HTMLOptionElement;
     blank.value = "";
     for (const n of names) { const o = fxEl("option", "", sel, n) as HTMLOptionElement; o.value = n; }
     if (fxStore.currentCase && names.includes(fxStore.currentCase)) sel.value = fxStore.currentCase;
@@ -174,18 +175,18 @@ export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
   function render() {
     main.textContent = "";
     const name = fxStore.currentCase;
-    if (!name) { fxNote(main, "open or create a case to begin."); return; }
+    if (!name) { fxNote(main, t("open or create a case to begin.")); return; }
     const c = loadCase(os, name);
-    if (!c) { fxNote(main, "that case is gone.", true); fxStore.currentCase = null; return; }
-    fxEl("h3", "os-fx-h", main, `case: ${c.name}`);
+    if (!c) { fxNote(main, t("that case is gone."), true); fxStore.currentCase = null; return; }
+    fxEl("h3", "os-fx-h", main, tf("case: {name}", { name: c.name }));
     fxNote(main, `opened ${c.created} · ${c.evidence.length} item(s) of evidence`);
 
     const inBar = fxEl("div", "os-fx-bar", main);
-    const pick = fxEl("button", "os-btn", inBar, "intake files");
+    const pick = fxEl("button", "os-btn", inBar, t("intake files"));
     const fileIn = fxEl("input", "", inBar) as HTMLInputElement;
     fileIn.type = "file"; fileIn.multiple = true; fileIn.hidden = true;
     pick.addEventListener("click", () => fileIn.click());
-    fxNote(inBar, "or drop files anywhere in this window");
+    fxNote(inBar, t("or drop files anywhere in this window"));
     const doIntake = async (files: FileList | File[]) => {
       for (const f of [...files]) {
         status.textContent = `hashing ${f.name}…`;
@@ -200,7 +201,7 @@ export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
 
     const table = fxEl("table", "os-fx-table", main);
     const thead = fxEl("tr", "", table);
-    for (const h of ["file", "size", "type", "sha-256", "acquired", ""]) fxEl("th", "", thead, h);
+    for (const h of ["file", "size", "type", "sha-256", "acquired", ""]) fxEl("th", "", thead, t(h));
     for (const rec of c.evidence) {
       const tr = fxEl("tr", "", table);
       fxEl("td", "", tr, rec.file);
@@ -210,16 +211,16 @@ export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
       fxEl("td", "", tr, rec.acquired.replace("T", " ").slice(0, 19));
       const acts = fxEl("td", "os-fx-acts", tr);
       const p = `${casePath(c.name)}/evidence/${rec.file}`;
-      const openBtn = fxEl("button", "os-btn", acts, "open");
+      const openBtn = fxEl("button", "os-btn", acts, t("open"));
       openBtn.addEventListener("click", () => {
         const bytes = os.readBytes(p);
         if (bytes) openInApp(os, smartApp(bytes, rec.file), p);
       });
-      const hexBtn = fxEl("button", "os-btn", acts, "hex");
+      const hexBtn = fxEl("button", "os-btn", acts, t("hex"));
       hexBtn.addEventListener("click", () => openInApp(os, "fxhex", p));
-      const dlBtn = fxEl("button", "os-btn", acts, "save");
+      const dlBtn = fxEl("button", "os-btn", acts, t("save"));
       dlBtn.addEventListener("click", () => { const b = os.readBytes(p); if (b) download(rec.file, b); });
-      const rmBtn = fxEl("button", "os-btn", acts, "remove");
+      const rmBtn = fxEl("button", "os-btn", acts, t("remove"));
       rmBtn.addEventListener("click", () => {
         try { os.remove(p); } catch { /* already gone */ }
         c.evidence = c.evidence.filter((r) => r !== rec);
@@ -230,8 +231,8 @@ export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
     }
 
     const vBar = fxEl("div", "os-fx-bar", main);
-    const verifyBtn = fxEl("button", "os-btn", vBar, "verify all");
-    const reportBtn = fxEl("button", "os-btn", vBar, "case report");
+    const verifyBtn = fxEl("button", "os-btn", vBar, t("verify all"));
+    const reportBtn = fxEl("button", "os-btn", vBar, t("case report"));
     const vStatus = fxNote(vBar, "");
     verifyBtn.addEventListener("click", async () => {
       vStatus.textContent = "re-hashing…";
@@ -266,14 +267,14 @@ export function buildWorkbench(body: HTMLElement, os: BlacksiteOS) {
       vStatus.textContent = "report downloaded and filed into the case";
     });
 
-    fxEl("h3", "os-fx-h", main, "notes");
+    fxEl("h3", "os-fx-h", main, t("notes"));
     const notes = fxEl("textarea", "os-fx-input os-fx-notes", main) as HTMLTextAreaElement;
     notes.value = c.notes;
     const nBar = fxEl("div", "os-fx-bar", main);
-    const saveNotes = fxEl("button", "os-btn", nBar, "save notes");
-    saveNotes.addEventListener("click", () => { c.notes = notes.value; saveCase(os, c); fxNote(nBar, "saved"); });
+    const saveNotes = fxEl("button", "os-btn", nBar, t("save notes"));
+    saveNotes.addEventListener("click", () => { c.notes = notes.value; saveCase(os, c); fxNote(nBar, t("saved")); });
 
-    fxEl("h3", "os-fx-h", main, "chain of custody");
+    fxEl("h3", "os-fx-h", main, t("chain of custody"));
     const log = fxEl("pre", "os-fx-pre", main);
     log.textContent = custodyLines(os, casePath(c.name)).join("\n") || "(no entries)";
   }

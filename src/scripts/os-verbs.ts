@@ -1,7 +1,7 @@
 // BLACKSITE OS — the verb roster, ported from nightjar's Blacksite bench.
 // LIVE = runs in this room. EDGE = one knock through the site's guarded
 // edge functions. LIMIT verbs are registered in os-limits.ts with the
-// room's honest reason, and `help` shows the whole 642 either way.
+// room's honest reason, and `help` shows the whole 644 either way.
 import {
   BlacksiteOS, VERBS, verb, md5, mmh3, bToHex, hexToB, bToB64, b64ToB,
 } from "./os-shell";
@@ -9,6 +9,7 @@ import type { ShellIO } from "./os-shell";
 import { identifyFile, hexdump } from "./os-parse";
 import { OS_RELEASE, registerRows, vfsStats } from "./os-register";
 import { sfx, armAudio, soundPrefs, setSoundPrefs, soundState } from "./os-sound";
+import { t, tf, lang, setLang, rosterDesc } from "./os-i18n";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -69,22 +70,41 @@ function registerHouse() {
     const statusOf = (v: string) => VERBS.get(v)?.status || "LIMIT";
     const q = ctx.args.join(" ").trim().toLowerCase();
     if (!q) {
-      const lines = ["BLACKSITE OS — command sections (help <section> opens one, help <word> searches all):", ""];
+      const lines = [t("BLACKSITE OS — command sections (help <section> opens one, help <word> searches all):"), ""];
       let live = 0, edge = 0, limit = 0;
       for (const [name, rows] of sections) {
         const verbs = new Set(rows.map((r: any) => r.verb));
         let l = 0, e = 0;
         verbs.forEach((v) => { const s = statusOf(v); if (s === "LIVE") l++; else if (s === "EDGE") e++; });
         live += l; edge += e; limit += verbs.size - l - e;
-        lines.push(`  ${name.padEnd(34)} ${rows.length} commands · ${l + e} live on the web`);
+        lines.push(`  ${t(name).padEnd(34)} ${tf("{n} commands · {l} live on the web", { n: rows.length, l: l + e })}`);
       }
-      lines.push("", `Total: ${rosterData.length} commands · ${live} LIVE in-room · ${edge} EDGE via one knock · ${limit} LIMIT (named in \`limits\`)`, "Doctrine: one knock, read, grade. Public targets only.");
+      lines.push("", tf("Total: {t} commands · {l} LIVE in-room · {e} EDGE via one knock · {x} LIMIT (named in `limits`)", { t: rosterData.length, l: live, e: edge, x: limit }), t("Doctrine: one knock, read, grade. Public targets only."));
       return lines.join("\n");
     }
-    const sectionMatch = [...sections.keys()].find((s) => s.toLowerCase().startsWith(q));
-    const rows = sectionMatch ? sections.get(sectionMatch)! : (rosterData as any[]).filter((r) => r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q));
-    if (!rows.length) return `no command matches "${q}".`;
-    return rows.slice(0, 90).map((r: any) => `${statusOf(r.verb).padEnd(5)} ${r.cmd.padEnd(38)} ${r.desc}`).join("\n");
+    const sectionMatch = [...sections.keys()].find((s) => s.toLowerCase().startsWith(q) || t(s).startsWith(q));
+    const rows = sectionMatch ? sections.get(sectionMatch)! : (rosterData as any[]).filter((r) => r.verb.includes(q) || r.cmd.includes(q) || r.desc.toLowerCase().includes(q) || (r.descJa || "").includes(q));
+    if (!rows.length) return tf("no command matches \"{q}\".", { q });
+    return rows.slice(0, 90).map((r: any) => `${statusOf(r.verb).padEnd(5)} ${r.cmd.padEnd(38)} ${rosterDesc(r)}`).join("\n");
+  });
+  verb("lang", "LIVE", "lang — the room's language: `lang`, `lang ja`, `lang en`", async (ctx) => {
+    const arg = (ctx.args[0] || "").toLowerCase();
+    if (!arg) {
+      return lang() === "ja"
+        ? "言語: 日本語 — `lang en` で英語に切り替えます。"
+        : "language: english — `lang ja` switches the room to 日本語.";
+    }
+    if (arg === "ja" || arg === "japanese" || arg === "日本語") {
+      setLang("ja");
+      return "日本語に切り替えました。デスクトップ、ヘルプ、名簿、ツールチェストが日本語で読みます。";
+    }
+    if (arg === "en" || arg === "english") {
+      setLang("en");
+      return "language: english. the desk, help, roster and toolchest read in english again.";
+    }
+    return lang() === "ja"
+      ? `言語は en か ja です — 「${arg}」という言語はこの部屋にありません。`
+      : `lang takes en or ja — "${arg}" is not a tongue this room speaks.`;
   });
   verb("sound", "LIVE", "sound [on|off|vol <0-100>|test] — the room's synthesized voice", async (ctx) => {
     const p = soundPrefs();
@@ -141,7 +161,7 @@ function registerHouse() {
     const edge = [...VERBS.values()].filter((v) => v.status === "EDGE").length;
     return [
       `BLACKSITE OS ${OS_RELEASE.version} "${OS_RELEASE.codename}" — sysinfo`,
-      `verbs: ${VERBS.size} registered (${live} in-room, ${edge} edge) of 642 on the roster — the rest are named limits`,
+      `verbs: ${VERBS.size} registered (${live} in-room, ${edge} edge) of 644 on the roster — the rest are named limits`,
       `vfs: ${vs.files} files · ${(vs.bytes / 1024).toFixed(1)} KB of content`,
       `local storage footprint: ${(ls / 1024).toFixed(1)} KB (this room only)`,
       `processes on the board: ${ctx.os.procs.length} · journal entries: ${ctx.os.journal.length}`,

@@ -4,6 +4,8 @@
 // is borrowed from Chase's WUCI OS: components are declared, budgets
 // are visible, and limits are named instead of hidden.
 
+import { t } from "./os-i18n";
+
 export const OS_RELEASE = { version: "2.0", codename: "NOETHER", shipped: "2026-10-23" };
 
 export interface RegisterFacts {
@@ -14,7 +16,7 @@ export interface RegisterFacts {
 }
 
 export function registerRows(f: RegisterFacts): Array<[string, string, string]> {
-  return [
+  const rows: Array<[string, string, string]> = [
     ["kernel", "blacksite sh — parser, pipes, redirects, jobs, EMCON gate", "LIVE"],
     ["vfs", "persistent virtual filesystem (this browser's local storage)", "LIVE"],
     ["window manager", "glass windows: drag, resize, minimize, maximize, taskbar", "LIVE"],
@@ -28,6 +30,7 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["dos machine", "DOSBox in WebAssembly (js-dos, vendored, self-hosted) — Wolfenstein 3D's shareware episode runs on it, unaltered 1992 data under its shareware license", "LIVE"],
     ["orc", "our version of LibreWolf in its wraparound: a room here, a standalone installable browser of its own", "LIVE"],
     ["javascript engine", "your programs, in the room", "LIVE"],
+    ["ruby engine", "CRuby 3.4 (ruby.wasm) — the real interpreter in a worker: the operator's home folder bridged from the VFS, console-fed stdin, no network, no gems beyond the bundled standard library", "LIVE (loads on first use)"],
     ["file parsers", "ELF · PE · Mach-O · ZIP · PDF · images · Wasm · SQLite · gzip · TAR · plist", "LIVE"],
     ["edge bridge", `/api/* — the guarded wire: ${f.live + f.edge} verbs registered, wire verbs behind the public-target guard`, "LIVE"],
     ["emcon standard", `graded silence — currently ${f.emcon.toUpperCase()}`, "LIVE"],
@@ -43,7 +46,12 @@ export function registerRows(f: RegisterFacts): Array<[string, string, string]> 
     ["verify-integrity", "the checker — one read-only audit of the whole defense (the wire's seal, every register against the manifest, the census, the tower's chain, the room re-hashed, the sentinel, AEGIS) plus the launched system's own bytes hashed against the SHA-256 seal the build stamped into version.json at launch — byte for byte, what the origin serves must be what was launched. on the `integrity` verb and the System panel; any failed line warns the operator by toast, as does every tamper verdict anywhere in the system", "LIVE"],
     ["toolchest", "209 tools: 209 live commands + 14700 registry entries (ports, ciphers, mime, protocols, zones, codes)", "LIVE"],
     ["forensics", "the evidence bench — 11 rooms in the Forensics folder: workbench (VFS cases, hash-at-intake, chain of custody), evidence locker (/evidence, AES-256-GCM .fxbag bags), hash, hex, file, metadata, image, pcap, strings & IOC, timeline and mail labs; 6 terminal verbs (fxcase, fxhash, fxmagic, fxstrings, fxioc, fxmeta); zero network — every byte is examined in this tab", "LIVE"],
+    ["japanese", "the room's second tongue — desk, windows, help, the 644-row roster and the toolchest registries read in Japanese when the language register says so; program output and file contents are never translated; the frost boot's subtitle pool stays English under the house's standing boot exemption", "LIVE"],
   ];
+  /* The register speaks the room's language: component names are
+     the components' own and stay; what each one IS reads through
+     the language register like every other surface. */
+  return rows.map(([n, w, s]): [string, string, string] => [n, t(w), s]);
 }
 
 export function vfsStats(files: Map<string, { type: string; content?: string; binary?: string }>): { files: number; bytes: number } {

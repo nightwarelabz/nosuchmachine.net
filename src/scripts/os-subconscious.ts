@@ -41,7 +41,7 @@ const NEVER_WARM = new Set([
      trying to run on. (2026-10-26 review, §4.) Rooms that left
      the shipped surface are not named here at all: unregistered,
      they are already outside the app universe this set filters. */
-  "games", "nexuiz",
+  "games", "nexuiz", "ruby",
   /* the forensics folder and its rooms: evidence work is opened
      deliberately, never prepared in the dark. */
   "forensics", "fxworkbench", "fxevidence", "fxhash", "fxhex", "fxfile", "fxmeta", "fximage", "fxpcap", "fxstrings", "fxtime", "fxmail",
@@ -108,6 +108,10 @@ export function wakeSubconscious(hooks: SubHooks): Subconscious {
   hooks.root.appendChild(cacheEl);
   const cache = new Map<string, HTMLElement>();
   const failedWarm = new Set<string>();
+  window.addEventListener("blacksite:langchange", () => {
+    for (const body of cache.values()) body.remove();
+    cache.clear();
+  });
   let warms = 0;
 
   const eligible = (app: string): boolean =>

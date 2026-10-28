@@ -8,6 +8,7 @@
  * OS transmits nothing, ever.
  */
 import type { BlacksiteOS } from "./os-shell";
+import { t, tf } from "./os-i18n";
 import {
   fxEl, fxNote, fxStore, casePath, loadCase, saveCase, custody, custodyLines,
   intakeInto, lockerLoad, lockerSave, LOCKER_ROOT,
@@ -19,13 +20,13 @@ import {
 } from "./os-fx-parse";
 
 function section(parent: HTMLElement, title: string): HTMLElement {
-  fxEl("h3", "os-fx-h", parent, title);
+  fxEl("h3", "os-fx-h", parent, t(title));
   return fxEl("div", "os-fx-sec", parent);
 }
 function kvTable(parent: HTMLElement, rows: Array<[string, string]>) {
-  const t = fxEl("table", "os-fx-table", parent);
+  const tbl = fxEl("table", "os-fx-table", parent);
   for (const [k, v] of rows) {
-    const tr = fxEl("tr", "", t);
+    const tr = fxEl("tr", "", tbl);
     fxEl("td", "os-fx-k", tr, k);
     fxEl("td", "os-fx-mono", tr, v);
   }
@@ -53,12 +54,12 @@ export function buildPcapLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
     kvTable(hier, [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, String(v)]));
 
     const tableSec = section(out, "packets");
-    const t = fxEl("table", "os-fx-table", tableSec);
-    const hd = fxEl("tr", "", t);
+    const tbl = fxEl("table", "os-fx-table", tableSec);
+    const hd = fxEl("tr", "", tbl);
     for (const h of ["#", "rel. time", "source", "destination", "proto", "len", "info"]) fxEl("th", "", hd, h);
     const t0 = pkts.length ? pkts[0].ts : 0;
     for (const p of pkts.slice(0, 500)) {
-      const tr = fxEl("tr", "", t);
+      const tr = fxEl("tr", "", tbl);
       fxEl("td", "os-fx-mono", tr, String(p.n));
       fxEl("td", "os-fx-mono", tr, (p.ts - t0).toFixed(3));
       fxEl("td", "", tr, p.src + (p.sport ? ":" + p.sport : ""));
@@ -115,9 +116,9 @@ export function buildPcapLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
         const preB = fxEl("pre", "os-fx-pre", view);
         preB.textContent = escapePayload(s.ba.subarray(0, 20000)) || "(no payload)";
         const dlBar = fxEl("div", "os-fx-bar", view);
-        const d1 = fxEl("button", "os-btn", dlBar, "download A→B");
+        const d1 = fxEl("button", "os-btn", dlBar, t("download A→B"));
         d1.addEventListener("click", () => download("stream-a-b.bin", s.ab));
-        const d2 = fxEl("button", "os-btn", dlBar, "download B→A");
+        const d2 = fxEl("button", "os-btn", dlBar, t("download B→A"));
         d2.addEventListener("click", () => download("stream-b-a.bin", s.ba));
       };
       sel.addEventListener("change", showStream);
@@ -127,8 +128,8 @@ export function buildPcapLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
     const searchSec = section(out, "payload search");
     const sBar = fxEl("div", "os-fx-bar", searchSec);
     const sIn = fxEl("input", "os-fx-input os-fx-grow", sBar) as HTMLInputElement;
-    sIn.placeholder = "text, or hex: 47455420";
-    const sBtn = fxEl("button", "os-btn", sBar, "search");
+    sIn.placeholder = t("text, or hex: 47455420");
+    const sBtn = fxEl("button", "os-btn", sBar, t("search"));
     const sOut = fxNote(searchSec, "");
     sBtn.addEventListener("click", () => {
       const q = sIn.value;
@@ -154,7 +155,7 @@ export function buildStringsLab(body: HTMLElement, os: BlacksiteOS, arg?: string
   body.textContent = "";
   const root = fxEl("div", "os-fx", body);
   const ctl = fxEl("div", "os-fx-bar", root);
-  fxNote(ctl, "minimum length");
+  fxNote(ctl, t("minimum length"));
   const minIn = fxEl("input", "os-fx-input", ctl) as HTMLInputElement;
   minIn.type = "number"; minIn.value = "4"; minIn.min = "3"; minIn.max = "64";
   const out = fxEl("div", "", root);
@@ -169,7 +170,7 @@ export function buildStringsLab(body: HTMLElement, os: BlacksiteOS, arg?: string
 
     const iocSec = section(out, "indicators");
     const kinds = Object.keys(groups);
-    if (!kinds.length) fxNote(iocSec, "no indicators in the strings — clean, or quiet");
+    if (!kinds.length) fxNote(iocSec, t("no indicators in the strings — clean, or quiet"));
     for (const k of kinds) {
       fxEl("h3", "os-fx-h", iocSec, `${k} (${groups[k].length})`);
       const pre = fxEl("pre", "os-fx-pre", iocSec);
@@ -179,13 +180,13 @@ export function buildStringsLab(body: HTMLElement, os: BlacksiteOS, arg?: string
     const rxSec = section(out, "regex search");
     const rxBar = fxEl("div", "os-fx-bar", rxSec);
     const rxIn = fxEl("input", "os-fx-input os-fx-grow", rxBar) as HTMLInputElement;
-    rxIn.placeholder = "your own pattern, e.g. (token|secret)=\\S+";
-    const rxBtn = fxEl("button", "os-btn", rxBar, "run");
+    rxIn.placeholder = t("your own pattern, e.g. (token|secret)=\\S+");
+    const rxBtn = fxEl("button", "os-btn", rxBar, t("run"));
     const rxOut = fxEl("div", "", rxSec);
     rxBtn.addEventListener("click", () => {
       rxOut.textContent = "";
       let re: RegExp;
-      try { re = new RegExp(rxIn.value, "g"); } catch (e) { fxNote(rxOut, "bad pattern: " + (e as Error).message, true); return; }
+      try { re = new RegExp(rxIn.value, "g"); } catch (e) { fxNote(rxOut, t("bad pattern: ") + (e as Error).message, true); return; }
       const lines: string[] = [];
       for (const h of hits) for (const m of h.text.matchAll(re)) lines.push(`0x${h.offset.toString(16)}  ${m[0].slice(0, 120)}`);
       const pre = fxEl("pre", "os-fx-pre", rxOut);
@@ -195,18 +196,18 @@ export function buildStringsLab(body: HTMLElement, os: BlacksiteOS, arg?: string
 
     const strSec = section(out, "strings");
     fxNote(strSec, `${hits.length} string(s) at minimum length ${minLen}${truncated ? " — capped at 5,000; raise the minimum to narrow" : ""}`);
-    const t = fxEl("table", "os-fx-table", strSec);
-    const hd = fxEl("tr", "", t);
+    const tbl = fxEl("table", "os-fx-table", strSec);
+    const hd = fxEl("tr", "", tbl);
     for (const h of ["offset", "enc", "text"]) fxEl("th", "", hd, h);
     for (const h of hits.slice(0, 1000)) {
-      const tr = fxEl("tr", "", t);
+      const tr = fxEl("tr", "", tbl);
       fxEl("td", "os-fx-mono", tr, "0x" + h.offset.toString(16));
       fxEl("td", "", tr, h.enc);
       fxEl("td", "", tr, h.text.slice(0, 120));
     }
-    if (hits.length > 1000) fxNote(strSec, "table shows the first 1,000 — the export carries them all");
+    if (hits.length > 1000) fxNote(strSec, t("table shows the first 1,000 — the export carries them all"));
     const expBar = fxEl("div", "os-fx-bar", strSec);
-    const exp = fxEl("button", "os-btn", expBar, "export strings + indicators");
+    const exp = fxEl("button", "os-btn", expBar, t("export strings + indicators"));
     exp.addEventListener("click", () => {
       const lines = [`# strings — ${cur!.name}`, ...hits.map((h) => `0x${h.offset.toString(16)}\t${h.enc}\t${h.text}`), "", "# indicators"];
       for (const k of kinds) { lines.push("", `## ${k} (${groups[k].length})`, ...groups[k]); }
@@ -221,7 +222,7 @@ export function buildStringsLab(body: HTMLElement, os: BlacksiteOS, arg?: string
 export function buildTimelineLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
   body.textContent = "";
   const root = fxEl("div", "os-fx", body);
-  fxNote(root, "a supertimeline from whatever the files themselves carry — EXIF, ZIP clocks, PDF dates, mail hops, capture spans, mvhd — plus logs and your own entries");
+  fxNote(root, t("a supertimeline from whatever the files themselves carry — EXIF, ZIP clocks, PDF dates, mail hops, capture spans, mvhd — plus logs and your own entries"));
   const events: FxEvent[] = [];
   const tableWrap = fxEl("div", "", root);
   const render = () => {
@@ -229,25 +230,25 @@ export function buildTimelineLab(body: HTMLElement, os: BlacksiteOS, arg?: strin
     const sources = [...new Set(events.map((e) => e.source))];
     const bar = fxEl("div", "os-fx-bar", tableWrap);
     const filter = fxEl("select", "os-fx-input", bar) as HTMLSelectElement;
-    const all = fxEl("option", "", filter, "all sources") as HTMLOptionElement; all.value = "";
+    const all = fxEl("option", "", filter, t("all sources")) as HTMLOptionElement; all.value = "";
     for (const s of sources) { const o = fxEl("option", "", filter, s) as HTMLOptionElement; o.value = s; }
-    const exp = fxEl("button", "os-btn", bar, "export CSV");
-    const clear = fxEl("button", "os-btn", bar, "clear");
+    const exp = fxEl("button", "os-btn", bar, t("export CSV"));
+    const clear = fxEl("button", "os-btn", bar, t("clear"));
     const tWrap = fxEl("div", "", tableWrap);
     const draw = () => {
       tWrap.textContent = "";
       const rows = events.filter((e) => !filter.value || e.source === filter.value).sort((a, b) => a.t - b.t);
       fxNote(tWrap, `${rows.length} event(s)`);
-      const t = fxEl("table", "os-fx-table", tWrap);
-      const hd = fxEl("tr", "", t);
+      const tbl = fxEl("table", "os-fx-table", tWrap);
+      const hd = fxEl("tr", "", tbl);
       for (const h of ["time (UTC)", "source", "event"]) fxEl("th", "", hd, h);
       for (const e of rows.slice(0, 2000)) {
-        const tr = fxEl("tr", "", t);
+        const tr = fxEl("tr", "", tbl);
         fxEl("td", "os-fx-mono", tr, new Date(e.t).toISOString().replace("T", " ").slice(0, 19));
         fxEl("td", "", tr, e.source);
         fxEl("td", "", tr, e.event);
       }
-      if (rows.length > 2000) fxNote(tWrap, "first 2,000 shown — the CSV carries them all");
+      if (rows.length > 2000) fxNote(tWrap, t("first 2,000 shown — the CSV carries them all"));
     };
     filter.addEventListener("change", draw);
     exp.addEventListener("click", () => {
@@ -269,9 +270,9 @@ export function buildTimelineLab(body: HTMLElement, os: BlacksiteOS, arg?: strin
   mountLoader(root, os, arg, (f) => void addFile(f));
   const logSec = section(root, "log text");
   const logTa = fxEl("textarea", "os-fx-input os-fx-notes", logSec) as HTMLTextAreaElement;
-  logTa.placeholder = "paste syslog / apache / ISO-timestamped lines";
+  logTa.placeholder = t("paste syslog / apache / ISO-timestamped lines");
   const logBar = fxEl("div", "os-fx-bar", logSec);
-  const logBtn = fxEl("button", "os-btn", logBar, "ingest lines");
+  const logBtn = fxEl("button", "os-btn", logBar, t("ingest lines"));
   logBtn.addEventListener("click", () => {
     const found = parseLogText(logTa.value, "pasted log");
     events.push(...found);
@@ -283,8 +284,8 @@ export function buildTimelineLab(body: HTMLElement, os: BlacksiteOS, arg?: strin
   const when = fxEl("input", "os-fx-input", manBar) as HTMLInputElement;
   when.type = "datetime-local";
   const what = fxEl("input", "os-fx-input os-fx-grow", manBar) as HTMLInputElement;
-  what.placeholder = "what happened";
-  const addBtn = fxEl("button", "os-btn", manBar, "add");
+  what.placeholder = t("what happened");
+  const addBtn = fxEl("button", "os-btn", manBar, t("add"));
   addBtn.addEventListener("click", () => {
     const t = when.value ? new Date(when.value).getTime() : NaN;
     if (!Number.isNaN(t) && what.value.trim()) { events.push({ t, source: "manual", event: what.value.trim() }); what.value = ""; render(); }
@@ -296,7 +297,7 @@ export function buildTimelineLab(body: HTMLElement, os: BlacksiteOS, arg?: strin
 export function buildMailLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
   body.textContent = "";
   const root = fxEl("div", "os-fx", body);
-  fxNote(root, "authentication headers are reported as they stand in the message — this lab shows them, it does not grade them");
+  fxNote(root, t("authentication headers are reported as they stand in the message — this lab shows them, it does not grade them"));
   const out = fxEl("div", "", root);
   mountLoader(root, os, arg, async (f) => {
     out.textContent = "";
@@ -334,7 +335,7 @@ export function buildMailLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
       });
     }
     const as = section(out, "authentication — verbatim");
-    if (!mail.authLines.length) fxNote(as, "no Authentication-Results, Received-SPF, DKIM-Signature or ARC headers in this message");
+    if (!mail.authLines.length) fxNote(as, t("no Authentication-Results, Received-SPF, DKIM-Signature or ARC headers in this message"));
     else {
       const at = fxEl("table", "os-fx-table", as);
       for (const [k, v] of mail.authLines) {
@@ -364,15 +365,15 @@ export function buildMailLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
         fxEl("td", "", tr, fmtSize(att.size));
         fxEl("td", "os-fx-mono", tr, (await sha256(att.bytes)).slice(0, 20) + "…");
         const cell = fxEl("td", "", tr);
-        const dl = fxEl("button", "os-btn", cell, "save");
+        const dl = fxEl("button", "os-btn", cell, t("save"));
         dl.addEventListener("click", () => download(att.name, att.bytes, att.type));
       }
     }
     const bs = section(out, "body");
     if (mail.textBody) { const pre = fxEl("pre", "os-fx-pre", bs); pre.textContent = mail.textBody.slice(0, 8000); }
-    else if (mail.htmlBody) { fxNote(bs, "no text/plain part — the HTML part, as source:"); const pre = fxEl("pre", "os-fx-pre", bs); pre.textContent = mail.htmlBody.slice(0, 8000); }
-    else fxNote(bs, "no readable body part");
-    fxNote(out, "PDF and Office metadata live in the Metadata Lab; attachment hashes cross-check in the Hash Lab.");
+    else if (mail.htmlBody) { fxNote(bs, t("no text/plain part — the HTML part, as source:")); const pre = fxEl("pre", "os-fx-pre", bs); pre.textContent = mail.htmlBody.slice(0, 8000); }
+    else fxNote(bs, t("no readable body part"));
+    fxNote(out, t("PDF and Office metadata live in the Metadata Lab; attachment hashes cross-check in the Hash Lab."));
   });
 }
 
@@ -380,7 +381,7 @@ export function buildMailLab(body: HTMLElement, os: BlacksiteOS, arg?: string) {
 export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
   body.textContent = "";
   const root = fxEl("div", "os-fx", body);
-  fxNote(root, "the standing locker at /evidence — what arrives is hashed, logged, and stays until you move it");
+  fxNote(root, t("the standing locker at /evidence — what arrives is hashed, logged, and stays until you move it"));
   let locker = lockerLoad(os);
   lockerSave(os, locker);
   const status = fxNote(root, "");
@@ -390,11 +391,11 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
     main.textContent = "";
     locker = lockerLoad(os);
     const inBar = fxEl("div", "os-fx-bar", main);
-    const pick = fxEl("button", "os-btn", inBar, "import files");
+    const pick = fxEl("button", "os-btn", inBar, t("import files"));
     const fileIn = fxEl("input", "", inBar) as HTMLInputElement;
     fileIn.type = "file"; fileIn.multiple = true; fileIn.hidden = true;
     pick.addEventListener("click", () => fileIn.click());
-    fxNote(inBar, "or drop files in this window");
+    fxNote(inBar, t("or drop files in this window"));
     fileIn.addEventListener("change", async () => {
       for (const f of [...(fileIn.files || [])]) {
         status.textContent = `hashing ${f.name}…`;
@@ -406,11 +407,11 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
     });
 
     const checked = new Set<string>();
-    const t = fxEl("table", "os-fx-table", main);
-    const hd = fxEl("tr", "", t);
+    const tbl = fxEl("table", "os-fx-table", main);
+    const hd = fxEl("tr", "", tbl);
     for (const h of ["", "file", "size", "type", "sha-256", "acquired", ""]) fxEl("th", "", hd, h);
     for (const rec of locker.items) {
-      const tr = fxEl("tr", "", t);
+      const tr = fxEl("tr", "", tbl);
       const cbCell = fxEl("td", "", tr);
       const cb = fxEl("input", "", cbCell) as HTMLInputElement;
       cb.type = "checkbox";
@@ -422,10 +423,10 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
       fxEl("td", "", tr, rec.acquired.replace("T", " ").slice(0, 19));
       const acts = fxEl("td", "os-fx-acts", tr);
       const p = `${LOCKER_ROOT}/evidence/${rec.file}`;
-      const toCase = fxEl("button", "os-btn", acts, "to case");
+      const toCase = fxEl("button", "os-btn", acts, t("to case"));
       toCase.addEventListener("click", async () => {
         const target = fxStore.currentCase;
-        if (!target) { status.textContent = "open a case in the Workbench first"; status.classList.add("os-fx-warn"); return; }
+        if (!target) { status.textContent = t("open a case in the Workbench first"); status.classList.add("os-fx-warn"); return; }
         const c = loadCase(os, target);
         const bytes = os.readBytes(p);
         if (!c || !bytes) return;
@@ -436,9 +437,9 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
         status.textContent = `${rec.file} copied into case ${target} (custody noted on both sides)`;
         status.classList.remove("os-fx-warn");
       });
-      const dl = fxEl("button", "os-btn", acts, "save");
+      const dl = fxEl("button", "os-btn", acts, t("save"));
       dl.addEventListener("click", () => { const b = os.readBytes(p); if (b) download(rec.file, b); });
-      const rm = fxEl("button", "os-btn", acts, "remove");
+      const rm = fxEl("button", "os-btn", acts, t("remove"));
       rm.addEventListener("click", () => {
         try { os.remove(p); } catch { /* already gone */ }
         locker.items = locker.items.filter((r) => r !== rec);
@@ -447,24 +448,24 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
         render();
       });
     }
-    if (!locker.items.length) fxNote(main, "the locker is empty");
+    if (!locker.items.length) fxNote(main, t("the locker is empty"));
 
     /* SEAL */
     const sealSec = section(main, "seal a bag — send");
     fxNote(sealSec, "tick items above, choose a passphrase, and the locker packs them into one encrypted .fxbag. the bag is a file — send it by any channel you trust. this OS does not transmit it, and the passphrase is never stored.");
     const sealBar = fxEl("div", "os-fx-bar", sealSec);
     const pass1 = fxEl("input", "os-fx-input", sealBar) as HTMLInputElement;
-    pass1.type = "password"; pass1.placeholder = "passphrase";
+    pass1.type = "password"; pass1.placeholder = t("passphrase");
     const pass2 = fxEl("input", "os-fx-input", sealBar) as HTMLInputElement;
-    pass2.type = "password"; pass2.placeholder = "again";
-    const sealBtn = fxEl("button", "os-btn", sealBar, "seal bag");
+    pass2.type = "password"; pass2.placeholder = t("again");
+    const sealBtn = fxEl("button", "os-btn", sealBar, t("seal bag"));
     const sealNote = fxNote(sealSec, "");
     sealBtn.addEventListener("click", async () => {
       const chosen = locker.items.filter((r) => checked.has(r.file));
-      if (!chosen.length) { sealNote.textContent = "tick at least one item"; return; }
-      if (pass1.value.length < 4) { sealNote.textContent = "a passphrase of at least 4 characters — longer is stronger"; return; }
-      if (pass1.value !== pass2.value) { sealNote.textContent = "the passphrases do not match"; return; }
-      sealNote.textContent = "deriving the key (PBKDF2, 600,000 rounds) and sealing…";
+      if (!chosen.length) { sealNote.textContent = t("tick at least one item"); return; }
+      if (pass1.value.length < 4) { sealNote.textContent = t("a passphrase of at least 4 characters — longer is stronger"); return; }
+      if (pass1.value !== pass2.value) { sealNote.textContent = t("the passphrases do not match"); return; }
+      sealNote.textContent = t("deriving the key (PBKDF2, 600,000 rounds) and sealing…");
       const files = [];
       for (const r of chosen) {
         const bytes = os.readBytes(`${LOCKER_ROOT}/evidence/${r.file}`);
@@ -474,21 +475,21 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
       custody(os, LOCKER_ROOT, "sealed bag", `${manifest.id} · ${files.length} file(s) · ${fmtSize(bag.length)}`);
       lockerSave(os, locker);
       download(`${manifest.id}.fxbag`, bag);
-      sealNote.textContent = `sealed: ${manifest.id}.fxbag · ${files.length} file(s) · ${fmtSize(bag.length)} — custody noted`;
+      sealNote.textContent = tf("sealed: {id}.fxbag · {n} file(s) · {size} — custody noted", { id: manifest.id, n: files.length, size: fmtSize(bag.length) });
       pass1.value = ""; pass2.value = "";
     });
 
     /* OPEN */
     const openSec = section(main, "open a bag — receive");
-    fxNote(openSec, "a sealed bag is opened only whole: the GCM tag must verify, then every file's SHA-256 is checked against the bag's manifest before anything is filed. a mismatch is refused, in red, by name.");
+    fxNote(openSec, t("a sealed bag is opened only whole: the GCM tag must verify, then every file's SHA-256 is checked against the bag's manifest before anything is filed. a mismatch is refused, in red, by name."));
     const openBar = fxEl("div", "os-fx-bar", openSec);
-    const bagBtn = fxEl("button", "os-btn", openBar, "choose .fxbag");
+    const bagBtn = fxEl("button", "os-btn", openBar, t("choose .fxbag"));
     const bagIn = fxEl("input", "", openBar) as HTMLInputElement;
     bagIn.type = "file"; bagIn.accept = ".fxbag"; bagIn.hidden = true;
     bagBtn.addEventListener("click", () => bagIn.click());
     const openPass = fxEl("input", "os-fx-input", openBar) as HTMLInputElement;
-    openPass.type = "password"; openPass.placeholder = "bag passphrase";
-    const openBtn = fxEl("button", "os-btn", openBar, "open bag");
+    openPass.type = "password"; openPass.placeholder = t("bag passphrase");
+    const openBtn = fxEl("button", "os-btn", openBar, t("open bag"));
     const openOut = fxEl("div", "", openSec);
     let bagBytes: Uint8Array | null = null;
     let bagName = "";
@@ -498,9 +499,9 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
     });
     openBtn.addEventListener("click", async () => {
       openOut.textContent = "";
-      if (!bagBytes) { fxNote(openOut, "choose a .fxbag first", true); return; }
-      if (!openPass.value) { fxNote(openOut, "the bag needs its passphrase", true); return; }
-      fxNote(openOut, "deriving the key and checking the seal…");
+      if (!bagBytes) { fxNote(openOut, t("choose a .fxbag first"), true); return; }
+      if (!openPass.value) { fxNote(openOut, t("the bag needs its passphrase"), true); return; }
+      fxNote(openOut, t("deriving the key and checking the seal…"));
       let opened;
       try { opened = await openBag(bagBytes, openPass.value); }
       catch (e) { openOut.textContent = ""; fxNote(openOut, (e as Error).message, true); return; }
@@ -519,7 +520,7 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
         if (!file.verified) refused++;
       }
       if (m.custody.length) {
-        fxEl("h3", "os-fx-h", openOut, "custody excerpt carried in the bag");
+        fxEl("h3", "os-fx-h", openOut, t("custody excerpt carried in the bag"));
         const pre = fxEl("pre", "os-fx-pre", openOut);
         pre.textContent = m.custody.join("\n");
       }
@@ -536,7 +537,7 @@ export function buildEvidenceLocker(body: HTMLElement, os: BlacksiteOS) {
           render();
         });
       }
-      if (refused) fxNote(openOut, `${refused} file(s) failed verification and were refused`, true);
+      if (refused) fxNote(openOut, tf("{n} file(s) failed verification and were refused", { n: refused }), true);
       void bagName;
     });
 

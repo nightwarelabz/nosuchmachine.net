@@ -7,6 +7,7 @@ import roster from "../data/blacksite-commands.json";
 import { identifyFile, hexdump as parseHexdump } from "./os-parse";
 import { sfx } from "./os-sound";
 import { skey } from "./os-depth";
+import { t, tf } from "./os-i18n";
 import { IvoryTower, hashText, merkleRoot, sha256Hex } from "./os-ivory";
 import type { IvoryInput } from "./os-ivory";
 import { TripwireRegister, judgeWire, judgeLaunched } from "./os-tripwire";
@@ -138,12 +139,14 @@ const WIRE_KEYS: Record<string, string> = {
   session: skey("blacksite-session-v1"), relay: skey("blacksite-relay-v2"),
   phonehome: skey("blacksite-phonehome-v1"), sigintRegistry: skey("sigint-registry-v2"),
   sigintLog: skey("sigint-log-v1"), sound: skey("blacksite-sound-v1"), subconscious: skey("blacksite-subconscious-v1"),
+  lang: skey("blacksite-lang-v1"),
 };
 const WIRE_NAMES: Record<string, string> = {
   aegis: "AEGIS's register", ivory: "the tower's ledger", vfs: "the filesystem register",
   macros: "the macro register", settings: "the settings register", session: "the session register",
   relay: "the Relay log", phonehome: "the phonehome callsign", sigintRegistry: "the SIGINT registry",
   sigintLog: "the SIGINT intercept log", sound: "the sound state", subconscious: "the subconscious register",
+  lang: "the language register",
 };
 /** The storage sentinel routes to the live room; a rebuilt room
  *  re-points it at itself. The wrapped-store set keeps the wrap
@@ -552,7 +555,7 @@ export class BlacksiteOS {
     } catch { /* storage refused — the wire's memory still testifies in-session */ }
   }
   /** The sanctioned write path for the room's other services
-   *  (session, Relay, phonehome, SIGINT, sound, subconscious):
+   *  (session, Relay, phonehome, SIGINT, sound, subconscious, language):
    *  the write lands under the wire's gate and is notarized in
    *  the same instant. Installed on the window for the services
    *  that do not hold the shell. Returns false for a register the
@@ -931,7 +934,7 @@ export class BlacksiteOS {
   seed() {
     const dirs = ["/", "/home", "/home/operator", "/home/operator/documents", "/packages", "/captures", "/deliveries", "/tmp"];
     for (const d of dirs) this.files.set(d, { type: "dir", mtime: Date.now() });
-    this.rawWrite("/README.md", "# BLACKSITE OS — web edition\n\nThe nightjar Blacksite console, ported to the web.\nType `help` for the full 642-command roster, `limits` for what this\nroom honestly cannot do, and `gauntlet` to watch it test itself.\n\nDoctrine: one knock, read, grade. Public targets only.\n");
+    this.rawWrite("/README.md", "# BLACKSITE OS — web edition\n\nThe nightjar Blacksite console, ported to the web.\nType `help` for the full 644-command roster, `limits` for what this\nroom honestly cannot do, and `gauntlet` to watch it test itself.\n\nDoctrine: one knock, read, grade. Public targets only.\n");
     this.rawWrite("/home/operator/notes.txt", "scope: only systems i own or am authorized to test.\nthe bench knocks once, reads, and grades. it does not exploit.\n");
     this.rawWrite("/home/operator/hello.lua", "-- lua in the room (fengari)\nprint('hello from blacksite lua')\nfor i = 1, 3 do print('count', i) end\nlocal t = {bench = 'blacksite'}\nprint(t.bench)\n");
     this.rawWrite("/home/operator/demo.scm", "; scheme in the room — run it: run demo.scm\n(define (square x) (* x x))\n(display (map square (list 3 4 12)))\n(newline)\n(display \"lisp answers in the room\")\n");
@@ -1211,7 +1214,7 @@ export async function execLine(os: BlacksiteOS, rawLine: string, io: ShellIO, de
   if (depth === 0) { os.history.push(line); os.log(`$ ${line}`); }
   // ; chaining, then && chaining
   for (const segment of splitTop(line, ";")) {
-    if (os.stopFlag) { os.stopFlag = false; io.print("— stopped.", "dim"); break; }
+    if (os.stopFlag) { os.stopFlag = false; io.print(t("— stopped."), "dim"); break; }
     let ok = true;
     for (const part of splitTop(segment, "&&")) {
       if (!ok) break;
@@ -1244,7 +1247,7 @@ async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: n
       const cmdline = stage;
       const redirect = parsed.out;
       const inputFile = parsed.inFile;
-      if (inputFile) { const content = os.read(inputFile); if (content === null) { io.print(`blacksite: no such file: ${inputFile}`, "err"); return false; } stdin = content; }
+      if (inputFile) { const content = os.read(inputFile); if (content === null) { io.print(tf("blacksite: no such file: {f}", { f: inputFile }), "err"); return false; } stdin = content; }
       const tokens = parsed.argv;
       if (!tokens.length) continue;
       // NAME=value assignments
@@ -1256,7 +1259,7 @@ async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: n
       if (!def) {
         const reason = LIMIT_REASONS.get(name);
         if (reason) io.print(`${name}: ${reason}`, "dim");
-        else io.print(`blacksite: command not found: ${name} — try \`help\``, "err");
+        else io.print(tf("blacksite: command not found: {name} — try `help`", { name }), "err");
         proc.state = "done"; return false;
       }
       let out = "";
@@ -1284,7 +1287,7 @@ async function execPipeline(os: BlacksiteOS, line: string, io: ShellIO, depth: n
     return ok;
   };
   if (background) {
-    io.print(`[${proc.pid}] running in background`, "dim");
+    io.print(tf("[{pid}] running in background", { pid: proc.pid }), "dim");
     void run();
     return true;
   }

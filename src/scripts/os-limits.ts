@@ -3,6 +3,7 @@
 // shows these as LIMIT; running one speaks its reason instead of pretending.
 import roster from "../data/blacksite-commands.json";
 import { LIMIT_REASONS, VERBS } from "./os-shell";
+import { t } from "./os-i18n";
 
 const UDP_HINTS = ["snmp", "nbstat", "mndp", "mdns", "ssdp", "upnp", "bonjour", "bacnet", "happ", "lon", "ffprobe", "moxa", "ntp", "reflect", "kiss", "ccsds"];
 const LAN_HINTS = ["discover", "revdns", "router", "census", "scan"];
@@ -32,6 +33,6 @@ export function registerLimitReasons() {
     } else {
       reason = "not ported to the web room yet. the native Blacksite in nightjar runs it today.";
     }
-    LIMIT_REASONS.set(v, reason);
+    LIMIT_REASONS.set(v, t(reason));
   }
 }
