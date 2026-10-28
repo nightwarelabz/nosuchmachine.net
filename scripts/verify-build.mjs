@@ -385,9 +385,23 @@ for (const id of ["http", "errno", "signals", "dnstypes", "protocols", "magic"])
   const srcRows = JSON.parse(fs.readFileSync(`public/toolchest/${id}.json`, "utf8"));
   assert.equal(JSON.parse(compRaw).length, srcRows.length, `the toolchest-ja companion ${id} must parallel its dataset row for row`);
 }
-const rubyWasmPath = path.join(root, "ruby/ruby.wasm");
-assert.ok(fs.existsSync(rubyWasmPath), "dist must carry the Ruby interpreter at ruby/ruby.wasm");
-const rubyWasmSize = fs.statSync(rubyWasmPath).size;
+// The Ruby interpreter ships split (Pages refuses files over 25 MiB;
+// the worker reassembles + hash-verifies). The gate keeps the whole
+// invariant: a manifest, every part present and under the cap, and
+// the parts summing to the full interpreter.
+const rubyManifestPath = path.join(root, "ruby/manifest.json");
+assert.ok(fs.existsSync(rubyManifestPath), "dist must carry the Ruby manifest at ruby/manifest.json");
+const rubyManifest = JSON.parse(fs.readFileSync(rubyManifestPath, "utf8"));
+assert.ok(Array.isArray(rubyManifest.parts) && rubyManifest.parts.length >= 2, "the ruby manifest must name at least two parts");
+let rubyWasmSize = 0;
+for (const part of rubyManifest.parts) {
+  const partPath = path.join(root, "ruby", part);
+  assert.ok(fs.existsSync(partPath), `dist must carry the Ruby part ruby/${part}`);
+  const partSize = fs.statSync(partPath).size;
+  assert.ok(partSize <= 26_214_400, `ruby/${part} exceeds the 25 MiB Pages per-file cap: ${partSize}`);
+  rubyWasmSize += partSize;
+}
+assert.equal(rubyWasmSize, rubyManifest.bytes, "the ruby parts must sum to the manifest byte count");
 assert.ok(rubyWasmSize > 20_000_000 && rubyWasmSize < 40_000_000, `ruby.wasm size looks wrong: ${rubyWasmSize}`);
 const rubyWorkerJs = fs.readFileSync(path.join(root, "ruby/ruby-worker.js"), "utf8");
 assert.ok(rubyWorkerJs.includes("full_message"), "the built ruby worker must carry the run driver");

@@ -1,7 +1,8 @@
 /* the Ruby room — real CRuby 3.4 (the official ruby.wasm build)
  * in a dedicated worker (os-ruby-worker.ts, bundled to
  * /ruby/ruby-worker.js by scripts/build-ruby.mjs; the interpreter
- * rides same-origin at /ruby/ruby.wasm).
+ * rides same-origin under /ruby/, split into parts the worker
+ * reassembles — see scripts/build-ruby.mjs for why).
  *
  * The bridge is the VFS: at run, /home/operator is mirrored into
  * the worker as Ruby's one filesystem and files Ruby writes are
@@ -106,7 +107,7 @@ class RubyRunner {
       else if (m.type === "done") this.finish({ files: m.files || [], capped: !!m.capped });
       else if (m.type === "fatal") { this.onOut?.("stderr", `ruby: ${m.error || "the run failed"}`); this.finish(null); }
     });
-    w.postMessage({ type: "init", wasmUrl: "/ruby/ruby.wasm" });
+    w.postMessage({ type: "init", wasmBase: "/ruby/" });
     return this.ready;
   }
 

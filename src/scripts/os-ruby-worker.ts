@@ -1,7 +1,9 @@
 /* the Ruby engine room — real CRuby 3.4 (the official ruby.wasm
  * build) in a dedicated worker. This file is bundled by
- * scripts/build-ruby.mjs into public/ruby/ruby-worker.js and the
- * interpreter itself is copied beside it as ruby.wasm; both are
+ * scripts/build-ruby.mjs into public/ruby/ruby-worker.js; the
+ * interpreter rides beside it split into ruby.wasm.<n> parts with
+ * a manifest (Pages refuses single files over 25 MiB) and is
+ * reassembled + hash-verified here before compiling. Both are
  * build artifacts, never committed.
  *
  * The world offered to Ruby is deliberately small: WASI args/env
@@ -134,12 +136,28 @@ async function run(m: { entry: string; files: RunFile[]; sab?: SharedArrayBuffer
 }
 
 self.onmessage = (e: MessageEvent) => {
-  const m = e.data as { type: string; wasmUrl?: string; entry: string; files: RunFile[]; sab?: SharedArrayBuffer };
+  const m = e.data as { type: string; wasmBase?: string; entry: string; files: RunFile[]; sab?: SharedArrayBuffer };
   if (m.type === "init") {
     modulePromise = (async () => {
-      const res = await fetch(m.wasmUrl!);
-      if (!res.ok) throw new Error(`ruby.wasm: HTTP ${res.status}`);
-      return WebAssembly.compile(await res.arrayBuffer());
+      const base = m.wasmBase!;
+      const mres = await fetch(`${base}manifest.json`);
+      if (!mres.ok) throw new Error(`ruby manifest: HTTP ${mres.status}`);
+      const manifest = (await mres.json()) as { parts: string[]; bytes: number; sha256: string };
+      const chunks = await Promise.all(
+        manifest.parts.map(async (part) => {
+          const res = await fetch(`${base}${part}`);
+          if (!res.ok) throw new Error(`ruby.wasm part ${part}: HTTP ${res.status}`);
+          return new Uint8Array(await res.arrayBuffer());
+        }),
+      );
+      const whole = new Uint8Array(manifest.bytes);
+      let off = 0;
+      for (const c of chunks) { whole.set(c, off); off += c.length; }
+      if (off !== manifest.bytes) throw new Error("ruby.wasm: reassembled size mismatch");
+      const digest = await crypto.subtle.digest("SHA-256", whole);
+      const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      if (hex !== manifest.sha256) throw new Error("ruby.wasm: sha-256 mismatch after reassembly");
+      return WebAssembly.compile(whole);
     })();
     modulePromise.then(
       () => (self as unknown as Worker).postMessage({ type: "ready" }),
