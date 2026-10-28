@@ -136,6 +136,27 @@ export class TripwireRegister {
   }
 }
 
+/** The launched-build judge: does what the origin serves now
+ *  match, byte for byte, what we ourselves launched? The build
+ *  stamps dist/version.json with the OS chunk's name and its
+ *  SHA-256 at the moment of launch; the running checker fetches
+ *  the served chunk and hashes it. A page running an OLDER chunk
+ *  than the stamp names is not tampering — it is the ordinary
+ *  update-waiting state, and the update watcher owns it. A stamp
+ *  without a seal predates byte-sealing and reports neutral. An
+ *  unreadable stamp or chunk is a network fact, not a verdict.
+ *  Only one thing fails: the stamp names the very chunk this
+ *  page runs, the bytes were fetched, and they hash to something
+ *  else — the launched artifact was altered after launch. */
+export function judgeLaunched(i: { stampChunk?: string | null; stampHash?: string | null; runningChunk?: string | null; servedHash?: string | null }): { ok: boolean; detail: string } {
+  if (!i.stampChunk) return { ok: true, detail: "no launch stamp could be read — the bytes stand unverified, not accused" };
+  if (!i.stampHash) return { ok: true, detail: "the launched stamp predates byte-sealing — the bytes stand unsealed, not accused" };
+  if (i.runningChunk && i.runningChunk !== i.stampChunk) return { ok: true, detail: `a newer build is launched and waiting (the stamp names ${i.stampChunk}; this page runs ${i.runningChunk}) — the update watcher owns the reload` };
+  if (!i.servedHash) return { ok: true, detail: "the served bundle could not be fetched for hashing — the bytes stand unverified, not accused" };
+  if (i.servedHash !== i.stampHash) return { ok: false, detail: `the served OS bundle hashes to ${i.servedHash.slice(0, 16)}…, NOT the launched build's ${i.stampHash.slice(0, 16)}… — what the origin serves is not what was launched` };
+  return { ok: true, detail: `the served OS bundle hashes byte-for-byte to the launched build (${i.stampHash.slice(0, 16)}…)` };
+}
+
 export interface WireJudgeInput {
   wirePresent: boolean;
   wireSealOk: boolean;

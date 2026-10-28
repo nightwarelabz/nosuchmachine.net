@@ -7,9 +7,9 @@ import roster from "../data/blacksite-commands.json";
 import { identifyFile, hexdump as parseHexdump } from "./os-parse";
 import { sfx } from "./os-sound";
 import { skey } from "./os-depth";
-import { IvoryTower, hashText, merkleRoot } from "./os-ivory";
+import { IvoryTower, hashText, merkleRoot, sha256Hex } from "./os-ivory";
 import type { IvoryInput } from "./os-ivory";
-import { TripwireRegister, judgeWire } from "./os-tripwire";
+import { TripwireRegister, judgeWire, judgeLaunched } from "./os-tripwire";
 
 export interface ShellIO {
   print(text: string, cls?: string): void;
@@ -689,11 +689,12 @@ export class BlacksiteOS {
    *  other key passes through untouched. Installed once per page;
    *  routed to the live room through wireSentinelOwner, so a
    *  rebuilt room inherits the same watch. */
+  wireSentinelArmed = false;
   private wireInstallSentinel() {
     wireSentinelOwner = this;
     try {
       const store = localStorage as unknown as Record<string, unknown>;
-      if (wireWrappedStores.has(store)) return;
+      if (wireWrappedStores.has(store)) { this.wireSentinelArmed = true; return; }
       wireWrappedStores.add(store);
       const defended = () => new Set<string>([...Object.values(WIRE_KEYS), WIRE_KEY]);
       const origSet = localStorage.setItem.bind(localStorage);
@@ -725,6 +726,7 @@ export class BlacksiteOS {
       } else {
         wrap(store);
       }
+      this.wireSentinelArmed = true;
     } catch { /* a store that refuses wrapping is still judged at boot and at every observance */ }
   }
   /** The sentence: record the accusation OUTSIDE the accused
@@ -781,6 +783,99 @@ export class BlacksiteOS {
     this.wire.noteEvent("injection", clean);
     this.wirePersist();
     this.log(`injection: ${clean} — the page's policy wall stopped it; the wire remembers.`);
+    try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:injection", { detail: { detail: clean } })); } catch { /* headless — the journal still knows */ }
+  }
+  /** VERIFY INTEGRITY — the whole defense composed into one
+   *  read-only audit, for the operator's hand whenever they want
+   *  it (the `integrity` verb, the System panel's checker): the
+   *  tripwire's stored register against its living seal, every
+   *  system register against the notarized manifest, the plant
+   *  law over the storage census, the tower's ledger chain, the
+   *  room re-hashed against the ledger's Merkle root, the
+   *  sentinel standing, and AEGIS's posture. It changes nothing
+   *  and sentences no one — it REPORTS, and the desk warns the
+   *  operator by toast whenever any line of it fails. The
+   *  sentences belong to the observance and the sentinel, as
+   *  always; this is the checker that lets a human ask. */
+  verifyIntegrity() {
+    const checks: Array<{ name: string; ok: boolean; detail: string }> = [];
+    let wireRaw: string | null = null;
+    try { wireRaw = localStorage.getItem(WIRE_KEY); } catch { /* treated as absent */ }
+    checks.push({
+      name: "the tripwire's seal",
+      ok: wireRaw !== null && wireRaw === this.wire.serialize(),
+      detail: wireRaw === null ? "the wire's register is missing from storage" : wireRaw === this.wire.serialize() ? "the stored wire matches its living seal, byte for byte" : "the stored wire is NOT what the living wire sealed",
+    });
+    const present = this.wirePresent();
+    const bad = Object.keys(WIRE_KEYS).filter((s) => (this.wire.heads[s] ?? null) !== (present[s] ?? null));
+    checks.push({
+      name: "the manifest — every system register against its notarized head",
+      ok: bad.length === 0,
+      detail: bad.length === 0 ? `${Object.keys(WIRE_KEYS).length} registers, every head matches` : "mismatched: " + bad.map((s) => WIRE_NAMES[s] || s).join(", "),
+    });
+    const planted = this.wirePlanted(this.wireEnumerate());
+    checks.push({
+      name: "the census — no planted registers",
+      ok: planted.length === 0,
+      detail: planted.length === 0 ? "every key in the system's namespaces is owned by a known hand" : "planted: " + planted.join(", "),
+    });
+    const v = this.ivoryVerify();
+    checks.push({ name: "the tower's ledger chain", ok: v.chainOk, detail: v.chainOk ? "every observance still chained to the one before" : `BROKEN at observance ${v.chainAt}` });
+    checks.push({ name: "the room against the ledger's root", ok: v.rootOk, detail: v.rootOk ? "the room still hashes to its Merkle root" : "the room no longer hashes to the ledger's root — an observance names the drift" });
+    checks.push({
+      name: "the sentinel on the storage surface",
+      ok: this.wireSentinelArmed,
+      detail: this.wireSentinelArmed ? "standing — an unaccounted write to any defended register is blocked on the spot" : "NOT standing on this storage surface; the wire still judges at boot and at every observance",
+    });
+    checks.push({
+      name: "AEGIS",
+      ok: true,
+      detail: this.aegis.contained ? "CONTAINED — the real filesystem is frozen and writes land in the mirage" : `armed — ${this.aegisSnaps.length} snapshot(s) in the ring, the breaker watching every write`,
+    });
+    const ok = checks.every((c) => c.ok);
+    try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:integrity", { detail: { ok, failures: checks.filter((c) => !c.ok).map((c) => c.name) } })); } catch { /* headless — the report still returns */ }
+    return { ok, checks, state: this.wireVerdict ? "cut" : "strung", contained: this.aegis.contained };
+  }
+  /** The launched-bytes line of the checker: fetch the launch
+   *  stamp (/version.json — it names the OS chunk and seals it
+   *  with the SHA-256 computed at build time), fetch the chunk
+   *  the origin serves now, hash it with the tower's own SHA-256,
+   *  and let the judge compare. Byte for byte, where it matters:
+   *  the system itself, as launched. */
+  async verifyLaunchedBytes() {
+    const name = "the launched system's bytes";
+    if (typeof fetch === "undefined") return { name, ok: true, detail: "not checked in this realm" };
+    let stamp: { chunk?: string | null; sha256?: string | null } | null = null;
+    try {
+      const r = await fetch("/version.json", { cache: "no-store" });
+      if (r.ok) stamp = await r.json();
+    } catch { /* a network fact — the judge hears it as unreadable */ }
+    let runningChunk: string | null = null;
+    try {
+      const perf = (globalThis as { performance?: { getEntriesByType?: (t: string) => Array<{ name: string }> } }).performance;
+      const entries = perf?.getEntriesByType ? perf.getEntriesByType("resource") : [];
+      for (const e of entries) { const m = /\/_astro\/(os\.[A-Za-z0-9_-]+\.js)/.exec(e.name); if (m) { runningChunk = m[1]; break; } }
+    } catch { /* the judge hears a null running chunk as this page's own — the stamp's name decides */ }
+    let servedHash: string | null = null;
+    if (stamp && stamp.chunk && stamp.sha256 && (!runningChunk || runningChunk === stamp.chunk)) {
+      try {
+        const r = await fetch(`/_astro/${stamp.chunk}`, { cache: "no-store" });
+        if (r.ok) servedHash = sha256Hex(new Uint8Array(await r.arrayBuffer()));
+      } catch { /* unverified, not accused */ }
+    }
+    const v = judgeLaunched({ stampChunk: stamp?.chunk ?? null, stampHash: stamp?.sha256 ?? null, runningChunk, servedHash });
+    return { name, ok: v.ok, detail: v.detail };
+  }
+  /** The full checker: the read-only audit plus the launched-
+   *  bytes line, with the desk's warning fired once, over the
+   *  whole of it. */
+  async verifyIntegrityFull() {
+    const base = this.verifyIntegrity();
+    const bytesLine = await this.verifyLaunchedBytes();
+    const checks = [...base.checks, bytesLine];
+    const ok = checks.every((c) => c.ok);
+    try { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("blacksite:integrity", { detail: { ok, failures: checks.filter((c) => !c.ok).map((c) => c.name) } })); } catch { /* headless — the report still returns */ }
+    return { ok, checks, state: base.state, contained: base.contained };
   }
   tripwireStatus() {
     const s = this.wire.status();

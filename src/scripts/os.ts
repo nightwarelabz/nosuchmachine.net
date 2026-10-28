@@ -44,6 +44,25 @@ window.addEventListener("blacksite:ivory", (e) => {
   if (findings.some((f: any) => f.severity === "watch")) {
     document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "ivory-tower: the watch is raised — drift no hand in this room accounts for. `ivory` in the terminal names it." } }));
   }
+  const trip = findings.find((f: any) => f.severity === "trip");
+  if (trip) {
+    document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "INTEGRITY WARNING — tampering detected: " + trip.detail + ". AEGIS containment is the sentence; the real filesystem is frozen. `integrity` in the terminal runs the full checker." } }));
+  }
+});
+/* The integrity warnings: whenever any layer of the defense —
+   the wire, the tower, the policy wall — convicts or refuses
+   something, the operator hears it as a toast immediately, in
+   plain words, wherever they are in the room. A system being
+   tampered with does not get to be quiet about it. */
+window.addEventListener("blacksite:integrity", (e) => {
+  const detail = (e as CustomEvent).detail || {};
+  if (detail.ok === false) {
+    document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "INTEGRITY WARNING — the checker found a failed line: " + (Array.isArray(detail.failures) ? detail.failures.join("; ") : "unknown") + ". `integrity` in the terminal shows the whole audit." } }));
+  }
+});
+window.addEventListener("blacksite:injection", (e) => {
+  const detail = (e as CustomEvent).detail || {};
+  document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "INTEGRITY WARNING — an injection was refused by this page's policy wall (" + (detail.detail || "a blocked load") + "). If you did not expect it, something in your browser or on your network is reaching for this system." } }));
 });
 /* TRIPWIRE: when the wire is cut, the desk says so in the wire's
    own banner, and the room reboots itself onto the restored
@@ -64,6 +83,7 @@ function tripwireBanner(text: string) {
 }
 window.addEventListener("blacksite:tripwire", (e) => {
   const detail = (e as CustomEvent).detail || {};
+  document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: "INTEGRITY WARNING — the tripwire is cut: " + (detail.reason || "the defenses were tampered with") + ". The default defenses are restoring themselves" + (detail.reboot ? " and the room reboots onto them." : "; containment holds.") } }));
   tripwireBanner(`${detail.reason || "the defenses were tampered with"}. the default defenses have been restored and containment holds.`);
   if (detail.reboot) setTimeout(() => { try { location.reload(); } catch { /* the banner already said it */ } }, 1800);
 });
@@ -94,6 +114,10 @@ window.addEventListener("blacksite:aegis", (e) => {
   document.querySelector(".os-desktop")?.appendChild(b);
 });
 let zTop = 10;
+/* The integrity checker's last word this visit — the System
+   panel shows it; the checker itself runs on the button or the
+   `integrity` verb, and warns by toast whenever a line fails. */
+let lastIntegrity: { ok: boolean; at: number; failures: string[] } | null = null;
 const windows = new Map<string, HTMLElement>();
 let winCounter = 0;
 
@@ -1100,7 +1124,21 @@ function buildSystem(body: HTMLElement) {
   if (tw.state === "cut") tstate.style.color = "var(--os-accent)";
   const tinfo = el("p", "os-note", "registers notarized: " + tw.registers + " · storage keys censused: " + tw.census + " · boots under this wire: " + tw.boots + (tw.events.length ? "\nthe wire's memory:\n" + tw.events.map((e) => "  " + new Date(e.at).toLocaleString() + "  " + e.kind + " — " + e.detail).join("\n") : ""));
   tinfo.style.whiteSpace = "pre-line";
-  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow, ih, istate, iinfo, irow, th, tstate, tinfo);
+  const trow = el("div", "os-sys-actions");
+  const integrityBtn = el("button", "os-btn", "verify integrity");
+  integrityBtn.addEventListener("click", async () => {
+    os.ivoryObserveNow("manual");
+    const r = await os.verifyIntegrityFull();
+    lastIntegrity = { ok: r.ok, at: Date.now(), failures: r.checks.filter((c) => !c.ok).map((c) => c.name) };
+    document.dispatchEvent(new CustomEvent("blacksite:toast", { detail: { text: r.ok ? "integrity verified — the wire's seal, all " + tw.registers + " registers, the ledger chain, the room itself, and the launched bytes check out." : "INTEGRITY WARNING — failed: " + lastIntegrity.failures.join("; ") + "." } }));
+    body.innerHTML = ""; buildSystem(body);
+  });
+  trow.append(integrityBtn);
+  const iline = el("p", "os-note", lastIntegrity
+    ? (lastIntegrity.ok ? "the checker last ran at " + new Date(lastIntegrity.at).toLocaleTimeString() + " — every line held." : "the checker last ran at " + new Date(lastIntegrity.at).toLocaleTimeString() + " — FAILED: " + lastIntegrity.failures.join("; ") + ".")
+    : "the checker has not run this visit. it re-reads the wire's seal, every register against the manifest, the census, the ledger chain, re-hashes the room, and hashes the launched system's own bytes against the seal the build stamped at launch — and warns you here and by toast if anything fails.");
+  if (lastIntegrity && !lastIntegrity.ok) iline.style.color = "var(--os-accent)";
+  wrap.append(stats, h, table, note, refresh, ah, astate, ainfo, arow, ih, istate, iinfo, irow, th, tstate, tinfo, trow, iline);
   body.appendChild(wrap);
 }
 

@@ -326,6 +326,16 @@ function registerHouse() {
     if (st.events.length) lines.push("the wire's memory:", ...st.events.map((e) => "  " + new Date(e.at).toLocaleString() + "  " + e.kind + " — " + e.detail));
     return lines.join("\n");
   });
+  verb("integrity", "LIVE", "integrity — verify the whole defense: the wire's seal, every register, the census, the ledger chain, the room itself, and the launched system's bytes", async (ctx) => {
+    ctx.os.ivoryObserveNow("manual");
+    const r = await ctx.os.verifyIntegrityFull();
+    const lines = [
+      "VERIFY INTEGRITY: " + (r.ok ? "the system checks out — every line of the defense holds." : "FAILED — the desk has been warned by toast; the failed lines are marked below."),
+      ...r.checks.map((c) => "  " + (c.ok ? "holds  " : "FAILED ") + c.name + " — " + c.detail),
+      "the wire: " + r.state + " · AEGIS: " + (r.contained ? "contained" : "armed") + ". the checker reports; the sentences belong to the observance and the sentinel, as always.",
+    ];
+    return lines.join("\n");
+  });
   verb("wallpaper", "LIVE", "wallpaper [monolith|mare|stars|plasma|mandelbrot|none] — the thinice monolith, the mare, or art the room generates", async (ctx) => {
     const kind = ctx.args[0] || "stars";
     if (!["monolith", "mare", "stars", "plasma", "mandelbrot", "none"].includes(kind)) return "wallpapers: monolith, mare, stars, plasma, mandelbrot, none.";

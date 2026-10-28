@@ -486,5 +486,37 @@ const REBOOT = "blacksite-tripwire-reboot";
   assert.equal(os.aegis.contained, false, "and it carries no sentence");
   assert.ok(os.journal.some((j) => j.text.startsWith("injection:")), "the journal carries the watch's word");
 }
+{ // VERIFY INTEGRITY: the composed checker — green on a healthy
+  // room, naming the failed line on a handled one, and read-only
+  // throughout (it reports; it does not sentence).
+  const shared = new Map(); const sess = new Map();
+  const { BlacksiteOS } = bootOS(shared, sess);
+  const os = new BlacksiteOS();
+  flushTimers();
+  const good = os.verifyIntegrity();
+  assert.equal(good.ok, true, "a healthy room verifies clean");
+  assert.ok(good.checks.every((c) => c.ok), "every line of the audit holds");
+  assert.ok(good.checks.some((c) => c.name.includes("sentinel") && c.ok), "the sentinel reports standing");
+  assert.equal(good.checks.length, 7, "seven lines: seal, manifest, census, chain, root, sentinel, AEGIS");
+  shared.set("blacksite-settings-v1", JSON.stringify({ emcon: "alpha", theme: "thinice", wallpaper: "", tomatoes: [] }));
+  const bad = os.verifyIntegrity();
+  assert.equal(bad.ok, false, "a register rewritten behind the realm fails the checker");
+  assert.ok(bad.checks.some((c) => !c.ok && c.detail.includes("settings register")), "the failed line names the handled register");
+  assert.equal(os.aegis.contained, false, "the checker itself sentences no one — the observance does that");
+  os.ivoryObserveNow("clock");
+  assert.equal(os.aegis.contained, true, "and the observance carries out the sentence the checker foresaw");
+}
+{ // the launched-bytes judge: byte for byte, where it matters
+  const J = tripwire.judgeLaunched;
+  const H = "a".repeat(64);
+  assert.equal(J({ stampChunk: "os.X.js", stampHash: H, runningChunk: "os.X.js", servedHash: H }).ok, true, "served bytes equal to the seal pass");
+  const bad = J({ stampChunk: "os.X.js", stampHash: H, runningChunk: "os.X.js", servedHash: "b".repeat(64) });
+  assert.equal(bad.ok, false, "same name, different bytes FAILS — the launched artifact was altered");
+  assert.ok(bad.detail.includes("NOT the launched build's"), "the failure says what happened");
+  assert.equal(J({ stampChunk: "os.Y.js", stampHash: H, runningChunk: "os.X.js", servedHash: null }).ok, true, "an older page under a newer stamp is update-waiting, not tampering");
+  assert.equal(J({ stampChunk: "os.X.js", stampHash: null, runningChunk: "os.X.js", servedHash: null }).ok, true, "a pre-seal stamp reports neutral");
+  assert.equal(J({ stampChunk: null, stampHash: null, runningChunk: null, servedHash: null }).ok, true, "an unreadable stamp reports neutral, never a verdict");
+  assert.equal(J({ stampChunk: "os.X.js", stampHash: H, runningChunk: "os.X.js", servedHash: null }).ok, true, "an unfetchable bundle is unverified, not accused");
+}
 console.log("tripwire layer 3: the full-system wire — all assertions held");
 console.log("verify-ivory: OK");

@@ -282,6 +282,15 @@ assert.ok(fs.existsSync(path.join(root, "_astro", versionStamp.chunk)), "version
 assert.ok(astroJs.includes("BLACKSITE has been updated"), "OS bundle must carry the update watcher");
 assert.ok(astroJs.includes("/version.json"), "OS bundle must poll /version.json");
 assert.ok(astroJs.includes("server is about to refresh for an update"), "OS bundle must carry the held update's warning toast");
+// The byte seal: the stamp must carry the chunk's true SHA-256 —
+// computed here, independently, from the bytes in dist — so the
+// running integrity checker's byte-for-byte line has a seal that
+// provably came from this build.
+import { createHash } from "node:crypto";
+const chunkBytes = fs.readFileSync(path.join(root, "_astro", versionStamp.chunk));
+assert.equal(versionStamp.sha256, createHash("sha256").update(chunkBytes).digest("hex"), "version.json must seal the OS chunk with its true SHA-256");
+assert.equal(versionStamp.bytes, chunkBytes.length, "version.json must record the OS chunk's byte size");
+assert.ok(astroJs.includes("byte-for-byte"), "the built OS bundle must carry the launched-bytes integrity line");
 assert.ok(astroJs.includes("waiting for haxiuz to close"), "OS bundle must carry the held update's haxiuz wait");
 // ——— BEGIN haxiuz restructure pins (Games folder + surface removal) ———
 // Chase's order (2026-10-26): the games stand in one desktop folder;
@@ -340,6 +349,12 @@ assert.ok(astroJs.includes("tripwire:"), "the built OS bundle must carry the wir
 // watch feeds the wire, and the orc room's scheme law keeps
 // javascript:/data: URLs from ever reaching a frame.
 assert.ok(astroJs.includes("securitypolicyviolation"), "the built OS bundle must carry the injection watch");
+// VERIFY INTEGRITY: the composed checker and the tamper toasts —
+// the wire's seal, manifest, census, chain, root, sentinel and
+// AEGIS in one read-only audit, and a toast that warns the
+// operator whenever any layer convicts anything.
+assert.ok(shellSrcI.includes("verifyIntegrity"), "the shell must carry the integrity checker");
+assert.ok(astroJs.includes("INTEGRITY WARNING"), "the built OS bundle must carry the tamper-warning toast");
 const orcSrcW = fs.readFileSync("src/scripts/os-orc.ts", "utf8");
 assert.ok(orcSrcW.includes('u.protocol !== "http:"'), "the orc room must refuse non-http(s) schemes before framing");
 const wyrdfallSrcW = fs.readFileSync("src/scripts/os-wyrdfall.ts", "utf8");
