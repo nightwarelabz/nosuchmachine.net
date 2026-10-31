@@ -47,6 +47,8 @@
     var lines = [
       'SNOOT PQC SCAN — INTAKE',
       '=======================',
+      'Send via GitHub: https://github.com/nightwarelabz/snoot — or via Ko-fi: https://ko-fi.com/nightwarelabz',
+      '',
       'Name: ' + name,
       'Send report to: ' + reportTo,
       'Tier: ' + tier,
