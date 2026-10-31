@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="data:," />
+<title>Quantum Edge Guard — NIGHTWARE LABZ</title>
+<meta name="description" content="Quantum Edge Guard (qeg) audits, grades, and enforces your machine's cryptography posture for the AI and quantum era. Terminal-first, local, no telemetry." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0b0d0e;
+    --bg2:#101315;
+    --panel:#14181a;
+    --panel2:#181d1f;
+    --line:#262d30;
+    --line-strong:#353f43;
+    --text:#e8eae6;
+    --muted:#a7ada6;
+    --faint:#7d847e;
+    --amber:#e6a23c;
+    --amber-dim:#8a6425;
+    --red:#e05a4e;
+    --orange:#d98a3a;
+    --green:#7fb069;
+    --teal:#5ab0a6;
+    --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--amber);text-decoration:none}
+  a:hover{text-decoration:underline}
+  ::selection{background:var(--amber);color:#111}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .mono{font-family:var(--mono)}
+
+  .topbar{border-bottom:1px solid var(--line);background:var(--bg2);position:sticky;top:0;z-index:10}
+  .topbar-in{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-size:13px;letter-spacing:.14em;font-weight:600;color:var(--text)}
+  .brand span{color:var(--amber)}
+  .brand .prod{color:var(--muted);letter-spacing:.06em;font-weight:400}
+  .topnav{display:flex;gap:18px;font-family:var(--mono);font-size:12.5px;flex-wrap:wrap}
+  .topnav a{color:var(--muted)}
+  .topnav a:hover{color:var(--amber);text-decoration:none}
+
+  .hero{padding:62px 0 46px;border-bottom:1px solid var(--line);background:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,.018) 39px, rgba(255,255,255,.018) 40px), var(--bg)}
+  .kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.16em;color:var(--amber);text-transform:uppercase;margin:0 0 18px}
+  h1{font-size:clamp(32px,5.4vw,56px);line-height:1.07;font-weight:700;letter-spacing:-.015em;margin:0 0 20px;max-width:860px}
+  h1 em{font-style:normal;color:var(--amber)}
+  .lede{font-size:clamp(16.5px,2vw,19px);color:var(--muted);max-width:740px;margin:0 0 14px;line-height:1.65}
+  .lede strong{color:var(--text);font-weight:600}
+  .hero-note{font-family:var(--mono);font-size:13px;color:var(--faint);margin:0 0 28px}
+  .hero-note b{color:var(--teal);font-weight:600}
+  .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:34px}
+  .btn{display:inline-block;font-family:var(--mono);font-size:14px;font-weight:600;padding:13px 22px;border:1px solid var(--amber);background:var(--amber);color:#14100a;cursor:pointer;text-align:center}
+  .btn:hover{background:#f0b356;text-decoration:none}
+  .btn-ghost{background:transparent;color:var(--text);border-color:var(--line-strong)}
+  .btn-ghost:hover{border-color:var(--amber);color:var(--amber);background:transparent}
+  .hero-stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);background:var(--panel)}
+  .stat{padding:16px 18px;border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
+  .stat b{display:block;font-family:var(--mono);font-size:20px;font-weight:600;color:var(--text);line-height:1.2}
+  .stat span{font-size:12.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.02em;line-height:1.4;display:block;margin-top:4px}
+
+  section{padding:56px 0;border-bottom:1px solid var(--line)}
+  .sec-head{margin-bottom:28px;max-width:760px}
+  .sec-label{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--amber);text-transform:uppercase;margin:0 0 10px}
+  h2{font-size:clamp(24px,3.4vw,32px);line-height:1.2;margin:0 0 10px;font-weight:700;letter-spacing:-.01em}
+  .sec-head p{color:var(--muted);margin:0}
+  h3{font-size:17px;margin:0 0 8px;font-weight:600}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);padding:24px}
+  .card .num{font-family:var(--mono);color:var(--amber);font-size:13px;font-weight:600;display:block;margin-bottom:10px}
+  .card .cmd{font-family:var(--mono);font-size:13.5px;color:var(--text);background:var(--bg2);border:1px solid var(--line);display:inline-block;padding:4px 9px;margin-bottom:12px}
+  .card .cmd em{font-style:normal;color:var(--amber)}
+  .card p{color:var(--muted);margin:0;font-size:15px}
+  .card p strong{color:var(--text)}
+  .card ul{margin:12px 0 0;padding:0 0 0 18px;color:var(--muted);font-size:14.5px}
+  .card ul li{margin:5px 0}
+  .card ul li::marker{color:var(--amber)}
+
+  /* grades */
+  .grades{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 0}
+  .grade{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.05em;padding:5px 10px;border:1px solid}
+  .g-pass{color:#9bc48a;border-color:rgba(127,176,105,.45);background:rgba(127,176,105,.10)}
+  .g-warn{color:#e5a45e;border-color:rgba(217,138,58,.45);background:rgba(217,138,58,.10)}
+  .g-fail{color:#f0857a;border-color:rgba(224,90,78,.45);background:rgba(224,90,78,.10)}
+  .g-policy{color:#f0857a;border-color:rgba(224,90,78,.7);background:rgba(224,90,78,.16)}
+  .g-info{color:var(--muted);border-color:var(--line-strong);background:var(--bg2)}
+
+  /* terminal */
+  .term{border:1px solid var(--line-strong);background:#080a0b;margin-bottom:16px;overflow:hidden}
+  .term-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg2);flex-wrap:wrap}
+  .term-title{font-family:var(--mono);font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+  .term-title b{color:var(--text)}
+  .term-exit{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;padding:3px 8px;border:1px solid var(--line-strong);color:var(--faint)}
+  .term-exit.bad{color:#f0857a;border-color:rgba(224,90,78,.4)}
+  .term-exit.policy{color:#fff;background:var(--red);border-color:var(--red)}
+  .term-body{padding:16px 16px 14px;font-family:var(--mono);font-size:13.2px;line-height:1.65;overflow-x:auto;white-space:pre;color:#c9cdc6}
+  .term-body .prompt{color:var(--amber)}
+  .term-body .pass{color:#9bc48a}
+  .term-body .warn{color:#e5a45e}
+  .term-body .fail{color:#f0857a}
+  .term-body .dim{color:var(--faint)}
+  .term-body .hl{color:var(--text);font-weight:600}
+  .proof-note{font-size:14.5px;color:var(--muted);margin:6px 0 22px}
+  .proof-note strong{color:var(--text)}
+
+  /* grading table */
+  .table-scroll{overflow-x:auto;border:1px solid var(--line);background:var(--panel)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:640px}
+  th{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-align:left;padding:12px 16px;border-bottom:1px solid var(--line-strong);background:var(--bg2);white-space:nowrap}
+  td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  tr:last-child td{border-bottom:0}
+  td strong, td .t{color:var(--text);font-weight:600}
+  td code{font-family:var(--mono);font-size:13px;color:var(--amber);background:rgba(230,162,60,.08);padding:1px 5px;white-space:nowrap}
+
+  /* install */
+  .install-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;align-items:start}
+  .codeblock{border:1px solid var(--line-strong);background:#080a0b}
+  .codeblock-head{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--bg2)}
+  .codeblock-head span{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase}
+  .copy-small{font-family:var(--mono);font-size:12px;background:transparent;border:1px solid var(--line-strong);color:var(--muted);padding:5px 10px;cursor:pointer}
+  .copy-small:hover{border-color:var(--amber);color:var(--amber)}
+  .codeblock pre{margin:0;padding:16px;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:#d6d9d2;overflow-x:auto;white-space:pre}
+  .codeblock pre .c{color:var(--faint)}
+  .codeblock pre .a{color:var(--amber)}
+  .license-box{border:1px solid var(--amber-dim);background:linear-gradient(180deg, rgba(230,162,60,.05), transparent 60%), var(--panel);padding:22px}
+  .license-box h3{font-size:16px}
+  .license-box p{color:var(--muted);font-size:14.5px;margin:0 0 10px}
+  .license-box p strong{color:var(--text)}
+  .usage-list{list-style:none;margin:16px 0 0;padding:0}
+  .usage-list li{border-top:1px solid var(--line);padding:12px 0}
+  .usage-list li:first-child{border-top:0;padding-top:2px}
+  .usage-list code{font-family:var(--mono);font-size:13.5px;color:var(--text);display:block}
+  .usage-list span{font-size:13.5px;color:var(--faint)}
+
+  /* pricing / buy */
+  .buy-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:stretch}
+  .buy-main{background:var(--panel);border:1px solid var(--line);padding:28px}
+  .buy-main h3{font-size:20px;margin-bottom:6px}
+  .buy-main p{color:var(--muted);margin:0 0 14px;font-size:15px}
+  .buy-main p strong{color:var(--text)}
+  .buy-list{list-style:none;margin:18px 0 0;padding:0}
+  .buy-list li{padding:10px 0 10px 22px;position:relative;color:var(--muted);font-size:15px;border-bottom:1px dashed var(--line)}
+  .buy-list li:last-child{border-bottom:0}
+  .buy-list li::before{content:"▸";position:absolute;left:2px;color:var(--amber);font-family:var(--mono)}
+  .buy-list li strong{color:var(--text)}
+  .buy-side{border:1px solid var(--line);background:var(--bg2);padding:24px;display:flex;flex-direction:column}
+  .buy-side .pending{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber-dim);display:inline-block;padding:6px 10px;margin-bottom:16px;align-self:flex-start}
+  .buy-side p{color:var(--muted);font-size:15px;margin:0 0 18px}
+  .buy-side p strong{color:var(--text)}
+  .buy-side .btn{margin-bottom:10px;width:100%}
+
+  /* limits */
+  .limits{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .limit{border:1px solid var(--line);background:var(--panel);padding:22px}
+  .limit h3{font-size:15.5px}
+  .limit p{color:var(--muted);font-size:14.5px;margin:0}
+  .limit p strong{color:var(--text)}
+
+  /* roadmap */
+  .road{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);background:var(--panel)}
+  .road-item{padding:24px;border-right:1px solid var(--line)}
+  .road-item:last-child{border-right:0}
+  .road-item .ver{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:10px}
+  .road-item .ver.now{color:var(--green)}
+  .road-item h3{font-size:16px}
+  .road-item p, .road-item li{color:var(--muted);font-size:14.5px}
+  .road-item ul{margin:8px 0 0;padding-left:18px}
+  .road-item li{margin:4px 0}
+  .road-item li::marker{color:var(--amber)}
+
+  /* inquiry */
+  #inquire{background:var(--bg2)}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .field.full{grid-column:1/-1}
+  label{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;color:var(--text);font-weight:600}
+  label .req{color:var(--amber)}
+  .hint{font-size:13px;color:var(--faint);margin:0}
+  input[type=text],input[type=email],select,textarea{font-family:var(--sans);font-size:15px;color:var(--text);background:var(--bg);border:1px solid var(--line-strong);padding:11px 13px;width:100%;border-radius:0;appearance:none}
+  textarea{resize:vertical;min-height:74px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--amber);outline-offset:0;border-color:var(--amber)}
+  select{background-image:linear-gradient(45deg, transparent 50%, var(--muted) 50%),linear-gradient(135deg, var(--muted) 50%, transparent 50%);background-position:calc(100% - 18px) 55%, calc(100% - 13px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+  .compile-row{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .output-box{grid-column:1/-1;display:none}
+  .output-box.show{display:block}
+  .output-box textarea{font-family:var(--mono);font-size:13.5px;min-height:260px;background:var(--panel);line-height:1.55}
+  .copy-status{font-family:var(--mono);font-size:13px;color:var(--green)}
+  .form-err{font-family:var(--mono);font-size:13px;color:#f0857a;display:none}
+  .form-err.show{display:block}
+
+  footer{padding:34px 0 44px;background:var(--bg)}
+  .foot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--faint);line-height:1.7}
+  .foot a{color:var(--muted)}
+  .foot a:hover{color:var(--amber)}
+
+  @media (max-width:860px){
+    .hero-stats{grid-template-columns:1fr 1fr}
+    .stat:nth-child(2){border-right:0}
+    .stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--line)}
+    .install-grid,.buy-grid{grid-template-columns:1fr}
+    .road{grid-template-columns:1fr}
+    .road-item{border-right:0;border-bottom:1px solid var(--line)}
+    .road-item:last-child{border-bottom:0}
+  }
+  @media (max-width:640px){
+    .hero{padding:44px 0 36px}
+    section{padding:42px 0}
+    .grid2,.limits,form{grid-template-columns:1fr}
+    .btn{width:100%}
+    .cta-row .btn{flex:1}
+    .table-scroll{overflow-x:visible}
+    table{min-width:0}
+    thead{display:none}
+    tr{display:block;border-bottom:1px solid var(--line-strong);padding:8px 0}
+    tr:last-child{border-bottom:0}
+    td{display:block;border-bottom:0;padding:7px 16px}
+    td::before{content:attr(data-label);display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+    td code{white-space:normal}
+    .term-body{font-size:12.4px;padding:13px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;overflow-x:hidden}
+    .codeblock pre{white-space:pre-wrap;word-break:break-word;overflow-x:hidden}
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand">NIGHTWARE <span>LABZ</span> <span class="prod">— Quantum Edge Guard</span></div>
+    <nav class="topnav" aria-label="Page sections">
+      <a href="#what">What it does</a>
+      <a href="#proof">Verified runs</a>
+      <a href="#install">Install</a>
+      <a href="#license">License</a>
+      <a href="#inquire">Inquire</a>
+    </nav>
+  </div>
+</div>
+
+<main id="main">
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">Commercial product · Terminal-first · No telemetry</p>
+    <h1>Grade your machine's cryptography <em>for the AI and quantum era.</em></h1>
+    <p class="lede"><strong>Quantum Edge Guard</strong> (<span class="mono">qeg</span>) is a terminal-first guard that <strong>audits, grades, and enforces</strong> a machine's cryptography posture — built from scratch by NIGHTWARE LABZ and sold commercially from day one.</p>
+    <p class="hero-note">Runs locally in your terminal. <b>No account. No phone-home.</b> The report is yours.</p>
+    <div class="cta-row">
+      <a class="btn" href="#inquire">License inquiry →</a>
+      <a class="btn btn-ghost" href="#proof">See verified runs</a>
+      <a class="btn btn-ghost" href="https://github.com/nightwarelabz/quantum-edge-guard" target="_blank" rel="noopener">View the repo ↗</a>
+    </div>
+    <div class="hero-stats" role="list" aria-label="At a glance">
+      <div class="stat" role="listitem"><b>scan · check · report</b><span>three commands, one binary — qeg</span></div>
+      <div class="stat" role="listitem"><b>PASS / WARN / FAIL</b><span>plus POLICY FAIL — every grade with evidence</span></div>
+      <div class="stat" role="listitem"><b>exit 0 · 1 · 2</b><span>clean · FAIL findings · policy violation — gates scripts &amp; CI</span></div>
+      <div class="stat" role="listitem"><b>FIPS 203 / 204 / 205</b><span>PQC grading aligned to NIST standards</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="what">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">What v1 does — all runnable today</p>
+      <h2>Four jobs, done locally</h2>
+      <p>Quantum Edge Guard grades the crypto on your machines and the endpoints they talk to. Its grading approach grows out of what the lab learned building snoot — snoot inventories the crypto in your <em>code</em>; qeg grades the crypto on your <em>machines</em>.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="num">01 — LOCAL POSTURE AUDIT</span>
+        <span class="cmd">qeg <em>scan</em></span>
+        <h3>Audit this machine</h3>
+        <p>Reads the crypto configuration already on the machine — <strong>SSH client/server configs and OpenSSL config</strong> — and grades what it finds.</p>
+        <ul>
+          <li>Weak or classical-only key exchange, legacy ciphers and MACs, permissive TLS floors</li>
+          <li>Lists listening TCP services and flags plaintext <strong>FTP / Telnet / HTTP</strong> exposure</li>
+          <li>Every finding cited by <strong>file and line</strong></li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">02 — ENDPOINT GRADING</span>
+        <span class="cmd">qeg <em>check</em> &lt;host[:port]&gt;</span>
+        <h3>Grade what was actually negotiated</h3>
+        <p>Opens a <strong>real TLS handshake</strong> to the endpoint and grades what was negotiated — not what the endpoint claims to support.</p>
+        <ul>
+          <li>Protocol version, cipher suite, key-exchange group, certificate signature family</li>
+          <li>Classical-only key exchange grades <strong>WARN</strong> — quantum-vulnerable</li>
+          <li>Post-quantum hybrid grades <strong>PASS</strong>; TLS below 1.2 grades <strong>FAIL</strong></li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">03 — POLICY ENFORCEMENT</span>
+        <span class="cmd">--policy <em>&lt;file&gt;</em></span>
+        <h3>Set a floor, and hold it</h3>
+        <p>A small local policy file sets your floor: <strong>minimum TLS version</strong>, whether <strong>post-quantum key exchange is required</strong>, and a <strong>deny-list of hosts</strong> the guard refuses to pass.</p>
+        <ul>
+          <li>Violations print <strong>POLICY FAIL</strong> and exit non-zero</li>
+          <li>Exit codes: <strong>0</strong> clean · <strong>1</strong> FAIL findings · <strong>2</strong> policy violation</li>
+          <li>Made to gate scripts, cron, and CI</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="num">04 — REPORTING</span>
+        <span class="cmd">qeg <em>report</em></span>
+        <h3>A graded report you keep</h3>
+        <p>Every run prints a <strong>graded plain-text report</strong> — PASS / WARN / FAIL / POLICY FAIL — with an <strong>evidence line for each grade</strong>.</p>
+        <ul>
+          <li>Stable, parseable line shapes</li>
+          <li><strong>No telemetry, no phone-home, no account</strong></li>
+          <li><span class="mono" style="font-size:13px">qeg report</span> prints the policy format and an example policy</li>
+        </ul>
+        <div class="grades" aria-label="Grade levels">
+          <span class="grade g-pass">PASS</span>
+          <span class="grade g-warn">WARN</span>
+          <span class="grade g-fail">FAIL</span>
+          <span class="grade g-policy">POLICY FAIL</span>
+          <span class="grade g-info">INFO</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:28px">
+      <h3 style="margin-bottom:12px">How endpoint grading reads</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>What was negotiated</th><th>Grade</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="What was negotiated"><span class="t">Post-quantum hybrid key exchange</span><br /><code>X25519 + ML-KEM-768</code></td>
+              <td data-label="Grade"><span class="grade g-pass">PASS</span></td>
+              <td data-label="Why">Hybrid PQC key establishment per <strong style="color:var(--text)">FIPS 203</strong> — the harvest-now-decrypt-later defence available today.</td>
+            </tr>
+            <tr>
+              <td data-label="What was negotiated"><span class="t">Classical-only key exchange</span><br /><code>X25519 / NIST curves / FFDHE</code></td>
+              <td data-label="Grade"><span class="grade g-warn">WARN</span></td>
+              <td data-label="Why">Quantum-vulnerable. Recorded today, it is exactly what <strong style="color:var(--text)">harvest now, decrypt later</strong> collection targets.</td>
+            </tr>
+            <tr>
+              <td data-label="What was negotiated"><span class="t">TLS below 1.2</span></td>
+              <td data-label="Grade"><span class="grade g-fail">FAIL</span></td>
+              <td data-label="Why">Pre-1.2 TLS is below any defensible floor.</td>
+            </tr>
+            <tr>
+              <td data-label="What was negotiated"><span class="t">Policy violation</span><br /><span style="font-size:13.5px">Below your min TLS, missing required PQC, or a deny-listed host</span></td>
+              <td data-label="Grade"><span class="grade g-policy">POLICY FAIL</span></td>
+              <td data-label="Why">Your own floor, enforced. Process exits <strong style="color:var(--text)">2</strong> — before connecting, for deny-listed hosts.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:10px">Certificate grading reads the leaf signature family too — RSA / ECDSA / Ed25519 today are flagged as classical (Shor-vulnerable long-term); ML-DSA / SLH-DSA are recognised by OID so the grader is ready before such certificates are common.</p>
+    </div>
+  </div>
+</section>
+
+<section id="proof">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">Proof — real verified runs</p>
+      <h2>It has already run. Here is what it found.</h2>
+      <p>These are the founding verification runs — the same build that is on <span class="mono" style="font-size:14px">main</span> today. Output below follows the tool's real report format.</p>
+    </div>
+
+    <div class="term" role="img" aria-label="Terminal output: qeg check grading a TLS 1.3 handshake, X25519 and RSA flagged as classical">
+      <div class="term-head">
+        <span class="term-title"><b>qeg check</b> — real TLS 1.3 handshake, graded end to end</span>
+        <span class="term-exit">exit 0 — warnings, no failures</span>
+      </div>
+      <div class="term-body"><span class="prompt">$</span> qeg check &lt;local TLS endpoint&gt;
+qeg check — TLS endpoint
+
+[<span class="pass">PASS       </span>] tls version — negotiated TLS 1.3
+[<span class="dim">INFO       </span>] cipher suite — negotiated suite recorded in report
+[<span class="warn">WARN       </span>] key exchange — <span class="hl">X25519 — classical key exchange:
+             harvest-now-decrypt-later applies</span>
+[<span class="warn">WARN       </span>] certificate — leaf signature: <span class="hl">RSA (classical signature)</span>
+             — Shor-vulnerable family; migration to ML-DSA required long-term
+
+summary: 1 pass, 1 info, 2 warn, 0 fail, 0 policy-fail</div>
+    </div>
+    <p class="proof-note"><strong>What this proves:</strong> the handshake is real, and the grading is honest — a modern TLS 1.3 endpoint still grades WARN on the quantum question, because X25519 and RSA are classical. An endpoint that negotiates a PQC hybrid (X25519+ML-KEM) grades PASS instead.</p>
+
+    <div class="term" role="img" aria-label="Terminal output: qeg scan failing a planted weak SSH configuration with file and line findings">
+      <div class="term-head">
+        <span class="term-title"><b>qeg scan</b> — planted weak SSH config, caught with file:line</span>
+        <span class="term-exit bad">exit 1 — FAIL findings</span>
+      </div>
+      <div class="term-body"><span class="prompt">$</span> qeg scan
+qeg scan — local crypto posture
+
+[<span class="fail">FAIL       </span>] ssh kex — /etc/ssh/sshd_config:12 offers known-weak
+             key exchange: <span class="hl">diffie-hellman-group14-sha1</span>
+[<span class="fail">FAIL       </span>] ssh ciphers — /etc/ssh/sshd_config:18 enables broken
+             ciphers: <span class="hl">3des-cbc</span>
+[<span class="fail">FAIL       </span>] ssh macs — /etc/ssh/sshd_config:21 enables broken
+             MACs: <span class="hl">hmac-md5</span>
+
+summary: findings at FAIL level — see file:line above for each fix</div>
+    </div>
+    <p class="proof-note"><strong>What this proves:</strong> classical configuration rot — the settings automated attack tooling exploits first — is found precisely, with the file and line cited, not waved at.</p>
+
+    <div class="term" role="img" aria-label="Terminal output: policy deny_host refusing a connection before connecting, exit code 2">
+      <div class="term-head">
+        <span class="term-title"><b>qeg check --policy</b> — deny-listed host refused before connecting</span>
+        <span class="term-exit policy">exit 2 — POLICY FAIL</span>
+      </div>
+      <div class="term-body"><span class="prompt">$</span> qeg check &lt;deny-listed host&gt; --policy qeg.policy
+qeg check — policy enforcement
+
+[<span class="fail">POLICY FAIL</span>] policy block-list — host is on the policy
+             <span class="hl">deny_host</span> list — <span class="hl">check refused before connecting</span>
+
+summary: 0 pass, 0 info, 0 warn, 0 fail, 1 policy-fail</div>
+    </div>
+    <p class="proof-note"><strong>What this proves:</strong> policy is enforcement, not advice. A denied host is refused <strong>before</strong> any connection is made — and the exit code lets your scripts and CI stop on it.</p>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">Install</p>
+      <h2>Build it from source</h2>
+      <p>Rust. No runtime services, no account, no network access needed except the endpoints you explicitly ask it to check.</p>
+    </div>
+    <div class="install-grid">
+      <div>
+        <div class="codeblock">
+          <div class="codeblock-head"><span>Build — Cargo</span><button type="button" class="copy-small" data-copy="cargo build --release">Copy</button></div>
+          <pre><span class="c"># clone the repo, then:</span>
+<span class="a">cargo</span> build --release
+<span class="c"># binary: target/release/qeg
+# package name: quantum-edge-guard</span></pre>
+        </div>
+        <ul class="usage-list">
+          <li>
+            <code>qeg scan</code>
+            <span>Audit this machine — SSH + OpenSSL posture, listening services.</span>
+          </li>
+          <li>
+            <code>qeg check example.com</code>
+            <span>Grade an endpoint (port 443) — real handshake, negotiated crypto.</span>
+          </li>
+          <li>
+            <code>qeg check mail.example.com:993</code>
+            <span>Grade a specific port.</span>
+          </li>
+          <li>
+            <code>qeg check example.com --policy qeg.policy</code>
+            <span>Grade against your policy floor — violations exit 2.</span>
+          </li>
+          <li>
+            <code>qeg check 192.168.1.10:8443 --insecure</code>
+            <span>Self-signed / internal endpoint: crypto graded, identity <strong style="color:var(--text)">not</strong> verified — the report says so, loudly.</span>
+          </li>
+          <li>
+            <code>qeg report</code>
+            <span>Print the policy format and an annotated example policy.</span>
+          </li>
+        </ul>
+      </div>
+      <div class="license-box">
+        <p class="sec-label" style="margin-bottom:8px">License — read this part</p>
+        <h3>Public source. Proprietary license.</h3>
+        <p>The source is <strong>public for transparency and evaluation</strong> — you can read exactly what the tool does before you license it.</p>
+        <p><strong>Visibility is not a use license.</strong> Quantum Edge Guard is © 2026 Chase Bryan / NIGHTWARE LABZ, all rights reserved. Building for personal evaluation on your own machines is permitted; production use, use within an organization, and any redistribution require a <strong>commercial license</strong> from NIGHTWARE LABZ.</p>
+        <p>This is deliberate: snoot sells reports and expertise under AGPL. <strong>Quantum Edge Guard sells the product.</strong></p>
+        <p style="margin-bottom:0"><a href="https://github.com/nightwarelabz/quantum-edge-guard" target="_blank" rel="noopener">Read the full LICENSE in the repo →</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="license">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">Pricing &amp; how to buy</p>
+      <h2>One-time license. Yearly updates. No SaaS.</h2>
+      <p>Quantum Edge Guard runs on your machine, under your policy. No per-seat SaaS, no telemetry, no account requirement.</p>
+    </div>
+    <div class="buy-grid">
+      <div class="buy-main">
+        <h3>The model</h3>
+        <p><strong>One-time license per machine</strong>, with a <strong>yearly update subscription</strong>. That is the whole model — the product is yours to run locally, and the subscription keeps its grading current as the standards move.</p>
+        <ul class="buy-list">
+          <li><strong>One-time license per machine</strong> — indie / small-team tier and site tier</li>
+          <li><strong>Yearly updates:</strong> new checks as new weak configurations and attack patterns emerge</li>
+          <li><strong>PQC standards tracking</strong> — NIST <strong>FIPS 203 / 204 / 205</strong> evolution, covered as it lands</li>
+          <li><strong>Threat-model updates</strong> — the AI-driven and quantum-era threat picture, kept current</li>
+          <li>Runs entirely on the customer's machine — <strong>no telemetry</strong> in either tier</li>
+        </ul>
+      </div>
+      <div class="buy-side">
+        <span class="pending">Pricing tiers — with first commercial release</span>
+        <p><strong>Pricing tiers are published with the first commercial release.</strong> No numbers are listed here because none are set yet — when they are, they will appear here and in the repo at the same time.</p>
+        <p>Licensing now? Early inquiries and support go through the lab directly:</p>
+        <a class="btn" href="https://github.com/nightwarelabz/quantum-edge-guard" target="_blank" rel="noopener">License inquiry via GitHub ↗</a>
+        <a class="btn btn-ghost" href="https://ko-fi.com/nightwarelabz" target="_blank" rel="noopener">Support via Ko-fi ↗</a>
+        <p class="hint" style="margin:6px 0 0">Use the inquiry form below to compile a ready-to-send message — then send it via GitHub or Ko-fi. Nothing you type is stored on this page.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">Honest limits</p>
+      <h2>What it does not do</h2>
+      <p>This section is the product's stance, not fine print. A guard you over-trust is worse than no guard.</p>
+    </div>
+    <div class="limits">
+      <div class="limit">
+        <h3>It does not make any machine unbreakable</h3>
+        <p>And no version of this product will ever honestly claim to. It <strong>finds and grades weak cryptography and enforces the policy you set</strong> — it is not a magic shield.</p>
+      </div>
+      <div class="limit">
+        <h3>v1 does not intercept or proxy traffic</h3>
+        <p>The enforcement proxy is on the <strong>roadmap (v2)</strong> — it is not in v1. In v1, enforcement is real at the level a terminal tool can honestly enforce: scripts, cron, and CI that call <span class="mono" style="font-size:13px">qeg</span> stop on a policy violation.</p>
+      </div>
+      <div class="limit">
+        <h3>It does not patch your software</h3>
+        <p>It tells you, <strong>precisely, what to fix</strong> — with the file, line, and negotiated evidence. Fixing it stays in your hands, on your schedule.</p>
+      </div>
+      <div class="limit">
+        <h3>Read “classical negotiated” correctly</h3>
+        <p>The probe grades what it negotiates. <strong>“Classical negotiated” means the endpoint accepted a classical handshake from this probe</strong> — read it as “quantum-vulnerable unless the endpoint also offers PQC and prefers it,” and see the report notes for each endpoint.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">Roadmap</p>
+      <h2>Where it goes from v1</h2>
+      <p>Copy follows capability: only at v2 may anything say the guard “blocks” connections — and only for proxied traffic.</p>
+    </div>
+    <div class="road">
+      <div class="road-item">
+        <span class="ver now">v1 — Now · in the repo</span>
+        <h3>Terminal tool</h3>
+        <p>Scan / check / report / policy — the founding tool described on this page.</p>
+        <ul>
+          <li>Local posture audit</li>
+          <li>Endpoint TLS grading</li>
+          <li>Policy floors + deny-list</li>
+        </ul>
+      </div>
+      <div class="road-item">
+        <span class="ver">v1.x — Next</span>
+        <h3>Deeper grading, machine-readable output</h3>
+        <ul>
+          <li><strong style="color:var(--text)">Multi-probe PQC grading</strong> — “supports PQC” and “prefers PQC” as distinct, provable grades</li>
+          <li><strong style="color:var(--text)">JSON reports</strong> (<span class="mono" style="font-size:13px">--json</span>) alongside the text format</li>
+          <li><strong style="color:var(--text)">Watch mode</strong> — scheduled re-checks, alerting on drift</li>
+          <li>Windows / macOS local-scan paths</li>
+        </ul>
+      </div>
+      <div class="road-item">
+        <span class="ver">v2 — Later</span>
+        <h3>Opt-in enforcement proxy</h3>
+        <p>A local TLS policy enforcement point for applications routed through it.</p>
+        <ul>
+          <li>Opt-in only — nothing is proxied unless you route it</li>
+          <li>Only then does “blocks” apply, and only for proxied traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="inquire">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-label">License inquiry</p>
+      <h2>Ask about a license</h2>
+      <p>Fill in what you can — the button compiles it into one copy-ready message. Copy it and send it via <a href="https://github.com/nightwarelabz/quantum-edge-guard" target="_blank" rel="noopener">GitHub</a> or <a href="https://ko-fi.com/nightwarelabz" target="_blank" rel="noopener">Ko-fi</a>. Nothing you type is saved on this page.</p>
+    </div>
+
+    <form id="inquiryForm" novalidate>
+      <div class="field">
+        <label for="fName">Your name <span class="req">*</span></label>
+        <input type="text" id="fName" autocomplete="name" placeholder="Name or handle" />
+      </div>
+      <div class="field">
+        <label for="fContact">Contact <span class="req">*</span></label>
+        <input type="text" id="fContact" autocomplete="email" placeholder="Email or GitHub handle" />
+        <p class="hint">Where the reply should go.</p>
+      </div>
+      <div class="field">
+        <label for="fMachines">Machines to license</label>
+        <select id="fMachines">
+          <option value="">Choose one…</option>
+          <option>1 machine — evaluation / personal</option>
+          <option>A few machines — small team</option>
+          <option>Site / fleet — many machines</option>
+          <option>Not sure yet</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fUse">Primary use</label>
+        <select id="fUse">
+          <option value="">Choose one…</option>
+          <option>Local posture audits (qeg scan)</option>
+          <option>Endpoint grading (qeg check)</option>
+          <option>Policy gating in scripts / CI</option>
+          <option>All of the above</option>
+          <option>Evaluating first</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="fNotes">Anything else?</label>
+        <textarea id="fNotes" placeholder="Your environment (OS, endpoints you need graded), timeline, questions about the license or roadmap…"></textarea>
+      </div>
+
+      <div class="compile-row">
+        <button type="submit" class="btn">Compile my inquiry →</button>
+        <span class="form-err" id="formErr">Add your name and a contact first.</span>
+      </div>
+
+      <div class="output-box" id="outputBox">
+        <label for="inquiryOutput" style="margin-bottom:7px;display:block">Your inquiry — copy this and send it</label>
+        <textarea id="inquiryOutput" readonly></textarea>
+        <div class="compile-row" style="margin-top:12px">
+          <button type="button" class="btn" id="copyBtn">Copy inquiry text</button>
+          <span class="copy-status" id="copyStatus" role="status" aria-live="polite"></span>
+        </div>
+        <p class="hint" style="margin-top:10px;color:var(--text)">Send via GitHub: <a href="https://github.com/nightwarelabz/quantum-edge-guard" target="_blank" rel="noopener">github.com/nightwarelabz/quantum-edge-guard</a> — or via <a href="https://ko-fi.com/nightwarelabz" target="_blank" rel="noopener">Ko-fi (ko-fi.com/nightwarelabz)</a>.</p>
+        <p class="hint" style="margin-top:6px">Quantum Edge Guard is sold as a one-time license per machine with a yearly update subscription. Pricing tiers are published with the first commercial release.</p>
+      </div>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>© 2026 NIGHTWARE LABZ · Quantum Edge Guard — all rights reserved</div>
+    <div>
+      Repo: <a href="https://github.com/nightwarelabz/quantum-edge-guard" target="_blank" rel="noopener">github.com/nightwarelabz/quantum-edge-guard</a> ·
+      Ko-fi: <a href="https://ko-fi.com/nightwarelabz" target="_blank" rel="noopener">ko-fi.com/nightwarelabz</a><br />
+      More from the lab: <a href="https://nosuchmachine.net" target="_blank" rel="noopener">nosuchmachine.net</a> ·
+      snoot PQC scan: <a href="https://nosuchmachine.net/snoot/" target="_blank" rel="noopener">nosuchmachine.net/snoot/</a>
+    </div>
+  </div>
+</footer>
+
+<script src="inquiry.js" defer></script>
+</body>
+</html>
